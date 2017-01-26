@@ -62,7 +62,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkCheckRotation, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkCheckRotation, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkCheckRotation);
 
 

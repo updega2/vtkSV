@@ -63,7 +63,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkPlacePointsOnS2, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkPlacePointsOnS2, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkPlacePointsOnS2);
 
 

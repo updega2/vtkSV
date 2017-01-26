@@ -6,6 +6,8 @@ find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
 add_executable(PlanarMapper PlanarMapper.cxx
+  vtkBoundaryMapper.cxx
+  vtkSquareBoundaryMapper.cxx
   vtkPlanarMapper.cxx
   svMath.cxx
   sparse_matrix.cxx)

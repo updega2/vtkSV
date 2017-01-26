@@ -57,7 +57,7 @@ class vtkFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
   static vtkFindGeodesicPath* New();
-  vtkTypeRevisionMacro(vtkFindGeodesicPath, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkFindGeodesicPath, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -85,7 +85,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkPolyDataSliceAndDiceFilter, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkPolyDataSliceAndDiceFilter, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkPolyDataSliceAndDiceFilter);
 
 //---------------------------------------------------------------------------

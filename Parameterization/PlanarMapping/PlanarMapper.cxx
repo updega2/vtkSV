@@ -12,6 +12,7 @@
 
  =========================================================================*/
 
+#include "vtkSquareBoundaryMapper.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
@@ -162,32 +163,38 @@ int main(int argc, char *argv[])
   std::cout<<"Reading Files..."<<endl;
   ReadInputFile(inputFilename1,pd1);
 
-  int boundaryCorners[4];
+  vtkSmartPointer<vtkIntArray> boundaryCorners =
+    vtkSmartPointer<vtkIntArray>::New();
+  boundaryCorners->SetNumberOfComponents(1);
+  boundaryCorners->SetNumberOfTuples(4);
   // 0103_0001
-  //boundaryCorners[0] = 4081;
-  //boundaryCorners[1] = 370;
-  //boundaryCorners[2] = 10;
-  //boundaryCorners[3] = 4016;
+  boundaryCorners->SetValue(0,4081);
+  boundaryCorners->SetValue(1,370);
+  boundaryCorners->SetValue(2,10);
+  boundaryCorners->SetValue(3,4016);
   // HalfSphere
-  //boundaryCorners[0] = 15;
-  //boundaryCorners[1] = 9;
-  //boundaryCorners[2] = 29;
-  //boundaryCorners[3] = 24;
+  //boundaryCorners->SetValue(0,15);
+  //boundaryCorners->SetValue(1,9);
+  //boundaryCorners->SetValue(2,29);
+  //boundaryCorners->SetValue(3,24);
   // HalfSphere 2
-  //boundaryCorners[0] = 32;
-  //boundaryCorners[1] = 72;
-  //boundaryCorners[2] = 67;
-  //boundaryCorners[3] = 104;
+  //boundaryCorners->SetValue(0,32);
+  //boundaryCorners->SetValue(1,72);
+  //boundaryCorners->SetValue(2,67);
+  //boundaryCorners->SetValue(3,104);
   // Aorta
-  boundaryCorners[0] = 22320;
-  boundaryCorners[1] = 22691;
-  boundaryCorners[2] = 22299;
-  boundaryCorners[3] = 23;
-  // IliacBranchSegment
-  //boundaryCorners[0] = 185;
-  //boundaryCorners[1] = 220;
-  //boundaryCorners[2] = 213;
-  //boundaryCorners[3] = 164;
+  //boundaryCorners->SetValue(0,22320);
+  //boundaryCorners->SetValue(1,22691);
+  //boundaryCorners->SetValue(2,22299);
+  //boundaryCorners->SetValue(3,23);
+  // IliacBranchSegme
+  //boundaryCorners->SetValue(0,185);
+  //boundaryCorners->SetValue(1,220);
+  //boundaryCorners->SetValue(2,213);
+  //boundaryCorners->SetValue(3,164);
+  vtkSmartPointer<vtkSquareBoundaryMapper> boundaryMapper =
+    vtkSmartPointer<vtkSquareBoundaryMapper>::New();
+  boundaryMapper->SetBoundaryIds(boundaryCorners);
 
   std::string newDirName = getPath(inputFilename1)+"/"+getRawName(inputFilename1);
   std::string newOutName = getPath(inputFilename1)+"/"+getRawName(inputFilename1)+"/"+getRawName(inputFilename1);
@@ -195,7 +202,7 @@ int main(int argc, char *argv[])
   //OPERATION
   std::cout<<"Performing Operation..."<<endl;
   Mapper->SetInputData(pd1);
-  Mapper->SetBoundaryCorners(boundaryCorners);
+  Mapper->SetBoundaryMapper(boundaryMapper);
   Mapper->Update();
 
   //Write Files

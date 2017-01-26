@@ -54,7 +54,7 @@ class vtkMakeParametricCube : public vtkPolyDataAlgorithm
 {
 public:
   static vtkMakeParametricCube* New();
-  vtkTypeRevisionMacro(vtkMakeParametricCube, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkMakeParametricCube, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

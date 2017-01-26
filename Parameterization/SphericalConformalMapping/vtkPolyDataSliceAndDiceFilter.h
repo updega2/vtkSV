@@ -63,7 +63,7 @@ class vtkPolyDataSliceAndDiceFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPolyDataSliceAndDiceFilter* New();
-  vtkTypeRevisionMacro(vtkPolyDataSliceAndDiceFilter, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkPolyDataSliceAndDiceFilter, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

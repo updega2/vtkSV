@@ -68,7 +68,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkS2LandmarkMatcher, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkS2LandmarkMatcher, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkS2LandmarkMatcher);
 
 

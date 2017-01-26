@@ -59,7 +59,7 @@ class vtkSurfaceToSurfaceMapper : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSurfaceToSurfaceMapper* New();
-  vtkTypeRevisionMacro(vtkSurfaceToSurfaceMapper, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkSurfaceToSurfaceMapper, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

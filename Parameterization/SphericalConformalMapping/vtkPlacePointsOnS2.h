@@ -57,7 +57,7 @@ class vtkPlacePointsOnS2 : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPlacePointsOnS2* New();
-  vtkTypeRevisionMacro(vtkPlacePointsOnS2, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkPlacePointsOnS2, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

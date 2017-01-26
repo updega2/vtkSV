@@ -70,7 +70,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSurfaceToSurfaceMapper, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkSurfaceToSurfaceMapper, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkSurfaceToSurfaceMapper);
 
 

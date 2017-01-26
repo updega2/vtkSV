@@ -67,7 +67,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkSphericalConformalMapper, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkSphericalConformalMapper, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkSphericalConformalMapper);
 
 

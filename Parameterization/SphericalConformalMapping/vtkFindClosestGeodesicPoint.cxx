@@ -62,7 +62,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkFindClosestGeodesicPoint, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkFindClosestGeodesicPoint, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkFindClosestGeodesicPoint);
 
 

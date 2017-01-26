@@ -62,7 +62,7 @@ class vtkPassDataArray : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPassDataArray* New();
-  vtkTypeRevisionMacro(vtkPassDataArray, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkPassDataArray, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

@@ -47,6 +47,7 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
+#include "vtkBoundaryMapper.h"
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
@@ -55,20 +56,12 @@ class vtkPlanarMapper : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPlanarMapper* New();
-  vtkTypeRevisionMacro(vtkPlanarMapper, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  vtkTypeMacro(vtkPlanarMapper, vtkPolyDataAlgorithm);
+  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
 
   // CG Update method
-  vtkGetMacro(BoundaryType, int);
-  vtkSetMacro(BoundaryType, int);
-
-  // Boundary Corners
-  vtkGetVector4Macro(BoundaryCorners, int);
-  vtkSetVector4Macro(BoundaryCorners, int);
-
-  // Boundary Corners
-  vtkGetVector4Macro(BoundaryLengths, double);
-  vtkSetVector4Macro(BoundaryLengths, double);
+  vtkGetObjectMacro(BoundaryMapper, vtkBoundaryMapper);
+  vtkSetObjectMacro(BoundaryMapper, vtkBoundaryMapper);
 
   // Axis of the object to use on orientation with sphee map
   vtkSetVector3Macro(ObjectXAxis, double);
@@ -79,19 +72,20 @@ public:
   vtkGetStringMacro(InternalIdsArrayName);
   vtkSetStringMacro(InternalIdsArrayName);
 
+  //BOUNDARY_TYPE
+  enum BOUNDARY_TYPE
+  {
+    SQUARE = 0,
+    CIRCLE
+  };
+
+
   //MAP
   enum WEIGHT_TYPE
   {
     HARMONIC = 0,
     MEAN_VALUE,
     TUTTE
-  };
-
-  //BOUNDARY_TYPE
-  enum BOUNDARY_TYPE
-  {
-    SQUARE = 0,
-    CIRCLE
   };
 
   static int CheckSurface(vtkPolyData *pd);
@@ -128,16 +122,12 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) VTK_OVERRIDE;
 
   // Main functions in filter
   int PrepFilter();
   int RunFilter();
   int SetBoundaries();
-  int GetBoundaryLoop();
-  int FindBoundaries();
-  int CalculateSquareEdgeLengths();
-  int SetSquareBoundary();
   int SetCircleBoundary();
   int SetInternalNodes();
   int SolveSystem();
@@ -160,6 +150,9 @@ private:
   vtkPolyData   *Boundaries;
   vtkPolyData   *BoundaryLoop;
 
+  // Filter to set the boundary!
+  vtkBoundaryMapper *BoundaryMapper;
+
   std::vector<std::vector<double> > AHarm;
   std::vector<std::vector<double> > ATutte;
   std::vector<double> Xu;
@@ -169,9 +162,6 @@ private:
 
   char *InternalIdsArrayName;
 
-  int BoundaryType;
-  int BoundaryCorners[4];
-  double BoundaryLengths[4];
   double ObjectXAxis[3];
   double ObjectZAxis[3];
 

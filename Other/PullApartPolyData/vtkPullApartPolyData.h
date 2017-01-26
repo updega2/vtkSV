@@ -57,7 +57,7 @@ class vtkPullApartPolyData : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPullApartPolyData* New();
-  vtkTypeRevisionMacro(vtkPullApartPolyData, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkPullApartPolyData, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

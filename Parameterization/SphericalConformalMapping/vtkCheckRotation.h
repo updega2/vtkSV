@@ -56,7 +56,7 @@ class vtkCheckRotation : public vtkPolyDataAlgorithm
 {
 public:
   static vtkCheckRotation* New();
-  vtkTypeRevisionMacro(vtkCheckRotation, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkCheckRotation, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

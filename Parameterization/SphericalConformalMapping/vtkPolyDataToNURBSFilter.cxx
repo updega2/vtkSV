@@ -80,7 +80,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkPolyDataToNURBSFilter, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkPolyDataToNURBSFilter, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkPolyDataToNURBSFilter);
 
 

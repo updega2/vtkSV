@@ -63,7 +63,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkFindGeodesicPath, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkFindGeodesicPath, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkFindGeodesicPath);
 
 

@@ -59,7 +59,7 @@ class vtkS2LandmarkMatcher : public vtkPolyDataAlgorithm
 {
 public:
   static vtkS2LandmarkMatcher* New();
-  vtkTypeRevisionMacro(vtkS2LandmarkMatcher, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkS2LandmarkMatcher, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

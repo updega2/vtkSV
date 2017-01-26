@@ -70,7 +70,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMakeParametricCube, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkMakeParametricCube, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkMakeParametricCube);
 
 

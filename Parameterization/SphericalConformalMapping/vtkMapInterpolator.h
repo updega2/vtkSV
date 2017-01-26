@@ -59,7 +59,7 @@ class vtkMapInterpolator : public vtkPolyDataAlgorithm
 {
 public:
   static vtkMapInterpolator* New();
-  vtkTypeRevisionMacro(vtkMapInterpolator, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkMapInterpolator, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

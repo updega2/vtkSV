@@ -56,7 +56,7 @@ class vtkSphericalConformalMapper : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSphericalConformalMapper* New();
-  vtkTypeRevisionMacro(vtkSphericalConformalMapper, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkSphericalConformalMapper, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

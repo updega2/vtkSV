@@ -68,7 +68,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkMapInterpolator, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkMapInterpolator, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkMapInterpolator);
 
 

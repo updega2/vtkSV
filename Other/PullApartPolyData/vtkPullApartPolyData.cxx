@@ -63,7 +63,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkPullApartPolyData, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkPullApartPolyData, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkPullApartPolyData);
 
 

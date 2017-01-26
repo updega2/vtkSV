@@ -73,7 +73,7 @@
 
 #include <iostream>
 
-vtkCxxRevisionMacro(vtkPassDataArray, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkPassDataArray, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkPassDataArray);
 
 vtkPassDataArray::vtkPassDataArray()

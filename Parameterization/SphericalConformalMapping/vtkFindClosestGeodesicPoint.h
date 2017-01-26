@@ -56,7 +56,7 @@ class vtkFindClosestGeodesicPoint : public vtkPolyDataAlgorithm
 {
 public:
   static vtkFindClosestGeodesicPoint* New();
-  vtkTypeRevisionMacro(vtkFindClosestGeodesicPoint, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkFindClosestGeodesicPoint, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

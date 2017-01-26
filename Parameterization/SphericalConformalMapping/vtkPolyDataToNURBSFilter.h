@@ -58,7 +58,7 @@ class vtkPolyDataToNURBSFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkPolyDataToNURBSFilter* New();
-  vtkTypeRevisionMacro(vtkPolyDataToNURBSFilter, vtkPolyDataAlgorithm);
+  //vtkTypeRevisionMacro(vtkPolyDataToNURBSFilter, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:

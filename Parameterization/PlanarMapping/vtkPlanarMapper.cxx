@@ -39,6 +39,7 @@
 
 #include "vtkPlanarMapper.h"
 
+#include "vtkBoundaryMapper.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkConnectivityFilter.h"
@@ -66,7 +67,7 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-vtkCxxRevisionMacro(vtkPlanarMapper, "$Revision: 0.0 $");
+//vtkCxxRevisionMacro(vtkPlanarMapper, "$Revision: 0.0 $");
 vtkStandardNewMacro(vtkPlanarMapper);
 
 
@@ -75,9 +76,6 @@ vtkPlanarMapper::vtkPlanarMapper()
 {
   this->RemoveInternalIds = 1;
 
-  this->BoundaryType = SQUARE;
-  this->SetBoundaryCorners(-1, -1, -1, -1);
-  this->SetBoundaryLengths(-1.0, -1.0, -1.0, -1.0);
   this->SetObjectXAxis(1.0, 0.0, 0.0);
   this->SetObjectZAxis(0.0, 0.0, 1.0);
 
@@ -90,6 +88,8 @@ vtkPlanarMapper::vtkPlanarMapper()
   this->IsBoundary    = vtkIntArray::New();
   this->Boundaries    = vtkPolyData::New();
   this->BoundaryLoop  = vtkPolyData::New();
+
+  this->BoundaryMapper = NULL;
 
   this->InternalIdsArrayName = NULL;
 
@@ -475,18 +475,6 @@ int vtkPlanarMapper::ComputeArea(double pt0[3], double pt1[3],
  */
 int vtkPlanarMapper::RunFilter()
 {
-  if (this->FindBoundaries() != 1)
-  {
-    vtkErrorMacro("Could not find boundaries");
-    return 0;
-  }
-
-  if (this->GetBoundaryLoop() != 1)
-  {
-    vtkErrorMacro("Error orienting boundary loop");
-    return 0;
-  }
-
   if (this->SetBoundaries() != 1)
   {
     vtkErrorMacro("Error in mapping");
@@ -516,124 +504,32 @@ int vtkPlanarMapper::RunFilter()
  */
 int vtkPlanarMapper::SetBoundaries()
 {
-  //TODO: Clean up correctly on errors!!!
-  vtkDataArray *pointIds = this->Boundaries->GetPointData()->GetArray(this->InternalIdsArrayName);
+  this->BoundaryMapper->SetInputData(this->WorkPd);
+  this->BoundaryMapper->SetEdgeTable(this->EdgeTable);
+  this->BoundaryMapper->SetInternalIdsArrayName(this->InternalIdsArrayName);
+  this->BoundaryMapper->Update();
 
-  if (this->CalculateSquareEdgeLengths() != 1)
+  vtkNew(vtkPolyData, boundaryPd);
+  // Check if array internal ids is already on pd
+  if (this->CheckArrayExists(boundaryPd, 0, this->InternalIdsArrayName) == 0)
   {
-    vtkErrorMacro("Didn't work");
+    vtkErrorMacro("No internal ids array name on boundary pd");
     return 0;
   }
-  fprintf(stdout,"Square edge lengths: %.4f %.4f %.4f %.4f\n", this->BoundaryLengths[0],
-                                                               this->BoundaryLengths[1],
-                                                               this->BoundaryLengths[2],
-                                                               this->BoundaryLengths[3]);
-  int ok = 0;
-  if (this->BoundaryType == SQUARE)
+  vtkDataArray *originalIds = boundaryPd->GetPointData()->GetArray(this->InternalIdsArrayName);
+  int numBoundPts = boundaryPd->GetNumberOfPoints();
+  for (int i=0; i<numBoundPts; i++)
   {
-    ok = this->SetSquareBoundary();
+    int id = originalIds->GetTuple1(i);
+    double pt[3];
+    boundaryPd->GetPoint(i, pt);
+    // Set diagonal to be 1 for boundary points
+    this->AHarm[id][id] = 1.0;
+    this->ATutte[id][id] = 1.0;
+    // Set right hand side to be point on boundary
+    this->Bu[id] = pt[0];
+    this->Bv[id] = pt[1];
   }
-  else
-  {
-    ok = this->SetCircleBoundary();
-  }
-  if (!ok)
-  {
-    vtkErrorMacro("Was not able to set boundary");
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlanarMapper::FindBoundaries()
-{
-  vtkSmartPointer<vtkFeatureEdges> finder =
-    vtkSmartPointer<vtkFeatureEdges>::New();
-  finder->SetInputData(this->WorkPd);
-  finder->FeatureEdgesOff();
-  finder->NonManifoldEdgesOff();
-  finder->BoundaryEdgesOn();
-  finder->Update();
-
-  vtkSmartPointer<vtkConnectivityFilter> connector =
-    vtkSmartPointer<vtkConnectivityFilter>::New();
-  connector->SetInputData(finder->GetOutput());
-  connector->SetExtractionMode(VTK_EXTRACT_ALL_REGIONS);
-  connector->ColorRegionsOn();
-  connector->Update();
-
-  vtkSmartPointer<vtkDataSetSurfaceFilter> surfacer =
-    vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
-  surfacer->SetInputData(connector->GetOutput());
-  surfacer->Update();
-
-  this->Boundaries->DeepCopy(surfacer->GetOutput());
-
-  if (this->Boundaries->GetNumberOfCells() == 0)
-  {
-    vtkErrorMacro("No boundaries on polydata");
-    return 0;
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlanarMapper::CalculateSquareEdgeLengths()
-{
-  vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
-  int numLines = this->BoundaryLoop->GetNumberOfLines();
-
-  for (int i=0; i<4; i++)
-  {
-    this->BoundaryLengths[i] = 0.0;
-  }
-  int currCell = 0;
-  for (int i=0; i<4; i++)
-  {
-    int lastPt   = pointIds->LookupValue(this->BoundaryCorners[(i+1)%4]);
-    int otherPt0 = pointIds->LookupValue(this->BoundaryCorners[(i+2)%4]);
-    int otherPt1 = pointIds->LookupValue(this->BoundaryCorners[(i+3)%4]);
-    int otherPt2 = pointIds->LookupValue(this->BoundaryCorners[i]);
-    vtkIdType npts, *pts;
-    int checkPt = -1;
-    while (checkPt != lastPt)
-    {
-      this->BoundaryLoop->GetCellPoints(currCell, npts, pts);
-      double pt0[3], pt1[3];
-      this->BoundaryLoop->GetPoint(pts[0], pt0);
-      this->BoundaryLoop->GetPoint(pts[1], pt1);
-      checkPt = pts[1];
-      if (checkPt == (lastPt))
-        fprintf(stdout,"Found corner %d\n", this->BoundaryCorners[(i+1)%4]);
-      if (checkPt == (otherPt0))
-        fprintf(stdout,"Found corner %d\n", this->BoundaryCorners[(i+2)%4]);
-      if (checkPt == (otherPt1))
-        fprintf(stdout,"Found corner %d\n", this->BoundaryCorners[(i+3)%4]);
-      if (checkPt == (otherPt2))
-        fprintf(stdout,"Found corner %d\n", this->BoundaryCorners[i]);
-
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
-      this->BoundaryLengths[i] += dist;
-
-      currCell++;
-    }
-  }
-  //fprintf(stdout,"Curr!: %d\n", currCell);
-  //fprintf(stdout,"NumLines!: %d\n", numLines);
 
   return 1;
 }
@@ -646,52 +542,52 @@ int vtkPlanarMapper::CalculateSquareEdgeLengths()
  */
 int vtkPlanarMapper::SetCircleBoundary()
 {
-  vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
-  int numLines = this->BoundaryLoop->GetNumberOfLines();
-
-  double currCoords[3];
-  for (int i=0; i<3; i++)
-  {
-    currCoords[i] = 0.0;
-  }
-
-  double unitLength = M_PI / 2.0;
-  int currCell = 0;
-  int checkPt = -1;
-  for (int i=0; i<4; i++)
-  {
-    double currLength = 0.0;
-    int lastPt = pointIds->LookupValue(this->BoundaryCorners[i]);
-    int dir = 0; //TODO: Figure out dir
-    vtkIdType npts, *pts;
-    while (checkPt != lastPt)
-    {
-      this->BoundaryLoop->GetCellPoints(currCell, npts, pts);
-      double pt0[3], pt1[3];
-      this->BoundaryLoop->GetPoint(pts[0], pt0);
-      this->BoundaryLoop->GetPoint(pts[1], pt1);
-
-      checkPt = pts[1];
-
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
-      currLength += dist;
-
-      double boundaryVal[3];
-
-      double angle = currLength/this->BoundaryLengths[i] * unitLength + unitLength*i;// + unitLength/2.0;
-      //boundaryVal[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
-      //boundaryVal[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
-      //boundaryVal[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-
-      int id = pointIds->GetTuple1(pts[1]);
-
-      //this->HarmonicMap[0]->GetPoints()->SetPoint(id, boundaryVal);
-
-      currCell++;
-    }
-  }
+//  vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
+//  int numLines = this->BoundaryLoop->GetNumberOfLines();
+//
+//  double currCoords[3];
+//  for (int i=0; i<3; i++)
+//  {
+//    currCoords[i] = 0.0;
+//  }
+//
+//  double unitLength = M_PI / 2.0;
+//  int currCell = 0;
+//  int checkPt = -1;
+//  for (int i=0; i<4; i++)
+//  {
+//    double currLength = 0.0;
+//    int lastPt = pointIds->LookupValue(this->BoundaryCorners[i]);
+//    int dir = 0; //TODO: Figure out dir
+//    vtkIdType npts, *pts;
+//    while (checkPt != lastPt)
+//    {
+//      this->BoundaryLoop->GetCellPoints(currCell, npts, pts);
+//      double pt0[3], pt1[3];
+//      this->BoundaryLoop->GetPoint(pts[0], pt0);
+//      this->BoundaryLoop->GetPoint(pts[1], pt1);
+//
+//      checkPt = pts[1];
+//
+//      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
+//                              std::pow(pt0[1]-pt1[1], 2.0) +
+//                              std::pow(pt0[2]-pt1[2], 2.0));
+//      currLength += dist;
+//
+//      double boundaryVal[3];
+//
+//      double angle = currLength/this->BoundaryLengths[i] * unitLength + unitLength*i;// + unitLength/2.0;
+//      //boundaryVal[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
+//      //boundaryVal[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
+//      //boundaryVal[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
+//
+//      int id = pointIds->GetTuple1(pts[1]);
+//
+//      //this->HarmonicMap[0]->GetPoints()->SetPoint(id, boundaryVal);
+//
+//      currCell++;
+//    }
+//  }
 
   return 1;
 }
@@ -738,72 +634,6 @@ int vtkPlanarMapper::CheckArrayExists(vtkPolyData *object,int datatype,std::stri
   }
 
   return exists;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlanarMapper::SetSquareBoundary()
-{
-  vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
-  double currCoords[3];
-  for (int i=0; i<3; i++)
-  {
-    currCoords[i] = 0.0;
-  }
-
-  double unitLength = 1.0;
-  int currCell = 0;
-  int checkPt = -1;
-  for (int i=0; i<4; i++)
-  {
-    double currLength = 0.0;
-    int lastPt  = pointIds->LookupValue(this->BoundaryCorners[(i+1)%4]);
-    vtkIdType npts, *pts;
-    while (checkPt != lastPt)
-    {
-      this->BoundaryLoop->GetCellPoints(currCell, npts, pts);
-      double pt0[3], pt1[3];
-      this->BoundaryLoop->GetPoint(pts[0], pt0);
-      this->BoundaryLoop->GetPoint(pts[1], pt1);
-      checkPt = pts[1];
-
-      // Set diagonal to be 1 for boundary points
-      int surfacePtId = pointIds->GetTuple1(checkPt);
-      this->AHarm[surfacePtId][surfacePtId] = 1.0;
-      this->ATutte[surfacePtId][surfacePtId] = 1.0;
-
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
-      currLength += dist;
-
-      if (i == 0)
-      {
-        currCoords[0] += dist/this->BoundaryLengths[i] * unitLength;
-      }
-      else if (i == 1)
-      {
-        currCoords[1] += dist/this->BoundaryLengths[i] * unitLength;
-      }
-      else if (i == 2)
-      {
-        currCoords[0] -= dist/this->BoundaryLengths[i] * unitLength;
-      }
-      else
-      {
-        currCoords[1] -= dist/this->BoundaryLengths[i] * unitLength;
-      }
-      this->Bu[surfacePtId] = currCoords[0];
-      this->Bv[surfacePtId] = currCoords[1];
-
-      currCell++;
-    }
-  }
-  return 1;
 }
 
 //---------------------------------------------------------------------------
@@ -1053,110 +883,6 @@ int vtkPlanarMapper::MatrixVectorMultiply(std::vector<std::vector<double> > &mat
       updateVal = mat[i][j]*inVec[j];
     }
     outVec[i] = updateVal;
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-//Determine type of intersection
-int vtkPlanarMapper::GetBoundaryLoop()
-{
-  vtkIdType nextCell;
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-  vtkDataArray *pointIds = this->Boundaries->GetPointData()->GetArray(this->InternalIdsArrayName);
-  int numInterPts = this->Boundaries->GetNumberOfPoints();
-  int numInterLines = this->Boundaries->GetNumberOfLines();
-  this->Boundaries->BuildLinks();
-
-  int count = 0;
-  vtkIdType startPt = pointIds->LookupValue(this->BoundaryCorners[0]);
-  this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
-  this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());
-  this->BoundaryLoop->Allocate(this->Boundaries->GetNumberOfCells(), 1000);
-  this->Boundaries->GetPointCells(startPt,cellIds);
-
-  nextCell = cellIds->GetId(0);
-  vtkIdType npts, *pts;
-  int testPt = -1;
-  this->Boundaries->GetCellPoints(nextCell, npts, pts);
-  if (pts[0] == startPt)
-    testPt = pts[1];
-  else
-    testPt = pts[0];
-
-  double pt0[3], pt1[3], vec0[3], vec1[3];
-  this->Boundaries->GetPoint(startPt, pt0);
-  this->Boundaries->GetPoint(testPt, pt1);
-  vtkMath::Subtract(pt1, pt0, vec0);
-  vtkMath::Normalize(vec0);
-  vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec1);
-  vtkMath::Normalize(vec1);
-  if (vtkMath::Dot(vec0, vec1) < 0)
-  {
-    nextCell = cellIds->GetId(1);
-  }
-
-  vtkPlanarMapper::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlanarMapper::RunLoopFind(vtkPolyData *pd,
-                                 vtkIdType startPt,
-                                 vtkIdType nextCell,
-                                 vtkPolyData *loop)
-{
-  vtkIdType prevPt = startPt;
-  vtkIdType nextPt = startPt;
-  vtkSmartPointer<vtkIdList> pointIds = vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-
-  pd->GetCellPoints(nextCell,pointIds);
-
-  if (pointIds->GetId(0) == nextPt)
-    nextPt = pointIds->GetId(1);
-  else
-    nextPt = pointIds->GetId(0);
-  vtkSmartPointer<vtkIdList> newline = vtkSmartPointer<vtkIdList>::New();
-  newline->SetNumberOfIds(2);
-  newline->SetId(0, prevPt);
-  newline->SetId(1, nextPt);
-  //newline.id = nextCell;
-  loop->InsertNextCell(VTK_LINE, newline);
-
-  while(nextPt != startPt)
-  {
-    pd->GetPointCells(nextPt,cellIds);
-    if (cellIds->GetId(0) == nextCell)
-      nextCell = cellIds->GetId(1);
-    else
-      nextCell = cellIds->GetId(0);
-
-    pd->GetCellPoints(nextCell,pointIds);
-    prevPt = nextPt;
-    if (pointIds->GetId(0) == nextPt)
-      nextPt = pointIds->GetId(1);
-    else
-      nextPt = pointIds->GetId(0);
-
-    vtkSmartPointer<vtkIdList> newestline = vtkSmartPointer<vtkIdList>::New();
-    newestline->SetNumberOfIds(2);
-    newestline->InsertId(0, prevPt);
-    newestline->InsertId(1, nextPt);
-    //newestline.id = nextCell;
-    loop->InsertNextCell(VTK_LINE, newestline);
   }
 
   return 1;
