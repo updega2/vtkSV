@@ -510,6 +510,7 @@ int vtkPlanarMapper::SetBoundaries()
   this->BoundaryMapper->Update();
 
   vtkNew(vtkPolyData, boundaryPd);
+  boundaryPd->DeepCopy(this->BoundaryMapper->GetOutput());
   // Check if array internal ids is already on pd
   if (this->CheckArrayExists(boundaryPd, 0, this->InternalIdsArrayName) == 0)
   {
