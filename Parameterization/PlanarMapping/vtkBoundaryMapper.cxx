@@ -31,6 +31,7 @@
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkXMLPolyDataWriter.h"
 
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
@@ -262,27 +263,30 @@ int vtkBoundaryMapper::GetBoundaryLoop()
  */
 int vtkBoundaryMapper::FindBoundaries()
 {
-  vtkSmartPointer<vtkFeatureEdges> finder =
-    vtkSmartPointer<vtkFeatureEdges>::New();
+  vtkNew(vtkFeatureEdges, finder);
   finder->SetInputData(this->InitialPd);
   finder->FeatureEdgesOff();
   finder->NonManifoldEdgesOff();
   finder->BoundaryEdgesOn();
   finder->Update();
 
-  vtkSmartPointer<vtkConnectivityFilter> connector =
-    vtkSmartPointer<vtkConnectivityFilter>::New();
+  vtkNew(vtkConnectivityFilter, connector);
   connector->SetInputData(finder->GetOutput());
   connector->SetExtractionMode(VTK_EXTRACT_ALL_REGIONS);
   connector->ColorRegionsOn();
   connector->Update();
 
-  vtkSmartPointer<vtkDataSetSurfaceFilter> surfacer =
-    vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
 
   this->Boundaries->DeepCopy(surfacer->GetOutput());
+
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Boundaries.vtp";
+  vtkNew(vtkXMLPolyDataWriter, writer);
+  writer->SetInputData(this->Boundaries);
+  writer->SetFileName(filename.c_str());
+  writer->Write();
 
   if (this->Boundaries->GetNumberOfCells() == 0)
   {

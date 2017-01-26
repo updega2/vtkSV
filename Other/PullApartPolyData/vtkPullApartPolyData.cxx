@@ -216,15 +216,27 @@ int vtkPullApartPolyData::PullApartCutEdges()
     newPointData->CopyData(this->WorkPd->GetPointData(), i, i);
   }
 
-  double shift[3]; shift[0] = 1.0e-6; shift[1] = 1.0e-6; shift[2] = 1.0e-6;
+  vtkNew(vtkIdList, replaceList);
+  vtkNew(vtkIdList, newPtIdList);
+  double shift[3]; shift[0] = 1.0e-6; shift[1] = 0.0; shift[2] = 0.0;
   for (int i=0; i<numPoints; i++)
   {
     double pt0[3];
     int replacePtId = this->ReplacePointList[i];
+    int newPtId = replaceList->IsId(replacePtId);
     this->WorkPd->GetPoint(replacePtId, pt0);
     double newPt[3];
     vtkMath::Add(pt0, shift, newPt);
-    int newPtId = this->WorkPd->GetPoints()->InsertNextPoint(newPt);
+    if (newPtId == -1)
+    {
+      newPtId = this->WorkPd->GetPoints()->InsertNextPoint(newPt);
+      replaceList->InsertNextId(replacePtId);
+      newPtIdList->InsertNextId(newPtId);
+    }
+    else
+    {
+      newPtId = newPtIdList->GetId(newPtId);
+    }
     newPointData->CopyData(this->WorkPd->GetPointData(), replacePtId, newPtId);
 
     int numCells = this->ReplaceCellList[i].size();
@@ -317,10 +329,6 @@ int vtkPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::
 
   vtkNew(vtkIdList, neighborCells);
   this->WorkPd->GetCellEdgeNeighbors(cellId, p1, p2, neighborCells);
-  if (cellId == 44477)
-  {
-    fprintf(stdout,"Tell ME!!! %lld\n", neighborCells->GetNumberOfIds());
-  }
   if (neighborCells->GetNumberOfIds() == 1)
   {
     vtkIdType npts, *pts;

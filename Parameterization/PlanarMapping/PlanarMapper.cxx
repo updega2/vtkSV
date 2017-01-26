@@ -168,10 +168,15 @@ int main(int argc, char *argv[])
   boundaryCorners->SetNumberOfComponents(1);
   boundaryCorners->SetNumberOfTuples(4);
   // 0103_0001
-  boundaryCorners->SetValue(0,4081);
-  boundaryCorners->SetValue(1,370);
-  boundaryCorners->SetValue(2,10);
-  boundaryCorners->SetValue(3,4016);
+  //boundaryCorners->SetValue(0,4081);
+  //boundaryCorners->SetValue(1,370);
+  //boundaryCorners->SetValue(2,10);
+  //boundaryCorners->SetValue(3,4016);
+  // 0110_0001
+  boundaryCorners->SetValue(0,5642);
+  boundaryCorners->SetValue(1,3624);
+  boundaryCorners->SetValue(2,4742);
+  boundaryCorners->SetValue(3,5610);
   // HalfSphere
   //boundaryCorners->SetValue(0,15);
   //boundaryCorners->SetValue(1,9);
