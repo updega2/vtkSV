@@ -26,7 +26,9 @@
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMergePoints.h"
 #include "vtkPointData.h"
+#include "vtkPointLocator.h"
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedCharArray.h"
@@ -53,6 +55,9 @@ vtkBoundaryMapper::vtkBoundaryMapper()
   this->BoundaryLoop  = vtkPolyData::New();
 
   this->InternalIdsArrayName = NULL;
+
+  this->SetObjectXAxis(1.0, 0.0, 0.0);
+  this->SetObjectZAxis(0.0, 0.0, 1.0);
 }
 
 //---------------------------------------------------------------------------
@@ -223,6 +228,7 @@ int vtkBoundaryMapper::GetBoundaryLoop()
 
   int count = 0;
   vtkIdType startPt = pointIds->LookupValue(this->BoundaryIds->GetValue(0));
+  fprintf(stdout,"Start Point is!: %lld\n", this->BoundaryIds->GetValue(0));
   this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
   this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());
   this->BoundaryLoop->Allocate(this->Boundaries->GetNumberOfCells(), 1000);
@@ -263,9 +269,12 @@ int vtkBoundaryMapper::GetBoundaryLoop()
  */
 int vtkBoundaryMapper::FindBoundaries()
 {
+  vtkIndent indenter;
+  vtkNew(vtkPointLocator, locator);
   vtkNew(vtkFeatureEdges, finder);
   finder->SetInputData(this->InitialPd);
   finder->FeatureEdgesOff();
+  //finder->SetLocator(locator);
   finder->NonManifoldEdgesOff();
   finder->BoundaryEdgesOn();
   finder->Update();
@@ -281,12 +290,6 @@ int vtkBoundaryMapper::FindBoundaries()
   surfacer->Update();
 
   this->Boundaries->DeepCopy(surfacer->GetOutput());
-
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Boundaries.vtp";
-  vtkNew(vtkXMLPolyDataWriter, writer);
-  writer->SetInputData(this->Boundaries);
-  writer->SetFileName(filename.c_str());
-  writer->Write();
 
   if (this->Boundaries->GetNumberOfCells() == 0)
   {

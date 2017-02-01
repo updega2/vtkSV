@@ -12,7 +12,7 @@
 
  =========================================================================*/
 
-#include "vtkSquareBoundaryMapper.h"
+#include "vtkSuperSquareBoundaryMapper.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
@@ -166,40 +166,25 @@ int main(int argc, char *argv[])
   vtkSmartPointer<vtkIntArray> boundaryCorners =
     vtkSmartPointer<vtkIntArray>::New();
   boundaryCorners->SetNumberOfComponents(1);
-  boundaryCorners->SetNumberOfTuples(4);
+  boundaryCorners->SetNumberOfTuples(10);
+  int boundaryDivisions[4];
   // 0103_0001
-  boundaryCorners->SetValue(0,4081);
-  boundaryCorners->SetValue(1,370);
-  boundaryCorners->SetValue(2,10);
-  boundaryCorners->SetValue(3,4016);
-  // 0110_0001
-  //boundaryCorners->SetValue(0,5642);
-  //boundaryCorners->SetValue(1,3624);
-  //boundaryCorners->SetValue(2,4742);
-  //boundaryCorners->SetValue(3,5610);
-  // HalfSphere
-  //boundaryCorners->SetValue(0,15);
-  //boundaryCorners->SetValue(1,24);
-  //boundaryCorners->SetValue(2,29);
-  //boundaryCorners->SetValue(3,9);
-  // HalfSphere 2
-  //boundaryCorners->SetValue(0,32);
-  //boundaryCorners->SetValue(1,104);
-  //boundaryCorners->SetValue(2,67);
-  //boundaryCorners->SetValue(3,72);
-  // Aorta
-  //boundaryCorners->SetValue(0,22320);
-  //boundaryCorners->SetValue(1,22691);
-  //boundaryCorners->SetValue(2,22299);
-  //boundaryCorners->SetValue(3,23);
-  // IliacBranchSegme
-  //boundaryCorners->SetValue(0,185);
-  //boundaryCorners->SetValue(1,220);
-  //boundaryCorners->SetValue(2,213);
-  //boundaryCorners->SetValue(3,164);
-  vtkSmartPointer<vtkSquareBoundaryMapper> boundaryMapper =
-    vtkSmartPointer<vtkSquareBoundaryMapper>::New();
+  boundaryCorners->SetValue(0,4081);  //Boundary 1
+  boundaryCorners->SetValue(1,3127);
+  boundaryCorners->SetValue(2,225);
+  boundaryCorners->SetValue(3,292);
+  boundaryCorners->SetValue(4,370); //Boundary 2
+  boundaryCorners->SetValue(5,10);  //Boundary 3
+  boundaryCorners->SetValue(6,131);
+  boundaryCorners->SetValue(7,145);
+  boundaryCorners->SetValue(8,80);
+  boundaryCorners->SetValue(9,4016); //Boundary 4
+  boundaryDivisions[0] = 3; boundaryDivisions[1] = 0; boundaryDivisions[2] = 3; boundaryDivisions[3] = 0;
+
+  vtkSmartPointer<vtkSuperSquareBoundaryMapper> boundaryMapper =
+    vtkSmartPointer<vtkSuperSquareBoundaryMapper>::New();
   boundaryMapper->SetBoundaryIds(boundaryCorners);
+  boundaryMapper->SetSuperBoundaryDivisions(boundaryDivisions);
 
   std::string newDirName = getPath(inputFilename1)+"/"+getRawName(inputFilename1);
   std::string newOutName = getPath(inputFilename1)+"/"+getRawName(inputFilename1)+"/"+getRawName(inputFilename1);
@@ -212,7 +197,7 @@ int main(int argc, char *argv[])
 
   //Write Files
   std::cout<<"Done...Writing Files..."<<endl;
-  WriteVTPFile(newOutName+".vtp",Mapper->GetOutput(0),"_Mapped");
+  WriteVTPFile(newOutName+".vtp",Mapper->GetOutput(0),"_SuperSquareBoundaryMapped");
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

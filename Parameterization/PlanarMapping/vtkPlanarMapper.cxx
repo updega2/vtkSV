@@ -59,9 +59,6 @@
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-#include "svMath.h"
-#include "sparse_matrix.h"
-
 #include <iostream>
 #include <sstream>
 #include <cmath>
@@ -75,9 +72,6 @@ vtkStandardNewMacro(vtkPlanarMapper);
 vtkPlanarMapper::vtkPlanarMapper()
 {
   this->RemoveInternalIds = 1;
-
-  this->SetObjectXAxis(1.0, 0.0, 0.0);
-  this->SetObjectZAxis(0.0, 0.0, 1.0);
 
   this->InitialPd     = vtkPolyData::New();
   this->WorkPd        = vtkPolyData::New();
@@ -95,6 +89,9 @@ vtkPlanarMapper::vtkPlanarMapper()
 
   this->Lambda = 0.5;
   this->Mu     = 0.5;
+
+  this->ATutte = NULL;
+  this->AHarm  = NULL;
 }
 
 //---------------------------------------------------------------------------
@@ -141,6 +138,15 @@ vtkPlanarMapper::~vtkPlanarMapper()
   {
     delete [] this->InternalIdsArrayName;
     this->InternalIdsArrayName = NULL;
+  }
+
+  if (this->ATutte != NULL)
+  {
+    delete this->ATutte;
+  }
+  if (this->AHarm != NULL)
+  {
+    delete this->AHarm;
   }
 }
 
@@ -287,13 +293,8 @@ int vtkPlanarMapper::PrepFilter()
   }
 
   // Set the size of the matrices
-  this->AHarm.resize(numPoints);
-  this->ATutte.resize(numPoints);
-  for (int i=0; i<numPoints; i++)
-  {
-    this->AHarm[i].resize(numPoints, 0.0);
-    this->ATutte[i].resize(numPoints, 0.0);
-  }
+  this->ATutte = new SparseMatrix(numPoints, numPoints);
+  this->AHarm = new SparseMatrix(numPoints, numPoints);
   this->Xu.resize(numPoints, 0.0);
   this->Xv.resize(numPoints, 0.0);
   this->Bu.resize(numPoints, 0.0);
@@ -396,14 +397,14 @@ int vtkPlanarMapper::ComputeEdgeWeight(vtkPolyData *pd,
       pd->GetCellPoints(cellIds[i], npts, pts);
       for (int k=0; k<npts; k++)
       {
-	if (pts[k] != p0 && pts[k] != p1)
-	{
-	  pd->GetPoint(pts[k], v2);
-	  double angle = 0.0;
-	  vtkPlanarMapper::GetEdgeCotangentAngle(v0, v1, v2, angle);
+        if (pts[k] != p0 && pts[k] != p1)
+        {
+          pd->GetPoint(pts[k], v2);
+          double angle = 0.0;
+          vtkPlanarMapper::GetEdgeCotangentAngle(v0, v1, v2, angle);
 
-	  weight += 0.5*angle;
-	}
+          weight += 0.5*angle;
+        }
       }
     }
   }
@@ -525,8 +526,8 @@ int vtkPlanarMapper::SetBoundaries()
     double pt[3];
     boundaryPd->GetPoint(i, pt);
     // Set diagonal to be 1 for boundary points
-    this->AHarm[id][id] = 1.0;
-    this->ATutte[id][id] = 1.0;
+    this->AHarm->set_element(id, id, 1.0);
+    this->ATutte->set_element(id, id, 1.0);
     // Set right hand side to be point on boundary
     this->Bu[id] = pt[0];
     this->Bv[id] = pt[1];
@@ -670,15 +671,15 @@ int vtkPlanarMapper::SetInternalNodes()
           continue;
         }
 
-        this->AHarm[i][p1] = weight;
-        this->ATutte[i][p1] = 1.0;
+        this->AHarm->set_element(i,p1, weight);
+        this->ATutte->set_element(i, p1, 1.0);
         tot_weight -= weight;
         tot_tutte_weight -= 1.0;
       }
       double pt[3];
       this->WorkPd->GetPoint(i, pt);
-      this->AHarm[i][i] = tot_weight;
-      this->ATutte[i][i] = tot_tutte_weight;
+      this->AHarm->set_element(i, i, tot_weight);
+      this->ATutte->set_element(i, i, tot_tutte_weight);
       this->Xu[i] = pt[0];
       this->Xv[i] = pt[1];
     }
@@ -746,32 +747,14 @@ int vtkPlanarMapper::SolveSystem()
   //  vtkErrorMacro("Error computing matrix vector multiply");
   //  return 0;
   //}
-  int nr = this->AHarm.size();
-  int nc = this->AHarm[0].size();
-  SparseMatrix spHarm(nr, nc);
-  SparseMatrix spTutte(nr, nc);
+  int numPoints = this->WorkPd->GetNumberOfPoints();
 
-  for (int i=0; i<nr; i++)
-  {
-    for (int j=0; j<nc; j++)
-    {
-      if (this->AHarm[i][j] != 0.0)
-      {
-        spHarm.set_element(i, j, this->AHarm[i][j]);
-      }
-      if (this->ATutte[i][j] != 0.0)
-      {
-        spTutte.set_element(i, j, this->ATutte[i][j]);
-      }
-    }
-  }
+  svMath::conjugate_gradient(*this->ATutte, &this->Bu[0], numPoints, &this->Xu[0]);
+  svMath::conjugate_gradient(*this->AHarm, &this->Bu[0], 3*numPoints, &this->Xu[0]);
+  svMath::conjugate_gradient(*this->ATutte, &this->Bv[0], numPoints, &this->Xv[0]);
+  svMath::conjugate_gradient(*this->AHarm, &this->Bv[0], 3*numPoints, &this->Xv[0]);
 
-  svMath::conjugate_gradient(spTutte, &this->Bu[0], nr, &this->Xu[0]);
-  svMath::conjugate_gradient(spHarm, &this->Bu[0], 3*nr, &this->Xu[0]);
-  svMath::conjugate_gradient(spTutte, &this->Bv[0], nr, &this->Xv[0]);
-  svMath::conjugate_gradient(spHarm, &this->Bv[0], 3*nr, &this->Xv[0]);
-
-  for (int i=0; i<nc; i++)
+  for (int i=0; i<numPoints; i++)
   {
     double pt[3];
     pt[0] = this->Xu[i];

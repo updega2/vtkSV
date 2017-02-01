@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkPullApartPolyData.h
+/** @file vtkFindGeodesicPath.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,70 +43,98 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkPullApartPolyData_h
-#define vtkPullApartPolyData_h
+#ifndef vtkFindGeodesicPath_h
+#define vtkFindGeodesicPath_h
 
 #include "vtkPolyDataAlgorithm.h"
 
 #include "vtkEdgeTable.h"
-#include "vtkDoubleArray.h"
+#include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtkPullApartPolyData : public vtkPolyDataAlgorithm
+class vtkFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkPullApartPolyData* New();
-  //vtkTypeRevisionMacro(vtkPullApartPolyData, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  static vtkFindGeodesicPath* New();
+  //vtkTypeRevisionMacro(vtkFindGeodesicPath, vtkPolyDataAlgorithm);
+  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
 
   // Description:
-  // String to separate the polydata at. 1 Indicates the points that are along
-  // separation line, everything else should be 0
-  vtkGetStringMacro(CutPointsArrayName);
-  vtkSetStringMacro(CutPointsArrayName);
+  // Print statements used for debugging
+  vtkGetMacro(Verbose, int);
+  vtkSetMacro(Verbose, int);
 
   // Description:
-  // The list of points that are to be replaced
-  vtkGetObjectMacro(ReplacePointList, vtkIdList);
+  // Point that will be close to the boundary in which the boundary
+  // should be
+  vtkGetVector3Macro(ClosePt, double);
+  vtkSetVector3Macro(ClosePt, double);
 
   // Description:
-  // The list that will be the same length as replacepoint list with the ids
-  // corresponding to the new points
-  vtkGetObjectMacro(NewPointList, vtkIdList);
+  // Boundary on which the closest point lies
+  vtkGetObjectMacro(Boundary, vtkPolyData);
+  vtkSetObjectMacro(Boundary, vtkPolyData);
+
+  // Description:
+  // Ids that create the path from the start to the end point (if using end pt)
+  vtkGetObjectMacro(PathIds, vtkIdList);
+  vtkSetObjectMacro(PathIds, vtkIdList);
+
+  // Description:
+  // Point that starts and ends that closest points on the boundaries
+  vtkGetMacro(StartPtId, int);
+  vtkSetMacro(StartPtId, int);
+  vtkGetMacro(EndPtId, int);
+  vtkSetMacro(EndPtId, int);
+
+  // Description:
+  // Add boolean array to polydata indicating whether point is on path to
+  // closest point
+  vtkGetMacro(AddPathBooleanArray, int);
+  vtkSetMacro(AddPathBooleanArray, int);
+
+  vtkGetStringMacro(InternalIdsArrayName);
+  vtkSetStringMacro(InternalIdsArrayName);
+  vtkGetStringMacro(DijkstraArrayName);
+  vtkSetStringMacro(DijkstraArrayName);
+  vtkGetStringMacro(PathBooleanArrayName);
+  vtkSetStringMacro(PathBooleanArrayName);
 
 protected:
-  vtkPullApartPolyData();
-  ~vtkPullApartPolyData();
+  vtkFindGeodesicPath();
+  ~vtkFindGeodesicPath();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) VTK_OVERRIDE;
 
   int PrepFilter();
   int RunFilter();
-  int FindEdgeCells();
-  int PullApartCutEdges();
-  int FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first);
+  int RunDijkstra();
+  int FindClosestBoundaryPoint();
   int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
 
 private:
-  vtkPullApartPolyData(const vtkPullApartPolyData&);  // Not implemented.
-  void operator=(const vtkPullApartPolyData&);  // Not implemented.
+  vtkFindGeodesicPath(const vtkFindGeodesicPath&);  // Not implemented.
+  void operator=(const vtkFindGeodesicPath&);  // Not implemented.
 
-  char *CutPointsArrayName;
+  int Verbose;
+  double ClosePt[3];
+  int StartPtId;
+  int EndPtId;
+  int AddPathBooleanArray;
+  int RemoveInternalIds;
 
-  // TODO: Add start and end point ids
+  char *InternalIdsArrayName;
+  char *DijkstraArrayName;
+  char *PathBooleanArrayName;
 
-  vtkPolyData  *WorkPd;
-  vtkEdgeTable *EdgeTable;
-  vtkIdList    *ReplacePointList;
-  vtkIdList    *NewPointList;
-
-  std::vector<int> ReplacePointVector;
-  std::vector<std::vector<int> > ReplaceCellVector;
-
+  vtkPolyData *WorkPd;
+  vtkPolyData *Boundary;
+  vtkIdList   *PathIds;
+  vtkIntArray *PathBoolean;
 };
 
 #endif

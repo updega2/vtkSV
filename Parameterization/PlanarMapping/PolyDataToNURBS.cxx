@@ -1,8 +1,8 @@
 //
-//  SphericalConformalMapper.cxx
+//  PolyDataToNURBS.cxx
 //
 //
-//  Created by Adam Updegrove on 6/4/16.
+//  Created by Adam Updegrove on 10/4/14.
 //
 //
 
@@ -12,20 +12,19 @@
 
  =========================================================================*/
 
-#include "vtkSquareBoundaryMapper.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
 #include "vtkDataWriter.h"
+#include "vtkDoubleArray.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkIntArray.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkPlanarMapper.h"
+#include "vtkPolyDataToNURBSFilter.h"
 #include "vtkSTLReader.h"
-#include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
@@ -144,75 +143,61 @@ void WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyData,std::stri
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
+  if (argc != 5)
   {
-      std::cout << "Incorrect Usage! Should be:" <<endl;
-      std::cout << "./PlanarMapper [filename]" <<endl;
+      std::cout << "Need four objects: [PolyData with Ids] [Centerlines] [S2 Matching Parameterization] [S2 Matching Open Parameterization]!" <<endl;
       return EXIT_FAILURE;
   }
 
   //Create string from input File Name on command line
   std::string inputFilename1 = argv[1];
+  std::string inputFilename2 = argv[2];
+  std::string inputFilename3 = argv[3];
+  std::string inputFilename4 = argv[4];
 
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPlanarMapper> Mapper =
-	  vtkSmartPointer<vtkPlanarMapper>::New();
+  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPolyData> pd3 = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPolyData> pd4 = vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPolyDataToNURBSFilter> Converter =
+	  vtkSmartPointer<vtkPolyDataToNURBSFilter>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   ReadInputFile(inputFilename1,pd1);
+  ReadInputFile(inputFilename2,pd2);
+  ReadInputFile(inputFilename3,pd3);
+  ReadInputFile(inputFilename4,pd4);
 
-  vtkSmartPointer<vtkIntArray> boundaryCorners =
-    vtkSmartPointer<vtkIntArray>::New();
-  boundaryCorners->SetNumberOfComponents(1);
-  boundaryCorners->SetNumberOfTuples(4);
-  // 0103_0001
-  boundaryCorners->SetValue(0,4081);
-  boundaryCorners->SetValue(1,370);
-  boundaryCorners->SetValue(2,10);
-  boundaryCorners->SetValue(3,4016);
-  // 0110_0001
-  //boundaryCorners->SetValue(0,5642);
-  //boundaryCorners->SetValue(1,3624);
-  //boundaryCorners->SetValue(2,4742);
-  //boundaryCorners->SetValue(3,5610);
-  // HalfSphere
-  //boundaryCorners->SetValue(0,15);
-  //boundaryCorners->SetValue(1,24);
-  //boundaryCorners->SetValue(2,29);
-  //boundaryCorners->SetValue(3,9);
-  // HalfSphere 2
-  //boundaryCorners->SetValue(0,32);
-  //boundaryCorners->SetValue(1,104);
-  //boundaryCorners->SetValue(2,67);
-  //boundaryCorners->SetValue(3,72);
-  // Aorta
-  //boundaryCorners->SetValue(0,22320);
-  //boundaryCorners->SetValue(1,22691);
-  //boundaryCorners->SetValue(2,22299);
-  //boundaryCorners->SetValue(3,23);
-  // IliacBranchSegme
-  //boundaryCorners->SetValue(0,185);
-  //boundaryCorners->SetValue(1,220);
-  //boundaryCorners->SetValue(2,213);
-  //boundaryCorners->SetValue(3,164);
-  vtkSmartPointer<vtkSquareBoundaryMapper> boundaryMapper =
-    vtkSmartPointer<vtkSquareBoundaryMapper>::New();
-  boundaryMapper->SetBoundaryIds(boundaryCorners);
-
+  //OPERATION
   std::string newDirName = getPath(inputFilename1)+"/"+getRawName(inputFilename1);
   std::string newOutName = getPath(inputFilename1)+"/"+getRawName(inputFilename1)+"/"+getRawName(inputFilename1);
   system(("mkdir -p "+newDirName).c_str());
-  //OPERATION
   std::cout<<"Performing Operation..."<<endl;
-  Mapper->SetInputData(pd1);
-  Mapper->SetBoundaryMapper(boundaryMapper);
-  Mapper->Update();
+  Converter->SetInputData(pd1);
+  Converter->SetCenterlines(pd2);
+  Converter->SetCubeS2Pd(pd3);
+  Converter->SetOpenCubeS2Pd(pd4);
+  Converter->SetVerbose(1);
+  Converter->SetBoundaryPointsArrayName("BoundaryPoints");
+  Converter->SetGroupIdsArrayName("GroupIds");
+  Converter->SetSegmentIdsArrayName("SegmentIds");
+  Converter->SetSliceIdsArrayName("SliceIds");
+  Converter->SetSphereRadiusArrayName("MaximumInscribedSphereRadius");
+  Converter->SetInternalIdsArrayName("TmpInternalIds");
+  Converter->SetDijkstraArrayName("DijkstraDistance");
+  Converter->SetBooleanPathArrayName("IsPath");
+  Converter->Update();
+
+  vtkSmartPointer<vtkPolyData> output =
+    vtkSmartPointer<vtkPolyData>::New();
+  output = Converter->GetOutput();
 
   //Write Files
   std::cout<<"Done...Writing Files..."<<endl;
-  WriteVTPFile(newOutName+".vtp",Mapper->GetOutput(0),"_Mapped");
+  std::string attachName = "_Converted";
+  WriteVTPFile(newOutName+".vtp",output,attachName);
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

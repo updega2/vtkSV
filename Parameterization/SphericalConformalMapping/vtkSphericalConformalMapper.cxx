@@ -390,14 +390,14 @@ int vtkSphericalConformalMapper::ComputeEdgeWeight(vtkPolyData *pd,
       pd->GetCellPoints(cellIds[i], npts, pts);
       for (int k=0; k<npts; k++)
       {
-	if (pts[k] != p0 && pts[k] != p1)
-	{
-	  pd->GetPoint(pts[k], v2);
-	  double angle = 0.0;
-	  vtkSphericalConformalMapper::GetEdgeCotangentAngle(v0, v1, v2, angle);
+        if (pts[k] != p0 && pts[k] != p1)
+        {
+          pd->GetPoint(pts[k], v2);
+          double angle = 0.0;
+          vtkSphericalConformalMapper::GetEdgeCotangentAngle(v0, v1, v2, angle);
 
-	  weight += 0.5*angle;
-	}
+          weight += 0.5*angle;
+        }
       }
     }
   }
