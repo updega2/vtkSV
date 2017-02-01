@@ -150,16 +150,12 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int ComputeCenterlines();
-  int ExtractBranches();
-  int PreProcessPolyData();
+  int PrepFilter();
   int FindGroupBoundaries();
-  int BuildSkeleton();
   int BuildPolycube();
   void CheckLength(int &ptId, const int numPts,
                   int &done);
   void UpdatePtId(int &ptId);
-  int SetDir(const int dir, double newDir[3]);
   int FormDirectionTable(int dirTable[6][4]);
   int CheckStartSurgeryPoints(vtkPolyData *pd, vtkIdList *startPoints);
   int CriticalSurgeryPoints(vtkPolyData *pd,
@@ -169,6 +165,9 @@ protected:
                            double startPt[3],
                            double secondPt[3],
                            vtkIdList *fixedSurgeryPoints);
+  int GetFirstSurgeryPoints(vtkPolyData *pd, int pointId,
+                            vtkIdList *surgeryPoints,
+                            double xvec[3], double zvec[3]);
   int GetSurgeryPoints(vtkPolyData *pd,
                        vtkDataArray *pointIds,
                        const double clStartPt[3],
@@ -182,6 +181,10 @@ protected:
                            const int front,
                            const int back,
                            vtkIdList *surgeryPoints);
+  int GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3],
+                           vtkIdList *surgeryPoints,
+                           double xvec[3], double zvec[3],
+                           vtkIdList *surgeryLineIds);
   int DetermineSliceStrategy(vtkPolyData *branchPd,
                              const int branchId,
                              vtkPolyData *branchCenterline,
@@ -206,10 +209,6 @@ protected:
                        svGCell *gCell,
                        int &segmentId,
                        vtkDataArray *segmentIds);
-  int GetRegionsOnPd(vtkPolyData *pd,
-                     vtkIdList *regionIds);
-  int GetNumberOfSlicesBefore(const int id, int &numBefore);
-  bool ListsMatch(vtkIdList *listA, vtkIdList *listB);
   int GetSectionZAxis(const double endPt[3], const double startPt[3],
                       double zvec[3]);
   int GetSectionXAxis(const double endPt[3], const double startPt[3],
@@ -226,8 +225,6 @@ protected:
                          const std::string &arrName);
   int GetBranchLength(vtkPolyData *points, double &length);
   int GetCloseGeodesicPoint(vtkPolyData *pd, double centerPt[3], const int startPtId, int &returnStartId, double zvec[3], vtkPolyData *boundary);
-  int GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3], vtkIdList *surgeryPoints, double xvec[3], double zvec[3], vtkIdList *surgeryLineIds);
-  int GetFirstSurgeryPoints(vtkPolyData *pd, int pointId, vtkIdList *surgeryPoints, double xvec[3], double zvec[3]);
   int GetClose3DPoint(vtkPolyData *pd, double centerPt[3], const int startPtId, int &returnStartId, double zvec[3], vtkPolyData *boundary);
   int GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3], double zvec[3], int &startSecondId);
   int AddSurgeryPoints(vtkIdList *surgeryLineIds, vtkPoints *surgeryPts, vtkCellArray *surgeryLines, vtkIntArray *surgeryData);

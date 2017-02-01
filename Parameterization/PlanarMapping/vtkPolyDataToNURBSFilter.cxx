@@ -325,10 +325,10 @@ int vtkPolyDataToNURBSFilter::PerformMappings()
       {
         this->MapBranch(branchPd, surgeryLinePd, sliceIds, appender);
       }
-      //else
-      //{
-      //  this->MapBifurcation(branchPd, sliceIds, appender);
-      //}
+      else
+      {
+        this->MapBifurcation(branchPd, sliceIds, appender);
+      }
     }
   }
   appender->Update();
@@ -545,6 +545,8 @@ int vtkPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
     ripIds->SetValue(i, pointIds->LookupValue(seamIds->GetValue(i)));
   }
 
+  //fprintf(stdout,"XVec: %.4f %.4f %.4f\n", xvec[0], xvec[1], xvec[2]);
+  //fprintf(stdout,"ZVec: %.4f %.4f %.4f\n", zvec[0], zvec[1], zvec[2]);
   vtkNew(vtkPullApartPolyData, ripper);
   ripper->SetInputData(slicePd);
   ripper->SetStartPtId(firstCorners->GetValue(0));

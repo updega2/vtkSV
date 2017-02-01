@@ -248,12 +248,10 @@ int vtkPolyDataSliceAndDiceFilter::RequestData(
   this->WorkPd->DeepCopy(this->InitialPd);
   if (this->Centerlines == NULL)
   {
-    this->Centerlines = vtkPolyData::New();
-    this->ComputeCenterlines();
-    this->ExtractBranches();
+    vtkErrorMacro("Error: no centerliens provided\n");
   }
 
-  if (this->PreProcessPolyData() != 1)
+  if (this->PrepFilter() != 1)
   {
     vtkErrorMacro("Error in preprocessing the polydata\n");
     return 0;
@@ -305,29 +303,7 @@ int vtkPolyDataSliceAndDiceFilter::RequestData(
  * @param *pd
  * @return
  */
-int vtkPolyDataSliceAndDiceFilter::ComputeCenterlines()
-{
-  return 0;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPolyDataSliceAndDiceFilter::ExtractBranches()
-{
-  return 0;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPolyDataSliceAndDiceFilter::PreProcessPolyData()
+int vtkPolyDataSliceAndDiceFilter::PrepFilter()
 {
   if (this->FindGroupBoundaries() != 1)
   {
@@ -361,41 +337,6 @@ int vtkPolyDataSliceAndDiceFilter::PreProcessPolyData()
   }
   this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
 
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPolyDataSliceAndDiceFilter::SetDir(const int dir, double newDir[3])
-{
-  if (dir == RIGHT)
-  {
-    newDir[0] = 1.0; newDir[1] = 0.0; newDir[2] = 0.0;
-  }
-  else if (dir == LEFT)
-  {
-    newDir[0] = -1.0; newDir[1] = 0.0; newDir[2] = 0.0;
-  }
-  else if (dir == FRONT)
-  {
-    newDir[0] = 0.0; newDir[1] = 1.0; newDir[2] = 0.0;
-  }
-  else if (dir == BACK)
-  {
-    newDir[0] = 0.0; newDir[1] = -1.0; newDir[2] = 0.0;
-  }
-  else if (dir == UP)
-  {
-    newDir[0] = 0.0; newDir[1] = 0.0; newDir[2] = 1.0;
-  }
-  else if (dir == DOWN)
-  {
-    newDir[0] = 0.0; newDir[1] = 0.0; newDir[2] = -1.0;
-  }
   return 1;
 }
 
@@ -571,7 +512,7 @@ int vtkPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *br
   this->ThresholdPd(this->WorkPd, branchId, branchId, 1,
     this->SegmentIdsArrayName, branchPd);
 
-  if (branchPd->GetNumberOfPoints() != 0)
+  if (branchPd != NULL)
   {
     vtkNew(vtkPolyData, centerlineBranchPd);
     this->ThresholdPd(this->Centerlines, branchId, branchId, 1,
@@ -1461,29 +1402,6 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcations()
  * @param *pd
  * @return
  */
-int vtkPolyDataSliceAndDiceFilter::GetRegionsOnPd(vtkPolyData *pd,
-                                                  vtkIdList *regionIds)
-{
-  int numCells = pd->GetNumberOfCells();
-  vtkIntArray *groupIds = vtkIntArray::SafeDownCast(
-    pd->GetCellData()->GetArray(this->GroupIdsArrayName));
-  for (int i=0; i<numCells; i++)
-  {
-    int groupId = groupIds->GetValue(i);
-    if (regionIds->IsId(groupId) == -1)
-    {
-      regionIds->InsertNextId(groupId);
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
                                                     svGCell *gCell,
                                                     int &segmentId,
@@ -1867,26 +1785,6 @@ int vtkPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
  * @param *pd
  * @return
  */
-int vtkPolyDataSliceAndDiceFilter::GetNumberOfSlicesBefore(const int id, int &numBefore)
-{
-  int numTups = this->NumberOfCubes->GetNumberOfTuples();
-  for (int i=0; i<numTups; i++)
-  {
-    if (this->NumberOfCubes->GetComponent(i, 0) == id)
-    {
-      numBefore = this->NumberOfCubes->GetComponent(i, 2) -
-                  this->NumberOfCubes->GetComponent(i, 1);
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkPolyDataSliceAndDiceFilter::GetCentroidOfPoints(vtkPoints *points,
                                                        double centroid[3])
 {
@@ -1923,6 +1821,11 @@ int vtkPolyDataSliceAndDiceFilter::ThresholdPd(vtkPolyData *pd, int minVal,
   thresholder->SetInputArrayToProcess(0, 0, 0, dataType, arrayName.c_str());
   thresholder->ThresholdBetween(minVal, maxVal);
   thresholder->Update();
+  if (thresholder->GetOutput()->GetNumberOfPoints() == 0)
+  {
+    returnPd = NULL;
+    return 0;
+  }
 
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(thresholder->GetOutput());
@@ -1931,35 +1834,6 @@ int vtkPolyDataSliceAndDiceFilter::ThresholdPd(vtkPolyData *pd, int minVal,
   returnPd->DeepCopy(surfacer->GetOutput());
 
   return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-bool vtkPolyDataSliceAndDiceFilter::ListsMatch(vtkIdList *listA, vtkIdList *listB)
-{
-  int numA = listA->GetNumberOfIds();
-  int numB = listB->GetNumberOfIds();
-  if (numA != numB)
-  {
-    fprintf(stderr,"Lists are different sizes\n");
-    return 0;
-  }
-  int match=0;
-  for (int i=0; i<numA; i++)
-  {
-    if (listA->GetId(i) == listB->GetId(i))
-    {
-      match++;
-    }
-  }
-  if (match == numA)
-    return 1;
-  else
-    return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -2420,68 +2294,6 @@ int vtkPolyDataSliceAndDiceFilter::GetClose3DPoint(vtkPolyData *pd, double cente
   //fprintf(stdout,"Locator ID: %d\n", endPtId);
   //fprintf(stdout,"MinDist ID: %d\n", minId);
 
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPolyDataSliceAndDiceFilter::GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3], double zvec[3], int &returnSecondId)
-{
-  pd->BuildLinks();
-
-  vtkSmartPointer<vtkIdList> cellIds =
-    vtkSmartPointer<vtkIdList>::New();
-  pd->GetPointCells(ptId, cellIds);
-  double startPt[3];
-  pd->GetPoint(ptId, startPt);
-
-  int numIds = cellIds->GetNumberOfIds();
-  if (numIds != 2)
-  {
-    vtkErrorMacro("Number of connected contour ids is not 2");
-    return 0;
-  }
-
-  vtkIdType npts, *pts;
-  pd->GetCellPoints(cellIds->GetId(0), npts, pts);
-  int checkPtId = -1;
-  if (pts[0] != ptId)
-  {
-    checkPtId = pts[0];
-  }
-  else
-  {
-    checkPtId = pts[1];
-  }
-
-  double checkPt[3];
-  pd->GetPoint(checkPtId, checkPt);
-  double vec0[3], vec1[3], vec2[3];
-  vtkMath::Subtract(startPt, centerPt, vec0);
-  vtkMath::Subtract(checkPt, startPt, vec1);
-  vtkMath::Cross(vec0, vec1, vec2);
-  double dotCheck = vtkMath::Dot(vec2, zvec);
-  if (dotCheck > 0)
-  {
-    returnSecondId = checkPtId;
-    return 1;
-  }
-
-  pd->GetCellPoints(cellIds->GetId(1), npts, pts);
-  if (pts[0] != ptId)
-  {
-    checkPtId = pts[0];
-  }
-  else
-  {
-    checkPtId = pts[1];
-  }
-  returnSecondId = checkPtId;
 
   return 1;
 }

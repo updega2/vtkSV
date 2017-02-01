@@ -228,7 +228,7 @@ int vtkBoundaryMapper::GetBoundaryLoop()
 
   int count = 0;
   vtkIdType startPt = pointIds->LookupValue(this->BoundaryIds->GetValue(0));
-  fprintf(stdout,"Start Point is!: %lld\n", this->BoundaryIds->GetValue(0));
+  //fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
   this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
   this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());
   this->BoundaryLoop->Allocate(this->Boundaries->GetNumberOfCells(), 1000);
@@ -253,6 +253,26 @@ int vtkBoundaryMapper::GetBoundaryLoop()
   if (vtkMath::Dot(vec0, vec1) < 0)
   {
     nextCell = cellIds->GetId(1);
+  }
+  else
+  {
+    vtkIdType checknpts, *checkpts;
+    this->Boundaries->GetCellPoints(cellIds->GetId(1), checknpts, checkpts);
+    int doubleCheckPt = -1;
+    if (checkpts[0] == startPt)
+      doubleCheckPt = checkpts[1];
+    else
+      doubleCheckPt = checkpts[0];
+    double pt2[3], vec2[3], vec3[3];
+    this->Boundaries->GetPoint(doubleCheckPt, pt2);
+    vtkMath::Subtract(pt2, pt0, vec2);
+    vtkMath::Normalize(vec2);
+    vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec3);
+    vtkMath::Normalize(vec3);
+    if (vtkMath::Dot(vec2, vec3) > vtkMath::Dot(vec0, vec1))
+    {
+      nextCell = cellIds->GetId(1);
+    }
   }
 
   vtkBoundaryMapper::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);
