@@ -127,6 +127,8 @@ public:
   static int GetClosestPointConnectedRegion(vtkPolyData *inPd,
                                             double origin[3],
                                             vtkPolyData *outPd);
+  static int GraphToPolycube(svGCell *gCell, void *arg0,
+                             void *arg1, void *arg2);
 
 
   enum DIRECTIONS
@@ -142,8 +144,6 @@ public:
 protected:
   vtkPolyDataSliceAndDiceFilter();
   ~vtkPolyDataSliceAndDiceFilter();
-
-  vtkSetStringMacro(NumberOfCubesArrayName);
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
@@ -207,7 +207,6 @@ protected:
   int SliceBifurcations();
   int SliceBifurcation(vtkPolyData *pd,
                        svGCell *gCell,
-                       int &segmentId,
                        vtkDataArray *segmentIds);
   int GetSectionZAxis(const double endPt[3], const double startPt[3],
                       double zvec[3]);
@@ -240,7 +239,6 @@ private:
   char *SegmentIdsArrayName;
   char *InternalIdsArrayName;
   char *DijkstraArrayName;
-  char *NumberOfCubesArrayName;
 
   vtkPolyData    *InitialPd;
   vtkPolyData    *WorkPd;
@@ -255,19 +253,10 @@ private:
   int ConstructPolycube;
   int SliceDirection;
   int TotalSliceId;
-  int MaxGroupNumber;
-  int MaxSegmentNumber;
   int DirectionTable[6][4];
 
   double FirstBranchVec[3];
   double SliceLength;
-
-  vtkIntArray    *StartPtIds;
-  vtkDoubleArray *TopNormals;
-  vtkDoubleArray *RightNormals;
-  vtkDoubleArray *BifTopNormals;
-  vtkDoubleArray *BifRightNormals;
-  vtkIntArray    *NumberOfCubes;
 
   vtkGeneralizedPolycube *Polycube;
 };

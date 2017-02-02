@@ -96,8 +96,6 @@ public:
   vtkGetObjectMacro(OpenCubeS2Pd, vtkPolyData);
   vtkSetObjectMacro(OpenCubeS2Pd, vtkPolyData);
 
-  vtkGetObjectMacro(StartPtIds, vtkIntArray);
-
 protected:
   vtkPolyDataToNURBSFilter();
   ~vtkPolyDataToNURBSFilter();
@@ -111,11 +109,10 @@ protected:
   int ComputeCenterlines();
   int ExtractBranches();
   int SliceAndDice();
-  int GetBranch(const int branchId, vtkPolyData *branchPd, vtkPolyData *surgeryLinePd);
-  int GetSlice(const int sliceId, vtkPolyData *branchPd, vtkPolyData *slicePd);
-  int MapBranch(vtkPolyData *branchPd, vtkPolyData *surgeryLinePd,
-                vtkDataArray *sliceIds, vtkAppendPolyData *appender);
-  int MapBifurcation(vtkPolyData *bifurcationPd, vtkDataArray *sliceIds, vtkAppendPolyData *appender);
+  int GetSegment(const int segmentId, vtkPolyData *segmentPd, vtkPolyData *surgeryLinePd);
+  int GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd);
+  int MapBranch(const int branchId, vtkAppendPolyData *appender);
+  int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender);
   int MapSliceToS2(vtkPolyData *slicePd, vtkPolyData *surgeryLinePd, vtkPolyData *sliceS2Pd,
                      vtkIntArray *firstCorners, vtkIntArray *secondCorners,
                      double xvec[3], double zvec[3]);
@@ -139,10 +136,6 @@ private:
   vtkPolyData *ParameterizedPd;
   vtkPolyData *Centerlines;
   vtkPolyData *SurgeryLines;
-  vtkIntArray *StartPtIds;
-
-  vtkDoubleArray * SliceRightNormals;
-  vtkDoubleArray * SliceTopNormals;
 
   char *SliceIdsArrayName;
   char *GroupIdsArrayName;

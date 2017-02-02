@@ -95,20 +95,9 @@ vtkPolyDataSliceAndDiceFilter::vtkPolyDataSliceAndDiceFilter()
   this->WorkPd          = vtkPolyData::New();
   this->GraphPd         = vtkPolyData::New();
   this->SurgeryLines    = vtkPolyData::New();
+  this->Polycube        = vtkGeneralizedPolycube::New();
   this->Centerlines     = NULL;
-  this->Polycube        = NULL;
   this->CenterlineGraph = NULL;
-
-  this->StartPtIds      = vtkIntArray::New();
-  this->TopNormals      = vtkDoubleArray::New();
-  this->RightNormals    = vtkDoubleArray::New();
-  this->BifTopNormals   = vtkDoubleArray::New();
-  this->BifRightNormals = vtkDoubleArray::New();
-  this->NumberOfCubes   = vtkIntArray::New();
-  this->StartPtIds->SetNumberOfComponents(4);
-  this->RightNormals->SetNumberOfComponents(3);
-  this->TopNormals->SetNumberOfComponents(3);
-  this->NumberOfCubes->SetNumberOfComponents(3);
 
   this->BoundaryPointsArrayName = NULL;
   this->GroupIdsArrayName = NULL;
@@ -120,8 +109,6 @@ vtkPolyDataSliceAndDiceFilter::vtkPolyDataSliceAndDiceFilter()
   this->ConstructPolycube = 0;
   this->SliceDirection = 0;
   this->TotalSliceId = 0;
-  this->MaxGroupNumber = 0;
-  this->MaxSegmentNumber = 0;
   this->SliceLength = 1.5;
 }
 
@@ -145,7 +132,7 @@ vtkPolyDataSliceAndDiceFilter::~vtkPolyDataSliceAndDiceFilter()
   }
   if (this->Centerlines != NULL)
   {
-    this->Centerlines->Delete();
+    this->Centerlines->UnRegister(this);
     this->Centerlines = NULL;
   }
   if (this->SurgeryLines != NULL)
@@ -162,36 +149,6 @@ vtkPolyDataSliceAndDiceFilter::~vtkPolyDataSliceAndDiceFilter()
   {
     delete this->CenterlineGraph;
     this->CenterlineGraph = NULL;
-  }
-  if (this->StartPtIds != NULL)
-  {
-    this->StartPtIds->Delete();
-    this->StartPtIds = NULL;
-  }
-  if (this->TopNormals != NULL)
-  {
-    this->TopNormals->Delete();
-    this->TopNormals = NULL;
-  }
-  if (this->RightNormals != NULL)
-  {
-    this->RightNormals->Delete();
-    this->RightNormals = NULL;
-  }
-  if (this->BifTopNormals != NULL)
-  {
-    this->BifTopNormals->Delete();
-    this->BifTopNormals = NULL;
-  }
-  if (this->BifRightNormals != NULL)
-  {
-    this->BifRightNormals->Delete();
-    this->BifRightNormals = NULL;
-  }
-  if (this->NumberOfCubes != NULL)
-  {
-    this->NumberOfCubes->Delete();
-    this->NumberOfCubes = NULL;
   }
 
   if (this->BoundaryPointsArrayName != NULL)
@@ -260,15 +217,19 @@ int vtkPolyDataSliceAndDiceFilter::RequestData(
   pdwriter->SetInputData(this->GraphPd);
   pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/graph.vtp");
   pdwriter->Write();
+
+  if (this->BuildPolycube() != 1)
+  {
+    vtkErrorMacro("Error in constructing polycube\n");
+    return 0;
+  }
+
   if (this->SliceBifurcations() != 1)
   {
     vtkErrorMacro("Error in slicing the polydata\n");
     return 0;
   }
-  vtkNew(vtkXMLPolyDataWriter, nwriter);
-  nwriter->SetInputData(this->WorkPd);
-  nwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/whatevs.vtp");
-  nwriter->Write();
+
   if (this->SliceBranches() != 1)
   {
     vtkErrorMacro("Error in slicing the polydata\n");
@@ -278,20 +239,10 @@ int vtkPolyDataSliceAndDiceFilter::RequestData(
   lwriter->SetInputData(this->SurgeryLines);
   lwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/surglines.vtp");
   lwriter->Write();
-  if (this->ConstructPolycube)
-  {
-    this->Polycube = vtkGeneralizedPolycube::New();
-    if (this->BuildPolycube() != 1)
-    {
-      vtkErrorMacro("Error in constructing polycube\n");
-      return 0;
-    }
-  }
-  //vtkNew(vtkXMLUnstructuredGridWriter, writer);
-  //writer->SetInputData(this->Polycube);
-  //writer->SetFileName("/Users/adamupdegrove/Desktop/tmp/polycube.vtu");
-  //writer->Write();
-
+  vtkNew(vtkXMLUnstructuredGridWriter, writer);
+  writer->SetInputData(this->Polycube);
+  writer->SetFileName("/Users/adamupdegrove/Desktop/tmp/polycube.vtu");
+  writer->Write();
 
   output->DeepCopy(this->WorkPd);
   return 1;
@@ -318,10 +269,6 @@ int vtkPolyDataSliceAndDiceFilter::PrepFilter()
   }
 
   this->FormDirectionTable(this->DirectionTable);
-  vtkDataArray *groupIds = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName);
-  double minmax[2];
-  groupIds->GetRange(minmax);
-  this->MaxGroupNumber = int(minmax[1]);
 
   vtkNew(vtkPoints, skeletonPoints);
   vtkNew(vtkCellArray, skeletonCells);
@@ -677,28 +624,22 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranches()
   vtkNew(vtkCellArray, surgeryLines);
   vtkNew(vtkIntArray, surgeryData);
   vtkNew(vtkIntArray, surgeryCellData);
-  for (int i=0; i<=this->MaxSegmentNumber; i++)
+
+  int numSegs = this->CenterlineGraph->NumberOfCells;
+  for (int i=0; i<numSegs; i++)
   {
+    svGCell *gCell = this->CenterlineGraph->GetCell(i);
+    int branchId = gCell->GroupId;
     vtkNew(vtkPolyData, branchPd);
     vtkNew(vtkPolyData, branchCenterline);
-    this->GetBranch(i, branchPd, branchCenterline);
-
+    this->GetBranch(branchId, branchPd, branchCenterline);
     int numPoints = branchPd->GetNumberOfPoints();
 
     if (numPoints != 0)
     {
-      if (i <= this->MaxGroupNumber)
-      {
-        this->SliceBranch(branchPd, branchCenterline, i, sliceIds, surgeryPts,
-                          surgeryLines, surgeryData);
-        surgeryCellData->InsertNextValue(i);
-      }
-      else
-      {
-        this->ReplaceDataOnCells(branchPd, sliceIds,
-                                 this->TotalSliceId, -1, this->InternalIdsArrayName);
-        this->TotalSliceId++;
-      }
+      this->SliceBranch(branchPd, branchCenterline, branchId, sliceIds, surgeryPts,
+                        surgeryLines, surgeryData);
+      surgeryCellData->InsertNextValue(branchId);
     }
   }
   this->SurgeryLines->SetPoints(surgeryPts);
@@ -1191,7 +1132,6 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
                                                vtkIntArray *surgeryData)
 {
   fprintf(stdout,"Slicing branch: %d\n", branchId);
-  int customStart = this->StartPtIds->GetNumberOfTuples();
 
   int numCells = branchPd->GetNumberOfCells();
   int numCenterlinePts = branchCenterline->GetNumberOfPoints();
@@ -1209,9 +1149,12 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   vtkNew(vtkIdList, surgeryPoints);
   this->DetermineSliceStrategy(branchPd, branchId, branchCenterline,
                                startPtId, surgeryPoints, linePtId);
+  double cornerPts[8];
+  for (int i=0; i<4; i++)
+  {
+    cornerPts[i] = surgeryPoints->GetId(i);
+  }
 
-  vtkNew(vtkPoints, testPts);
-  vtkNew(vtkCellArray, testCells);
   vtkNew(vtkIdList, surgeryLineIds);
   int done = 0;
   int sliceId = 0;
@@ -1284,21 +1227,10 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     this->ReplaceDataOnCells(connectedPd, sliceIds,
                              this->TotalSliceId, -1, this->InternalIdsArrayName);
 
-    double surgeryPointIds[4];
-    for (int i=0; i<4; i++)
-    {
-      surgeryPointIds[i] = surgeryPoints->GetId(i);
-
-      //Test polydata
-      double xyz[3]; this->WorkPd->GetPoint(surgeryPointIds[i], xyz);
-      testPts->InsertNextPoint(xyz);
-
-    }
     if (sliceId == 0)
     {
-      this->TopNormals->InsertTuple(this->TotalSliceId, zvec);
-      this->RightNormals->InsertTuple(this->TotalSliceId, xvec);
-      this->StartPtIds->InsertNextTuple(surgeryPointIds);
+      this->Polycube->GetCellData()->GetArray("TopNormal")->InsertTuple(branchId, zvec);
+      this->Polycube->GetCellData()->GetArray("RightNormal")->InsertTuple(branchId, xvec);
     }
     double contourClosePt[3];
     branchCenterline->GetPoint(linePtId, contourClosePt);
@@ -1313,44 +1245,16 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
 
     sliceId++;
   }
-  double surgeryPointIds[4];
   for (int i=0; i<4; i++)
   {
-    surgeryPointIds[i] = surgeryPoints->GetId(i);
-
-    //Test polydata
-    double xyz[3]; this->WorkPd->GetPoint(surgeryPointIds[i], xyz);
-    testPts->InsertNextPoint(xyz);
+    cornerPts[i+4] = surgeryPoints->GetId(i);
   }
-  this->StartPtIds->InsertNextTuple(surgeryPointIds);
+  this->Polycube->GetCellData()->GetArray("CornerPtIds")->InsertTuple(branchId, cornerPts);
   this->AddSurgeryPoints(surgeryLineIds, surgeryPts, surgeryLines, surgeryData);
 
   this->ReplaceDataOnCells(branchPd, sliceIds,
                            this->TotalSliceId, -1, this->InternalIdsArrayName);
-  this->NumberOfCubes->InsertNextTuple3( branchId, 1, this->TotalSliceId);
   this->TotalSliceId++;
-
-  for (int i=0; i<4; i++)
-  {
-    testCells->InsertNextCell(testPts->GetNumberOfPoints()/4);
-    for (int j=i;j<testPts->GetNumberOfPoints(); j+=4)
-    {
-      testCells->InsertCellPoint(j);
-    }
-  }
-  vtkNew(vtkPolyData, testPd);
-  testPd->SetPoints(testPts);
-  testPd->SetLines(testCells);
-  testPd->BuildLinks();
-
-  //std::stringstream out;
-  //out << branchId;
-
-  //std::string filename = "/Users/adamupdegrove/Desktop/tmp/Lines_"+out.str()+".vtp";
-  //vtkNew(vtkXMLPolyDataWriter, writer);
-  //writer->SetInputData(testPd);
-  //writer->SetFileName(filename.c_str());
-  //writer->Write();
 
   return 1;
 }
@@ -1363,8 +1267,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
  */
 int vtkPolyDataSliceAndDiceFilter::SliceBifurcations()
 {
-  vtkDataArray *groupIds = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName);
-  int numIds = groupIds->GetNumberOfTuples();
+  int numIds = this->WorkPd->GetCellData()->
+    GetArray(this->GroupIdsArrayName)->GetNumberOfTuples();
   vtkNew(vtkIntArray, segmentIds);
   segmentIds->SetNumberOfTuples(numIds);
   segmentIds->SetName(this->SegmentIdsArrayName);
@@ -1375,17 +1279,13 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcations()
   ider->Update();
   this->WorkPd->DeepCopy(ider->GetOutput());
 
-  //this->CenterlineGraph->PrintGraph();
   int numSegs = this->CenterlineGraph->NumberOfCells;
-  //this->MaxSegmentNumber = this->CenterlineGraph->NumberOfCells;
-  this->MaxSegmentNumber = this->MaxGroupNumber;
   for (int i=0; i<numSegs; i++)
   {
     svGCell *gCell = this->CenterlineGraph->GetCell(i);
     if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
     {
-      this->MaxSegmentNumber++;
-      this->SliceBifurcation(this->WorkPd, gCell, this->MaxSegmentNumber, segmentIds);
+      this->SliceBifurcation(this->WorkPd, gCell, segmentIds);
     }
   }
 
@@ -1404,10 +1304,10 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcations()
  */
 int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
                                                     svGCell *gCell,
-                                                    int &segmentId,
                                                     vtkDataArray *segmentIds)
 {
   int parentId = gCell->GroupId;
+  int segmentId = parentId + 1;
   double vecs[2][3];
   vtkMath::Subtract(gCell->EndPt, gCell->StartPt, vecs[0]);
   vtkMath::Subtract(gCell->Children[0]->EndPt, gCell->Children[0]->StartPt, vecs[1]);
@@ -1591,8 +1491,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
 
   double xvec[3];
   vtkMath::Subtract(goToFirst, newSlicePt0, xvec);
-  this->BifTopNormals->InsertNextTuple(newSliceNormal0);
-  this->BifRightNormals->InsertNextTuple(xvec);
+  this->Polycube->GetCellData()->GetArray("TopNormal")->InsertTuple(segmentId, newSliceNormal0);
+  this->Polycube->GetCellData()->GetArray("RightNormal")->InsertTuple(segmentId, xvec);
 
   if (vtkMath::Dot(newSliceNormal1, normal2) < 0.0)
     vtkMath::MultiplyScalar(newSliceNormal1, -1.0);
@@ -1704,6 +1604,7 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   new3[5] = fixedSurgeryPoints1->GetId(0),
   new3[6] = fixedSurgeryPoints1->GetId(1),
   new3[7] = goToPoints->GetId(3);
+  this->Polycube->GetCellData()->GetArray("CornerPtIds")->InsertTuple(segmentId, new3);
   for (int i=0; i<8; i++)
   {
     this->SurgeryPointMap.insert(std::make_pair(segmentId, new3[i]));
@@ -1844,94 +1745,66 @@ int vtkPolyDataSliceAndDiceFilter::ThresholdPd(vtkPolyData *pd, int minVal,
  */
 int vtkPolyDataSliceAndDiceFilter::BuildPolycube()
 {
-  vtkDataArray *groupIds = this->GraphPd->GetCellData()->GetArray(this->GroupIdsArrayName);
-  int numIds = groupIds->GetNumberOfTuples();
-  //vtkNew(vtkPolyData, bigGraphPd);
-  //this->BlowUpSkeleton(bigGraphPd);
+  int numCubes = this->CenterlineGraph->NumberOfNodes;
+  fprintf(stdout,"Number : %d\n", numCubes);
+  this->Polycube->SetNumberOfGrids(numCubes);
 
-  double minmax[2];
-  groupIds->GetRange(minmax);
-  int count = 0;
-  for (int i=0; i<=this->MaxSegmentNumber; i++)
+  double dims[3]; dims[0] = 0.5; dims[1] = 0.5; dims[2] = 0.5;
+  double startPt[3];
+  vtkMath::Add(this->CenterlineGraph->Root->StartPt,
+               this->CenterlineGraph->Root->EndPt, startPt);
+  vtkMath::MultiplyScalar(startPt, 0.5);
+  this->Polycube->SetGridWithCenter(this->CenterlineGraph->Root->GroupId,
+                                    startPt,
+                                    dims, vtkGeneralizedPolycube::CUBE_BRANCH);
+  vtkNew(vtkIntArray, segmentIds);
+  segmentIds->InsertTuple1(this->CenterlineGraph->Root->GroupId,
+                           this->CenterlineGraph->Root->GroupId);
+  this->CenterlineGraph->Recurse(this->CenterlineGraph->Root,
+                                 vtkPolyDataSliceAndDiceFilter::GraphToPolycube,
+                                 this->Polycube,
+                                 segmentIds, NULL);
+
+  segmentIds->SetName(this->SegmentIdsArrayName);
+  this->Polycube->GetCellData()->AddArray(segmentIds);
+  this->Polycube->BuildLinks();
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
+                                                   void *arg1, void *arg2)
+{
+  if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
   {
-    vtkNew(vtkThreshold, thresholder);
-    thresholder->SetInputData(this->WorkPd);
-    thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->SegmentIdsArrayName);
-    thresholder->ThresholdBetween(i, i);
-    thresholder->Update();
+    vtkGeneralizedPolycube *polycube =
+      reinterpret_cast<vtkGeneralizedPolycube*>(arg0);
+    vtkIntArray *segmentIds =
+      reinterpret_cast<vtkIntArray*>(arg1);
+    int id = gCell->GroupId + 1;
+    double dims[3]; dims[0] = 0.5; dims[1] = 0.5; dims[2] = 0.5;
+    polycube->SetGridWithCenter(id, gCell->EndPt,
+                                dims, vtkGeneralizedPolycube::CUBE_BIFURCATION);
+    segmentIds->InsertTuple1(id, id);
 
-    int numPoints = thresholder->GetOutput()->GetNumberOfPoints();
-
-    if (numPoints != 0)
+    //Two children
+    for (int i=0; i<2; i++)
     {
-      int numCurrentCubes = this->Polycube->GetNumberOfGrids();
-      int numCubes;;
-
-      double cornerPt[3], secondPt[3];
-      double vec0[3];
-      if (i <= this->MaxGroupNumber)
-      {
-        numCubes = this->NumberOfCubes->GetComponent(count, 1);
-        int cellId = groupIds->LookupValue(i);
-        vtkNew(vtkIdList, neighbors);
-        vtkIdType npts, *pts;
-        this->GraphPd->GetCellPoints(cellId, npts, pts);
-        this->GraphPd->GetPointCells(pts[0], neighbors);
-        if (i == 0)
-        {
-          this->GraphPd->GetPoint(pts[1], cornerPt);
-          this->GraphPd->GetPoint(pts[0], secondPt);
-        }
-        else
-        {
-          this->GraphPd->GetPoint(pts[0], cornerPt);
-          this->GraphPd->GetPoint(pts[1], secondPt);
-        }
-        vtkMath::Subtract(secondPt, cornerPt, vec0);
-      }
-      else
-      {
-        cornerPt[0] = 0.0; cornerPt[1] = 0.0; cornerPt[2] = 0.0;
-        numCubes = 1;
-      }
-      this->Polycube->SetNumberOfGrids(numCurrentCubes + numCubes);
-      int idStart = count++;
-
-      double unitCube[3]; unitCube[0] = 1.0; unitCube[1] = 1.0; unitCube[2] = 1.0;
-      for (int j=numCurrentCubes; j<numCurrentCubes + numCubes; j++)
-      {
-        double topNormal[3];
-        double rightNormal[3];
-        int starts[8];
-        if (i <= this->MaxGroupNumber)
-        {
-          for (int k=0; k<4; k++)
-          {
-            starts[k] = this->StartPtIds->GetComponent(j+idStart, k);
-            starts[k+4] = this->StartPtIds->GetComponent(j+idStart+1, k);
-          }
-          this->TopNormals->GetTuple(j, topNormal);
-          this->RightNormals->GetTuple(j, rightNormal);
-        }
-        else
-        {
-          std::list<int> surgeryIds;
-          this->GetValuesFromMap(this->SurgeryPointMap, i, surgeryIds);
-          std::list<int>::iterator it = surgeryIds.begin();
-          for (int j=0; it != surgeryIds.end() && j<8; it++, j++)
-          {
-            starts[j] = *it;
-          }
-          this->BifTopNormals->GetTuple(i-this->MaxGroupNumber-1, topNormal);
-          this->BifRightNormals->GetTuple(i-this->MaxGroupNumber-1, rightNormal);
-        }
-        this->Polycube->SetGridWithOrigin(j, cornerPt, unitCube, 0, topNormal, rightNormal, starts);
-        for (int k=0; k<3; k++)
-        {
-          cornerPt[k] = cornerPt[k] + vec0[k];
-        }
-      }
+      id = gCell->Children[i]->GroupId;
+      double centerPt[3];
+      vtkMath::Add(gCell->Children[i]->StartPt,
+                   gCell->Children[i]->EndPt, centerPt);
+      vtkMath::MultiplyScalar(centerPt, 0.5);
+      polycube->SetGridWithCenter(id, centerPt,
+                                  dims, vtkGeneralizedPolycube::CUBE_BRANCH);
+      segmentIds->InsertTuple1(id, id);
     }
+
   }
 
   return 1;

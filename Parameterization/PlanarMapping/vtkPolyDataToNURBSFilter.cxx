@@ -278,12 +278,6 @@ int vtkPolyDataToNURBSFilter::SliceAndDice()
 
   this->InputPd->DeepCopy(slicer->GetOutput());
   this->Polycube->DeepCopy(slicer->GetPolycube());
-  this->StartPtIds = vtkIntArray::SafeDownCast(
-    this->Polycube->GetCellData()->GetArray("CornerPtIds"));
-  this->SliceRightNormals = vtkDoubleArray::SafeDownCast(
-    this->Polycube->GetCellData()->GetArray("RightNormal"));
-  this->SliceTopNormals = vtkDoubleArray::SafeDownCast(
-    this->Polycube->GetCellData()->GetArray("TopNormal"));
   this->SurgeryLines->DeepCopy(slicer->GetSurgeryLines());
 
   return 1;
@@ -297,38 +291,29 @@ int vtkPolyDataToNURBSFilter::SliceAndDice()
  */
 int vtkPolyDataToNURBSFilter::PerformMappings()
 {
-  vtkDataArray *segmentIds = this->InputPd->GetCellData()->GetArray(this->SegmentIdsArrayName);
-  vtkDataArray *groupIds = this->InputPd->GetCellData()->GetArray(this->GroupIdsArrayName);
-  int numIds = segmentIds->GetNumberOfTuples();
+  int numCubes = this->Polycube->GetNumberOfGrids();
   vtkNew(vtkIdFilter, ider);
   ider->SetInputData(this->InputPd);
   ider->SetIdsArrayName(this->InternalIdsArrayName);
   ider->Update();
   this->InputPd->DeepCopy(ider->GetOutput());
 
+  vtkIntArray *segmentIds = vtkIntArray::SafeDownCast(
+      this->Polycube->GetCellData()->GetArray(this->SegmentIdsArrayName));
+  vtkIntArray *cubeType = vtkIntArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("CubeType"));
+
   vtkNew(vtkAppendPolyData, appender);
-  double segminmax[2], groupminmax[2];
-  segmentIds->GetRange(segminmax);
-  groupIds->GetRange(groupminmax);
-  for (int i=segminmax[0]; i<=segminmax[1]; i++)
+  for (int i=0; i<numCubes; i++)
   {
-    vtkNew(vtkPolyData, branchPd);
-    vtkNew(vtkPolyData, surgeryLinePd);
-    this->GetBranch(i, branchPd, surgeryLinePd);
-    vtkDataArray *sliceIds = branchPd->GetCellData()->GetArray(this->SliceIdsArrayName);
-
-    int numPoints = branchPd->GetNumberOfPoints();
-
-    if (numPoints != 0)
+    int segmentId = segmentIds->GetValue(i);
+    if (cubeType->GetValue(i) == vtkGeneralizedPolycube::CUBE_BRANCH)
     {
-      if (i <= groupminmax[1])
-      {
-        this->MapBranch(branchPd, surgeryLinePd, sliceIds, appender);
-      }
-      else
-      {
-        this->MapBifurcation(branchPd, sliceIds, appender);
-      }
+      this->MapBranch(segmentId, appender);
+    }
+    else if (cubeType->GetValue(i) == vtkGeneralizedPolycube::CUBE_BIFURCATION)
+    {
+      this->MapBifurcation(segmentId, appender);
     }
   }
   appender->Update();
@@ -346,21 +331,21 @@ int vtkPolyDataToNURBSFilter::PerformMappings()
  * @param *pd
  * @return
  */
-int vtkPolyDataToNURBSFilter::GetBranch(const int branchId, vtkPolyData *branchPd,
+int vtkPolyDataToNURBSFilter::GetSegment(const int segmentId, vtkPolyData *segmentPd,
                                         vtkPolyData *surgeryLinePd)
 {
   vtkNew(vtkThreshold, thresholder);
   thresholder->SetInputData(this->InputPd);
   //Set Input Array to 0 port,0 connection,1 for Cell Data, and Regions is the type name
   thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->SegmentIdsArrayName);
-  thresholder->ThresholdBetween(branchId, branchId);
+  thresholder->ThresholdBetween(segmentId, segmentId);
   thresholder->Update();
 
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(thresholder->GetOutput());
   surfacer->Update();
 
-  branchPd->DeepCopy(surfacer->GetOutput());
+  segmentPd->DeepCopy(surfacer->GetOutput());
 
   thresholder->SetInputData(this->SurgeryLines);
   thresholder->Update();
@@ -378,10 +363,10 @@ int vtkPolyDataToNURBSFilter::GetBranch(const int branchId, vtkPolyData *branchP
  * @param *pd
  * @return
  */
-int vtkPolyDataToNURBSFilter::GetSlice(const int sliceId, vtkPolyData *branchPd, vtkPolyData *slicePd)
+int vtkPolyDataToNURBSFilter::GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd)
 {
   vtkNew(vtkThreshold, thresholder);
-  thresholder->SetInputData(branchPd);
+  thresholder->SetInputData(segmentPd);
   //Set Input Array to 0 port,0 connection,1 for Cell Data, and Regions is the type name
   thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->SliceIdsArrayName);
   thresholder->ThresholdBetween(sliceId, sliceId);
@@ -402,14 +387,24 @@ int vtkPolyDataToNURBSFilter::GetSlice(const int sliceId, vtkPolyData *branchPd,
  * @param *pd
  * @return
  */
-int vtkPolyDataToNURBSFilter::MapBranch(vtkPolyData *branchPd,
-                                        vtkPolyData *surgeryLinePd,
-                                        vtkDataArray *sliceIds,
+int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
                                         vtkAppendPolyData *appender)
 {
-  double minmax[2];
-  sliceIds->GetRange(minmax);
+  vtkNew(vtkPolyData, branchPd);
+  vtkNew(vtkPolyData, surgeryLinePd);
+  this->GetSegment(branchId, branchPd, surgeryLinePd);
 
+  vtkIntArray *startPtIds =  vtkIntArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("CornerPtIds"));
+  vtkDoubleArray *sliceRightNormals = vtkDoubleArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("RightNormal"));
+  vtkDoubleArray *sliceTopNormals = vtkDoubleArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("TopNormal"));
+
+  double minmax[2];
+  vtkIntArray *sliceIds = vtkIntArray::SafeDownCast(
+    branchPd->GetCellData()->GetArray(this->SliceIdsArrayName));
+  sliceIds->GetRange(minmax);
   for (int i=minmax[0]; i<=minmax[1]; i++)
   {
     vtkNew(vtkPolyData, slicePd);
@@ -424,14 +419,14 @@ int vtkPolyDataToNURBSFilter::MapBranch(vtkPolyData *branchPd,
       vtkNew(vtkIntArray, secondLoopPts);
       for (int j=0; j<4; j++)
       {
-        firstLoopPts->InsertNextValue(ptIds->LookupValue(this->StartPtIds->GetComponent(i, j)));
-        secondLoopPts->InsertNextValue(ptIds->LookupValue(this->StartPtIds->GetComponent(i, j+4)));
+        firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(branchId, j)));
+        secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(branchId, j+4)));
       }
-      this->SliceRightNormals->GetTuple(i, xvec);
-      this->SliceTopNormals->GetTuple(i, zvec);
+      sliceRightNormals->GetTuple(branchId, xvec);
+      sliceTopNormals->GetTuple(branchId, zvec);
       vtkNew(vtkPolyData, sliceS2Pd);
       vtkNew(vtkPolyData, mappedPd);
-      fprintf(stdout,"Mapping region %d...\n", i);
+      fprintf(stdout,"Mapping region %d...\n", branchId);
 
       this->MapSliceToS2(slicePd, surgeryLinePd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
       //this->GetCorrespondingCube(cubeS2Pd, boundary);
@@ -440,14 +435,14 @@ int vtkPolyDataToNURBSFilter::MapBranch(vtkPolyData *branchPd,
       appender->AddInputData(mappedPd);
 
 
-      std::stringstream out;
-      out << i;
+      //std::stringstream out;
+      //out << i;
 
-      std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Slice_"+out.str()+".vtp";
-      vtkNew(vtkXMLPolyDataWriter, writer);
-      writer->SetInputData(sliceS2Pd);
-      writer->SetFileName(filename.c_str());
-      writer->Write();
+      //std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Slice_"+out.str()+".vtp";
+      //vtkNew(vtkXMLPolyDataWriter, writer);
+      //writer->SetInputData(sliceS2Pd);
+      //writer->SetFileName(filename.c_str());
+      //writer->Write();
 
     }
   }
@@ -461,11 +456,23 @@ int vtkPolyDataToNURBSFilter::MapBranch(vtkPolyData *branchPd,
  * @param *pd
  * @return
  */
-int vtkPolyDataToNURBSFilter::MapBifurcation(vtkPolyData *bifurcationPd,
-                                             vtkDataArray *sliceIds,
+int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
                                              vtkAppendPolyData *appender)
 {
+  vtkNew(vtkPolyData, bifurcationPd);
+  vtkNew(vtkPolyData, surgeryLinePd);
+  this->GetSegment(bifurcationId, bifurcationPd, surgeryLinePd);
+
+  vtkIntArray *startPtIds =  vtkIntArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("CornerPtIds"));
+  vtkDoubleArray *sliceRightNormals = vtkDoubleArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("RightNormal"));
+  vtkDoubleArray *sliceTopNormals = vtkDoubleArray::SafeDownCast(
+    this->Polycube->GetCellData()->GetArray("TopNormal"));
+
   double minmax[2];
+  vtkIntArray *sliceIds = vtkIntArray::SafeDownCast(
+    bifurcationPd->GetCellData()->GetArray(this->SliceIdsArrayName));
   sliceIds->GetRange(minmax);
 
   for (int i=minmax[0]; i<=minmax[1]; i++)
@@ -482,14 +489,14 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(vtkPolyData *bifurcationPd,
       vtkNew(vtkIntArray, secondLoopPts);
       for (int j=0; j<4; j++)
       {
-        firstLoopPts->InsertNextValue(ptIds->LookupValue(this->StartPtIds->GetComponent(i, j)));
-        secondLoopPts->InsertNextValue(ptIds->LookupValue(this->StartPtIds->GetComponent(i, j+4)));
+        firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j)));
+        secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j+4)));
       }
-      this->SliceRightNormals->GetTuple(i, xvec);
-      this->SliceTopNormals->GetTuple(i, zvec);
+      sliceRightNormals->GetTuple(bifurcationId, xvec);
+      sliceTopNormals->GetTuple(bifurcationId, zvec);
       vtkNew(vtkPolyData, sliceS2Pd);
       vtkNew(vtkPolyData, mappedPd);
-      fprintf(stdout,"Mapping region %d...\n", i);
+      fprintf(stdout,"Mapping region %d...\n", bifurcationId);
 
       this->MapOpenSliceToS2(bifurcationPd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
       //this->GetCorrespondingCube(cubeS2Pd, boundary);

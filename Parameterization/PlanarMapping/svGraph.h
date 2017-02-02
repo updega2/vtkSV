@@ -84,6 +84,7 @@ public:
   //Member data
   svGCell *Root;
   int NumberOfCells;
+  int NumberOfNodes;
 
   //Member data needed to build
   vtkPolyData *Lines;

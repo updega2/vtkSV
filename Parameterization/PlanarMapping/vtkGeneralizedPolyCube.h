@@ -38,21 +38,32 @@ public:
   vtkTypeMacro(vtkGeneralizedPolycube,vtkUnstructuredGrid);
   void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
 
+  // Description: Surgerylines that define a more exact path in between individual starting points of the polycube. Do not have to be used
+  vtkGetObjectMacro(SurgeryLines, vtkPolyData);
+  vtkSetObjectMacro(SurgeryLines, vtkPolyData);
+
+  //CUBE_TYPE
+  enum CUBE_TYPE
+  {
+    CUBE_BRANCH = 0,
+    CUBE_BIFURCATION
+  };
+
   void Initialize() VTK_OVERRIDE;
 
   // Origin is front, left, bottom corner of cube when axis aligned
   int InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int boundary);
+                        const int cubetype);
   int SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int boundary);
+                        const int cubetype);
   int SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int boundary, const double topNormal[3], const double rightNormal[3], const int corners[4]);
+                        const int cubetype, const double topNormal[3], const double rightNormal[3], const int corners[4]);
   int InsertGridWithCenter(const int cellId, const double center[3], const double dims[3],
-                        const int boundary);
+                        const int cubetype);
   int SetGridWithCenter(const int cellId, const double center[3], const double dims[3],
-                        const int boundary);
-  int InsertGrid(const int cellId, vtkPoints *points, const int boundary);
-  int SetGrid(const int cellId, vtkPoints *points, const int boundary);
+                        const int cubetype);
+  int InsertGrid(const int cellId, vtkPoints *points, const int cubetype);
+  int SetGrid(const int cellId, vtkPoints *points, const int cubetype);
   int GetFullRepresentation(vtkUnstructuredGrid *fullRepresentation) {return 0;}
   int GetGrid(const int cellId, const int spacing, vtkStructuredGrid *gridRepresentation) {return 0;}
   void SetNumberOfGrids(const int numberOfGrids);
@@ -62,13 +73,12 @@ protected:
   vtkGeneralizedPolycube();
   ~vtkGeneralizedPolycube();
 
-  vtkPoints *InternalPoints;
-
-  vtkPolyData    *Skeleton;
-  vtkIntArray    *Boundaries;
+  vtkPolyData    *SurgeryLines;
+  vtkIntArray    *CubeType;
   vtkIntArray    *Corners;
   vtkDoubleArray *TopNormals;
   vtkDoubleArray *RightNormals;
+  vtkPoints      *InternalPoints;
 
 private:
   vtkGeneralizedPolycube(const vtkGeneralizedPolycube&);  // Not implemented.

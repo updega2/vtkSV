@@ -46,6 +46,7 @@
 svGraph::svGraph()
 {
   this->NumberOfCells = 0;
+  this->NumberOfNodes = 1; // The root
   this->Root = NULL;
 
   this->Lines = vtkPolyData::New();
@@ -58,6 +59,7 @@ svGraph::svGraph(int rootId,
                  int directionTable[6][4])
 {
   this->NumberOfCells = 0;
+  this->NumberOfNodes = 1; // The root
   double startPt[3]; startPt[0] = 0.0; startPt[1] = 0.0; startPt[2] = 0.0;
   double endPt[3]; endPt[0] = 0.0; endPt[1] = 0.0; endPt[2] = -1.0;
   this->Root = this->NewCell(rootId, vtkPolyDataSliceAndDiceFilter::DOWN, startPt, endPt);
@@ -190,6 +192,7 @@ int svGraph::BuildGraph()
       std::list<int>::iterator childit = children.begin();
       this->Root->Children[0] = this->NewCell(*childit, this->Root); ++childit;
       this->Root->Children[1] = this->NewCell(*childit, this->Root); ++childit;
+      this->NumberOfNodes += 3;
 
       this->ComputeFirstCellVector(this->Root);
       this->GetNewBranchDirections(this->Root);
@@ -228,6 +231,7 @@ int svGraph::GrowGraph(svGCell *parent)
           count++;
         }
       }
+      this->NumberOfNodes += 3;
       //fprintf(stdout,"What is the child %d\n", parent->Children[0]->GroupId);
       //fprintf(stdout,"What is the child %d\n", parent->Children[1]->GroupId);
       this->GetNewBranchDirections(parent);
