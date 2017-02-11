@@ -67,11 +67,11 @@
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
-#include "vtkTextureMapToSphere.h"
 #include "vtkThreshold.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkTriangle.h"
+#include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -761,6 +761,40 @@ int vtkPolyDataSliceAndDiceFilter::ExtractionCut(vtkPolyData *inPd, vtkPlane *cu
  * @param *pd
  * @return
  */
+int vtkPolyDataSliceAndDiceFilter::ClipCut(vtkPolyData *inPd, vtkPlane *cutPlane,
+                                           const int generateClippedOutput,
+                                           const int extractInside,
+                                           vtkPolyData *outPd,
+                                           vtkPolyData *clippedOutPd)
+{
+    vtkNew(vtkClipPolyData, cutter);
+    cutter->SetInputData(inPd);
+    cutter->SetClipFunction(cutPlane);
+    cutter->SetInsideOut(extractInside);
+    cutter->SetGenerateClippedOutput(generateClippedOutput);
+    cutter->Update();
+
+    vtkNew(vtkTriangleFilter, triangulator);
+    triangulator->SetInputData(cutter->GetOutput(0));
+    triangulator->Update();
+
+    outPd->DeepCopy(triangulator->GetOutput());
+    if (generateClippedOutput)
+    {
+      triangulator->SetInputData(cutter->GetOutput(1));
+      triangulator->Update();
+      clippedOutPd->DeepCopy(triangulator->GetOutput());
+    }
+
+    return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
 int vtkPolyDataSliceAndDiceFilter::GetClosestPointConnectedRegion(vtkPolyData *inPd,
                                                                   double origin[3],
                                                                   vtkPolyData *outPd)
@@ -1297,6 +1331,12 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcations()
   ider->SetIdsArrayName(this->InternalIdsArrayName);
   ider->Update();
   this->WorkPd->DeepCopy(ider->GetOutput());
+  //vtkNew(vtkIntArray, surgeryPointArray);
+  //surgeryPointArray->SetNumberOfComponents(1);
+  //surgeryPointArray->SetNumberOfTuples(this->WorkPd->GetNumberOfPoints());
+  //surgeryPointArray->FillComponent(0, -1);
+  //surgeryPointArray->SetName("SurgeryPoints");
+  //this->WorkPd->GetPointData()->AddArray(surgeryPointArray);
 
   int numSegs = this->CenterlineGraph->NumberOfCells;
   for (int i=0; i<numSegs; i++)
@@ -1521,8 +1561,12 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   cutPlane1->SetOrigin(adjSlicePt1);
   cutPlane1->SetNormal(newSliceNormal1);
 
+  fprintf(stdout,"Cutting first at points: %lld %lld\n", goToPoints->GetId(0), goToPoints->GetId(1));
+  fprintf(stdout,"Cutting second at points: %lld %lld\n", goToPoints->GetId(2), goToPoints->GetId(3));
   vtkNew(vtkPolyData, slicePd0);
   vtkNew(vtkPolyData, slicePd1);
+  //this->ClipCut(separator->GetOutput(), cutPlane0, 0, 1, slicePd0, NULL);
+  //this->ClipCut(slicePd0, cutPlane1, 0, 1, slicePd1, NULL);
   this->ExtractionCut(separator->GetOutput(), cutPlane0, 1, 1, slicePd0);
   this->ExtractionCut(slicePd0, cutPlane1, 1, 1, slicePd1);
 
@@ -1537,6 +1581,12 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   bigregioner->Update();
   vtkNew(vtkPolyData, leftovers);
   leftovers->DeepCopy(bigregioner->GetOutput());
+
+  //vtkNew(vtkXMLPolyDataWriter, pdwriter);
+  //pdwriter->SetInputData(leftovers);
+  //pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/ahbutofcourse.vtp");
+  //pdwriter->Write();
+  //return 1;
 
   //Must check and make sure that the new region actually has the points;
   //sometimes gets cut short
@@ -1700,10 +1750,6 @@ int vtkPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
   vtkNew(vtkPolyData, thresholdPd);
   this->ThresholdPd(pd, groupId, groupId, 1,
       this->SegmentIdsArrayName, thresholdPd);
-  vtkNew(vtkXMLPolyDataWriter, pdwriter);
-  pdwriter->SetInputData(thresholdPd);
-  pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/ahbutofcourse.vtp");
-  pdwriter->Write();
 
   vtkNew(vtkFeatureEdges, boundaries);
   boundaries->SetInputData(thresholdPd);
@@ -1940,6 +1986,7 @@ int vtkPolyDataSliceAndDiceFilter::GetCloseGeodesicPoint(vtkPolyData *pd, double
   finder->SetStartPtId(actualId);
   finder->SetClosePt(centerPt);
   finder->SetDijkstraArrayName(this->DijkstraArrayName);
+  finder->SetRepelCloseBoundaryPoints(1);
   finder->Update();
 
   boundary->DeepCopy(finder->GetBoundary());
@@ -2068,6 +2115,7 @@ int vtkPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, double 
     LookupValue(initialSurgeryPt));
   finder->SetDijkstraArrayName(this->DijkstraArrayName);
   finder->SetInternalIdsArrayName(this->InternalIdsArrayName);
+  finder->SetRepelCloseBoundaryPoints(1);
   finder->Update();
 
   vtkNew(vtkIdList, tmpIds);

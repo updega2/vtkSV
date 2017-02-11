@@ -414,9 +414,9 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   vtkMath::Cross(vec3, this->FirstVec, angleVec2);
   double ang2 = atan2(vtkMath::Norm(angleVec2), vtkMath::Dot(vec3, this->FirstVec));
 
-  //fprintf(stdout,"Angle 0: %4f\n", 180*ang0/M_PI);
-  //fprintf(stdout,"Angle 1: %4f\n", 180*ang1/M_PI);
-  //fprintf(stdout,"Angle 2: %4f\n", 180*ang2/M_PI);
+  fprintf(stdout,"Angle 0: %4f\n", 180*ang0/M_PI);
+  fprintf(stdout,"Angle 1: %4f\n", 180*ang1/M_PI);
+  fprintf(stdout,"Angle 2: %4f\n", 180*ang2/M_PI);
   int direction1;
   if (ang2 >= 7.0*M_PI/4.0 || ang2 < M_PI/4.0)
   {

@@ -222,12 +222,14 @@ int vtkBoundaryMapper::GetBoundaryLoop()
   vtkIdType nextCell;
   vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
   vtkDataArray *pointIds = this->Boundaries->GetPointData()->GetArray(this->InternalIdsArrayName);
+  vtkDataArray *oPointIds = this->InitialPd->GetPointData()->GetArray(this->InternalIdsArrayName);
   int numInterPts = this->Boundaries->GetNumberOfPoints();
   int numInterLines = this->Boundaries->GetNumberOfLines();
   this->Boundaries->BuildLinks();
 
   int count = 0;
-  vtkIdType startPt = pointIds->LookupValue(this->BoundaryIds->GetValue(0));
+  vtkIdType startPt = pointIds->LookupValue(
+    oPointIds->GetTuple1(this->BoundaryIds->GetValue(0)));
   fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
   this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
   this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());

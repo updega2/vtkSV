@@ -55,6 +55,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkXMLPolyDataWriter.h"
 
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
@@ -71,9 +72,10 @@ vtkStandardNewMacro(vtkFindGeodesicPath);
 vtkFindGeodesicPath::vtkFindGeodesicPath()
 {
   this->SetNumberOfInputPorts(1);
-  this->Verbose             = 0;
-  this->AddPathBooleanArray = 0;
-  this->RemoveInternalIds   = 1;
+  this->Verbose                  = 0;
+  this->AddPathBooleanArray      = 0;
+  this->RemoveInternalIds        = 1;
+  this->RepelCloseBoundaryPoints = 0;
 
   this->StartPtId = -1;
   this->EndPtId   = -1;
@@ -285,10 +287,19 @@ int vtkFindGeodesicPath::RunFilter()
       return 0;
     }
   }
+  vtkNew(vtkPoints, repelPoints);
+  if (this->RepelCloseBoundaryPoints)
+  {
+    if (this->GetCloseBoundaryPoints(this->StartPtId, this->EndPtId, repelPoints) != 1)
+    {
+      vtkErrorMacro("Error getting close points on the boundary to repel");
+      return 0;
+    }
+  }
 
   if (runItChrisBrown)
   {
-    if (this->RunDijkstra() != 1)
+    if (this->RunDijkstra(repelPoints) != 1)
     {
       vtkErrorMacro("vtkDijkstraGraphGeodesicPath failed");
       return 0;
@@ -318,7 +329,7 @@ int vtkFindGeodesicPath::RunFilter()
  */
 int vtkFindGeodesicPath::FindClosestBoundaryPoint()
 {
-  if (this->RunDijkstra() != 1)
+  if (this->RunDijkstra(NULL) != 1)
   {
     vtkErrorMacro("vtkDijkstraGraphGeodesicPath failed");
     return 0;
@@ -359,6 +370,7 @@ int vtkFindGeodesicPath::FindClosestBoundaryPoint()
   }
 
   this->EndPtId = minId;
+
   return 1;
 }
 
@@ -368,11 +380,16 @@ int vtkFindGeodesicPath::FindClosestBoundaryPoint()
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::RunDijkstra()
+int vtkFindGeodesicPath::RunDijkstra(vtkPoints *repelPoints)
 {
   vtkNew(vtkDijkstraGraphGeodesicPath, dijkstra);
   dijkstra->SetInputData(this->WorkPd);
   dijkstra->SetStartVertex(this->StartPtId);
+  if (repelPoints != NULL)
+  {
+    dijkstra->RepelPathFromVerticesOn();
+    dijkstra->SetRepelVertices(repelPoints);
+  }
   if (this->EndPtId != -1)
   {
     dijkstra->SetEndVertex(this->EndPtId);
@@ -385,6 +402,104 @@ int vtkFindGeodesicPath::RunDijkstra()
   tmpWeights->SetName(this->DijkstraArrayName);
   this->WorkPd->GetPointData()->AddArray(tmpWeights);
   this->PathIds->DeepCopy(dijkstra->GetIdList());
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
+                                                const int endPtId,
+                                                vtkPoints *repelPoints)
+{
+  vtkDataArray *internalIds = this->WorkPd->GetPointData()->
+    GetArray(this->InternalIdsArrayName);
+  vtkNew(vtkFeatureEdges, boundaries);
+  boundaries->SetInputData(this->WorkPd);
+  boundaries->BoundaryEdgesOn();
+  boundaries->FeatureEdgesOff();
+  boundaries->NonManifoldEdgesOff();
+  boundaries->ManifoldEdgesOff();
+  boundaries->Update();
+
+  double startPt[3], endPt[3];
+  this->WorkPd->GetPoint(startPtId, startPt);
+  this->WorkPd->GetPoint(endPtId, endPt);
+
+  vtkNew(vtkConnectivityFilter, connector);
+  connector->SetInputData(boundaries->GetOutput());
+  connector->SetExtractionModeToClosestPointRegion();
+  connector->SetClosestPoint(startPt);
+  connector->Update();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(connector->GetOutput());
+  surfacer->Update();
+  vtkDataArray *sInternalIds = surfacer->GetOutput()->GetPointData()->
+    GetArray(this->InternalIdsArrayName);
+  int bStartId = sInternalIds->LookupValue(int(internalIds->GetTuple1(startPtId)));
+  if (bStartId != -1)
+  {
+    if (this->GetNeighborBoundaryPoints(bStartId, surfacer->GetOutput(), repelPoints) != 1)
+    {
+      vtkErrorMacro("Error getting neighbor boundary points");
+      return 0;
+    }
+  }
+
+  connector->SetClosestPoint(endPt);
+  connector->Update();
+  surfacer->SetInputData(connector->GetOutput());
+  surfacer->Update();
+  vtkDataArray *eInternalIds = surfacer->GetOutput()->GetPointData()->
+    GetArray(this->InternalIdsArrayName);
+  int bEndId = eInternalIds->LookupValue(int(internalIds->GetTuple1(endPtId)));
+  if (bEndId != -1)
+  {
+    if (this->GetNeighborBoundaryPoints(bEndId, surfacer->GetOutput(), repelPoints) != 1)
+    {
+      vtkErrorMacro("Error getting neighbor boundary points");
+      return 0;
+    }
+  }
+
+  return 1;
+}
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
+                                                   vtkPolyData *pd,
+                                                   vtkPoints *repelPoints)
+{
+  if (ptId == -1 || ptId >= pd->GetNumberOfPoints())
+  {
+    vtkErrorMacro("Point id is not valid " << ptId);
+    return 0;
+  }
+  pd->BuildLinks();
+  vtkNew(vtkIdList, pointCells);
+  pd->GetPointCells(ptId, pointCells);
+  for (int i=0; i<pointCells->GetNumberOfIds(); i++)
+  {
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(pointCells->GetId(i), npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      if (pts[j]  != ptId)
+      {
+        double pt[3];
+        pd->GetPoint(pts[j], pt);
+        repelPoints->InsertNextPoint(pt);
+      }
+    }
+  }
 
   return 1;
 }

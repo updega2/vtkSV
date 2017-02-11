@@ -220,6 +220,11 @@ protected:
                     const int extractBoundaryCells,
                     const int extractInside,
                     vtkPolyData *outPd);
+  int ClipCut(vtkPolyData *inPd, vtkPlane *cutPlane,
+              const int generateClippedOutput,
+              const int extractInside,
+              vtkPolyData *outPd,
+              vtkPolyData *clippedOutPd);
 
   int ReplaceDataOnCells(vtkPointSet *pointset, vtkDataArray *sliceIds,
                          const int sliceId, const int replaceVal,

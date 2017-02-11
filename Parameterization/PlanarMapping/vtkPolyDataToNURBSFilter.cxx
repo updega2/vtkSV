@@ -49,7 +49,6 @@
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
 #include "vtkExtractGeometry.h"
-#include "vtkFindGeodesicPath.h"
 #include "vtkFloatArray.h"
 #include "vtkIdFilter.h"
 #include "vtkIntArray.h"

@@ -89,6 +89,11 @@ public:
   vtkSetMacro(EndPtId, int);
 
   // Description:
+  // Ids that create the path from the start to the end point (if using end pt)
+  vtkGetMacro(RepelCloseBoundaryPoints, int);
+  vtkSetMacro(RepelCloseBoundaryPoints, int);
+
+  // Description:
   // Add boolean array to polydata indicating whether point is on path to
   // closest point
   vtkGetMacro(AddPathBooleanArray, int);
@@ -112,9 +117,13 @@ protected:
 
   int PrepFilter();
   int RunFilter();
-  int RunDijkstra();
+  int RunDijkstra(vtkPoints *repelPoints);
   int FindClosestBoundaryPoint();
   int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
+  int GetCloseBoundaryPoints(const int startPtId, const int endPtId,
+                             vtkPoints *repelPoints);
+  int GetNeighborBoundaryPoints(const int ptId,vtkPolyData *pd,
+                                vtkPoints *repelPoints);
 
 private:
   vtkFindGeodesicPath(const vtkFindGeodesicPath&);  // Not implemented.
@@ -126,6 +135,7 @@ private:
   int EndPtId;
   int AddPathBooleanArray;
   int RemoveInternalIds;
+  int RepelCloseBoundaryPoints;
 
   char *InternalIdsArrayName;
   char *DijkstraArrayName;

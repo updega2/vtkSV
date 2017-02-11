@@ -314,6 +314,7 @@ int vtkPullApartPolyData::FindEdgeCells()
       vtkIdType npts, *pts;
       int cellId = pointCells->GetId(i);
       this->WorkPd->GetCellPoints(cellId, npts, pts);
+      int done = 0;
       for (int j=0; j<npts; j++)
       {
         startPt0 = pts[j];
@@ -365,9 +366,13 @@ int vtkPullApartPolyData::FindEdgeCells()
               //fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
               this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, firstCellList, 1);
             }
+            done = 1;
+            break;
           }
         }
       }
+      if (done)
+        break;
     }
   }
   else
