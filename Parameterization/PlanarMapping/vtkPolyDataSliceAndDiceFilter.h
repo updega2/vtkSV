@@ -183,6 +183,7 @@ protected:
                            vtkIdList *surgeryPoints);
   int GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3],
                            vtkIdList *surgeryPoints,
+                           int endSurgeryId,
                            double xvec[3], double zvec[3],
                            vtkIdList *surgeryLineIds);
   int DetermineSliceStrategy(vtkPolyData *branchPd,
@@ -190,7 +191,8 @@ protected:
                              vtkPolyData *branchCenterline,
                              int &branchStartPtId,
                              vtkIdList *surgeryPoints,
-                             int &centerlineStartPtId);
+                             int &centerlineStartPtId,
+                             int &strategy);
   int GetPointGroups(vtkPolyData *pd, std::string arrayName,
                      const int pointId, vtkIdList *groupIds);
   int GetCriticalPoints();
@@ -248,7 +250,6 @@ private:
   svGraph *CenterlineGraph;
 
   std::multimap<int , int> CriticalPointMap;
-  std::multimap<int , int> SurgeryPointMap;
 
   int ConstructPolycube;
   int SliceDirection;

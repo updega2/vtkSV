@@ -74,11 +74,6 @@ protected:
   ~vtkGeneralizedPolycube();
 
   vtkPolyData    *SurgeryLines;
-  vtkIntArray    *CubeType;
-  vtkIntArray    *Corners;
-  vtkDoubleArray *TopNormals;
-  vtkDoubleArray *RightNormals;
-  vtkPoints      *InternalPoints;
 
 private:
   vtkGeneralizedPolycube(const vtkGeneralizedPolycube&);  // Not implemented.

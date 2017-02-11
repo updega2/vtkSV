@@ -228,10 +228,11 @@ int vtkBoundaryMapper::GetBoundaryLoop()
 
   int count = 0;
   vtkIdType startPt = pointIds->LookupValue(this->BoundaryIds->GetValue(0));
-  //fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
+  fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
   this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
   this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());
   this->BoundaryLoop->Allocate(this->Boundaries->GetNumberOfCells(), 1000);
+  fprintf(stdout,"The value on this is!: %lld\n", startPt);
   this->Boundaries->GetPointCells(startPt,cellIds);
 
   nextCell = cellIds->GetId(0);

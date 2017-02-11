@@ -34,24 +34,27 @@ vtkGeneralizedPolycube::vtkGeneralizedPolycube()
 {
   this->SurgeryLines = vtkPolyData::New();
 
-  this->CubeType = vtkIntArray::New();
-  this->Corners  = vtkIntArray::New();
-  this->Corners->SetNumberOfComponents(8);
-  this->TopNormals = vtkDoubleArray::New();
-  this->TopNormals->SetNumberOfComponents(3);
-  this->RightNormals = vtkDoubleArray::New();
-  this->RightNormals->SetNumberOfComponents(3);
+  vtkNew(vtkPoints, internalPoints);
+  this->SetPoints(internalPoints);
 
-  this->InternalPoints = vtkPoints::New();
-  this->SetPoints(this->InternalPoints);
-  this->CubeType->SetName("CubeType");
-  this->GetCellData()->AddArray(this->CubeType);
-  this->Corners->SetName("CornerPtIds");
-  this->GetCellData()->AddArray(this->Corners);
-  this->TopNormals->SetName("TopNormal");
-  this->GetCellData()->AddArray(this->TopNormals);
-  this->RightNormals->SetName("RightNormal");
-  this->GetCellData()->AddArray(this->RightNormals);
+  vtkNew(vtkIntArray, cubeType);
+  cubeType->SetName("CubeType");
+  this->GetCellData()->AddArray(cubeType);
+
+  vtkNew(vtkIntArray, corners);
+  corners->SetNumberOfComponents(8);
+  corners->SetName("CornerPtIds");
+  this->GetCellData()->AddArray(corners);
+
+  vtkNew(vtkDoubleArray, topNormals);
+  topNormals->SetNumberOfComponents(3);
+  topNormals->SetName("TopNormal");
+  this->GetCellData()->AddArray(topNormals);
+
+  vtkNew(vtkDoubleArray, rightNormals);
+  rightNormals->SetNumberOfComponents(3);
+  rightNormals->SetName("RightNormal");
+  this->GetCellData()->AddArray(rightNormals);
 }
 
 //---------------------------------------------------------------------------
@@ -66,31 +69,6 @@ vtkGeneralizedPolycube::~vtkGeneralizedPolycube()
   {
     this->SurgeryLines->Delete();
     this->SurgeryLines = NULL;
-  }
-  if (this->CubeType != NULL)
-  {
-    this->CubeType->Delete();
-    this->CubeType = NULL;
-  }
-  if (this->Corners != NULL)
-  {
-    this->Corners->Delete();
-    this->Corners = NULL;
-  }
-  if (this->TopNormals != NULL)
-  {
-    this->TopNormals->Delete();
-    this->TopNormals = NULL;
-  }
-  if (this->RightNormals != NULL)
-  {
-    this->RightNormals->Delete();
-    this->RightNormals = NULL;
-  }
-  if (this->InternalPoints != NULL)
-  {
-    this->InternalPoints->Delete();
-    this->InternalPoints = NULL;
   }
 }
 
@@ -139,17 +117,17 @@ void vtkGeneralizedPolycube::SetNumberOfGrids(const int numberOfGrids)
   for (int i=numCurrentGrids; i <numberOfGrids; i++)
   {
     this->InsertNextCell(VTK_HEXAHEDRON, blankIds);
-    this->CubeType->InsertNextValue(-1);
+    this->GetCellData()->GetArray("CubeType")->InsertNextTuple1(-1);
     double blankCorner[8];
     for (int i=0; i<8; i++)
     {
       blankCorner[i] = -1;
     }
-    this->Corners->InsertNextTuple(blankCorner);
+    this->GetCellData()->GetArray("CornerPtIds")->InsertNextTuple(blankCorner);
     double topNormal[3]; topNormal[0] = 0.0; topNormal[1] = 0.0; topNormal[2] = 1.0;
-    this->TopNormals->InsertNextTuple(topNormal);
+    this->GetCellData()->GetArray("TopNormal")->InsertNextTuple(topNormal);
     double rightNormal[3]; rightNormal[0] = 1.0; rightNormal[1] = 0.0; rightNormal[2] = 0.0;
-    this->RightNormals->InsertNextTuple(rightNormal);
+    this->GetCellData()->GetArray("RightNormal")->InsertNextTuple(rightNormal);
   }
   this->Modified();
 }
@@ -225,11 +203,11 @@ int vtkGeneralizedPolycube::InsertGridWithOrigin(const int cellId, const double 
  */
 int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const double topNormal[3], const double rightNormal[3], const int corners[8])
 {
-  this->TopNormals->SetTuple(cellId, topNormal);
-  this->RightNormals->SetTuple(cellId, rightNormal);
+  this->GetCellData()->GetArray("TopNormal")->SetTuple(cellId, topNormal);
+  this->GetCellData()->GetArray("RightNormal")->SetTuple(cellId, rightNormal);
   for (int i=0; i<8; i++)
   {
-  this->Corners->SetComponent(cellId, i, corners[i]);
+  this->GetCellData()->GetArray("CornerPtIds")->SetComponent(cellId, i, corners[i]);
   }
   this->SetGridWithOrigin(cellId, origin, dims, cubetype);
 
@@ -338,7 +316,7 @@ int vtkGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const i
     vtkErrorMacro("CellId is greater than number of cells, must set number of grids to correct size first");
     return 0;
   }
-  this->CubeType->SetTuple1(cellId, cubetype);
+  this->GetCellData()->GetArray("CubeType")->SetTuple1(cellId, cubetype);
   this->Modified();
 
   return 1;

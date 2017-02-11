@@ -102,7 +102,7 @@ void svMath::conjugate_gradient(
 
   int iteration = 0;
   for (iteration = 0;
-       iteration < num_iterations;// && iteration < a_trans.get_num_rows();
+       iteration < num_iterations && iteration < a_trans.get_num_rows();
        iteration++) {
     // temp = A'A * p
     multiply_ata_b(a_trans, a, p, temp);

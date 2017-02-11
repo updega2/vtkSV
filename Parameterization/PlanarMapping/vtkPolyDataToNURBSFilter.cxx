@@ -265,7 +265,7 @@ int vtkPolyDataToNURBSFilter::SliceAndDice()
   vtkNew(vtkPolyDataSliceAndDiceFilter, slicer);
   slicer->SetInputData(this->InputPd);
   slicer->SetCenterlines(this->Centerlines);
-  slicer->SetSliceLength(1.5);
+  slicer->SetSliceLength(1.0);
   slicer->SetConstructPolycube(1);
   slicer->SetBoundaryPointsArrayName(this->BoundaryPointsArrayName);
   slicer->SetGroupIdsArrayName(this->GroupIdsArrayName);
@@ -427,6 +427,14 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
       vtkNew(vtkPolyData, sliceS2Pd);
       vtkNew(vtkPolyData, mappedPd);
       fprintf(stdout,"Mapping region %d...\n", branchId);
+      //fprintf(stdout,"First start vals are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 0),
+      //                                                      startPtIds->GetComponent(branchId, 1),
+      //                                                      startPtIds->GetComponent(branchId, 2),
+      //                                                      startPtIds->GetComponent(branchId, 3));
+      //fprintf(stdout,"Second start are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 4),
+      //                                                  startPtIds->GetComponent(branchId, 5),
+      //                                                  startPtIds->GetComponent(branchId, 6),
+      //                                                  startPtIds->GetComponent(branchId, 7));
 
       this->MapSliceToS2(slicePd, surgeryLinePd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
       //this->GetCorrespondingCube(cubeS2Pd, boundary);

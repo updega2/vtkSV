@@ -750,9 +750,9 @@ int vtkPlanarMapper::SolveSystem()
   int numPoints = this->WorkPd->GetNumberOfPoints();
 
   svMath::conjugate_gradient(*this->ATutte, &this->Bu[0], numPoints, &this->Xu[0]);
-  svMath::conjugate_gradient(*this->AHarm, &this->Bu[0], 3*numPoints, &this->Xu[0]);
+  svMath::conjugate_gradient(*this->AHarm, &this->Bu[0], numPoints, &this->Xu[0]);
   svMath::conjugate_gradient(*this->ATutte, &this->Bv[0], numPoints, &this->Xv[0]);
-  svMath::conjugate_gradient(*this->AHarm, &this->Bv[0], 3*numPoints, &this->Xv[0]);
+  svMath::conjugate_gradient(*this->AHarm, &this->Bv[0], numPoints, &this->Xv[0]);
 
   for (int i=0; i<numPoints; i++)
   {
