@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
   Finder->SetDijkstraArrayName("DijkstraDistance");
   Finder->SetInternalIdsArrayName("InternalIds");
   Finder->SetPathBooleanArrayName("IsPath");
+  //Finder->SetRepelCloseBoundaryPoints(1);
   Finder->SetVerbose(1);
   Finder->Update();
 

@@ -585,6 +585,17 @@ int vtkPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   int loc1 = replacedPoints->IsId(secondCorners->GetValue(0));
   int new0 = newPoints->GetId(loc0);
   int new1 = newPoints->GetId(loc1);
+  fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d %d %d\n",
+    firstCorners->GetValue(0),
+    firstCorners->GetValue(1),
+    firstCorners->GetValue(2),
+    firstCorners->GetValue(3),
+    new0,
+    new1,
+    secondCorners->GetValue(3),
+    secondCorners->GetValue(2),
+    secondCorners->GetValue(1),
+    secondCorners->GetValue(0));
 
   vtkNew(vtkIntArray, boundaryCorners);
   boundaryCorners->SetNumberOfValues(10);
@@ -611,7 +622,7 @@ int vtkPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   boundaryMapper->SetObjectZAxis(zvec);
 
   vtkNew(vtkPlanarMapper, mapper);
-  mapper->SetInputData(ripper->GetOutput());
+  mapper->SetInputData(slicePd);
   //mapper->SetTutteEnergyCriterion(1.0e-6);
   //mapper->SetHarmonicEnergyCriterion(1.0e-7);
   //mapper->SetMaxNumIterations(1e4);
@@ -655,10 +666,19 @@ int vtkPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   boundaryCorners->SetValue(5, secondCorners->GetValue(1));
   boundaryCorners->SetValue(6, secondCorners->GetValue(2));
   boundaryCorners->SetValue(7, secondCorners->GetValue(3));
+  fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d\n",
+    firstCorners->GetValue(0),
+    firstCorners->GetValue(1),
+    firstCorners->GetValue(2),
+    firstCorners->GetValue(3),
+    secondCorners->GetValue(0),
+    secondCorners->GetValue(1),
+    secondCorners->GetValue(2),
+    secondCorners->GetValue(3));
   double boundaryLengths[4];
-  boundaryLengths[0] = 3.0; boundaryLengths[1] = 1.0; boundaryLengths[2] = 3.0; boundaryLengths[3] = 1.0;
+  boundaryLengths[0] = 1.0; boundaryLengths[1] = 3.0; boundaryLengths[2] = 1.0; boundaryLengths[3] = 3.0;
   int boundaryDivisions[4];
-  boundaryDivisions[0] = 2; boundaryDivisions[1] = 0; boundaryDivisions[2] = 2; boundaryDivisions[3] = 0;
+  boundaryDivisions[0] = 0; boundaryDivisions[1] = 2; boundaryDivisions[2] = 0; boundaryDivisions[3] = 2;
 
   vtkNew(vtkSuperSquareBoundaryMapper, boundaryMapper);
   boundaryMapper->SetBoundaryIds(boundaryCorners);
@@ -666,6 +686,11 @@ int vtkPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   boundaryMapper->SetSuperBoundaryLengths(boundaryLengths);
   boundaryMapper->SetObjectXAxis(xvec);
   boundaryMapper->SetObjectZAxis(zvec);
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Totsally.vtp";
+  vtkNew(vtkXMLPolyDataWriter, writer);
+  writer->SetInputData(slicePd);
+  writer->SetFileName(filename.c_str());
+  writer->Write();
 
   vtkNew(vtkPlanarMapper, mapper);
   mapper->SetInputData(slicePd);

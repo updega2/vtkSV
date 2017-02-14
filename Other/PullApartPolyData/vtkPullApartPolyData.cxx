@@ -55,6 +55,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkXMLPolyDataWriter.h"
 
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
@@ -76,9 +77,12 @@ vtkPullApartPolyData::vtkPullApartPolyData()
 
   this->WorkPd       = vtkPolyData::New();
   this->EdgeTable    = vtkEdgeTable::New();
+  this->SeamPointIds = NULL;
 
   this->ReplacePointList = vtkIdList::New();
   this->NewPointList     = vtkIdList::New();
+
+  this->StartPtId = -1;
 }
 
 //---------------------------------------------------------------------------
@@ -93,6 +97,11 @@ vtkPullApartPolyData::~vtkPullApartPolyData()
   {
     this->EdgeTable->Delete();
     this->EdgeTable = NULL;
+  }
+  if (this->SeamPointIds != NULL)
+  {
+    this->SeamPointIds->UnRegister(this);
+    this->SeamPointIds = NULL;
   }
   if (this->ReplacePointList != NULL)
   {
@@ -178,8 +187,24 @@ int vtkPullApartPolyData::PrepFilter()
   // Check if array dijkstra is already on pd
   if (!this->CheckArrayExists(this->WorkPd, 0, this->CutPointsArrayName))
   {
-    vtkErrorMacro("No point array on surface named " << this->CutPointsArrayName << " on surface");
-    return 0;
+    if (this->SeamPointIds != NULL)
+    {
+      vtkNew(vtkIntArray, seamArray);
+      seamArray->SetNumberOfComponents(1);
+      seamArray->SetNumberOfTuples(numPoints);
+      seamArray->FillComponent(0, 0);
+      seamArray->SetName(this->CutPointsArrayName);
+      for (int i=0; i<this->SeamPointIds->GetNumberOfValues(); i++)
+      {
+        seamArray->SetValue(this->SeamPointIds->GetValue(i), 1);
+      }
+      this->WorkPd->GetPointData()->AddArray(seamArray);
+    }
+    else
+    {
+      vtkErrorMacro("No point array on surface named " << this->CutPointsArrayName << " on surface and not SeamPointIds provided. Must provide one or the other to cut pd");
+      return 0;
+    }
   }
 
   return 1;
@@ -273,12 +298,112 @@ int vtkPullApartPolyData::PullApartCutEdges()
 int vtkPullApartPolyData::FindEdgeCells()
 {
   int numPts = this->WorkPd->GetNumberOfPoints();
-  int numTris = this->WorkPd->GetNumberOfCells();
+  this->WorkPd->BuildLinks();
 
   vtkIntArray *cutPointValues = vtkIntArray::SafeDownCast(
     this->WorkPd->GetPointData()->GetArray(this->CutPointsArrayName));
 
   this->EdgeTable->InitEdgeInsertion(numPts, 1);
+
+  int startPt0, startPt1, startPt2, startCellId;
+  if (this->StartPtId != -1)
+  {
+    vtkNew(vtkIdList, pointCells);
+    this->WorkPd->GetPointCells(this->StartPtId, pointCells);
+    for (int i=0; i<pointCells->GetNumberOfIds(); i++)
+    {
+      vtkIdType npts, *pts;
+      int cellId = pointCells->GetId(i);
+      this->WorkPd->GetCellPoints(cellId, npts, pts);
+      int done = 0;
+      for (int j=0; j<npts; j++)
+      {
+        startPt0 = pts[j];
+        startPt1 = pts[(j+1)%npts];
+        startPt2 = pts[(j+2)%npts];
+        vtkNew(vtkIdList, neighborCells);
+        this->WorkPd->GetCellEdgeNeighbors(cellId, startPt0, startPt1, neighborCells);
+        // We found the edge cell!
+        if (neighborCells->GetNumberOfIds() == 0)
+        {
+          double pt0[3], pt1[3], vec0[3], vec1[3];
+          this->WorkPd->GetPoint(startPt0, pt0);
+          this->WorkPd->GetPoint(startPt1, pt1);
+          if (startPt0 == this->StartPtId)
+          {
+            vtkMath::Subtract(pt1, pt0, vec0);
+          }
+          else
+          {
+            vtkMath::Subtract(pt0, pt1, vec0);
+            int tmp = startPt1;
+            startPt1 = startPt0;
+            startPt0 = tmp;
+          }
+          vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec1);
+          vtkMath::Normalize(vec0);
+          vtkMath::Normalize(vec1);
+          // We found the right cell!
+          if (vtkMath::Dot(vec0, vec1) < 0)
+          {
+            startCellId = cellId;
+            std::vector<int> firstCellList; firstCellList.push_back(startCellId);
+            if (cutPointValues->GetValue(startPt2) == 1)
+            {
+              int tmp = startPt1;
+              startPt1 = startPt2;
+              startPt2 = tmp;
+              fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
+              this->ReplaceCellVector.push_back(firstCellList);
+              this->ReplacePointVector.push_back(startPt0);
+              std::vector<int> list0; list0.push_back(startCellId);
+              this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, list0, 1);
+            }
+            else
+            {
+              int tmp = startPt1;
+              startPt1 = startPt0;
+              startPt0 = tmp;
+              fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
+              this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, firstCellList, 1);
+            }
+            done = 1;
+            break;
+          }
+        }
+      }
+      if (done)
+        break;
+    }
+  }
+  else
+  {
+    if (this->FindStartingEdge(startPt0, startPt1, startPt2, startCellId) != 1)
+    {
+      vtkErrorMacro("Starting edge could not be found");
+      return 0;
+    }
+    fprintf(stdout,"Starts: %d %d %d\n", startPt0, startPt1, startPt2);
+    std::vector<int> list0; list0.push_back(startCellId);
+    std::vector<int> list1; list1.push_back(startCellId);
+    this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, list0, 1);
+    this->FindNextEdge(startPt1, startPt0, startPt2, startCellId, list1, 1);
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkPullApartPolyData::FindStartingEdge(int &p0, int &p1, int &p2, int &cellId)
+{
+  int numTris = this->WorkPd->GetNumberOfCells();
+  vtkIntArray *cutPointValues = vtkIntArray::SafeDownCast(
+    this->WorkPd->GetPointData()->GetArray(this->CutPointsArrayName));
 
   for (int i=0; i<numTris; i++)
   {
@@ -288,21 +413,9 @@ int vtkPullApartPolyData::FindEdgeCells()
     //Insert edge into table
     for (int j=0; j<npts; j++)
     {
-      vtkIdType p0 = pts[j];
-      vtkIdType p1 = pts[(j+1)%npts];
-      vtkIdType p2 = pts[(j+2)%npts];
-      vtkSmartPointer<vtkIdList> neighborCellIds =
-        vtkSmartPointer<vtkIdList>::New();
-      this->WorkPd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
-      vtkIdType neighborCellId = 0;
-      if (neighborCellIds->GetNumberOfIds() > 0)
-      {
-        neighborCellId = neighborCellIds->GetId(0);
-      }
-      else
-      {
-        neighborCellId = -1;
-      }
+      p0 = pts[j];
+      p1 = pts[(j+1)%npts];
+      p2 = pts[(j+2)%npts];
 
       vtkIdType checkEdge = this->EdgeTable->IsEdge(p0, p1);
       if (checkEdge == -1)
@@ -313,18 +426,16 @@ int vtkPullApartPolyData::FindEdgeCells()
         if (cutVal0 == 1 && cutVal1 == 1)
         {
           vtkIdType edgeId = this->EdgeTable->InsertEdge(p0, p1);
-          vtkDebugMacro("First edge in list with points" << p0 << " and " << p1 << " on cell " << i);
-          //fprintf(stdout,"First Edge in list with points %lld and %lld on cell %d\n", p0, p1, i);
-          std::vector<int> list0; list0.push_back(i);
-          std::vector<int> list1; list1.push_back(i);
-          this->FindNextEdge(p0, p1, p2, i, list0, 1);
-          this->FindNextEdge(p1, p0, p2, i, list1, 1);
+          cellId = i;
+          vtkDebugMacro("First edge in list with points" << p0 << " and " << p1 << " on cell " << cellId);
+          fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p0, p1, i);
+          return 1;
         }
       }
     }
   }
 
-  return 1;
+  return 0;
 }
 
 //---------------------------------------------------------------------------
@@ -353,7 +464,7 @@ int vtkPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::
         int outP = pts[j];
         cellList.push_back(neighborCell);
         vtkDebugMacro("Edge in same list with points" << p2 << " and " << p1 << " on cell " << neighborCell);
-        //fprintf(stdout,"Edge in same list with points %d and %d on cell %d\n", p2, p1, neighborCell);
+        fprintf(stdout,"Edge in same list with points %d and %d on cell %d\n", p2, p1, neighborCell);
         this->FindNextEdge(p2, p1, outP, neighborCell, cellList, 0);
       }
       else if (pts[j] != p1 && pts[j] != p2 && cutVal == 1)
@@ -362,13 +473,13 @@ int vtkPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::
         int newP = pts[j];
         cellList.push_back(neighborCell);
         vtkDebugMacro("Final edge in list with points" << p1 << " and " << newP << " on cell " << neighborCell);
-        //fprintf(stdout,"Final Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
+        fprintf(stdout,"Final Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
         this->ReplaceCellVector.push_back(cellList);
         this->ReplacePointVector.push_back(p1);
         std::vector<int> newCellList;
         newCellList.push_back(neighborCell);
         vtkDebugMacro("First edge in list with points" << p1 << " and " << newP << " on cell " << neighborCell);
-        //fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
+        fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
         vtkIdType edgeId = this->EdgeTable->InsertEdge(p1, newP);
         this->FindNextEdge(p1, newP, p2, neighborCell, newCellList, 1);
         this->ReplaceCellVector.push_back(newCellList);
@@ -379,9 +490,15 @@ int vtkPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::
   }
   else if (neighborCells->GetNumberOfIds() == 0 && first)
   {
+    fprintf(stdout,"Ending edge with point %d on cell %d\n", p1, cellId);
     std::vector<int> newCellList;
     newCellList.push_back(cellId);
     this->ReplaceCellVector.push_back(newCellList);
+    this->ReplacePointVector.push_back(p1);
+  }
+  else if (neighborCells->GetNumberOfIds() == 0 && !first)
+  {
+    this->ReplaceCellVector.push_back(cellList);
     this->ReplacePointVector.push_back(p1);
   }
 
@@ -431,4 +548,3 @@ int vtkPullApartPolyData::CheckArrayExists(vtkPolyData *pd,
 
   return exists;
 }
-

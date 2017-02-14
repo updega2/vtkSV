@@ -69,13 +69,14 @@ vtkSuperSquareBoundaryMapper::~vtkSuperSquareBoundaryMapper()
  */
 int vtkSuperSquareBoundaryMapper::SetBoundaries()
 {
-  if (this->CalculateSquareEdgeLengths() != 1)
+  vtkNew(vtkIntArray, actualIds);
+  if (this->CalculateSquareEdgeLengths(actualIds) != 1)
   {
     vtkErrorMacro("Didn't work");
     return 0;
   }
 
-  if (!this->SetSquareBoundary())
+  if (!this->SetSquareBoundary(actualIds))
   {
     vtkErrorMacro("Was not able to set boundary");
     return 0;
@@ -90,7 +91,7 @@ int vtkSuperSquareBoundaryMapper::SetBoundaries()
  * @param *pd
  * @return
  */
-int vtkSuperSquareBoundaryMapper::CalculateSquareEdgeLengths()
+int vtkSuperSquareBoundaryMapper::CalculateSquareEdgeLengths(vtkIntArray *actualIds)
 {
   vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
   int numLines = this->BoundaryLoop->GetNumberOfLines();
@@ -98,14 +99,18 @@ int vtkSuperSquareBoundaryMapper::CalculateSquareEdgeLengths()
   int numBoundaryPts = this->BoundaryIds->GetNumberOfTuples();
   this->BoundaryLengths->SetNumberOfComponents(1);
   this->BoundaryLengths->SetNumberOfTuples(numBoundaryPts);
+  actualIds->SetNumberOfComponents(1);
+  actualIds->SetNumberOfTuples(numBoundaryPts);
   int currCell = 0;
   for (int i=0; i<numBoundaryPts; i++)
   {
-    int lastPt = pointIds->LookupValue(this->BoundaryIds->GetValue((i+1)%numBoundaryPts));
+    //int lastPt = pointIds->LookupValue(this->BoundaryIds->GetValue((i+1)%numBoundaryPts));
     vtkIdType npts, *pts;
     int checkPt = -1;
     double boundaryDistance = 0.0;
-    while (checkPt != lastPt)
+    int done = 0;
+    //while (checkPt != lastPt)
+    while (!done)
     {
       this->BoundaryLoop->GetCellPoints(currCell, npts, pts);
       double pt0[3], pt1[3];
@@ -116,7 +121,9 @@ int vtkSuperSquareBoundaryMapper::CalculateSquareEdgeLengths()
       {
         if (checkPt == pointIds->LookupValue(this->BoundaryIds->GetValue(j)))
         {
+          actualIds->SetValue((i+1)%numBoundaryPts, pointIds->GetTuple1(checkPt));
           fprintf(stdout,"Found boundary ID!: %d\n", this->BoundaryIds->GetValue(j));
+          done = 1;
         }
       }
 
@@ -126,6 +133,11 @@ int vtkSuperSquareBoundaryMapper::CalculateSquareEdgeLengths()
       boundaryDistance += dist;
 
       currCell++;
+      if (currCell > this->BoundaryLoop->GetNumberOfCells())
+      {
+        vtkErrorMacro("Error could not find all boundary points provided\n");
+        return 0;
+      }
     }
     this->BoundaryLengths->SetTuple1(i, boundaryDistance);
   }
@@ -141,7 +153,7 @@ int vtkSuperSquareBoundaryMapper::CalculateSquareEdgeLengths()
  * @param *pd
  * @return
  */
-int vtkSuperSquareBoundaryMapper::SetSquareBoundary()
+int vtkSuperSquareBoundaryMapper::SetSquareBoundary(vtkIntArray *actualIds)
 {
   vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
   double currCoords[3];
@@ -150,7 +162,7 @@ int vtkSuperSquareBoundaryMapper::SetSquareBoundary()
     currCoords[i] = 0.0;
   }
 
-  int numBoundaryPts = this->BoundaryIds->GetNumberOfTuples();
+  int numBoundaryPts = actualIds->GetNumberOfTuples();
 
   vtkNew(vtkPoints, newPoints);
   vtkNew(vtkIntArray, newDataArray);
@@ -161,8 +173,9 @@ int vtkSuperSquareBoundaryMapper::SetSquareBoundary()
   int divisionCount = 0;
   for (int i=0; i<numBoundaryPts; i++)
   {
+    fprintf(stdout,"Looping to next point: %d\n", i);
     double currLength = 0.0;
-    int lastPt  = pointIds->LookupValue(this->BoundaryIds->GetValue((i+1)%numBoundaryPts));
+    int lastPt  = pointIds->LookupValue(actualIds->GetValue((i+1)%numBoundaryPts));
     vtkIdType npts, *pts;
     while (checkPt != lastPt)
     {

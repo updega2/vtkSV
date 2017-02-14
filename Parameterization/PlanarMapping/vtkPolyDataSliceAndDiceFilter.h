@@ -155,15 +155,22 @@ protected:
   int BuildPolycube();
   void CheckLength(int &ptId, const int numPts,
                   int &done);
+  int CheckSlice(vtkPolyData *pd);
   void UpdatePtId(int &ptId);
   int FormDirectionTable(int dirTable[6][4]);
+  int GetFourPolyDataRegions(vtkPolyData *startPd,
+                             const int id0, vtkPolyData *pd0,
+                             const int id1, vtkPolyData *pd1,
+                             const int id2, vtkPolyData *pd2,
+                             vtkPolyData *leftovers);
   int CheckStartSurgeryPoints(vtkPolyData *pd, vtkIdList *startPoints);
   int CriticalSurgeryPoints(vtkPolyData *pd,
-                           const int groupId,
                            const int frontId,
                            const int backId,
+                           const int groupId,
                            double startPt[3],
                            double secondPt[3],
+                           vtkIdList *fixedGoToPoints,
                            vtkIdList *fixedSurgeryPoints);
   int GetFirstSurgeryPoints(vtkPolyData *pd, int pointId,
                             vtkIdList *surgeryPoints,
@@ -185,6 +192,7 @@ protected:
                            vtkIdList *surgeryPoints,
                            int endSurgeryId,
                            double xvec[3], double zvec[3],
+                           double radius,
                            vtkIdList *surgeryLineIds);
   int DetermineSliceStrategy(vtkPolyData *branchPd,
                              const int branchId,
@@ -208,8 +216,7 @@ protected:
                     vtkIntArray *surgeryData);
   int SliceBifurcations();
   int SliceBifurcation(vtkPolyData *pd,
-                       svGCell *gCell,
-                       vtkDataArray *segmentIds);
+                       svGCell *gCell);
   int GetSectionZAxis(const double endPt[3], const double startPt[3],
                       double zvec[3]);
   int GetSectionXAxis(const double endPt[3], const double startPt[3],
@@ -230,8 +237,14 @@ protected:
                          const int sliceId, const int replaceVal,
                          const std::string &arrName);
   int GetBranchLength(vtkPolyData *points, double &length);
-  int GetCloseGeodesicPoint(vtkPolyData *pd, double centerPt[3], const int startPtId, int &returnStartId, double zvec[3], vtkPolyData *boundary);
-  int GetClose3DPoint(vtkPolyData *pd, double centerPt[3], const int startPtId, int &returnStartId, double zvec[3], vtkPolyData *boundary);
+  int GetCloseGeodesicPoint(vtkPolyData *pd, double centerPt[3],
+                            const int startPtId, int &returnStartId,
+                            double zvec[3], vtkPolyData *boundary);
+  int GetClose3DPoint(vtkPolyData *pd, double centerPt[3],
+                      const int startPtId, int &returnStartId,
+                      double xvec[3], double zvec[3],
+                      double radius,
+                      vtkPolyData *boundary);
   int GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3], double zvec[3], int &startSecondId);
   int AddSurgeryPoints(vtkIdList *surgeryLineIds, vtkPoints *surgeryPts, vtkCellArray *surgeryLines, vtkIntArray *surgeryData);
 

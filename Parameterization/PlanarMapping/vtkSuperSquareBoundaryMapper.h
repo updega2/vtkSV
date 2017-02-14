@@ -51,8 +51,8 @@ protected:
   ~vtkSuperSquareBoundaryMapper();
 
   int SetBoundaries() VTK_OVERRIDE;
-  int CalculateSquareEdgeLengths();
-  int SetSquareBoundary();
+  int CalculateSquareEdgeLengths(vtkIntArray *actualIds);
+  int SetSquareBoundary(vtkIntArray *actualIds);
 
   vtkDoubleArray *BoundaryLengths;
   int SuperBoundaryDivisions[4];

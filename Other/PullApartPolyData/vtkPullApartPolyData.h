@@ -68,12 +68,28 @@ public:
 
   // Description:
   // The list of points that are to be replaced
+  vtkSetObjectMacro(SeamPointIds, vtkIntArray);
+  vtkGetObjectMacro(SeamPointIds, vtkIntArray);
+
+  // Description:
+  // The list of points that are to be replaced
   vtkGetObjectMacro(ReplacePointList, vtkIdList);
 
   // Description:
   // The list that will be the same length as replacepoint list with the ids
   // corresponding to the new points
   vtkGetObjectMacro(NewPointList, vtkIdList);
+
+  // Description:
+  // Axis of the object to use on orientation with sphee map
+  vtkSetVector3Macro(ObjectXAxis, double);
+  vtkSetVector3Macro(ObjectZAxis, double);
+
+  // Description:
+  // If start point is provided, it helps the algorithm go quicker because
+  // a start point does not need to be found
+  vtkGetMacro(StartPtId, int);
+  vtkSetMacro(StartPtId, int);
 
 protected:
   vtkPullApartPolyData();
@@ -88,6 +104,7 @@ protected:
   int RunFilter();
   int FindEdgeCells();
   int PullApartCutEdges();
+  int FindStartingEdge(int &p0, int &p1, int &p2, int &cellId);
   int FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first);
   int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
 
@@ -99,10 +116,15 @@ private:
 
   // TODO: Add start and end point ids
 
+  int StartPtId;
   vtkPolyData  *WorkPd;
   vtkEdgeTable *EdgeTable;
+  vtkIntArray  *SeamPointIds;
   vtkIdList    *ReplacePointList;
   vtkIdList    *NewPointList;
+
+  double ObjectXAxis[3];
+  double ObjectZAxis[3];
 
   std::vector<int> ReplacePointVector;
   std::vector<std::vector<int> > ReplaceCellVector;

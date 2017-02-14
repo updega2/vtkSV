@@ -387,8 +387,11 @@ int vtkFindGeodesicPath::RunDijkstra(vtkPoints *repelPoints)
   dijkstra->SetStartVertex(this->StartPtId);
   if (repelPoints != NULL)
   {
-    dijkstra->RepelPathFromVerticesOn();
-    dijkstra->SetRepelVertices(repelPoints);
+    if (repelPoints->GetNumberOfPoints() != 0)
+    {
+      dijkstra->RepelPathFromVerticesOn();
+      dijkstra->SetRepelVertices(repelPoints);
+    }
   }
   if (this->EndPtId != -1)
   {
@@ -483,23 +486,32 @@ int vtkFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
     vtkErrorMacro("Point id is not valid " << ptId);
     return 0;
   }
-  pd->BuildLinks();
-  vtkNew(vtkIdList, pointCells);
-  pd->GetPointCells(ptId, pointCells);
-  for (int i=0; i<pointCells->GetNumberOfIds(); i++)
+  for (int i=0; i<pd->GetNumberOfPoints(); i++)
   {
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(pointCells->GetId(i), npts, pts);
-    for (int j=0; j<npts; j++)
+    if (i != ptId)
     {
-      if (pts[j]  != ptId)
-      {
-        double pt[3];
-        pd->GetPoint(pts[j], pt);
-        repelPoints->InsertNextPoint(pt);
-      }
+      double pt[3];
+      pd->GetPoint(i, pt);
+      repelPoints->InsertNextPoint(pt);
     }
   }
+  //pd->BuildLinks();
+  //vtkNew(vtkIdList, pointCells);
+  //pd->GetPointCells(ptId, pointCells);
+  //for (int i=0; i<pointCells->GetNumberOfIds(); i++)
+  //{
+  //  vtkIdType npts, *pts;
+  //  pd->GetCellPoints(pointCells->GetId(i), npts, pts);
+  //  for (int j=0; j<npts; j++)
+  //  {
+  //    if (pts[j]  != ptId)
+  //    {
+  //      double pt[3];
+  //      pd->GetPoint(pts[j], pt);
+  //      repelPoints->InsertNextPoint(pt);
+  //    }
+  //  }
+  //}
 
   return 1;
 }
