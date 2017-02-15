@@ -53,6 +53,7 @@
 #include "vtkIdFilter.h"
 #include "vtkIntArray.h"
 #include "vtkGradientFilter.h"
+#include "vtkLoftNURBSSurface.h"
 #include "vtkMapInterpolator.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
@@ -94,6 +95,7 @@ vtkPolyDataToNURBSFilter::vtkPolyDataToNURBSFilter()
   this->InputPd         = vtkPolyData::New();
   this->ParameterizedPd = vtkPolyData::New();
   this->TexturedPd      = vtkPolyData::New();
+  this->LoftedPd        = vtkPolyData::New();
   this->Centerlines     = NULL;
   this->CubeS2Pd        = NULL;
   this->OpenCubeS2Pd    = NULL;
@@ -137,6 +139,11 @@ vtkPolyDataToNURBSFilter::~vtkPolyDataToNURBSFilter()
   {
     this->TexturedPd->Delete();
     this->TexturedPd = NULL;
+  }
+  if (this->LoftedPd != NULL)
+  {
+    this->LoftedPd->Delete();
+    this->LoftedPd = NULL;
   }
   if (this->Centerlines != NULL)
   {
@@ -310,12 +317,13 @@ int vtkPolyDataToNURBSFilter::PerformMappings()
 
   vtkNew(vtkAppendPolyData, appender);
   vtkNew(vtkAppendPolyData, inputAppender);
+  vtkNew(vtkAppendPolyData, loftAppender);
   for (int i=0; i<numCubes; i++)
   {
     int segmentId = segmentIds->GetValue(i);
     if (cubeType->GetValue(i) == vtkGeneralizedPolycube::CUBE_BRANCH)
     {
-      this->MapBranch(segmentId, appender, inputAppender);
+      this->MapBranch(segmentId, appender, inputAppender, loftAppender);
     }
     else if (cubeType->GetValue(i) == vtkGeneralizedPolycube::CUBE_BIFURCATION)
     {
@@ -324,8 +332,10 @@ int vtkPolyDataToNURBSFilter::PerformMappings()
   }
   appender->Update();
   inputAppender->Update();
+  loftAppender->Update();
   this->ParameterizedPd->DeepCopy(appender->GetOutput());
   this->TexturedPd->DeepCopy(inputAppender->GetOutput());
+  this->LoftedPd->DeepCopy(inputAppender->GetOutput());
 
   this->InputPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   this->InputPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
@@ -397,7 +407,8 @@ int vtkPolyDataToNURBSFilter::GetSlice(const int sliceId, vtkPolyData *segmentPd
  */
 int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
                                         vtkAppendPolyData *appender,
-                                        vtkAppendPolyData *inputAppender)
+                                        vtkAppendPolyData *inputAppender,
+                                        vtkAppendPolyData *loftAppender)
 {
   vtkNew(vtkPolyData, branchPd);
   vtkNew(vtkPolyData, surgeryLinePd);
@@ -465,8 +476,11 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
       writer->SetFileName(filename.c_str());
       writer->Write();
 
-      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-      this->WriteToGroupsFile(mappedPd, groupfile);
+      //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+      //this->WriteToGroupsFile(mappedPd, groupfile);
+      vtkNew(vtkPolyData, loftedPd);
+      this->LoftNURBSSurface(mappedPd, loftedPd);
+      loftAppender->AddInputData(loftedPd);
     }
   }
 
@@ -543,8 +557,8 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
       writer->SetFileName(filename.c_str());
       writer->Write();
 
-      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-      this->WriteToGroupsFile(mappedPd, groupfile);
+      //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+      //this->WriteToGroupsFile(mappedPd, groupfile);
 
     }
   }
@@ -773,6 +787,55 @@ int vtkPolyDataToNURBSFilter::UseMapToAddTextureCoordinates(vtkPolyData *pd,
   }
 
   pd->GetPointData()->SetTCoords(textureCoordinates);
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *loftedPd)
+{
+  vtkFloatArray *tCoords = vtkFloatArray::SafeDownCast(pd->GetPointData()->GetArray("TextureCoordinates"));
+  int numPts = pd->GetNumberOfPoints();
+
+  double xSpacing, ySpacing;
+  vtkPolyDataToNURBSFilter::GetSpacingOfTCoords(pd, xSpacing, ySpacing);
+
+  //vtkSmartPointer<vtkIntArray> newPointOrder =
+  //  vtkSmartPointer<vtkIntArray>::New();
+  //vtkPolyDataToNURBSFilter::GetNewPointOrder(pd, xSpacing, ySpacing, newPointOrder);
+  vtkNew(vtkLoftNURBSSurface, lofter);
+
+  int xNum = 1.0/xSpacing + 1;
+  int yNum = 1.0/ySpacing + 1;
+  fprintf(stdout,"XNum: %d\n", xNum);
+  fprintf(stdout,"YNum: %d\n", yNum);
+  for (int i=0; i<yNum; i++)
+  {
+    vtkNew(vtkPoints, newPoints);
+    newPoints->SetNumberOfPoints(xNum);
+    for (int j=0; j<xNum; j++)
+    {
+      double pt[3];
+      pd->GetPoint(i*xNum+j, pt);
+      newPoints->SetPoint(j,pt);
+
+    }
+    vtkNew(vtkPolyData, newPoly);
+    newPoly->SetPoints(newPoints);
+    lofter->AddInputData(newPoly);
+  }
+  lofter->SetUDegree(2);
+  lofter->SetVDegree(2);
+  lofter->SetPolyDataUSpacing(0.1);
+  lofter->SetPolyDataVSpacing(0.1);
+  lofter->Update();
+
+  loftedPd->DeepCopy(lofter->GetOutput());
 
   return 1;
 }

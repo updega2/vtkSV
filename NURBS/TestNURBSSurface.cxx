@@ -28,6 +28,8 @@
 #include <sstream>
 #include <iostream>
 
+#include <unistd.h>
+
 //Function to turn an integer into a string
 std::string intToString(int i)
 {

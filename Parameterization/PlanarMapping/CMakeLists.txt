@@ -5,6 +5,9 @@ PROJECT(PlanarMapper)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
+# Temporary include for nurbs surface
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../NURBS")
+
 add_executable(PlanarMapper PlanarMapper.cxx
   vtkBoundaryMapper.cxx
   vtkSquareBoundaryMapper.cxx
@@ -56,4 +59,7 @@ else()
   target_link_libraries(SliceAndDice ${VTK_LIBRARIES})
   target_link_libraries(PolyDataToNURBS ${VTK_LIBRARIES})
 endif()
+
+#Temporary link to nurbs code
+target_link_libraries(PolyDataToNURBS "${CMAKE_CURRENT_SOURCE_DIR}/../../NURBS/Build/libvtksv_nurbs.a")
 

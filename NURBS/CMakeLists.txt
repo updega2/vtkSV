@@ -12,16 +12,29 @@ add_executable(LoftNURBSCurve TestNURBSCurve.cxx
                               vtkNURBSUtils.cxx)
 
 add_executable(LoftNURBSSurface TestNURBSSurface.cxx
-	                        vtkLoftNURBSSurface.cxx
+	                              vtkLoftNURBSSurface.cxx
                                 vtkControlGrid.cxx
-				vtkNURBSSurface.cxx
+				                        vtkNURBSSurface.cxx
                                 vtkNURBSUtils.cxx
                                 vtkGeneralizedPolyCube.cxx)
+
+add_library(vtksv_nurbs vtkLoftNURBSCurve.cxx
+                        vtkLoftNURBSSurface.cxx
+                        vtkControlGrid.cxx
+                        vtkNURBSUtils.cxx
+                        vtkNURBSCurve.cxx
+                        vtkNURBSSurface.cxx
+                        vtkGeneralizedPolyCube.cxx)
 
 if(VTK_LIBRARIES)
   target_link_libraries(LoftNURBSCurve ${VTK_LIBRARIES})
   target_link_libraries(LoftNURBSSurface ${VTK_LIBRARIES})
+  target_link_libraries(vtksv_nurbs ${VTK_LIBRARIES})
 else()
   target_link_libraries(LoftNURBSCurve vtkHybrid)
   target_link_libraries(LoftNURBSSurface vtkHybrid)
+  target_link_libraries(vtksv_nurbs vtkHybrid)
 endif()
+
+
+

@@ -97,6 +97,8 @@ public:
   vtkSetObjectMacro(OpenCubeS2Pd, vtkPolyData);
   vtkGetObjectMacro(TexturedPd, vtkPolyData);
   vtkSetObjectMacro(TexturedPd, vtkPolyData);
+  vtkGetObjectMacro(LoftedPd, vtkPolyData);
+  vtkSetObjectMacro(LoftedPd, vtkPolyData);
 
   static int WriteToGroupsFile(vtkPolyData *pd, std::string fileName);
   static int GetSpacingOfTCoords(vtkPolyData *pd, double &xSpacing, double &ySpacing);
@@ -120,7 +122,8 @@ protected:
   int SliceAndDice();
   int GetSegment(const int segmentId, vtkPolyData *segmentPd, vtkPolyData *surgeryLinePd);
   int GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd);
-  int MapBranch(const int branchId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender);
+  int MapBranch(const int branchId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender,
+                vtkAppendPolyData *loftAppender);
   int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender);
   int MapSliceToS2(vtkPolyData *slicePd, vtkPolyData *surgeryLinePd, vtkPolyData *sliceS2Pd,
                      vtkIntArray *firstCorners, vtkIntArray *secondCorners,
@@ -136,6 +139,7 @@ protected:
                                     vtkPolyData *mappedPd,
                                     const double xSize,
                                     const double ySize);
+  int LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *loftedPd);
 
 private:
   vtkPolyDataToNURBSFilter(const vtkPolyDataToNURBSFilter&);  // Not implemented.
@@ -146,6 +150,7 @@ private:
   vtkPolyData *OpenCubeS2Pd;
   vtkPolyData *ParameterizedPd;
   vtkPolyData *TexturedPd;
+  vtkPolyData *LoftedPd;
   vtkPolyData *Centerlines;
   vtkPolyData *SurgeryLines;
 
