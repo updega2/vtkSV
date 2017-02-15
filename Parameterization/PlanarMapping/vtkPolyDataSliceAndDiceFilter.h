@@ -51,6 +51,7 @@
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkGeneralizedPolycube.h"
+#include "vtkImplicitFunction.h"
 #include "vtkPlane.h"
 #include "vtkPolyData.h"
 
@@ -223,11 +224,11 @@ protected:
                       const double surfacePt[3], double xvec[3]);
   int GetCutPlane(const double endPt[3], const double startPt[3],
                   const double length, double origin[3], vtkPlane *cutPlane);
-  int ExtractionCut(vtkPolyData *inPd, vtkPlane *cutPlane,
+  int ExtractionCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
                     const int extractBoundaryCells,
                     const int extractInside,
                     vtkPolyData *outPd);
-  int ClipCut(vtkPolyData *inPd, vtkPlane *cutPlane,
+  int ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
               const int generateClippedOutput,
               const int extractInside,
               vtkPolyData *outPd,

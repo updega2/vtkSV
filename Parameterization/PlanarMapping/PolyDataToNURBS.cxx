@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
   Converter->SetCenterlines(pd2);
   Converter->SetCubeS2Pd(pd3);
   Converter->SetOpenCubeS2Pd(pd4);
-  Converter->SetVerbose(1);
+  Converter->SetAddTextureCoordinates(1);
   Converter->SetBoundaryPointsArrayName("BoundaryPoints");
   Converter->SetGroupIdsArrayName("GroupIds");
   Converter->SetSegmentIdsArrayName("SegmentIds");
@@ -190,14 +190,12 @@ int main(int argc, char *argv[])
   Converter->SetBooleanPathArrayName("IsPath");
   Converter->Update();
 
-  vtkSmartPointer<vtkPolyData> output =
-    vtkSmartPointer<vtkPolyData>::New();
-  output = Converter->GetOutput();
-
   //Write Files
   std::cout<<"Done...Writing Files..."<<endl;
   std::string attachName = "_Converted";
-  WriteVTPFile(newOutName+".vtp",output,attachName);
+  WriteVTPFile(newOutName+".vtp",Converter->GetOutput(), attachName);
+  std::string attachName2 = "_Textured";
+  WriteVTPFile(newOutName+".vtp",Converter->GetTexturedPd(), attachName2);
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

@@ -62,9 +62,9 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // Print statements used for debugging
-  vtkGetMacro(Verbose, int);
-  vtkSetMacro(Verbose, int);
+  // Flag to indicate whether texture coordinates should be added to input
+  vtkGetMacro(AddTextureCoordinates, double);
+  vtkSetMacro(AddTextureCoordinates, double);
 
   // Description:
   // Array names for the segment and group ids. Must exist on input
@@ -95,6 +95,13 @@ public:
   vtkSetObjectMacro(CubeS2Pd, vtkPolyData);
   vtkGetObjectMacro(OpenCubeS2Pd, vtkPolyData);
   vtkSetObjectMacro(OpenCubeS2Pd, vtkPolyData);
+  vtkGetObjectMacro(TexturedPd, vtkPolyData);
+  vtkSetObjectMacro(TexturedPd, vtkPolyData);
+
+  static int WriteToGroupsFile(vtkPolyData *pd, std::string fileName);
+  static int GetSpacingOfTCoords(vtkPolyData *pd, double &xSpacing, double &ySpacing);
+  static int GetNewPointOrder(vtkPolyData *pd, double xSpacing, double ySpacing,
+                              vtkIntArray *newPointOrder);
 
 protected:
   vtkPolyDataToNURBSFilter();
@@ -105,14 +112,16 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
+  int AddTextureCoordinates;
+
   int PerformMappings();
   int ComputeCenterlines();
   int ExtractBranches();
   int SliceAndDice();
   int GetSegment(const int segmentId, vtkPolyData *segmentPd, vtkPolyData *surgeryLinePd);
   int GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd);
-  int MapBranch(const int branchId, vtkAppendPolyData *appender);
-  int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender);
+  int MapBranch(const int branchId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender);
+  int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender);
   int MapSliceToS2(vtkPolyData *slicePd, vtkPolyData *surgeryLinePd, vtkPolyData *sliceS2Pd,
                      vtkIntArray *firstCorners, vtkIntArray *secondCorners,
                      double xvec[3], double zvec[3]);
@@ -123,17 +132,20 @@ protected:
                                vtkPolyData *targetPd,
                                vtkPolyData *targetS2Pd,
                                vtkPolyData *mappedPd);
+  int UseMapToAddTextureCoordinates(vtkPolyData *pd,
+                                    vtkPolyData *mappedPd,
+                                    const double xSize,
+                                    const double ySize);
 
 private:
   vtkPolyDataToNURBSFilter(const vtkPolyDataToNURBSFilter&);  // Not implemented.
   void operator=(const vtkPolyDataToNURBSFilter&);  // Not implemented.
 
-  int Verbose;
-
   vtkPolyData *InputPd;
   vtkPolyData *CubeS2Pd;
   vtkPolyData *OpenCubeS2Pd;
   vtkPolyData *ParameterizedPd;
+  vtkPolyData *TexturedPd;
   vtkPolyData *Centerlines;
   vtkPolyData *SurgeryLines;
 

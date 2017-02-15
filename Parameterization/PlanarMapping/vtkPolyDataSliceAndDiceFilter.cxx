@@ -46,6 +46,7 @@
 #include "vtkCleanPolyData.h"
 #include "vtkClipPolyData.h"
 #include "vtkConnectivityFilter.h"
+#include "vtkCutter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
 #include "vtkExtractGeometry.h"
@@ -59,6 +60,7 @@
 #include "vtkIntArray.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkPlanes.h"
 #include "vtkPointData.h"
 #include "vtkPointDataToCellData.h"
 #include "vtkPointLocator.h"
@@ -733,14 +735,14 @@ int vtkPolyDataSliceAndDiceFilter::GetCutPlane(const double endPt[3], const doub
  * @param *pd
  * @return
  */
-int vtkPolyDataSliceAndDiceFilter::ExtractionCut(vtkPolyData *inPd, vtkPlane *cutPlane,
+int vtkPolyDataSliceAndDiceFilter::ExtractionCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
                                                  const int extractBoundaryCells,
                                                  const int extractInside,
                                                  vtkPolyData *outPd)
 {
     vtkNew(vtkExtractGeometry, cutter);
     cutter->SetInputData(inPd);
-    cutter->SetImplicitFunction(cutPlane);
+    cutter->SetImplicitFunction(cutFunction);
     cutter->SetExtractBoundaryCells(extractBoundaryCells);
     cutter->ExtractOnlyBoundaryCellsOff();
     cutter->SetExtractInside(extractInside);
@@ -761,7 +763,7 @@ int vtkPolyDataSliceAndDiceFilter::ExtractionCut(vtkPolyData *inPd, vtkPlane *cu
  * @param *pd
  * @return
  */
-int vtkPolyDataSliceAndDiceFilter::ClipCut(vtkPolyData *inPd, vtkPlane *cutPlane,
+int vtkPolyDataSliceAndDiceFilter::ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
                                            const int generateClippedOutput,
                                            const int extractInside,
                                            vtkPolyData *outPd,
@@ -769,7 +771,7 @@ int vtkPolyDataSliceAndDiceFilter::ClipCut(vtkPolyData *inPd, vtkPlane *cutPlane
 {
     vtkNew(vtkClipPolyData, cutter);
     cutter->SetInputData(inPd);
-    cutter->SetClipFunction(cutPlane);
+    cutter->SetClipFunction(cutFunction);
     cutter->SetInsideOut(extractInside);
     cutter->SetGenerateClippedOutput(generateClippedOutput);
     cutter->Update();
@@ -1586,6 +1588,11 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   vtkMath::Subtract(pt2, newSlicePt0, vec4);
   vtkMath::Subtract(pt3, newSlicePt0, vec5);
 
+  vtkNew(vtkDoubleArray, boxCutNormals);
+  boxCutNormals->SetNumberOfComponents(3);
+  boxCutNormals->SetNumberOfTuples(6);
+  vtkNew(vtkPoints, boxCutPoints);
+  boxCutPoints->SetNumberOfPoints(6);
   double newSliceNormal0[3];
   vtkMath::Cross(vec4, vec5, newSliceNormal0);
   vtkMath::Normalize(newSliceNormal0);
@@ -1596,6 +1603,30 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   vtkNew(vtkPlane, cutPlane0);
   cutPlane0->SetOrigin(adjSlicePt0);
   cutPlane0->SetNormal(newSliceNormal0);
+  boxCutNormals->SetTuple(0, newSliceNormal0);
+  boxCutPoints->SetPoint(0, adjSlicePt0);
+  vtkNew(vtkCutter, sliceThrough0);
+  sliceThrough0->SetInputData(separator->GetOutput());
+  sliceThrough0->SetCutFunction(cutPlane0);
+  sliceThrough0->Update();
+  vtkNew(vtkConnectivityFilter, getClose0);
+  getClose0->SetInputData(sliceThrough0->GetOutput());
+  getClose0->SetExtractionModeToClosestPointRegion();
+  getClose0->SetClosestPoint(adjSlicePt0);
+  getClose0->Update();
+
+  double maxDist = 0.0;
+  for (int i=0; i<getClose0->GetOutput()->GetNumberOfPoints(); i++)
+  {
+    double testPt[3];
+    getClose0->GetOutput()->GetPoint(i, testPt);
+    double dist = std::sqrt(std::pow(testPt[0] - adjSlicePt0[0], 2.0) +
+                            std::pow(testPt[1] - adjSlicePt0[1], 2.0) +
+                            std::pow(testPt[2] - adjSlicePt0[2], 2.0));
+    if (dist > maxDist)
+      maxDist = dist;
+
+  }
 
   double pt4[3], pt5[3];
   tmpPts1->GetPoint(0, pt4);
@@ -1620,49 +1651,106 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   vtkNew(vtkPlane, cutPlane1);
   cutPlane1->SetOrigin(adjSlicePt1);
   cutPlane1->SetNormal(newSliceNormal1);
+  boxCutNormals->SetTuple(1, newSliceNormal1);
+  boxCutPoints->SetPoint(1, adjSlicePt1);
+  vtkNew(vtkCutter, sliceThrough1);
+  sliceThrough1->SetInputData(separator->GetOutput());
+  sliceThrough1->SetCutFunction(cutPlane1);
+  sliceThrough1->Update();
+  vtkNew(vtkConnectivityFilter, getClose1);
+  getClose1->SetInputData(sliceThrough1->GetOutput());
+  getClose1->SetExtractionModeToClosestPointRegion();
+  getClose1->SetClosestPoint(adjSlicePt1);
+  getClose1->Update();
+
+  for (int i=0; i<getClose1->GetOutput()->GetNumberOfPoints(); i++)
+  {
+    double testPt[3];
+    getClose1->GetOutput()->GetPoint(i, testPt);
+    double dist = std::sqrt(std::pow(testPt[0] - adjSlicePt1[0], 2.0) +
+                            std::pow(testPt[1] - adjSlicePt1[1], 2.0) +
+                            std::pow(testPt[2] - adjSlicePt1[2], 2.0));
+    if (dist > maxDist)
+      maxDist = dist;
+
+  }
+  maxDist = maxDist+0.5*maxDist;
+  double outPlane0[3], outPlane1[3], outPlane2[3], outPlane3[3];
+  double outPoint0[3], outPoint1[3], outPoint2[3], outPoint3[3];
+  vtkMath::Add(vec4, vec5, outPlane0);
+  vtkMath::Add(vec4, vec5, outPlane1);
+  vtkMath::MultiplyScalar(outPlane0, 0.5);
+  vtkMath::MultiplyScalar(outPlane1, -0.5);
+  vtkMath::Normalize(outPlane0);
+  vtkMath::Normalize(outPlane1);
+  vtkMath::MultiplyScalar(outPlane0, maxDist);
+  vtkMath::MultiplyScalar(outPlane1, maxDist);
+  vtkMath::Add(adjSlicePt0, outPlane0, outPoint0);
+  vtkMath::Add(adjSlicePt0, outPlane1, outPoint1);
+  boxCutNormals->SetTuple(2, outPlane0);
+  boxCutPoints->SetPoint(2, outPoint0);
+  boxCutNormals->SetTuple(3, outPlane1);
+  boxCutPoints->SetPoint(3, outPoint1);
+  vtkMath::Cross(newSliceNormal0, outPlane0, outPlane2);
+  vtkMath::Cross(newSliceNormal0, outPlane1, outPlane3);
+  vtkMath::Normalize(outPlane2);
+  vtkMath::Normalize(outPlane3);
+  vtkMath::MultiplyScalar(outPlane2, maxDist);
+  vtkMath::MultiplyScalar(outPlane3, maxDist);
+  vtkMath::Add(adjSlicePt0, outPlane2, outPoint2);
+  vtkMath::Add(adjSlicePt0, outPlane3, outPoint3);
+  boxCutNormals->SetTuple(4, outPlane2);
+  boxCutPoints->SetPoint(4, outPoint2);
+  boxCutNormals->SetTuple(5, outPlane3);
+  boxCutPoints->SetPoint(5, outPoint3);
+  vtkNew(vtkPlanes, cutPlanes);
+  cutPlanes->SetPoints(boxCutPoints);
+  cutPlanes->SetNormals(boxCutNormals);
 
   fprintf(stdout,"Cutting first at points: %lld %lld\n", goToPoints->GetId(0), goToPoints->GetId(1));
   fprintf(stdout,"Cutting second at points: %lld %lld\n", goToPoints->GetId(2), goToPoints->GetId(3));
   vtkNew(vtkPolyData, slicePd0);
-  vtkNew(vtkPolyData, clippedOut0);
   vtkNew(vtkPolyData, slicePd1);
-  vtkNew(vtkPolyData, clippedOut1);
-  this->ClipCut(separator->GetOutput(), cutPlane0, 1, 1, slicePd0, clippedOut0);
-  this->ClipCut(slicePd0, cutPlane1, 1, 1, slicePd1, clippedOut1);
-  //this->ExtractionCut(separator->GetOutput(), cutPlane0, 1, 1, slicePd0);
-  //this->ExtractionCut(slicePd0, cutPlane1, 1, 1, slicePd1);
+  vtkNew(vtkPolyData, leftovers0);
+  vtkNew(vtkPolyData, leftovers1);
+  this->ClipCut(separator->GetOutput(), cutPlane0, 1, 1, slicePd0, leftovers0);
+  this->ClipCut(slicePd0, cutPlane1, 1, 1, slicePd1, leftovers1);
 
-  //vtkNew(vtkGetBoundaryFaces, bigregioner);
-  //bigregioner->SetInputData(slicePd1);
-  //bigregioner->SetBoundaryEdges(1);
-  //bigregioner->SetManifoldEdges(0);
-  //bigregioner->SetNonManifoldEdges(0);
-  //bigregioner->SetFeatureEdges(0);
-  //bigregioner->SetRegionIdsArrayName("ConnectedRegionId");
-  //bigregioner->SetExtractLargestRegion(1);
-  //bigregioner->Update();
-  vtkNew(vtkPolyData, leftovers);
-  leftovers->DeepCopy(slicePd1);
-
-  int numCells = leftovers->GetNumberOfCells();
+  vtkNew(vtkIdFilter, ider3);
+  ider3->SetInputData(slicePd1);
+  ider3->SetIdsArrayName(this->InternalIdsArrayName);
+  ider3->Update();
+  slicePd1->DeepCopy(ider3->GetOutput());
+  vtkNew(vtkPolyData, onlyGood);
+  this->GetClosestPointConnectedRegion(slicePd1, centroid, onlyGood);
+  int numCells = onlyGood->GetNumberOfCells();
   for (int i=0; i<numCells; i++)
   {
-    leftovers->GetCellData()->GetArray(this->SegmentIdsArrayName)->
-      InsertTuple1(i, segmentId);
+    slicePd1->GetCellData()->GetArray(this->SegmentIdsArrayName)->
+      InsertTuple1(onlyGood->GetCellData()->GetArray(this->InternalIdsArrayName)->
+          GetTuple1(i), segmentId);
   }
 
   vtkNew(vtkAppendPolyData, appender2);
   appender2->AddInputData(theRestPd);
   appender2->AddInputData(section2Pd);
-  appender2->AddInputData(clippedOut0);
-  appender2->AddInputData(clippedOut1);
-  appender2->AddInputData(leftovers);
+  appender2->AddInputData(leftovers0);
+  appender2->AddInputData(leftovers1);
+  appender2->AddInputData(slicePd1);
   appender2->Update();
 
   vtkNew(vtkCleanPolyData, cleaner2);
   cleaner2->SetInputData(appender2->GetOutput());
   cleaner2->Update();
   pd->DeepCopy(cleaner2->GetOutput());
+  vtkNew(vtkPolyData, dumTemp);
+  dumTemp->SetPoints(boxCutPoints);
+  boxCutNormals->SetName("DumBNorms");
+  dumTemp->GetPointData()->AddArray(boxCutNormals);
+    vtkNew(vtkXMLPolyDataWriter, pdwriter);
+    pdwriter->SetInputData(dumTemp);
+    pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/ahbutofcourse.vtp");
+    pdwriter->Write();
 
   vtkNew(vtkIdFilter, ider2);
   ider2->SetInputData(pd);
@@ -2315,17 +2403,6 @@ int vtkPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, double 
   vtkNew(vtkIdList, tmpIds);
   tmpIds = finder->GetPathIds();
   int numToAdd = tmpIds->GetNumberOfIds();
-  if (numToAdd == 1)
-  {
-    fprintf(stdout,"Start!: %lld\n", pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
-      LookupValue(surgeryPoints->GetId(0)));
-    fprintf(stdout,"End!: %lld\n", pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
-      LookupValue(initialSurgeryPt));
-    vtkNew(vtkXMLPolyDataWriter, pdwriter);
-    pdwriter->SetInputData(pd);
-    pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/sodumbo.vtp");
-    pdwriter->Write();
-  }
   for (int i=0; i<numToAdd; i++)
   {
     int testId = pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
