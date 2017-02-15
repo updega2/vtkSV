@@ -231,10 +231,12 @@ int main(int argc, char *argv[])
   lofter->SetVDegree(2);
   lofter->SetPolyDataUSpacing(0.01);
   lofter->SetPolyDataVSpacing(0.01);
-  //lofter->SetUKnotSpanType("derivative");
+  lofter->SetUKnotSpanType("equal");
+  lofter->SetUParametricSpanType("chord");
   //lofter->SetStartUDerivatives(uders);
   //lofter->SetEndUDerivatives(uders);
-  //lofter->SetVKnotSpanType("derivative");
+  lofter->SetVKnotSpanType("equal");
+  lofter->SetVParametricSpanType("chord");
   //lofter->SetStartVDerivatives(vders);
   //lofter->SetEndVDerivatives(vders);
   lofter->Update();

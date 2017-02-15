@@ -196,6 +196,8 @@ int main(int argc, char *argv[])
   WriteVTPFile(newOutName+".vtp",Converter->GetOutput(), attachName);
   std::string attachName2 = "_Textured";
   WriteVTPFile(newOutName+".vtp",Converter->GetTexturedPd(), attachName2);
+  std::string attachName3 = "_Lofted";
+  WriteVTPFile(newOutName+".vtp",Converter->GetLoftedPd(), attachName3);
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

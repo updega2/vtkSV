@@ -72,8 +72,6 @@ vtkLoftNURBSCurve::vtkLoftNURBSCurve()
 
   this->Degree = 2;
   this->PolyDataSpacing = 0.1;
-  this->SetKnotSpanType("average");
-  this->SetParametricSpanType("chord");
   double neg[3];
   for (int i=0; i<3; i++)
   {
@@ -83,6 +81,9 @@ vtkLoftNURBSCurve::vtkLoftNURBSCurve()
   this->SetEndDerivative(neg);
 
   this->Curve = vtkNURBSCurve::New();
+
+  this->KnotSpanType       = NULL;
+  this->ParametricSpanType = NULL;
 }
 
 //----------------------------------------------------------------------------

@@ -327,7 +327,7 @@ int vtkPolyDataToNURBSFilter::PerformMappings()
     }
     else if (cubeType->GetValue(i) == vtkGeneralizedPolycube::CUBE_BIFURCATION)
     {
-      this->MapBifurcation(segmentId, appender, inputAppender);
+      this->MapBifurcation(segmentId, appender, inputAppender, loftAppender);
     }
   }
   appender->Update();
@@ -335,7 +335,7 @@ int vtkPolyDataToNURBSFilter::PerformMappings()
   loftAppender->Update();
   this->ParameterizedPd->DeepCopy(appender->GetOutput());
   this->TexturedPd->DeepCopy(inputAppender->GetOutput());
-  this->LoftedPd->DeepCopy(inputAppender->GetOutput());
+  this->LoftedPd->DeepCopy(loftAppender->GetOutput());
 
   this->InputPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   this->InputPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
@@ -476,8 +476,8 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
       writer->SetFileName(filename.c_str());
       writer->Write();
 
-      //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-      //this->WriteToGroupsFile(mappedPd, groupfile);
+      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+      this->WriteToGroupsFile(mappedPd, groupfile);
       vtkNew(vtkPolyData, loftedPd);
       this->LoftNURBSSurface(mappedPd, loftedPd);
       loftAppender->AddInputData(loftedPd);
@@ -495,7 +495,8 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
  */
 int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
                                              vtkAppendPolyData *appender,
-                                             vtkAppendPolyData *inputAppender)
+                                             vtkAppendPolyData *inputAppender,
+                                             vtkAppendPolyData *loftAppender)
 {
   vtkNew(vtkPolyData, bifurcationPd);
   vtkNew(vtkPolyData, surgeryLinePd);
@@ -544,7 +545,7 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
 
       if (this->AddTextureCoordinates)
       {
-        this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 1.0, 3.0);
+        this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 4.0, 3.0);
       }
       inputAppender->AddInputData(bifurcationPd);
 
@@ -557,8 +558,11 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
       writer->SetFileName(filename.c_str());
       writer->Write();
 
-      //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-      //this->WriteToGroupsFile(mappedPd, groupfile);
+      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+      this->WriteToGroupsFile(mappedPd, groupfile);
+      vtkNew(vtkPolyData, loftedPd);
+      this->LoftNURBSSurface(mappedPd, loftedPd);
+      loftAppender->AddInputData(loftedPd);
 
     }
   }
@@ -781,9 +785,12 @@ int vtkPolyDataToNURBSFilter::UseMapToAddTextureCoordinates(vtkPolyData *pd,
   textureCoordinates->SetName("TextureCoordinates");
   for (int i=0; i<numPoints; i++)
   {
-    double pt[3];
+    double pt[3], tc[3];
     mappedPd->GetPoint(i, pt);
-    textureCoordinates->SetTuple(i, pt);
+    tc[0] = pt[0]/xSize;
+    tc[1] = pt[1]/ySize;
+    tc[2] = 0.0;
+    textureCoordinates->SetTuple(i, tc);
   }
 
   pd->GetPointData()->SetTCoords(textureCoordinates);
@@ -810,8 +817,8 @@ int vtkPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *lof
   //vtkPolyDataToNURBSFilter::GetNewPointOrder(pd, xSpacing, ySpacing, newPointOrder);
   vtkNew(vtkLoftNURBSSurface, lofter);
 
-  int xNum = 1.0/xSpacing + 1;
-  int yNum = 1.0/ySpacing + 1;
+  int xNum = 1.0/xSpacing + 2;
+  int yNum = 1.0/ySpacing + 2;
   fprintf(stdout,"XNum: %d\n", xNum);
   fprintf(stdout,"YNum: %d\n", yNum);
   for (int i=0; i<yNum; i++)
@@ -831,8 +838,14 @@ int vtkPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *lof
   }
   lofter->SetUDegree(2);
   lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(0.1);
-  lofter->SetPolyDataVSpacing(0.1);
+  lofter->SetPolyDataUSpacing(0.01);
+  lofter->SetPolyDataVSpacing(0.01);
+  lofter->SetUKnotSpanType("average");
+  lofter->SetVKnotSpanType("average");
+  //lofter->SetUKnotSpanType("derivative");
+  //lofter->SetVKnotSpanType("derivative");
+  lofter->SetUParametricSpanType("chord");
+  lofter->SetVParametricSpanType("chord");
   lofter->Update();
 
   loftedPd->DeepCopy(lofter->GetOutput());
@@ -866,8 +879,8 @@ int vtkPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string fil
     return 0;
   }
 
-  int xNum = 1.0/xSpacing + 1;
-  int yNum = 1.0/ySpacing + 1;
+  int xNum = 1.0/xSpacing + 2;
+  int yNum = 1.0/ySpacing + 2;
   fprintf(stdout,"XNum: %d\n", xNum);
   fprintf(stdout,"YNum: %d\n", yNum);
   for (int i=0; i<yNum; i++)

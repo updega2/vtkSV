@@ -67,17 +67,18 @@ vtkStandardNewMacro(vtkLoftNURBSSurface);
 //----------------------------------------------------------------------------
 vtkLoftNURBSSurface::vtkLoftNURBSSurface()
 {
+  this->UserManagedInputs = 0;
   this->UDegree = 2;
   this->VDegree = 2;
 
   this->PolyDataUSpacing = 0.1;
   this->PolyDataVSpacing = 0.1;
 
-  this->SetUKnotSpanType("equal");
-  this->SetVKnotSpanType("equal");
+  //this->SetUKnotSpanType("equal");
+  //this->SetVKnotSpanType("equal");
 
-  this->SetUParametricSpanType("chord");
-  this->SetVParametricSpanType("chord");
+  //this->SetUParametricSpanType("chord");
+  //this->SetVParametricSpanType("chord");
 
   this->StartUDerivatives = vtkDoubleArray::New();
   this->StartVDerivatives = vtkDoubleArray::New();
@@ -94,6 +95,11 @@ vtkLoftNURBSSurface::vtkLoftNURBSSurface()
   this->EndVDerivatives->SetNumberOfTuples(1);
 
   this->Surface = vtkNURBSSurface::New();
+
+  this->UKnotSpanType        = NULL;
+  this->VKnotSpanType        = NULL;
+  this->UParametricSpanType = NULL;
+  this->VParametricSpanType = NULL;
 }
 
 //----------------------------------------------------------------------------
@@ -118,6 +124,27 @@ vtkLoftNURBSSurface::~vtkLoftNURBSSurface()
   if (this->EndVDerivatives != NULL)
   {
     this->EndVDerivatives->Delete();
+  }
+
+  if (this->UKnotSpanType != NULL)
+  {
+    delete [] this->UKnotSpanType;
+    this->UKnotSpanType = NULL;
+  }
+  if (this->VKnotSpanType != NULL)
+  {
+    delete [] this->VKnotSpanType;
+    this->VKnotSpanType = NULL;
+  }
+  if (this->UParametricSpanType != NULL)
+  {
+    delete [] this->UParametricSpanType;
+    this->UParametricSpanType = NULL;
+  }
+  if (this->VParametricSpanType != NULL)
+  {
+    delete [] this->VParametricSpanType;
+    this->VParametricSpanType = NULL;
   }
 }
 

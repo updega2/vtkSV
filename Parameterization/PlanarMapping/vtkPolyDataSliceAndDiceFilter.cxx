@@ -1382,7 +1382,7 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcations()
   surgeryPointArray->SetNumberOfTuples(this->WorkPd->GetNumberOfPoints());
   for (int i=0; i<this->CenterlineGraph->NumberOfNodes; i++)
   {
-    surgeryPointArray->FillComponent(0, -1);
+    surgeryPointArray->FillComponent(i, -1);
   }
   surgeryPointArray->SetName("SurgeryPoints");
   this->WorkPd->GetPointData()->AddArray(surgeryPointArray);

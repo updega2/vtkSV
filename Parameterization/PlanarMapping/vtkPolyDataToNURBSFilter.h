@@ -122,9 +122,12 @@ protected:
   int SliceAndDice();
   int GetSegment(const int segmentId, vtkPolyData *segmentPd, vtkPolyData *surgeryLinePd);
   int GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd);
-  int MapBranch(const int branchId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender,
+  int MapBranch(const int branchId, vtkAppendPolyData *appender,
+                vtkAppendPolyData *inputAppender,
                 vtkAppendPolyData *loftAppender);
-  int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender, vtkAppendPolyData *inputAppender);
+  int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender,
+                     vtkAppendPolyData *inputAppender,
+                     vtkAppendPolyData *loftAppender);
   int MapSliceToS2(vtkPolyData *slicePd, vtkPolyData *surgeryLinePd, vtkPolyData *sliceS2Pd,
                      vtkIntArray *firstCorners, vtkIntArray *secondCorners,
                      double xvec[3], double zvec[3]);
