@@ -362,6 +362,7 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   thresholder->GetOutput()->GetPoint(numPts-1, endPt1);
 
   double startPts[2][3];
+  double secondPts[2][3];
   for (int i=0; i<2; i++)
   {
     thresholder->SetInputData(this->Lines);
@@ -370,14 +371,15 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
     thresholder->Update();
 
     thresholder->GetOutput()->GetPoint(0, startPts[i]);
+    thresholder->GetOutput()->GetPoint(1, secondPts[i]);
   }
 
   double vec0[3], vec1[3], vec2[3];
   vtkMath::Subtract(endPt1, endPt0, vec0);
   vtkMath::Normalize(vec0);
-  vtkMath::Subtract(startPts[0], endPt1, vec1);
+  vtkMath::Subtract(secondPts[0], startPts[0], vec1);
   vtkMath::Normalize(vec1);
-  vtkMath::Subtract(startPts[1], endPt1, vec2);
+  vtkMath::Subtract(secondPts[1], startPts[1], vec2);
   vtkMath::Normalize(vec2);
 
   // Get angle between vectors
