@@ -277,7 +277,7 @@ int vtkPolyDataToNURBSFilter::SliceAndDice()
   vtkNew(vtkPolyDataSliceAndDiceFilter, slicer);
   slicer->SetInputData(this->InputPd);
   slicer->SetCenterlines(this->Centerlines);
-  slicer->SetSliceLength(1.0);
+  slicer->SetSliceLength(2.0);
   slicer->SetConstructPolycube(1);
   slicer->SetBoundaryPointsArrayName(this->BoundaryPointsArrayName);
   slicer->SetGroupIdsArrayName(this->GroupIdsArrayName);
@@ -463,7 +463,7 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
       appender->AddInputData(mappedPd);
       if (this->AddTextureCoordinates)
       {
-        this->UseMapToAddTextureCoordinates(slicePd, sliceS2Pd, 4.0, 1.0);
+        this->UseMapToAddTextureCoordinates(slicePd, sliceS2Pd, 1.0, 1.0);
       }
       inputAppender->AddInputData(slicePd);
 
@@ -545,7 +545,7 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
 
       if (this->AddTextureCoordinates)
       {
-        this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 4.0, 3.0);
+        this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 1.0, 1.0);
       }
       inputAppender->AddInputData(bifurcationPd);
 
@@ -620,6 +620,7 @@ int vtkPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   writer->Write();
   slicePd->DeepCopy(ripper->GetOutput());
 
+  fprintf(stdout,"WODIDN\n");
   vtkNew(vtkIdList, replacedPoints);
   vtkNew(vtkIdList, newPoints);
   replacedPoints->DeepCopy(ripper->GetReplacePointList());
@@ -838,8 +839,8 @@ int vtkPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *lof
   }
   lofter->SetUDegree(2);
   lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(0.01);
-  lofter->SetPolyDataVSpacing(0.01);
+  lofter->SetPolyDataUSpacing(0.1);
+  lofter->SetPolyDataVSpacing(0.1);
   lofter->SetUKnotSpanType("average");
   lofter->SetVKnotSpanType("average");
   //lofter->SetUKnotSpanType("derivative");

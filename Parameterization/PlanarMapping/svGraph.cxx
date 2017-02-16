@@ -402,7 +402,6 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   //will be either 0 degrees (RIGHT) or 180 degrees (LEFT) with respect
   //to FirstBranchVec! Very important, this may not be the direction it
   //goes on the skeleton. We need to add that direction to parent direction
-  //Need to put in a tolerance as well.
 
   //If not RIGHT or LEFT, then it is either BACK (90 degrees)
   //or FRONT (270 degrees), again with respect to FirstBranchVec

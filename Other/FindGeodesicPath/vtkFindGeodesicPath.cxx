@@ -186,7 +186,7 @@ int vtkFindGeodesicPath::RequestData(
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::PrepFilter()
+int vtkFindGeodesicPath::RunFilter()
 {
   vtkIdType numPolys  = this->WorkPd->GetNumberOfPolys();
   vtkIdType numPoints = this->WorkPd->GetNumberOfPoints();

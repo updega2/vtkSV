@@ -106,6 +106,7 @@ protected:
   int PullApartCutEdges();
   int FindStartingEdge(int &p0, int &p1, int &p2, int &cellId);
   int FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first);
+  int FixTheBadStartCell(vtkPolyData *pd, const int pointId, const int cellId);
   int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
 
 private:

@@ -2536,10 +2536,10 @@ int vtkPolyDataSliceAndDiceFilter::GetClose3DPoint(vtkPolyData *pd, double cente
   vtkMath::MultiplyScalar(projVec, 1.5*radius);
   double closePt[3];
   vtkMath::Add(centerPt, projVec, closePt);
-  //fprintf(stdout,"Input start Pt ID: %d\n", startPtId);
+  fprintf(stdout,"Input start Pt ID: %d\n", startPtId);
   fprintf(stdout,"Close point is!: %.4f %.4f %.4f\n", closePt[0], closePt[1], closePt[2]);
 
-  this->GetClosestPointConnectedRegion(boundaries->GetOutput(), closePt, boundary);
+  this->GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
 
   int pointId = pd->GetPointData()->GetArray(this->InternalIdsArrayName)
     ->LookupValue(startPtId);
@@ -2553,6 +2553,7 @@ int vtkPolyDataSliceAndDiceFilter::GetClose3DPoint(vtkPolyData *pd, double cente
   int endPtId = pointLocator->FindClosestPoint(closePt);
   returnStartId = boundary->GetPointData()->GetArray(this->InternalIdsArrayName)->
     GetTuple1(endPtId);
+  fprintf(stdout,"Close point Id is: %d\n", returnStartId);
 
   double minDist = 1.0e10;
   int minId = -1;
