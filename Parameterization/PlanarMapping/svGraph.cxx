@@ -264,6 +264,7 @@ int svGraph::ComputeFirstCellVector(svGCell *parent)
   thresholder->GetOutput()->GetPoint(numPts-1, endPt1);
 
   double startPts[2][3];
+  double secondPts[2][3];
   for (int i=0; i<2; i++)
   {
     thresholder->SetInputData(this->Lines);
@@ -272,14 +273,15 @@ int svGraph::ComputeFirstCellVector(svGCell *parent)
     thresholder->Update();
 
     thresholder->GetOutput()->GetPoint(0, startPts[i]);
+    thresholder->GetOutput()->GetPoint(1, secondPts[i]);
   }
 
   double vec0[3], vec1[3], rootVec[3];
   vtkMath::Subtract(endPt1, endPt0, rootVec);
   vtkMath::Normalize(rootVec);
-  vtkMath::Subtract(startPts[0], endPt1, vec0);
+  vtkMath::Subtract(secondPts[0], startPts[0], vec0);
   vtkMath::Normalize(vec0);
-  vtkMath::Subtract(startPts[1], endPt1, vec1);
+  vtkMath::Subtract(secondPts[1], startPts[1], vec1);
   vtkMath::Normalize(vec1);
 
   // Get angle between vectors
