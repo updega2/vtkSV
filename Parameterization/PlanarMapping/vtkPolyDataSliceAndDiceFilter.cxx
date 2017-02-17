@@ -40,6 +40,7 @@
 #include "vtkPolyDataSliceAndDiceFilter.h"
 
 #include "vtkAppendPolyData.h"
+#include "vtkAppendFilter.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCenterOfMass.h"
@@ -226,7 +227,6 @@ int vtkPolyDataSliceAndDiceFilter::RequestData(
     vtkErrorMacro("Error in constructing polycube\n");
     return 0;
   }
-  fprintf(stdout,"Polycube built...\n");
 
   if (this->SliceBifurcations() != 1)
   {
@@ -245,6 +245,7 @@ int vtkPolyDataSliceAndDiceFilter::RequestData(
   writer->SetInputData(this->Polycube);
   writer->SetFileName("/Users/adamupdegrove/Desktop/tmp/polycube.vtu");
   writer->Write();
+  fprintf(stdout,"Polycube built...\n");
   vtkNew(vtkXMLPolyDataWriter, lwriter);
   lwriter->SetInputData(this->SurgeryLines);
   lwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/surglines.vtp");
@@ -376,7 +377,7 @@ int vtkPolyDataSliceAndDiceFilter::FindGroupBoundaries()
  */
 int vtkPolyDataSliceAndDiceFilter::GetCriticalPoints()
 {
-  //Forms a map of gropus to critical points
+  //Forms a map of groups to critical points
   //Keys: Group ids on surface
   //Values: Ids of points on surface that touch key group
   this->WorkPd->BuildLinks();
@@ -2141,7 +2142,15 @@ int vtkPolyDataSliceAndDiceFilter::BuildPolycube()
 
   segmentIds->SetName(this->SegmentIdsArrayName);
   this->Polycube->GetCellData()->AddArray(segmentIds);
+
+  vtkNew(vtkAppendFilter, merger);
+  merger->SetInputData(this->Polycube);
+  merger->MergePointsOn();
+  merger->Update();
+
+  this->Polycube->DeepCopy(merger->GetOutput());
   this->Polycube->BuildLinks();
+
   return 1;
 }
 
@@ -2183,21 +2192,6 @@ int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
 
   return 1;
 }
-
-////---------------------------------------------------------------------------
-///**
-// * @brief
-// * @param *pd
-// * @return
-// */
-//int vtkPolyDataSliceAndDiceFilter::BlowUpSkeleton(vtkPolyData *bigGraphPd)
-//{
-//  //RecurseSkeleton , start at 0 blow up, and then continue along tree
-//
-//  this->Recurse();
-//  return 1;
-//}
-
 //---------------------------------------------------------------------------
 /**
  * @brief

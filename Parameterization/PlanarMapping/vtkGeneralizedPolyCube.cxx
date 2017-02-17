@@ -17,6 +17,7 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkMath.h"
+#include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 
 #define vtkNew(type,name) \
@@ -45,6 +46,11 @@ vtkGeneralizedPolycube::vtkGeneralizedPolycube()
   corners->SetNumberOfComponents(8);
   corners->SetName("CornerPtIds");
   this->GetCellData()->AddArray(corners);
+
+  vtkNew(vtkIntArray, pointCorners);
+  pointCorners->SetNumberOfComponents(1);
+  pointCorners->SetName("CornerPtIds");
+  this->GetPointData()->AddArray(pointCorners);
 
   vtkNew(vtkDoubleArray, topNormals);
   topNormals->SetNumberOfComponents(3);
@@ -207,13 +213,24 @@ int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double ori
   this->GetCellData()->GetArray("RightNormal")->SetTuple(cellId, rightNormal);
   for (int i=0; i<8; i++)
   {
-  this->GetCellData()->GetArray("CornerPtIds")->SetComponent(cellId, i, corners[i]);
+    this->GetCellData()->GetArray("CornerPtIds")->SetComponent(cellId, i, corners[i]);
   }
   this->SetGridWithOrigin(cellId, origin, dims, cubetype);
 
   return 1;
 }
 
+/**
+ *               7---------6
+ *              /|        /|
+ *             / |       / |
+ *            4---------5  |
+ *            |  |      |  |
+ *            |  3------|--2
+ *            | /       | /
+ *            |/        |/
+ *            0---------1
+ */
 //---------------------------------------------------------------------------
 /**
  * @brief
@@ -305,6 +322,7 @@ int vtkGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const i
   for (int i=0; i<numPts; i++)
   {
     this->GetPoints()->InsertNextPoint(points->GetPoint(i));
+    this->GetPointData()->GetArray("CornerPtIds")->InsertNextTuple1(-1.0);
     pointIds[i] = numPCPts++;
   }
   if (cellId < this->GetNumberOfCells())
