@@ -934,11 +934,13 @@ int vtkPolyDataSliceAndDiceFilter::DetermineSliceStrategy(vtkPolyData *branchPd,
  * @return
  */
 int vtkPolyDataSliceAndDiceFilter::GetSurgeryPoints(vtkPolyData *pd,
+                                                    vtkPolyData *parentPd,
                                                     vtkDataArray *pointIds,
                                                     const double clStartPt[3],
                                                     const double clSecondPt[3],
                                                     const int front,
                                                     const int back,
+                                                    const int checkId,
                                                     vtkIdList *surgeryPoints,
                                                     double startDir[3])
 {
@@ -953,13 +955,16 @@ int vtkPolyDataSliceAndDiceFilter::GetSurgeryPoints(vtkPolyData *pd,
   pd->GetCellPoints(prevCellId, npts, pts);
   int secondPtId;
   if (pts[0] == pointId)
-  {
     secondPtId = pts[1];
-  }
   else
-  {
     secondPtId = pts[0];
-  }
+  //vtkNew(vtkIdList, checkIds);
+  //this->GetPointGroups(parentPd, this->GroupIdsArrayName, pd->GetPointData()->GetArray(
+  //  this->InternalIdsArrayName)->GetTuple1(secondPtId), checkIds);
+  //if (checkIds->IsId(checkId) == -1)
+  //{
+  //  fprintf(stdout,"This says that we would flip\n");
+  //}
   double pt0[3], pt1[3];
   pd->GetPoint(pointId, pt0);
   pd->GetPoint(secondPtId, pt1);
@@ -974,16 +979,32 @@ int vtkPolyDataSliceAndDiceFilter::GetSurgeryPoints(vtkPolyData *pd,
   //Get starting point from tmp id
   double xvec[3];
   this->GetSectionXAxis(clSecondPt, clStartPt, pt0, xvec);
-  for (int i=0; i<3; i++)
-    startDir[i] = xvec[i];
 
   vtkMath::Cross(xvec, vec0, vec1);
 
   if (vtkMath::Dot(zvec, vec1) > 0)
   {
+    fprintf(stdout,"Inside other way!\n");
     prevCellId = startCellIds->GetId(1);
     prevCellId2 = startCellIds->GetId(0);
   }
+  pd->GetCellPoints(prevCellId, npts, pts);
+  if (pts[0] == pointId)
+    secondPtId = pts[1];
+  else
+    secondPtId = pts[0];
+  pd->GetPoint(pointId, pt0);
+  pd->GetPoint(secondPtId, pt1);
+  vtkMath::Subtract(pt1, pt0, vec0);
+  vtkMath::Normalize(vec0);
+  vtkMath::Cross(vec0, zvec, startDir);
+  vtkMath::Normalize(startDir);
+  if (vtkMath::Dot(startDir, xvec) > 0)
+  {
+    for (int i=0; i<3; i++)
+      startDir[i] = -1.0*startDir[i];
+  }
+
 
   vtkNew(vtkIdList, halfPoints);
   this->GetHalfSurgeryPoints(pd, pointIds, prevCellId, front, back, halfPoints);
@@ -1194,8 +1215,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
 
   int numCells = branchPd->GetNumberOfCells();
   int numCenterlinePts = branchCenterline->GetNumberOfPoints();
-    vtkDataArray *radiusArray =
-      branchCenterline->GetPointData()->GetArray(this->SphereRadiusArrayName);
+  vtkDataArray *pointIds = branchPd->GetPointData()->GetArray(this->InternalIdsArrayName);
+  vtkDataArray *radiusArray = branchCenterline->GetPointData()->GetArray(this->SphereRadiusArrayName);
 
   vtkNew(vtkPolyData, leftovers); leftovers->DeepCopy(branchPd);
 
@@ -1213,6 +1234,18 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   {
     cornerPts[i] = surgeryPoints->GetId(i);
   }
+  double veryFirst[3], verySecond[3], zvec[3], xvec[3], surfacePt[3];
+  branchCenterline->GetPoint(linePtId, veryFirst);
+  if (linePtId == 0)
+    branchCenterline->GetPoint(1, verySecond);
+  else
+    branchCenterline->GetPoint(numCenterlinePts-2, verySecond);
+  this->GetSectionZAxis(verySecond, veryFirst, zvec);
+  int pointId = pointIds->LookupValue(surgeryPoints->GetId(0));
+  branchPd->GetPoint(pointId, surfacePt);
+  this->GetSectionXAxis(verySecond, veryFirst, surfacePt, xvec);
+  this->Polycube->GetCellData()->GetArray("TopNormal")->InsertTuple(branchId, zvec);
+  this->Polycube->GetCellData()->GetArray("RightNormal")->InsertTuple(branchId, xvec);
 
   vtkNew(vtkIdList, surgeryLineIds);
   int done = 0;
@@ -1253,13 +1286,10 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     currLength += centerlineLength;
 
     //Get the vector from start to end
-    double zvec[3];
     this->GetSectionZAxis(pt1, startPt, zvec);
 
     //Get starting point from tmp id
-    double xvec[3], surfacePt[3];
-    vtkDataArray *pointIds = branchPd->GetPointData()->GetArray(this->InternalIdsArrayName);
-    int pointId = pointIds->LookupValue(surgeryPoints->GetId(0));
+    pointId = pointIds->LookupValue(surgeryPoints->GetId(0));
     branchPd->GetPoint(pointId, surfacePt);
     this->GetSectionXAxis(pt1, startPt, surfacePt, xvec);
 
@@ -1287,12 +1317,6 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
       {
         continue;
       }
-    }
-
-    if (sliceId == 0)
-    {
-      this->Polycube->GetCellData()->GetArray("TopNormal")->InsertTuple(branchId, zvec);
-      this->Polycube->GetCellData()->GetArray("RightNormal")->InsertTuple(branchId, xvec);
     }
 
     double contourClosePt[3];
@@ -1551,7 +1575,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   fprintf(stdout,"FRONT!!!!: %d\n", criticalPoints.front());
   fprintf(stdout,"BACK!!!!: %d\n", criticalPoints.back());
   double dummy[3];
-  this->GetSurgeryPoints(section2Loop, section2Ids, inPt0, inPt1, front, back, goToPoints, dummy);
+  fprintf(stdout,"REG\n");
+  this->GetSurgeryPoints(section2Loop, this->WorkPd, section2Ids, inPt0, inPt1, front, back, parentId, goToPoints, dummy);
   fprintf(stdout,"ORDER: %lld %lld %lld %lld\n", goToPoints->GetId(0), goToPoints->GetId(1), goToPoints->GetId(2), goToPoints->GetId(3));
   vtkNew(vtkIdList, checkIds);
   this->GetPointGroups(this->WorkPd, this->GroupIdsArrayName, goToPoints->GetId(0), checkIds);
@@ -1559,7 +1584,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   {
     fprintf(stdout,"FLIPPP GoToPoints\n");
     goToPoints->Reset();
-    this->GetSurgeryPoints(section2Loop, section2Ids, inPt0, inPt1, back, front, goToPoints, dummy);
+  fprintf(stdout,"OTHER\n");
+    this->GetSurgeryPoints(section2Loop, this->WorkPd, section2Ids, inPt0, inPt1, back, front, parentId, goToPoints, dummy);
   }
   vtkNew(vtkPoints, tmpPts0);
   tmpPts0->InsertNextPoint(this->WorkPd->GetPoint(goToPoints->GetId(0)));
@@ -1775,7 +1801,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
 
   vtkNew(vtkIdList, fixedSurgeryPoints0);
   vtkNew(vtkIdList, fixedGoToPoints0);
-  this->CriticalSurgeryPoints(pd, frontId0, backId0, parentId,
+  fprintf(stdout,"REG\n");
+  this->CriticalSurgeryPoints(pd, frontId0, backId0, parentId, segmentId,
                              centroid, adjSlicePt0,
                              fixedGoToPoints0, fixedSurgeryPoints0, xvec);
   checkIds->Reset();
@@ -1784,7 +1811,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   {
     fprintf(stdout,"FLIPPP SurgeryPoints0\n");
     fixedSurgeryPoints0->Reset();
-    this->CriticalSurgeryPoints(pd, backId0, frontId0, parentId,
+  fprintf(stdout,"OTHER\n");
+    this->CriticalSurgeryPoints(pd, backId0, frontId0, parentId, segmentId,
                                centroid, adjSlicePt0,
                                fixedGoToPoints0, fixedSurgeryPoints0, xvec);
   }
@@ -1821,7 +1849,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
 
   vtkNew(vtkIdList, fixedSurgeryPoints1);
   vtkNew(vtkIdList, fixedGoToPoints1);
-  this->CriticalSurgeryPoints(pd, frontId1, backId1, goodKidId,
+  fprintf(stdout,"REG\n");
+  this->CriticalSurgeryPoints(pd, frontId1, backId1, goodKidId, segmentId,
                              centroid, adjSlicePt1,
                              fixedGoToPoints1, fixedSurgeryPoints1, dummy);
   checkIds->Reset();
@@ -1830,7 +1859,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   {
     fprintf(stdout,"FLIPPP SurgeryPoints1\n");
     fixedSurgeryPoints1->Reset();
-    this->CriticalSurgeryPoints(pd, backId1, frontId1, goodKidId,
+  fprintf(stdout,"OTHER\n");
+    this->CriticalSurgeryPoints(pd, backId1, frontId1, goodKidId, segmentId,
                                centroid, adjSlicePt1,
                                fixedGoToPoints1, fixedSurgeryPoints1, dummy);
   }
@@ -2027,6 +2057,7 @@ int vtkPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
                                                          const int frontId,
                                                          const int backId,
                                                          const int groupId,
+                                                         const int checkId,
                                                          double startPt[3],
                                                          double secondPt[3],
                                                          vtkIdList *fixedGoToPoints,
@@ -2056,7 +2087,7 @@ int vtkPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
     thresholdLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
   int fixFront = thresholdIds->LookupValue(frontId);
   int fixBack = thresholdIds->LookupValue(backId);
-  this->GetSurgeryPoints(thresholdLoop, thresholdIds, startPt, secondPt, fixFront, fixBack, fixedSurgeryPoints, startDir);
+  this->GetSurgeryPoints(thresholdLoop, pd, thresholdIds, startPt, secondPt, fixFront, fixBack, checkId, fixedSurgeryPoints, startDir);
 
   return 1;
 }

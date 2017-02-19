@@ -230,6 +230,7 @@ int vtkPullApartPolyData::PrepFilter()
       }
       if (badCell == 2)
       {
+        fprintf(stdout, "Bad start cell!, fixing\n");
         this->FixTheBadStartCell(this->WorkPd, this->StartPtId, cellId);
       }
     }
@@ -333,7 +334,10 @@ int vtkPullApartPolyData::FindEdgeCells()
 
   this->EdgeTable->InitEdgeInsertion(numPts, 1);
 
-  int startPt0, startPt1, startPt2, startCellId;
+  int startCellId = -1;
+  int startPt0, startPt1, startPt2;
+  int realPt0, realPt1, realPt2;
+  double storeDot = 1.1;
   if (this->StartPtId != -1)
   {
     vtkNew(vtkIdList, pointCells);
@@ -343,7 +347,6 @@ int vtkPullApartPolyData::FindEdgeCells()
       vtkIdType npts, *pts;
       int cellId = pointCells->GetId(i);
       this->WorkPd->GetCellPoints(cellId, npts, pts);
-      int done = 0;
       for (int j=0; j<npts; j++)
       {
         startPt0 = pts[j];
@@ -371,38 +374,44 @@ int vtkPullApartPolyData::FindEdgeCells()
           vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec1);
           vtkMath::Normalize(vec0);
           vtkMath::Normalize(vec1);
-          fprintf(stdout,"What is dot: %.4f for %d and %d\n", vtkMath::Dot(vec0, vec1), startPt0, startPt1);
-          // We found the right cell!
-          if (vtkMath::Dot(vec0, vec1) < 0)
+          fprintf(stdout,"Object z axis is: %.4f %.4f %.4f\n", this->ObjectZAxis[0],
+                                                               this->ObjectZAxis[1],
+                                                               this->ObjectZAxis[2]);
+          fprintf(stdout,"Object x axis is: %.4f %.4f %.4f\n", this->ObjectXAxis[0],
+                                                               this->ObjectXAxis[1],
+                                                               this->ObjectXAxis[2]);
+          // We found the right cell!, or so we think
+          if (vtkMath::Dot(vec0, vec1) < 0 && vtkMath::Dot(vec0, vec1) < storeDot)
           {
+            fprintf(stdout,"What is dot: %.4f for %d and %d\n", vtkMath::Dot(vec0, vec1), startPt0, startPt1);
             startCellId = cellId;
-            std::vector<int> firstCellList; firstCellList.push_back(startCellId);
-            if (cutPointValues->GetValue(startPt2) == 1)
-            {
-              int tmp = startPt1;
-              startPt1 = startPt2;
-              startPt2 = tmp;
-              //fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
-              this->ReplaceCellVector.push_back(firstCellList);
-              this->ReplacePointVector.push_back(startPt0);
-              std::vector<int> list0; list0.push_back(startCellId);
-              this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, list0, 1);
-            }
-            else
-            {
-              int tmp = startPt1;
-              startPt1 = startPt0;
-              startPt0 = tmp;
-              //fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
-              this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, firstCellList, 1);
-            }
-            done = 1;
-            break;
+            realPt0     = startPt0;
+            realPt1     = startPt1;
+            realPt2     = startPt2;
+            storeDot    = vtkMath::Dot(vec0, vec1);
           }
         }
       }
-      if (done)
-        break;
+    }
+    std::vector<int> firstCellList; firstCellList.push_back(startCellId);
+    if (cutPointValues->GetValue(realPt2) == 1)
+    {
+      int tmp = realPt1;
+      realPt1 = realPt2;
+      realPt2 = tmp;
+      //fprintf(stdout,"Found em!: %d %d %d\n", realPt0, realPt1, realPt2);
+      this->ReplaceCellVector.push_back(firstCellList);
+      this->ReplacePointVector.push_back(realPt0);
+      std::vector<int> list0; list0.push_back(startCellId);
+      this->FindNextEdge(realPt0, realPt1, realPt2, startCellId, list0, 1);
+    }
+    else
+    {
+      int tmp = realPt1;
+      realPt1 = realPt0;
+      realPt0 = tmp;
+      //fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
+      this->FindNextEdge(realPt0, realPt1, realPt2, startCellId, firstCellList, 1);
     }
   }
   else

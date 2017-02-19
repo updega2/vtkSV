@@ -509,70 +509,60 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
   vtkDoubleArray *sliceTopNormals = vtkDoubleArray::SafeDownCast(
     this->Polycube->GetCellData()->GetArray("TopNormal"));
 
-  double minmax[2];
-  vtkIntArray *sliceIds = vtkIntArray::SafeDownCast(
-    bifurcationPd->GetCellData()->GetArray(this->SliceIdsArrayName));
-  sliceIds->GetRange(minmax);
+  int numPoints = bifurcationPd->GetNumberOfPoints();
+  vtkDataArray *ptIds = bifurcationPd->GetPointData()->GetArray(this->InternalIdsArrayName);
 
-  for (int i=minmax[0]; i<=minmax[1]; i++)
+  if (numPoints != 0)
   {
-    vtkNew(vtkPolyData, slicePd);
-    this->GetSlice(i, bifurcationPd, slicePd);
-    int numPoints = slicePd->GetNumberOfPoints();
-    vtkDataArray *ptIds = slicePd->GetPointData()->GetArray(this->InternalIdsArrayName);
-
-    if (numPoints != 0)
+    double xvec[3], zvec[3];
+    vtkNew(vtkIntArray, firstLoopPts);
+    vtkNew(vtkIntArray, secondLoopPts);
+    for (int j=0; j<4; j++)
     {
-      double xvec[3], zvec[3];
-      vtkNew(vtkIntArray, firstLoopPts);
-      vtkNew(vtkIntArray, secondLoopPts);
-      for (int j=0; j<4; j++)
-      {
-        firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j)));
-        secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j+4)));
-      }
-        fprintf(stdout,"First Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 0),
-                                                           startPtIds->GetComponent(bifurcationId, 1),
-                                                           startPtIds->GetComponent(bifurcationId, 2),
-                                                           startPtIds->GetComponent(bifurcationId, 3));
-        fprintf(stdout,"Second Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 4),
-                                                            startPtIds->GetComponent(bifurcationId, 5),
-                                                            startPtIds->GetComponent(bifurcationId, 6),
-                                                            startPtIds->GetComponent(bifurcationId, 7));
-      sliceRightNormals->GetTuple(bifurcationId, xvec);
-      sliceTopNormals->GetTuple(bifurcationId, zvec);
-      vtkNew(vtkPolyData, sliceS2Pd);
-      vtkNew(vtkPolyData, mappedPd);
-      fprintf(stdout,"Mapping region %d...\n", bifurcationId);
-
-      this->MapOpenSliceToS2(bifurcationPd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
-      //this->GetCorrespondingCube(cubeS2Pd, boundary);
-      this->InterpolateMapOntoTarget(this->OpenCubeS2Pd, bifurcationPd, sliceS2Pd, mappedPd);
-      fprintf(stdout,"Done with mapping...\n");
-      appender->AddInputData(mappedPd);
-
-      if (this->AddTextureCoordinates)
-      {
-        this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 1.0, 1.0);
-      }
-      inputAppender->AddInputData(bifurcationPd);
-
-      std::stringstream out;
-      out << bifurcationId;
-
-      std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Slice_"+out.str()+".vtp";
-      vtkNew(vtkXMLPolyDataWriter, writer);
-      writer->SetInputData(sliceS2Pd);
-      writer->SetFileName(filename.c_str());
-      writer->Write();
-
-      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-      this->WriteToGroupsFile(mappedPd, groupfile);
-      vtkNew(vtkPolyData, loftedPd);
-      this->LoftNURBSSurface(mappedPd, loftedPd);
-      loftAppender->AddInputData(loftedPd);
-
+      firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j)));
+      secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j+4)));
     }
+      fprintf(stdout,"First Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 0),
+                                                         startPtIds->GetComponent(bifurcationId, 1),
+                                                         startPtIds->GetComponent(bifurcationId, 2),
+                                                         startPtIds->GetComponent(bifurcationId, 3));
+      fprintf(stdout,"Second Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 4),
+                                                          startPtIds->GetComponent(bifurcationId, 5),
+                                                          startPtIds->GetComponent(bifurcationId, 6),
+                                                          startPtIds->GetComponent(bifurcationId, 7));
+    sliceRightNormals->GetTuple(bifurcationId, xvec);
+    sliceTopNormals->GetTuple(bifurcationId, zvec);
+    vtkNew(vtkPolyData, sliceS2Pd);
+    vtkNew(vtkPolyData, mappedPd);
+    fprintf(stdout,"Mapping region %d...\n", bifurcationId);
+
+    this->MapOpenSliceToS2(bifurcationPd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
+    //this->GetCorrespondingCube(cubeS2Pd, boundary);
+    this->InterpolateMapOntoTarget(this->OpenCubeS2Pd, bifurcationPd, sliceS2Pd, mappedPd);
+    fprintf(stdout,"Done with mapping...\n");
+    appender->AddInputData(mappedPd);
+
+    if (this->AddTextureCoordinates)
+    {
+      this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 1.0, 1.0);
+    }
+    inputAppender->AddInputData(bifurcationPd);
+
+    std::stringstream out;
+    out << bifurcationId;
+
+    std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Slice_"+out.str()+".vtp";
+    vtkNew(vtkXMLPolyDataWriter, writer);
+    writer->SetInputData(sliceS2Pd);
+    writer->SetFileName(filename.c_str());
+    writer->Write();
+
+    std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+    this->WriteToGroupsFile(mappedPd, groupfile);
+    vtkNew(vtkPolyData, loftedPd);
+    this->LoftNURBSSurface(mappedPd, loftedPd);
+    loftAppender->AddInputData(loftedPd);
+
   }
 
   return 1;
@@ -736,11 +726,8 @@ int vtkPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   boundaryMapper->SetBoundaryIds(boundaryCorners);
   boundaryMapper->SetSuperBoundaryDivisions(boundaryDivisions);
   boundaryMapper->SetSuperBoundaryLengths(boundaryLengths);
-  //TEST!
-  for (int i=0; i<3; i++)
-  {
-    xvec[i] = -1.0*xvec[i];
-  }
+  fprintf(stdout,"XVec: %.4f %.4f %.4f\n", xvec[0], xvec[1], xvec[2]);
+  fprintf(stdout,"ZVec: %.4f %.4f %.4f\n", zvec[0], zvec[1], zvec[2]);
   boundaryMapper->SetObjectXAxis(xvec);
   boundaryMapper->SetObjectZAxis(zvec);
 

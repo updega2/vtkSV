@@ -253,29 +253,23 @@ int vtkBoundaryMapper::GetBoundaryLoop()
   vtkMath::Normalize(vec0);
   vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec1);
   vtkMath::Normalize(vec1);
-  if (vtkMath::Dot(vec0, vec1) < 0)
+
+  vtkIdType checknpts, *checkpts;
+  this->Boundaries->GetCellPoints(cellIds->GetId(1), checknpts, checkpts);
+  int doubleCheckPt = -1;
+  if (checkpts[0] == startPt)
+    doubleCheckPt = checkpts[1];
+  else
+    doubleCheckPt = checkpts[0];
+  double pt2[3], vec2[3], vec3[3];
+  this->Boundaries->GetPoint(doubleCheckPt, pt2);
+  vtkMath::Subtract(pt2, pt0, vec2);
+  vtkMath::Normalize(vec2);
+  vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec3);
+  vtkMath::Normalize(vec3);
+  if (vtkMath::Dot(vec0, vec1) < vtkMath::Dot(vec2, vec3))
   {
     nextCell = cellIds->GetId(1);
-  }
-  else
-  {
-    vtkIdType checknpts, *checkpts;
-    this->Boundaries->GetCellPoints(cellIds->GetId(1), checknpts, checkpts);
-    int doubleCheckPt = -1;
-    if (checkpts[0] == startPt)
-      doubleCheckPt = checkpts[1];
-    else
-      doubleCheckPt = checkpts[0];
-    double pt2[3], vec2[3], vec3[3];
-    this->Boundaries->GetPoint(doubleCheckPt, pt2);
-    vtkMath::Subtract(pt2, pt0, vec2);
-    vtkMath::Normalize(vec2);
-    vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec3);
-    vtkMath::Normalize(vec3);
-    if (vtkMath::Dot(vec2, vec3) > vtkMath::Dot(vec0, vec1))
-    {
-      nextCell = cellIds->GetId(1);
-    }
   }
 
   vtkBoundaryMapper::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);

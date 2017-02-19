@@ -169,6 +169,7 @@ protected:
                            const int frontId,
                            const int backId,
                            const int groupId,
+                           const int checkId,
                            double startPt[3],
                            double secondPt[3],
                            vtkIdList *fixedGoToPoints,
@@ -178,11 +179,13 @@ protected:
                             vtkIdList *surgeryPoints,
                             double xvec[3], double zvec[3]);
   int GetSurgeryPoints(vtkPolyData *pd,
+                       vtkPolyData *parentPd,
                        vtkDataArray *pointIds,
                        const double clStartPt[3],
                        const double clSecondPt[3],
                        const int front,
                        const int back,
+                       const int checkId,
                        vtkIdList *surgeryPoints,
                        double startDir[3]);
   int GetHalfSurgeryPoints(vtkPolyData *pd,
