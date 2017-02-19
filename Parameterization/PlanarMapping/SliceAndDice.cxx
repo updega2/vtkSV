@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
   std::cout<<"Performing Operation..."<<endl;
   Slicer->SetInputData(pd1);
   Slicer->SetCenterlines(pd2);
-  Slicer->SetSliceLength(2.0);
+  Slicer->SetSliceLength(1.0);
   Slicer->SetConstructPolycube(1);
   Slicer->SetBoundaryPointsArrayName("BoundaryPoints");
   Slicer->SetGroupIdsArrayName("GroupIds");

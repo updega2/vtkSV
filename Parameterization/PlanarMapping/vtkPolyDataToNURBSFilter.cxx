@@ -277,7 +277,7 @@ int vtkPolyDataToNURBSFilter::SliceAndDice()
   vtkNew(vtkPolyDataSliceAndDiceFilter, slicer);
   slicer->SetInputData(this->InputPd);
   slicer->SetCenterlines(this->Centerlines);
-  slicer->SetSliceLength(2.0);
+  slicer->SetSliceLength(1.0);
   slicer->SetConstructPolycube(1);
   slicer->SetBoundaryPointsArrayName(this->BoundaryPointsArrayName);
   slicer->SetGroupIdsArrayName(this->GroupIdsArrayName);
@@ -531,6 +531,14 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
         firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j)));
         secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j+4)));
       }
+        fprintf(stdout,"First Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 0),
+                                                           startPtIds->GetComponent(bifurcationId, 1),
+                                                           startPtIds->GetComponent(bifurcationId, 2),
+                                                           startPtIds->GetComponent(bifurcationId, 3));
+        fprintf(stdout,"Second Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 4),
+                                                            startPtIds->GetComponent(bifurcationId, 5),
+                                                            startPtIds->GetComponent(bifurcationId, 6),
+                                                            startPtIds->GetComponent(bifurcationId, 7));
       sliceRightNormals->GetTuple(bifurcationId, xvec);
       sliceTopNormals->GetTuple(bifurcationId, zvec);
       vtkNew(vtkPolyData, sliceS2Pd);
@@ -620,7 +628,6 @@ int vtkPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   writer->Write();
   slicePd->DeepCopy(ripper->GetOutput());
 
-  fprintf(stdout,"WODIDN\n");
   vtkNew(vtkIdList, replacedPoints);
   vtkNew(vtkIdList, newPoints);
   replacedPoints->DeepCopy(ripper->GetReplacePointList());
@@ -721,14 +728,19 @@ int vtkPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
     secondCorners->GetValue(2),
     secondCorners->GetValue(3));
   double boundaryLengths[4];
-  boundaryLengths[0] = 1.0; boundaryLengths[1] = 3.0; boundaryLengths[2] = 1.0; boundaryLengths[3] = 3.0;
+  boundaryLengths[0] = 3.0; boundaryLengths[1] = 1.0; boundaryLengths[2] = 3.0; boundaryLengths[3] = 1.0;
   int boundaryDivisions[4];
-  boundaryDivisions[0] = 0; boundaryDivisions[1] = 2; boundaryDivisions[2] = 0; boundaryDivisions[3] = 2;
+  boundaryDivisions[0] = 2; boundaryDivisions[1] = 0; boundaryDivisions[2] = 2; boundaryDivisions[3] = 0;
 
   vtkNew(vtkSuperSquareBoundaryMapper, boundaryMapper);
   boundaryMapper->SetBoundaryIds(boundaryCorners);
   boundaryMapper->SetSuperBoundaryDivisions(boundaryDivisions);
   boundaryMapper->SetSuperBoundaryLengths(boundaryLengths);
+  //TEST!
+  for (int i=0; i<3; i++)
+  {
+    xvec[i] = -1.0*xvec[i];
+  }
   boundaryMapper->SetObjectXAxis(xvec);
   boundaryMapper->SetObjectZAxis(zvec);
 

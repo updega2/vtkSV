@@ -172,7 +172,8 @@ protected:
                            double startPt[3],
                            double secondPt[3],
                            vtkIdList *fixedGoToPoints,
-                           vtkIdList *fixedSurgeryPoints);
+                           vtkIdList *fixedSurgeryPoints,
+                           double startDir[3]);
   int GetFirstSurgeryPoints(vtkPolyData *pd, int pointId,
                             vtkIdList *surgeryPoints,
                             double xvec[3], double zvec[3]);
@@ -182,7 +183,8 @@ protected:
                        const double clSecondPt[3],
                        const int front,
                        const int back,
-                       vtkIdList *surgeryPoints);
+                       vtkIdList *surgeryPoints,
+                       double startDir[3]);
   int GetHalfSurgeryPoints(vtkPolyData *pd,
                            vtkDataArray *pointIds,
                            const int cellId,
@@ -191,7 +193,7 @@ protected:
                            vtkIdList *surgeryPoints);
   int GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3],
                            vtkIdList *surgeryPoints,
-                           int endSurgeryId,
+                           double endSurgeryIds[8],
                            double xvec[3], double zvec[3],
                            double radius,
                            vtkIdList *surgeryLineIds);
