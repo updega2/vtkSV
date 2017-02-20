@@ -194,7 +194,7 @@ int svGraph::BuildGraph()
       this->Root->Children[1] = this->NewCell(*childit, this->Root); ++childit;
       this->NumberOfNodes += 3;
 
-      this->ComputeFirstCellVector(this->Root);
+      this->ComputeReferenceVectors(this->Root);
       this->GetNewBranchDirections(this->Root);
       this->GrowGraph(this->Root->Children[0]);
       this->GrowGraph(this->Root->Children[1]);
@@ -250,7 +250,7 @@ int svGraph::GrowGraph(svGCell *parent)
  * @param *pd
  * @return
  */
-int svGraph::ComputeFirstCellVector(svGCell *parent)
+int svGraph::ComputeReferenceVectors(svGCell *parent)
 {
   vtkNew(vtkThreshold, thresholder);
   thresholder->SetInputData(this->Lines);
@@ -276,9 +276,9 @@ int svGraph::ComputeFirstCellVector(svGCell *parent)
     thresholder->GetOutput()->GetPoint(1, secondPts[i]);
   }
 
-  double vec0[3], vec1[3], rootVec[3];
-  vtkMath::Subtract(endPt1, endPt0, rootVec);
-  vtkMath::Normalize(rootVec);
+  double vec0[3], vec1[3];
+  vtkMath::Subtract(endPt1, endPt0, this->ReferenceVecs[2]);
+  vtkMath::Normalize(this->ReferenceVecs[2]);
   vtkMath::Subtract(secondPts[0], startPts[0], vec0);
   vtkMath::Normalize(vec0);
   vtkMath::Subtract(secondPts[1], startPts[1], vec1);
@@ -286,20 +286,21 @@ int svGraph::ComputeFirstCellVector(svGCell *parent)
 
   // Get angle between vectors
   double angleVec0[3], angleVec1[3];
-  vtkMath::Cross(vec0, rootVec, angleVec0);
-  double ang0 = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(vec0, rootVec));
-  vtkMath::Cross(vec1, rootVec, angleVec1);
-  double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec1, rootVec));
+  vtkMath::Cross(vec0, this->ReferenceVecs[2], angleVec0);
+  double ang0 = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(vec0, this->ReferenceVecs[2]));
+  vtkMath::Cross(vec1, this->ReferenceVecs[2], angleVec1);
+  double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec1, this->ReferenceVecs[2]));
 
   if (ang0 < ang1)
   {
-    vtkMath::Cross(rootVec, vec1, this->FirstVec);
+    vtkMath::Cross(this->ReferenceVecs[2], vec1, this->ReferenceVecs[1]);
   }
   else
   {
-    vtkMath::Cross(rootVec, vec0, this->FirstVec);
+    vtkMath::Cross(this->ReferenceVecs[2], vec0, this->ReferenceVecs[1]);
   }
-  vtkMath::Normalize(this->FirstVec);
+  vtkMath::Normalize(this->ReferenceVecs[1]);
+  vtkMath::Cross(this->ReferenceVecs[1], this->ReferenceVecs[2], this->ReferenceVecs[0]);
 
   return 1;
 }
@@ -382,6 +383,20 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   vtkMath::Subtract(secondPts[1], startPts[1], vec2);
   vtkMath::Normalize(vec2);
 
+  int maxDir;
+  double maxDot = -0.1;
+  for (int i=0; i<3; i++)
+  {
+    double compare = fabs(vtkMath::Dot(this->ReferenceVecs[i], vec0));
+    fprintf(stdout,"Dot with Ref %d: %.4f\n", i, vtkMath::Dot(this->ReferenceVec[i], vec0));
+    if (compare > maxDot)
+    {
+      maxDot = compare;
+      maxDir = i;
+    }
+  }
+  fprintf(stdout,"Direction aligns most with: %d\n", maxDir);
+
   // Get angle between vectors
   double angleVec0[3], angleVec1[3];
   vtkMath::Cross(vec1, vec0, angleVec0);
@@ -411,16 +426,16 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   //or FRONT (270 degrees), again with respect to FirstBranchVec
 
   vtkMath::Normalize(vec3);
-  //fprintf(stdout,"First Branch: %.4f %.4f %.4f\n", this->FirstVec[0], this->FirstVec[1], this->FirstVec[2]);
+  //fprintf(stdout,"First Branch: %.4f %.4f %.4f\n", this->ReferenceVecs[0], this->ReferenceVecs[1], this->ReferenceVecs[2]);
   //fprintf(stdout,"This Branch: %.4f %.4f %.4f\n", vec3[0], vec3[1], vec3[2]);
   double angleVec2[3];
-  vtkMath::Cross(vec3, this->FirstVec, angleVec2);
-  double ang2 = atan2(vtkMath::Norm(angleVec2), vtkMath::Dot(vec3, this->FirstVec));
-  fprintf(stdout,"Dot between vec3 and first is %.4f\n", vtkMath::Dot(vec3, this->FirstVec));
-  //if (vtkMath::Dot(vec3, this->FirstVec) < 0.0)
-  //{
-  //  ang2 = ang2 + M_PI;
-  //}
+  vtkMath::Cross(vec3, this->ReferenceVecs[(maxDir+2)%3], angleVec2);
+  double ang2 = atan2(vtkMath::Norm(angleVec2), vtkMath::Dot(vec3, this->ReferenceVecs[(maxDir+2)%3]));
+  fprintf(stdout,"Dot between vec3 and first is %.4f\n", vtkMath::Dot(vec3, this->ReferenceVecs[(maxDir+2)%3]));
+  if (vtkMath::Dot(vec3, this->ReferenceVecs[(maxDir+1)%3]) < 0.0)
+  {
+    ang2 = ang2 + M_PI;
+  }
 
   fprintf(stdout,"Angle 0: %4f\n", 180*ang0/M_PI);
   fprintf(stdout,"Angle 1: %4f\n", 180*ang1/M_PI);

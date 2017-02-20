@@ -69,7 +69,7 @@ public:
   int BuildGraph();
   int PrintGraph();
   int GrowGraph(svGCell *parent);
-  int ComputeFirstCellVector(svGCell *parent);
+  int ComputeReferenceVectors(svGCell *parent);
   int GetNewBranchDirections(svGCell *parent);
   int GetDirectionVector(const int dir, double dirVector[3]);
   int GetGraphPolyData(vtkPolyData *pd);
@@ -91,7 +91,7 @@ public:
   std::string GroupIdsArrayName;
   std::multimap<int, int> CriticalPointMap;
   double DirectionTable[6][4];
-  double FirstVec[3];
+  double ReferenceVecs[3][3];
 
 };
 
