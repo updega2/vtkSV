@@ -840,10 +840,10 @@ int vtkPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *lof
   lofter->SetVDegree(2);
   lofter->SetPolyDataUSpacing(0.1);
   lofter->SetPolyDataVSpacing(0.1);
-  lofter->SetUKnotSpanType("average");
-  lofter->SetVKnotSpanType("average");
-  //lofter->SetUKnotSpanType("derivative");
-  //lofter->SetVKnotSpanType("derivative");
+  //lofter->SetUKnotSpanType("average");
+  //lofter->SetVKnotSpanType("average");
+  lofter->SetUKnotSpanType("derivative");
+  lofter->SetVKnotSpanType("derivative");
   lofter->SetUParametricSpanType("chord");
   lofter->SetVParametricSpanType("chord");
   lofter->Update();

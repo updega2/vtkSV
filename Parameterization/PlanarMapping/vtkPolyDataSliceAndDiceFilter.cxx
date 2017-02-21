@@ -302,19 +302,19 @@ int vtkPolyDataSliceAndDiceFilter::PrepFilter()
  */
 int vtkPolyDataSliceAndDiceFilter::FormDirectionTable(int dirTable[6][4])
 {
-  //RIGHT: UP    BACK DOWN  FRONT
-  //LEFT:  DOWN  BACK UP    FRONT
-  //FRONT: RIGHT DOWN LEFT  UP
-  //BACK:  RIGHT UP   LEFT  DOWN
-  //UP:    LEFT  BACK RIGHT FRONT
-  //DOWN:  RIGHT BACK LEFT  FRONT
+  //RIGHT: UP    FRONT  DOWN BACK
+  //LEFT:  DOWN  FRONT  UP   BACK
+  //BACK:  RIGHT DOWN   LEFT UP
+  //FRONT: RIGHT UP     LEFT DOWN
+  //UP:    LEFT  FRONT  RIGHTBACK
+  //DOWN:  RIGHT FRONT  LEFT BACK
 
-  dirTable[RIGHT][0] = UP;    dirTable[RIGHT][1] = BACK; dirTable[RIGHT][2] = DOWN;  dirTable[RIGHT][3] = FRONT;
-  dirTable[LEFT][0]  = DOWN;  dirTable[LEFT][1]  = BACK; dirTable[LEFT][2]  = UP;    dirTable[LEFT][3]  = FRONT;
-  dirTable[FRONT][0] = RIGHT; dirTable[FRONT][1] = DOWN; dirTable[FRONT][2] = LEFT;  dirTable[FRONT][3] = UP;
-  dirTable[BACK][0]  = RIGHT; dirTable[BACK][1]  = UP;   dirTable[BACK][2]  = LEFT;  dirTable[BACK][3]  = DOWN;
-  dirTable[UP][0]    = LEFT;  dirTable[UP][1]    = BACK; dirTable[UP][2]    = RIGHT; dirTable[UP][3]    = FRONT;
-  dirTable[DOWN][0]  = RIGHT; dirTable[DOWN][1]  = BACK; dirTable[DOWN][2]  = LEFT;  dirTable[DOWN][3]  = FRONT;
+  dirTable[RIGHT][RIGHT] = UP;    dirTable[RIGHT][LEFT] = DOWN;  dirTable[RIGHT][FRONT] = FRONT; dirTable[RIGHT][BACK] = BACK;
+  dirTable[LEFT][RIGHT]  = DOWN;  dirTable[LEFT][LEFT]  = UP;    dirTable[LEFT][FRONT]  = FRONT; dirTable[LEFT][BACK]  = BACK;
+  dirTable[BACK][RIGHT]  = RIGHT; dirTable[BACK][LEFT]  = LEFT;  dirTable[BACK][FRONT]  = DOWN;  dirTable[BACK][BACK]  = UP;
+  dirTable[FRONT][RIGHT] = RIGHT; dirTable[FRONT][LEFT] = LEFT;  dirTable[FRONT][FRONT] = UP;    dirTable[FRONT][BACK] = DOWN;
+  dirTable[UP][RIGHT]    = LEFT;  dirTable[UP][LEFT]    = RIGHT; dirTable[UP][FRONT]    = FRONT; dirTable[UP][BACK]    = BACK;
+  dirTable[DOWN][RIGHT]  = RIGHT; dirTable[DOWN][LEFT]  = LEFT;  dirTable[DOWN][FRONT]  = FRONT; dirTable[DOWN][BACK]  = BACK;
 
   return 1;
 }
