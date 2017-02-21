@@ -279,8 +279,8 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
   }
 
   double vec0[3], vec1[3];
-  vtkMath::Subtract(endPt0, endPt1, this->ReferenceVecs[2]);
-  vtkMath::Normalize(this->ReferenceVecs[2]);
+  vtkMath::Subtract(endPt0, endPt1, this->ReferenceVecs[0]);
+  vtkMath::Normalize(this->ReferenceVecs[0]);
   vtkMath::Subtract(secondPts[0], startPts[0], vec0);
   vtkMath::Normalize(vec0);
   vtkMath::Subtract(secondPts[1], startPts[1], vec1);
@@ -288,12 +288,12 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
 
   // Get angle between vectors
   double angleVec0[3], angleVec1[3];
-  vtkMath::Cross(vec0, this->ReferenceVecs[2], angleVec0);
-  double ang0 = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(vec0, this->ReferenceVecs[2]));
-  vtkMath::Cross(vec1, this->ReferenceVecs[2], angleVec1);
-  double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec1, this->ReferenceVecs[2]));
+  vtkMath::Cross(vec0, this->ReferenceVecs[0], angleVec0);
+  double ang0 = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(vec0, this->ReferenceVecs[0]));
+  vtkMath::Cross(vec1, this->ReferenceVecs[0], angleVec1);
+  double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec1, this->ReferenceVecs[0]));
 
-  fprintf(stdout,"Root vec: %.4f %.4f %.4f\n", this->ReferenceVecs[2][0], this->ReferenceVecs[2][1], this->ReferenceVecs[2][2]);
+  fprintf(stdout,"Root vec: %.4f %.4f %.4f\n", this->ReferenceVecs[0][0], this->ReferenceVecs[0][1], this->ReferenceVecs[0][2]);
   fprintf(stdout,"Vec 0: %.4f %.4f %.4f\n", vec0[0], vec0[1], vec0[2]);
   fprintf(stdout,"Vec 1: %.4f %.4f %.4f\n", vec1[0], vec1[1], vec1[2]);
   fprintf(stdout,"Angle 0: %4f\n", 180*ang0/M_PI);
@@ -301,15 +301,16 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
   if (ang0 > ang1)
   {
     fprintf(stdout,"Diverging child is %d\n", parent->Children[1]->GroupId);
-    vtkMath::Cross(this->ReferenceVecs[2], vec1, this->ReferenceVecs[1]);
+    vtkMath::Cross(this->ReferenceVecs[0], vec1, this->ReferenceVecs[2]);
   }
   else
   {
     fprintf(stdout,"Diverging child is %d\n", parent->Children[0]->GroupId);
-    vtkMath::Cross(this->ReferenceVecs[2], vec0, this->ReferenceVecs[1]);
+    vtkMath::Cross(this->ReferenceVecs[0], vec0, this->ReferenceVecs[2]);
   }
+  vtkMath::Normalize(this->ReferenceVecs[2]);
+  vtkMath::Cross(this->ReferenceVecs[2], this->ReferenceVecs[0], this->ReferenceVecs[1]);
   vtkMath::Normalize(this->ReferenceVecs[1]);
-  vtkMath::Cross(this->ReferenceVecs[1], this->ReferenceVecs[2], this->ReferenceVecs[0]);
 
   return 1;
 }
@@ -408,37 +409,6 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
     }
   }
   fprintf(stdout,"Direction aligns most with: %d\n", maxDir);
-  int angFactor = 1.0;
-  int dotFactor = 1.0;
-  int angDir = -1;
-  int dotDir = -1;
-  if (maxDir == 0)
-  {
-    // Aligns with branch vector, angle factor is 1 and dot factor is dependent on opp dot with Ref
-    angDir = 1;
-    dotDir = 2;
-    angFactor = 1.0;
-    if (vtkMath::Dot(this->ReferenceVecs[maxDir], vec0) > 0)
-      dotFactor = -1.0;
-  }
-  if (maxDir == 1)
-  {
-    // Aligns with cross vector, dot factor is 1 and angle factor is dependent on opp dot with Ref
-    angDir = 2;
-    dotDir = 0;
-    dotFactor = 1.0;
-    if (vtkMath::Dot(this->ReferenceVecs[maxDir], vec0) > 0)
-      angFactor = -1.0;
-  }
-  if (maxDir == 2)
-  {
-    // Aligns with root vector, angle factor is 1 and dot factor is dependent on dot with Ref
-    angDir = 1;
-    dotDir = 0;
-    angFactor = 1.0;
-    if (vtkMath::Dot(this->ReferenceVecs[maxDir], vec0) < 0)
-      dotFactor = -1.0;
-  }
 
   // Get angle between vectors
   double angleVec0[3], angleVec1[3];
@@ -460,19 +430,16 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
     parent->Children[1]->Dir = direction0;
   }
 
-  //Check to see if right or left. Perpendicular vector from new branch
-  //will be either 0 degrees (RIGHT) or 180 degrees (LEFT) with respect
-  //to FirstBranchVec! Very important, this may not be the direction it
-  //goes on the skeleton. We need to add that direction to parent direction
-
-  //If not RIGHT or LEFT, then it is either BACK (270 degrees)
-  //or FRONT (90 degrees), again with respect to FirstBranchVec
+  //Check to see orientation with respect to reference vectors. Angle that
+  //it makes with reference vector determines the input angle to a
+  //lookup table that tells us the absolute direction that the new branch
+  //node should go
 
   double checkVec[3], dotVec[3];
   for (int i=0; i<3; i++)
   {
-    checkVec[i] = angFactor*this->ReferenceVecs[angDir][i];
-    dotVec[i]   = dotFactor*this->ReferenceVecs[dotDir][i];
+    checkVec[i] = this->ReferenceVecs[(maxDir+2)%3][i];
+    dotVec[i]   = this->ReferenceVecs[(maxDir+1)%3][i];
   }
 
   vtkMath::Normalize(vec3);
@@ -491,28 +458,24 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   fprintf(stdout,"Dot check dir: %.4f %.4f %.4f\n", dotVec[0], dotVec[1], dotVec[2]);
   fprintf(stdout,"This vec: %.4f %.4f %.4f\n", vec3[0], vec3[1], vec3[2]);
   fprintf(stdout,"Parent direction: %d\n", parent->Dir);
-  fprintf(stdout,"Angle check direction: %d\n", angDir);
   fprintf(stdout,"Angle is: %.4f\n", 180*ang2/M_PI);
-  fprintf(stdout,"Ang factor is: %d\n", angFactor);
-  fprintf(stdout,"Dot check direction: %d\n", dotDir);
   fprintf(stdout,"Dot is: %.4f\n", vtkMath::Dot(vec3, dotVec));
-  fprintf(stdout,"Dot factor is: %d\n", dotFactor);
   int direction1;
   if (ang2 >= 7.0*M_PI/4.0 || ang2 < M_PI/4.0)
   {
-    direction1 = this->DirectionTable[direction0][vtkPolyDataSliceAndDiceFilter::RIGHT];
+    direction1 = this->DirectionTable[direction0][0];
   }
   else if (ang2 >= M_PI/4.0 && ang2 < 3.0*M_PI/4.0)
   {
-    direction1 = this->DirectionTable[direction0][vtkPolyDataSliceAndDiceFilter::FRONT];
+    direction1 = this->DirectionTable[direction0][1];
   }
   else if (ang2 >= 3.0*M_PI/4.0 && ang2 < 5.0*M_PI/4.0)
   {
-    direction1 = this->DirectionTable[direction0][vtkPolyDataSliceAndDiceFilter::LEFT];
+    direction1 = this->DirectionTable[direction0][2];
   }
   else if (ang2 >= 5.0*M_PI/4.0 && ang2 < 7.0*M_PI/4.0)
   {
-    direction1 = this->DirectionTable[direction0][vtkPolyDataSliceAndDiceFilter::BACK];
+    direction1 = this->DirectionTable[direction0][3];
   }
   if (ang0 > ang1)
   {
