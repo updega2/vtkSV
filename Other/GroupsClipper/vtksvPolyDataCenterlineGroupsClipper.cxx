@@ -23,6 +23,7 @@ Version:   $Revision: 1.9 $
 #include "vtkAppendPolyData.h"
 #include "vtkExecutive.h"
 #include "vtkCellLocator.h"
+#include "vtkConnectivityFilter.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkPointLocator.h"
@@ -31,6 +32,7 @@ Version:   $Revision: 1.9 $
 #include "vtkIntArray.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
+#include "vtkCenterOfMass.h"
 #include "vtkCleanPolyData.h"
 #include "vtkClipPolyData.h"
 #include "vtkFeatureEdges.h"
@@ -38,9 +40,11 @@ Version:   $Revision: 1.9 $
 #include "vtksvPolyBallLine.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
+#include "vtkSphere.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
 #include "vtkThreshold.h"
 #include "vtkUnstructuredGrid.h"
@@ -456,12 +460,10 @@ int vtksvPolyDataCenterlineGroupsClipper::RequestData(
   vtkNew(vtkIdList, separateIds);
   this->FindGroupSeparatingPoints(finisher, separateIds);
 
-  vtkNew(vtkIdList, newPointIds);
-  vtkNew(vtkDoubleArray, averageDistances);
-  this->SplitGroups(finisher, separateIds, newPointIds, averageDistances);
+  vtkNew(vtkPoints, newPoints);
+  this->SplitGroups(finisher, separateIds, newPoints);
 
-  this->FillGroups(finisher, newPointIds, averageDistances);
-
+  this->FillGroups(finisher, newPoints);
 
   output->DeepCopy(finisher);
 
@@ -522,7 +524,6 @@ int vtksvPolyDataCenterlineGroupsClipper::FindGroupSeparatingPoints(vtkPolyData 
     if (pointType == 3)
     {
       separateIds->InsertNextId(i);
-      fprintf(stdout,"Holy toledo: %d\n", i);
     }
   }
 
@@ -562,8 +563,7 @@ int vtksvPolyDataCenterlineGroupsClipper::GetPointGroups(vtkPolyData *pd, std::s
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkIdList *newPointIds,
-                                                        vtkDoubleArray *averageDistances)
+int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints)
 {
   fprintf(stdout,"Splitting\n");
   int numIds = separateIds->GetNumberOfIds();
@@ -588,168 +588,61 @@ int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList
   separatePointLocator->SetDataSet(tmpPoly);
   separatePointLocator->BuildLocator();
 
-  separateIds->Reset();
-  separateIds->SetNumberOfIds(0);
-  for (int i=0; i<separatePoints->GetNumberOfPoints(); i++)
-  {
-    if (used->GetValue(i) == -1)
-    {
-      fprintf(stdout,"Found uno\n");
-      double pt[3];
-      separatePoints->GetPoint(i, pt);
-      vtkNew(vtkIdList, closePointIds);
-      separatePointLocator->FindClosestNPoints(3, pt, closePointIds);
-      fprintf(stdout,"What the %lld\n", closePointIds->GetNumberOfIds());
-      double avgDistance = 0.0;
-      for (int j=0; j<closePointIds->GetNumberOfIds(); j++)
-      {
-        used->SetValue(closePointIds->GetId(j), 1);
-        double pt0[3], pt1[3];
-        separatePoints->GetPoint(closePointIds->GetId(j), pt0);
-        separatePoints->GetPoint(closePointIds->GetId((j+1)%3), pt1);
-        avgDistance += std::sqrt(std::pow(pt0[0] - pt1[0], 2.0) +
-                                 std::pow(pt0[1] - pt1[1], 2.0) +
-                                 std::pow(pt0[2] - pt1[2], 2.0));
-      }
-      avgDistance = avgDistance/3.0;
-      averageDistances->InsertNextValue(avgDistance);
-      vtkNew(vtkIdList, groupPoints);
-      this->AddNewCriticalPoint(pd, separatePoints, closePointIds, newPointIds);
-    }
-  }
-  pd->RemoveDeletedCells();
+  vtkNew(vtkPolyData, pieces);
+  this->ThresholdPd(pd, -1, -1, 1, this->GroupIdsArrayName, pieces);
 
-  return 1;
-}
+  vtkNew(vtkConnectivityFilter, connector);
+  connector->SetInputData(pieces);
+  connector->SetExtractionModeToAllRegions();
+  connector->ColorRegionsOn();
+  connector->Update();
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtksvPolyDataCenterlineGroupsClipper::AddNewCriticalPoint(vtkPolyData *pd,
-                                                                vtkPoints *separatePoints,
-                                                                vtkIdList *groupIds,
-                                                                vtkIdList *newPointIds)
-{
-  vtkNew(vtkPointData, newPointData);
-  vtkNew(vtkCellData, newCellData);
-  newPointData->CopyAllocate(pd->GetPointData(), pd->GetNumberOfPoints() + 1);
-  newCellData->CopyAllocate(pd->GetCellData(), pd->GetNumberOfCells() + 3);
-  for (int i=0; i<pd->GetNumberOfPoints(); i++)
-  {
-    newPointData->CopyData(pd->GetPointData(), i, i);
-  }
-  for (int i=0; i<pd->GetNumberOfCells(); i++)
-  {
-    newCellData->CopyData(pd->GetCellData(), i, i);
-  }
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(connector->GetOutput());
+  surfacer->Update();
 
-  double centroid[3];
-  centroid[0] = 0.0; centroid[1] = 0.0; centroid[2] = 0.0;
-  for (int i=0; i< groupIds->GetNumberOfIds(); i++)
+  for (int i=0; i<connector->GetNumberOfExtractedRegions(); i++)
   {
-    double pt[3];
-    separatePoints->GetPoint(groupIds->GetId(i), pt);
+    fprintf(stdout,"Clipping region: %d\n", i);
+    vtkNew(vtkPolyData, onePiece);
+    this->ThresholdPd(surfacer->GetOutput(), i, i, 1, "RegionId", onePiece);
+    double center[3];
+    this->ComputeMassCenter(onePiece, center);
+    vtkNew(vtkIdList, closePointIds);
+    separatePointLocator->FindClosestNPoints(3, center, closePointIds);
+    double pts[3][3];
     for (int j=0; j<3; j++)
     {
-      centroid[j] += pt[j];
+      separatePoints->GetPoint(closePointIds->GetId(j), pts[j]);
     }
-  }
-  vtkMath::MultiplyScalar(centroid, 1.0/groupIds->GetNumberOfIds());
-      fprintf(stdout,"Centroid %.4f %.4f %.4f\n", centroid[0], centroid[1], centroid[2]);
-
-  vtkNew(vtkCellLocator, cellLocator);
-  cellLocator->SetDataSet(pd);
-  cellLocator->BuildLocator();
-
-  double closestPt[3];
-  vtkIdType closestCell;
-  int subId;
-  double distance;
-  vtkSmartPointer<vtkGenericCell> genericCell =
-    vtkSmartPointer<vtkGenericCell>::New();
-  cellLocator->FindClosestPoint(centroid, closestPt, genericCell, closestCell, subId,
-    distance);
-
-  if (int(pd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(closestCell)) != -1)
-  {
-    int newCell;
-    this->GetNewPointSpecial(pd, centroid, newCell, closestPt);
-    closestCell = newCell;
-  }
-  fprintf(stdout,"Inserting Point %.4f %.4f %.4f\n", closestPt[0], closestPt[1], closestPt[2]);
-  fprintf(stdout,"For cell %lld\n", closestCell);
-  int newId = pd->GetPoints()->InsertNextPoint(closestPt);
-  newPointIds->InsertNextId(newId);
-  newPointData->CopyData(pd->GetPointData(), groupIds->GetId(0), newId);
-  vtkIdType npts, *pts;
-  pd->GetCellPoints(closestCell, npts, pts);
-  for (int i=0; i<npts; i++)
-  {
-    int ptId0 = pts[i];
-    int ptId1 = pts[(i+1)%npts];
-    vtkNew(vtkIdList, newCellPoints);
-    newCellPoints->SetNumberOfIds(3);
-    newCellPoints->SetId(0, newId);
-    newCellPoints->SetId(1, ptId0);
-    newCellPoints->SetId(2, ptId1);
-    int newCellId = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints);
-    newCellData->CopyData(pd->GetCellData(), closestCell, newCellId);
-  }
-  pd->DeleteCell(closestCell);
-
-  pd->GetPointData()->PassData(newPointData);
-  pd->GetCellData()->PassData(newCellData);
-  return 1;
-}
-
-int vtksvPolyDataCenterlineGroupsClipper::GetNewPointSpecial(vtkPolyData *pd,
-                                                               double centroid[3],
-                                                               int &newCell,
-                                                               double newPt[3])
-{
-  vtkNew(vtkIdFilter, ider);
-  ider->SetInputData(pd);
-  ider->SetIdsArrayName("TmpInternalIds");
-  ider->Update();
-  vtkNew(vtkPolyData, idOutPd);
-  idOutPd->DeepCopy(ider->GetOutput());
-  vtkNew(vtkPolyData, tmpPd);
-  this->ThresholdPd(idOutPd, -1, -1, 1, this->GroupIdsArrayName, tmpPd);
-  tmpPd->BuildLinks();
-
-  vtkNew(vtkCellLocator, locator);
-  locator->SetDataSet(tmpPd);
-  locator->BuildLocator();
-
-  double closestPt[3];
-  vtkIdType closestCell;
-  int subId;
-  double distance;
-  vtkSmartPointer<vtkGenericCell> genericCell =
-    vtkSmartPointer<vtkGenericCell>::New();
-  locator->FindClosestPoint(centroid, closestPt, genericCell, closestCell, subId,
-    distance);
-
-  newPt[0] = 0.0; newPt[1] = 0.0; newPt[2] = 0.0;
-  vtkIdType npts, *pts;
-  tmpPd->GetCellPoints(closestCell, npts, pts);
-  for (int i=0; i< npts; i++)
-  {
-    double pt[3];
-    tmpPd->GetPoint(pts[i], pt);
+    double tmp[3], circleCenter[3];
+    vtkMath::Add(pts[0], pts[1], tmp);
+    vtkMath::Add(tmp, pts[2], circleCenter);
+    vtkMath::MultiplyScalar(circleCenter, 1.0/3);
+    newPoints->InsertNextPoint(circleCenter);
+    double circleRadius = 0.0;
     for (int j=0; j<3; j++)
     {
-      newPt[j] += pt[j];
+      double dist = std::sqrt(std::pow(pts[j][0] - circleCenter[0], 2.0) +
+                              std::pow(pts[j][1] - circleCenter[1], 2.0) +
+                              std::pow(pts[j][2] - circleCenter[2], 2.0));
+      if (dist > circleRadius)
+        circleRadius = dist;
     }
+    vtkNew(vtkSphere, sphere);
+    sphere->SetCenter(circleCenter);
+    sphere->SetRadius(circleRadius);
+
+    vtkNew(vtkClipPolyData, cutter);
+    cutter->SetInputData(pd);
+    cutter->SetClipFunction(sphere);
+    cutter->Update();
+    pd->DeepCopy(cutter->GetOutput());
   }
-  vtkMath::MultiplyScalar(newPt, 1.0/npts);
-  fprintf(stdout,"New centroid %.4f %.4f %.4f\n", newPt[0], newPt[1], newPt[2]);
-  newCell = tmpPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(closestCell);
+
   return 1;
 }
+
 
 int vtksvPolyDataCenterlineGroupsClipper::ThresholdPd(vtkPolyData *pd, int minVal,
                                                         int maxVal, int dataType,
@@ -779,152 +672,120 @@ int vtksvPolyDataCenterlineGroupsClipper::ThresholdPd(vtkPolyData *pd, int minVa
 
 
 int vtksvPolyDataCenterlineGroupsClipper::FillGroups(vtkPolyData *pd,
-                                                       vtkIdList *newPointIds,
-                                                       vtkDoubleArray *averageDistances)
+                                                     vtkPoints *newPoints)
 {
-  pd->BuildLinks();
-  for (int i=0; i<newPointIds->GetNumberOfIds(); i++)
+  vtkNew(vtkIdFilter, ider);
+  ider->SetInputData(pd);
+  ider->SetIdsArrayName("TmpInternalIds");
+  ider->Update();
+
+  vtkNew(vtkFeatureEdges, boundaries);
+  boundaries->SetInputData(ider->GetOutput());
+  boundaries->BoundaryEdgesOn();
+  boundaries->FeatureEdgesOff();
+  boundaries->NonManifoldEdgesOff();
+  boundaries->ManifoldEdgesOff();
+  boundaries->Update();
+
+  for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
   {
-    int pointId = newPointIds->GetId(i);
-    double avgDistance = averageDistances->GetValue(i);
-    fprintf(stdout,"Doing the point %d\n", pointId);
-    this->FillRegionGroups(pd, pointId, avgDistance);
+    double pt[3];
+    newPoints->GetPoint(i, pt);
+    vtkNew(vtkPolyData, pointLoop);
+    this->GetClosestPointConnectedRegion(boundaries->GetOutput(), pt, pointLoop);
+    this->FillRegionGroups(pd, pointLoop, pt);
   }
+
   return 1;
 }
 
 int vtksvPolyDataCenterlineGroupsClipper::FillRegionGroups(vtkPolyData *pd,
-                                                             const int pointId,
-                                                             const double rayDist)
+                                                           vtkPolyData *boundary,
+                                                           double center[3])
 {
-  vtkIdList *cellListArray[3];
-  vtkIdList *groupListArray[3];
-  for (int i=0; i<3; i++)
+  vtkNew(vtkPointData, newPointData);
+  vtkNew(vtkCellData, newCellData);
+  newPointData->CopyAllocate(pd->GetPointData(), pd->GetNumberOfPoints() + 1);
+  newCellData->CopyAllocate(pd->GetCellData(), pd->GetNumberOfCells() + boundary->GetNumberOfCells());
+  for (int i=0; i<pd->GetNumberOfPoints(); i++)
   {
-    cellListArray[i] = vtkIdList::New();
-    groupListArray[i] = vtkIdList::New();
+    newPointData->CopyData(pd->GetPointData(), i, i);
+  }
+  for (int i=0; i<pd->GetNumberOfCells(); i++)
+  {
+    newCellData->CopyData(pd->GetCellData(), i, i);
   }
 
-  vtkNew(vtkIdList, cellIdList);
-  pd->GetPointCells(pointId, cellIdList);
-  if (cellIdList->GetNumberOfIds() != 3)
+  boundary->BuildLinks();
+  vtkDataArray *pointIds = boundary->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *cellIds  = boundary->GetCellData()->GetArray("TmpInternalIds");
+  for (int i=0; i<boundary->GetNumberOfCells(); i++)
   {
-    vtkErrorMacro("New point should be connected to three cells");
-    for (int i=0; i<3; i++)
-    {
-      cellListArray[i]->Delete();
-      groupListArray[i]->Delete();
-    }
-    return 0;
-  }
-  for (int i=0; i<3; i++)
-  {
-    int cellId = cellIdList->GetId(i);
-    fprintf(stdout,"Start cell id %d\n", cellId);
-    this->FillCellGroups(pd, cellId, pointId, cellListArray[i], groupListArray[i]);
     vtkIdType npts, *pts;
-    pd->GetCellPoints(cellId, npts, pts);
-    int groupId;
-    for (int j=0; j<npts; j++)
+    boundary->GetCellPoints(i, npts, pts);
+    if (npts != 2)
     {
-      if (pts[j] == pointId)
-      {
-        int pointId0 = pts[(j+1)%npts];
-        int pointId1 = pts[(j+2)%npts];
-        int pointId2 = pts[j];
-        vtkNew(vtkIdList, cellNeighbors);
-        pd->GetCellEdgeNeighbors(cellId, pointId0, pointId1, cellNeighbors);
-        if (cellNeighbors->GetNumberOfIds() != 1)
-        {
-          vtkErrorMacro("There is a problem here");
-          return 0;
-        }
-        double pt0[3], pt1[3], pt2[3];
-        pd->GetPoint(pointId0, pt0);
-        pd->GetPoint(pointId1, pt1);
-        pd->GetPoint(pointId2, pt2);
-        double midway[3];
-        vtkMath::Add(pt0, pt1, midway);
-        vtkMath::MultiplyScalar(midway, 0.5);
-        double vec0[3];
-        vtkMath::Subtract(midway, pt2, vec0);
-        vtkMath::Normalize(vec0);
-        vtkMath::MultiplyScalar(vec0, 1.5*rayDist);
-        double finalPt[3];
-        vtkMath::Add(pt2, vec0, finalPt);
-        vtkNew(vtkCellLocator, locator);
-        locator->SetDataSet(pd);
-        locator->BuildLocator();
-        double closestPt[3];
-        vtkIdType closestCell;
-        int subId;
-        double distance;
-        vtkSmartPointer<vtkGenericCell> genericCell =
-          vtkSmartPointer<vtkGenericCell>::New();
-        locator->FindClosestPoint(finalPt, closestPt, genericCell, closestCell, subId,
-          distance);
-        groupId = pd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(closestCell);
-      }
+      vtkErrorMacro("Should only have 2 points on line!");
+      return 0;
     }
-    for (int j=0; j<cellListArray[i]->GetNumberOfIds(); j++)
-    {
-      pd->GetCellData()->GetArray(this->GroupIdsArrayName)->
-        SetTuple1(cellListArray[i]->GetId(j), groupId);
-    }
+    vtkNew(vtkIdList, newCellPoints);
+    int newId = pd->GetPoints()->InsertNextPoint(center);
+    newPointData->CopyData(pd->GetPointData(), pointIds->GetTuple1(pts[0]), newId);
+    newCellPoints->SetNumberOfIds(3);
+    newCellPoints->SetId(0, newId);
+    newCellPoints->SetId(1, pointIds->GetTuple1(pts[0]));
+    newCellPoints->SetId(2, pointIds->GetTuple1(pts[1]));
+    int newCellId = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints);
+    newCellData->CopyData(pd->GetCellData(), cellIds->GetTuple1(i), newCellId);
   }
 
-  for (int i=0; i<3; i++)
-  {
-    fprintf(stdout,"Array %d has %lld ids and %lld groups\n", i, cellListArray[i]->GetNumberOfIds(), groupListArray[i]->GetNumberOfIds());
-    cellListArray[i]->Delete();
-    groupListArray[i]->Delete();
-  }
+  pd->GetPointData()->PassData(newPointData);
+  pd->GetCellData()->PassData(newCellData);
+
   return 1;
 }
 
-int vtksvPolyDataCenterlineGroupsClipper::FillCellGroups(vtkPolyData *pd,
-                                                           const int cellId,
-                                                           const int pointId,
-                                                           vtkIdList *cellList,
-                                                           vtkIdList *groupList)
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtksvPolyDataCenterlineGroupsClipper::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
 {
+  massCenter[0] = 0.0;
+  massCenter[1] = 0.0;
+  massCenter[2] = 0.0;
+  vtkSmartPointer<vtkCenterOfMass> centerFinder =
+    vtkSmartPointer<vtkCenterOfMass>::New();
+  centerFinder->SetInputData(pd);
+  centerFinder->Update();
+  centerFinder->GetCenter(massCenter);
 
-  cellList->InsertUniqueId(cellId);
-  vtkIdType npts, *pts;
-  pd->GetCellPoints(cellId, npts, pts);
-  for (int j=0; j<3; j++)
-  {
-    if (pts[j] == pointId)
-    {
-      int pointId0 = pts[(j+1)%npts];
-      int pointId1 = pts[(j+2)%npts];
-      vtkNew(vtkIdList, cellNeighbors);
-      pd->GetCellEdgeNeighbors(cellId, pointId0, pointId1, cellNeighbors);
-      if (cellNeighbors->GetNumberOfIds() != 1)
-      {
-        vtkErrorMacro("There is a problem here");
-        return 0;
-      }
-      int groupId = pd->GetCellData()->GetArray(this->GroupIdsArrayName)->
-        GetTuple1(cellNeighbors->GetId(0));
-      fprintf(stdout,"What is group id %d\n", groupId);
-      if (groupId != -1)
-      {
-        groupList->InsertUniqueId(groupId);
-      }
-      else
-      {
-        if (cellList->IsId(cellNeighbors->GetId(0)) != -1)
-        {
-          fprintf(stdout,"What the eff returning %d\n", cellId);
-          return 1;
-        }
-        fprintf(stdout,"Doing cell %lld and points %d %d\n", cellNeighbors->GetId(0), pointId0, pointId1);
-        this->FillCellGroups(pd, cellNeighbors->GetId(0), pointId0, cellList, groupList);
-        this->FillCellGroups(pd, cellNeighbors->GetId(0), pointId1, cellList, groupList);
-      }
-    }
-  }
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtksvPolyDataCenterlineGroupsClipper::GetClosestPointConnectedRegion(vtkPolyData *inPd,
+                                                                         double origin[3],
+                                                                         vtkPolyData *outPd)
+{
+  vtkNew(vtkConnectivityFilter, connector);
+  connector->SetInputData(inPd);
+  connector->SetExtractionModeToClosestPointRegion();
+  connector->SetClosestPoint(origin);
+  connector->Update();
+
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(connector->GetOutput());
+  surfacer->Update();
+
+  outPd->DeepCopy(surfacer->GetOutput());
 
   return 1;
 }

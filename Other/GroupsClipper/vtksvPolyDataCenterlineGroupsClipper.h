@@ -88,21 +88,15 @@ class vtksvPolyDataCenterlineGroupsClipper : public vtkPolyDataAlgorithm
   int GetPointGroups(vtkPolyData *pd, std::string arrayName,
                      const int pointId, vtkIdList *groupIds);
 
-  int SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkIdList *newPointIds,
-                  vtkDoubleArray *averageDistances);
-  int AddNewCriticalPoint(vtkPolyData *pd,
-                          vtkPoints *separatePoints,
-                          vtkIdList *groupIds,
-                          vtkIdList *newPointIds);
-  int FillGroups(vtkPolyData *pd, vtkIdList *newPointIds, vtkDoubleArray *averageDistances);
-  int FillRegionGroups(vtkPolyData *pd, const int pointId, const double rayDist);
-  int FillCellGroups(vtkPolyData *pd, const int cellId, const int pointId,
-                     vtkIdList *cellList,
-                     vtkIdList *groupList);
-  int GetNewPointSpecial(vtkPolyData *pd, double centroid[3],
-                         int &newCell, double newPt[3]);
+  int SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints);
+  int FillGroups(vtkPolyData *pd, vtkPoints *newPoints);
+  int FillRegionGroups(vtkPolyData *pd, vtkPolyData *boundary, double center[3]);
   int ThresholdPd(vtkPolyData *pd, int minVal, int maxVal, int dataType,
                   std::string arrayName, vtkPolyData *returnPd);
+  int ComputeMassCenter(vtkPolyData *pd, double massCenter[3]);
+  int GetClosestPointConnectedRegion(vtkPolyData *inPd,
+                                     double origin[3],
+                                     vtkPolyData *outPd);
   vtkPolyData* Centerlines;
 
   vtkIdList* CenterlineGroupIds;
