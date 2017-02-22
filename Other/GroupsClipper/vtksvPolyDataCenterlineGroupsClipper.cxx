@@ -464,6 +464,10 @@ int vtksvPolyDataCenterlineGroupsClipper::RequestData(
   this->SplitGroups(finisher, separateIds, newPoints);
 
   this->FillGroups(finisher, newPoints);
+  vtkNew(vtkCleanPolyData, finalCleaner);
+  finalCleaner->SetInputData(finisher);
+  finalCleaner->Update();
+  finisher->DeepCopy(finalCleaner->GetOutput());
 
   output->DeepCopy(finisher);
 
@@ -526,6 +530,7 @@ int vtksvPolyDataCenterlineGroupsClipper::FindGroupSeparatingPoints(vtkPolyData 
       separateIds->InsertNextId(i);
     }
   }
+  fprintf(stdout,"Number Of Ids: %lld\n", separateIds->GetNumberOfIds());
 
   return 1;
 }
@@ -565,7 +570,6 @@ int vtksvPolyDataCenterlineGroupsClipper::GetPointGroups(vtkPolyData *pd, std::s
  */
 int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints)
 {
-  fprintf(stdout,"Splitting\n");
   int numIds = separateIds->GetNumberOfIds();
   vtkSmartPointer<vtkIntArray> used =
     vtkSmartPointer<vtkIntArray>::New();
@@ -603,7 +607,6 @@ int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList
 
   for (int i=0; i<connector->GetNumberOfExtractedRegions(); i++)
   {
-    fprintf(stdout,"Clipping region: %d\n", i);
     vtkNew(vtkPolyData, onePiece);
     this->ThresholdPd(surfacer->GetOutput(), i, i, 1, "RegionId", onePiece);
     double center[3];
@@ -621,11 +624,13 @@ int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList
     vtkMath::MultiplyScalar(circleCenter, 1.0/3);
     newPoints->InsertNextPoint(circleCenter);
     double circleRadius = 0.0;
-    for (int j=0; j<3; j++)
+    for (int j=0; j<onePiece->GetNumberOfPoints(); j++)
     {
-      double dist = std::sqrt(std::pow(pts[j][0] - circleCenter[0], 2.0) +
-                              std::pow(pts[j][1] - circleCenter[1], 2.0) +
-                              std::pow(pts[j][2] - circleCenter[2], 2.0));
+      double testPt[3];
+      onePiece->GetPoint(j, testPt);
+      double dist = std::sqrt(std::pow(testPt[0] - circleCenter[0], 2.0) +
+                              std::pow(testPt[1] - circleCenter[1], 2.0) +
+                              std::pow(testPt[2] - circleCenter[2], 2.0));
       if (dist > circleRadius)
         circleRadius = dist;
     }
@@ -733,9 +738,10 @@ int vtksvPolyDataCenterlineGroupsClipper::FillRegionGroups(vtkPolyData *pd,
     newPointData->CopyData(pd->GetPointData(), pointIds->GetTuple1(pts[0]), newId);
     newCellPoints->SetNumberOfIds(3);
     newCellPoints->SetId(0, newId);
-    newCellPoints->SetId(1, pointIds->GetTuple1(pts[0]));
-    newCellPoints->SetId(2, pointIds->GetTuple1(pts[1]));
-    int newCellId = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints);
+    newCellPoints->SetId(1, pointIds->GetTuple1(pts[1]));
+    newCellPoints->SetId(2, pointIds->GetTuple1(pts[0]));
+    int newCellId = pd->GetNumberOfCells();
+    pd->InsertNextCell(VTK_TRIANGLE, newCellPoints);
     newCellData->CopyData(pd->GetCellData(), cellIds->GetTuple1(i), newCellId);
   }
 
