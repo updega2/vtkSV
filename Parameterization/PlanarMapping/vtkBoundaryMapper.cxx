@@ -245,6 +245,7 @@ int vtkBoundaryMapper::GetBoundaryLoop()
     testPt = pts[1];
   else
     testPt = pts[0];
+  fprintf(stdout,"And the next ponit: %f\n", pointIds->GetTuple1(testPt));
 
   double pt0[3], pt1[3], vec0[3], vec1[3];
   this->Boundaries->GetPoint(startPt, pt0);
@@ -267,8 +268,10 @@ int vtkBoundaryMapper::GetBoundaryLoop()
   vtkMath::Normalize(vec2);
   vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec3);
   vtkMath::Normalize(vec3);
+  fprintf(stdout,"And the other ponit: %f\n", pointIds->GetTuple1(doubleCheckPt));
   if (vtkMath::Dot(vec0, vec1) < vtkMath::Dot(vec2, vec3))
   {
+    fprintf(stdout,"Fliippped\n");
     nextCell = cellIds->GetId(1);
   }
 

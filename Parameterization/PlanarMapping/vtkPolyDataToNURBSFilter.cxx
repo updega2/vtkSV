@@ -420,6 +420,13 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
     this->Polycube->GetCellData()->GetArray("RightNormal"));
   vtkDoubleArray *sliceTopNormals = vtkDoubleArray::SafeDownCast(
     this->Polycube->GetCellData()->GetArray("TopNormal"));
+  int parentDir = this->Polycube->GetCellData()->GetArray(
+    "ParentDirection")->GetTuple1(branchId);
+  int childDir = this->Polycube->GetCellData()->GetArray(
+    "ChildDirection")->GetTuple1(branchId);
+  int cellIndices[8];
+  for (int i=0; i<8; i++)
+    cellIndices[i] = vtkPolyDataSliceAndDiceFilter::LookupIndex(parentDir, childDir, i);
 
   double minmax[2];
   vtkIntArray *sliceIds = vtkIntArray::SafeDownCast(
@@ -439,22 +446,22 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
       vtkNew(vtkIntArray, secondLoopPts);
       for (int j=0; j<4; j++)
       {
-        firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(branchId, j)));
-        secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(branchId, j+4)));
+        firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(branchId, cellIndices[j])));
+        secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(branchId, cellIndices[j+4])));
       }
       sliceRightNormals->GetTuple(branchId, xvec);
       sliceTopNormals->GetTuple(branchId, zvec);
       vtkNew(vtkPolyData, sliceS2Pd);
       vtkNew(vtkPolyData, mappedPd);
       fprintf(stdout,"Mapping region %d...\n", branchId);
-      //fprintf(stdout,"First start vals are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 0),
-      //                                                      startPtIds->GetComponent(branchId, 1),
-      //                                                      startPtIds->GetComponent(branchId, 2),
-      //                                                      startPtIds->GetComponent(branchId, 3));
-      //fprintf(stdout,"Second start are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 4),
-      //                                                  startPtIds->GetComponent(branchId, 5),
-      //                                                  startPtIds->GetComponent(branchId, 6),
-      //                                                  startPtIds->GetComponent(branchId, 7));
+      fprintf(stdout,"First start vals are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 0),
+                                                            startPtIds->GetComponent(branchId, 1),
+                                                            startPtIds->GetComponent(branchId, 2),
+                                                            startPtIds->GetComponent(branchId, 3));
+      fprintf(stdout,"Second start are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 4),
+                                                        startPtIds->GetComponent(branchId, 5),
+                                                        startPtIds->GetComponent(branchId, 6),
+                                                        startPtIds->GetComponent(branchId, 7));
 
       this->MapSliceToS2(slicePd, surgeryLinePd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
       //this->GetCorrespondingCube(cubeS2Pd, boundary);
@@ -508,6 +515,13 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     this->Polycube->GetCellData()->GetArray("RightNormal"));
   vtkDoubleArray *sliceTopNormals = vtkDoubleArray::SafeDownCast(
     this->Polycube->GetCellData()->GetArray("TopNormal"));
+  int parentDir = this->Polycube->GetCellData()->GetArray(
+    "ParentDirection")->GetTuple1(bifurcationId);
+  int childDir = this->Polycube->GetCellData()->GetArray(
+    "ChildDirection")->GetTuple1(bifurcationId);
+  int cellIndices[8];
+  for (int i=0; i<8; i++)
+    cellIndices[i] = vtkPolyDataSliceAndDiceFilter::LookupIndex(parentDir, childDir, i);
 
   int numPoints = bifurcationPd->GetNumberOfPoints();
   vtkDataArray *ptIds = bifurcationPd->GetPointData()->GetArray(this->InternalIdsArrayName);
@@ -519,8 +533,8 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     vtkNew(vtkIntArray, secondLoopPts);
     for (int j=0; j<4; j++)
     {
-      firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j)));
-      secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, j+4)));
+      firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, cellIndices[j])));
+      secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, cellIndices[j+4])));
     }
       fprintf(stdout,"First Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 0),
                                                          startPtIds->GetComponent(bifurcationId, 1),
@@ -701,22 +715,22 @@ int vtkPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   vtkNew(vtkIntArray, boundaryCorners);
   boundaryCorners->SetNumberOfValues(8);
   boundaryCorners->SetValue(0, firstCorners->GetValue(0));
-  boundaryCorners->SetValue(1, firstCorners->GetValue(1));
+  boundaryCorners->SetValue(1, firstCorners->GetValue(3));
   boundaryCorners->SetValue(2, firstCorners->GetValue(2));
-  boundaryCorners->SetValue(3, firstCorners->GetValue(3));
-  boundaryCorners->SetValue(4, secondCorners->GetValue(0));
-  boundaryCorners->SetValue(5, secondCorners->GetValue(1));
-  boundaryCorners->SetValue(6, secondCorners->GetValue(2));
-  boundaryCorners->SetValue(7, secondCorners->GetValue(3));
+  boundaryCorners->SetValue(3, firstCorners->GetValue(1));
+  boundaryCorners->SetValue(4, secondCorners->GetValue(1));
+  boundaryCorners->SetValue(5, secondCorners->GetValue(2));
+  boundaryCorners->SetValue(6, secondCorners->GetValue(3));
+  boundaryCorners->SetValue(7, secondCorners->GetValue(0));
   fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d\n",
     firstCorners->GetValue(0),
-    firstCorners->GetValue(1),
-    firstCorners->GetValue(2),
     firstCorners->GetValue(3),
-    secondCorners->GetValue(0),
+    firstCorners->GetValue(2),
+    firstCorners->GetValue(1),
     secondCorners->GetValue(1),
     secondCorners->GetValue(2),
-    secondCorners->GetValue(3));
+    secondCorners->GetValue(3),
+    secondCorners->GetValue(0));
   double boundaryLengths[4];
   boundaryLengths[0] = 3.0; boundaryLengths[1] = 1.0; boundaryLengths[2] = 3.0; boundaryLengths[3] = 1.0;
   int boundaryDivisions[4];

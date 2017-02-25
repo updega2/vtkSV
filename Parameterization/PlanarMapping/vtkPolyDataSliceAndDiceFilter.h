@@ -130,6 +130,7 @@ public:
                                             vtkPolyData *outPd);
   static int GraphToPolycube(svGCell *gCell, void *arg0,
                              void *arg1, void *arg2);
+  static int LookupIndex(const int PARENT, const int DIVCHILD, const int index);
 
 
   enum DIRECTIONS
@@ -159,6 +160,10 @@ protected:
   int CheckSlice(vtkPolyData *pd);
   void UpdatePtId(int &ptId);
   int FormDirectionTable(int dirTable[6][4]);
+  int GetCorrectFrontPoint(vtkPolyData *pd,
+                           double frontDir[3],
+                           int &frontId,
+                           int &backId);
   int GetFourPolyDataRegions(vtkPolyData *startPd,
                              const int id0, vtkPolyData *pd0,
                              const int id1, vtkPolyData *pd1,
@@ -186,6 +191,7 @@ protected:
                        const int front,
                        const int back,
                        const int checkId,
+                       std::string arrayName,
                        vtkIdList *surgeryPoints,
                        double startDir[3]);
   int GetHalfSurgeryPoints(vtkPolyData *pd,
@@ -199,9 +205,10 @@ protected:
                            double endSurgeryIds[8],
                            double xvec[3], double zvec[3],
                            double radius,
-                           vtkIdList *surgeryLineIds);
+                           vtkIdList *surgeryLineIds,
+                           int cellIndices[8]);
   int DetermineSliceStrategy(vtkPolyData *branchPd,
-                             const int branchId,
+                             svGCell *gCell,
                              vtkPolyData *branchCenterline,
                              int &branchStartPtId,
                              vtkIdList *surgeryPoints,
@@ -215,7 +222,7 @@ protected:
                                     vtkPolyData *branchCenterlines);
   int SliceBranches();
   int SliceBranch(vtkPolyData *branchPd, vtkPolyData *branchCenterline,
-                    const int branchId,
+                    svGCell *gCell,
                     vtkDataArray *sliceIds,
                     vtkPoints *surgeryPts,
                     vtkCellArray *surgeryLines,
@@ -279,6 +286,7 @@ private:
   int SliceDirection;
   int TotalSliceId;
   int DirectionTable[6][4];
+  int IT[9][8];
 
   double FirstBranchVec[3];
   double SliceLength;

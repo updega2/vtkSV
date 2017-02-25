@@ -55,6 +55,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkXMLPolyDataWriter.h"
 
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
@@ -230,7 +231,7 @@ int vtkPullApartPolyData::PrepFilter()
       }
       if (badCell == 2)
       {
-        fprintf(stdout, "Bad start cell!, fixing\n");
+        //fprintf(stdout, "Bad start cell!, fixing\n");
         this->FixTheBadStartCell(this->WorkPd, this->StartPtId, cellId);
       }
     }
@@ -374,14 +375,14 @@ int vtkPullApartPolyData::FindEdgeCells()
           vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec1);
           vtkMath::Normalize(vec0);
           vtkMath::Normalize(vec1);
-          fprintf(stdout,"Object z axis is: %.4f %.4f %.4f\n", this->ObjectZAxis[0],
-                                                               this->ObjectZAxis[1],
-                                                               this->ObjectZAxis[2]);
-          fprintf(stdout,"Object x axis is: %.4f %.4f %.4f\n", this->ObjectXAxis[0],
-                                                               this->ObjectXAxis[1],
-                                                               this->ObjectXAxis[2]);
+          //fprintf(stdout,"Object z axis is: %.4f %.4f %.4f\n", this->ObjectZAxis[0],
+          //                                                     this->ObjectZAxis[1],
+          //                                                     this->ObjectZAxis[2]);
+          //fprintf(stdout,"Object x axis is: %.4f %.4f %.4f\n", this->ObjectXAxis[0],
+          //                                                     this->ObjectXAxis[1],
+          //                                                     this->ObjectXAxis[2]);
           // We found the right cell!, or so we think
-          if (vtkMath::Dot(vec0, vec1) < 0 && vtkMath::Dot(vec0, vec1) < storeDot)
+          if (vtkMath::Dot(vec0, vec1) < storeDot)
           {
             fprintf(stdout,"What is dot: %.4f for %d and %d\n", vtkMath::Dot(vec0, vec1), startPt0, startPt1);
             startCellId = cellId;
@@ -399,7 +400,7 @@ int vtkPullApartPolyData::FindEdgeCells()
       int tmp = realPt1;
       realPt1 = realPt2;
       realPt2 = tmp;
-      //fprintf(stdout,"Found em!: %d %d %d\n", realPt0, realPt1, realPt2);
+      fprintf(stdout,"Found em!: %d %d %d\n", realPt0, realPt1, realPt2);
       this->ReplaceCellVector.push_back(firstCellList);
       this->ReplacePointVector.push_back(realPt0);
       std::vector<int> list0; list0.push_back(startCellId);
@@ -410,7 +411,7 @@ int vtkPullApartPolyData::FindEdgeCells()
       int tmp = realPt1;
       realPt1 = realPt0;
       realPt0 = tmp;
-      //fprintf(stdout,"Found em!: %d %d %d\n", startPt0, startPt1, startPt2);
+      fprintf(stdout,"Found em!: %d %d %d\n", realPt0, realPt1, realPt2);
       this->FindNextEdge(realPt0, realPt1, realPt2, startCellId, firstCellList, 1);
     }
   }
@@ -555,7 +556,7 @@ int vtkPullApartPolyData::FixTheBadStartCell(vtkPolyData *pd, const int pointId,
   vtkNew(vtkPointData, newPointData);
   vtkNew(vtkCellData, newCellData);
   newPointData->CopyAllocate(pd->GetPointData(), pd->GetNumberOfPoints() + 1);
-  newCellData->CopyAllocate(pd->GetCellData(), pd->GetNumberOfCells() + 2);
+  newCellData->CopyAllocate(pd->GetCellData(), pd->GetNumberOfCells() + 4);
   for (int i=0; i<pd->GetNumberOfPoints(); i++)
   {
     newPointData->CopyData(pd->GetPointData(), i, i);
@@ -568,6 +569,7 @@ int vtkPullApartPolyData::FixTheBadStartCell(vtkPolyData *pd, const int pointId,
   int startPt0;
   int startPt1;
   int startPt2;
+  int newPointId;
   int cellNeighborId;
   vtkIdType npts, *pts;
   pd->GetCellPoints(cellId, npts, pts);
@@ -584,21 +586,23 @@ int vtkPullApartPolyData::FixTheBadStartCell(vtkPolyData *pd, const int pointId,
       pd->GetPoint(startPt1, pt1);
       vtkMath::Add(pt0, pt1, newPt);
       vtkMath::MultiplyScalar(newPt, 0.5);
-      int newPointId = pd->GetPoints()->InsertNextPoint(newPt);
+      newPointId = pd->GetPoints()->InsertNextPoint(newPt);
       newPointData->CopyData(pd->GetPointData(), startPt2, newPointId);
       vtkNew(vtkIdList, newCellPoints0);
       newCellPoints0->SetNumberOfIds(3);
       newCellPoints0->SetId(0, startPt2);
       newCellPoints0->SetId(1, startPt0);
       newCellPoints0->SetId(2, newPointId);
-      int newCellId0 = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints0);
+      int newCellId0 = pd->GetNumberOfCells();
+      pd->InsertNextCell(VTK_TRIANGLE, newCellPoints0);
       newCellData->CopyData(pd->GetCellData(), cellId, newCellId0);
       vtkNew(vtkIdList, newCellPoints1);
       newCellPoints1->SetNumberOfIds(3);
       newCellPoints1->SetId(0, startPt2);
       newCellPoints1->SetId(1, startPt1);
       newCellPoints1->SetId(2, newPointId);
-      int newCellId1 = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints1);
+      int newCellId1 = pd->GetNumberOfCells();
+      pd->InsertNextCell(VTK_TRIANGLE, newCellPoints1);
       newCellData->CopyData(pd->GetCellData(), cellId, newCellId1);
 
       vtkNew(vtkIdList, cellNeighbor);
@@ -615,26 +619,27 @@ int vtkPullApartPolyData::FixTheBadStartCell(vtkPolyData *pd, const int pointId,
           newCellPoints2->SetId(0, neipoints[j]);
           newCellPoints2->SetId(1, startPt0);
           newCellPoints2->SetId(2, newPointId);
-          int newCellId2 = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints2);
+          int newCellId2 = pd->GetNumberOfCells();
+          pd->InsertNextCell(VTK_TRIANGLE, newCellPoints2);
           newCellData->CopyData(pd->GetCellData(), cellNeighborId, newCellId2);
           vtkNew(vtkIdList, newCellPoints3);
           newCellPoints3->SetNumberOfIds(3);
           newCellPoints3->SetId(0, neipoints[j]);
           newCellPoints3->SetId(1, startPt1);
           newCellPoints3->SetId(2, newPointId);
-          int newCellId3 = pd->InsertNextCell(VTK_TRIANGLE, newCellPoints3);
+          int newCellId3 = pd->GetNumberOfCells();
+          pd->InsertNextCell(VTK_TRIANGLE, newCellPoints3);
           newCellData->CopyData(pd->GetCellData(), cellNeighborId, newCellId3);
         }
       }
       break;
     }
   }
-  pd->GetPointData()->PassData(newPointData);
-  pd->GetCellData()->PassData(newCellData);
   pd->DeleteCell(cellId);
   pd->DeleteCell(cellNeighborId);
+  pd->GetPointData()->PassData(newPointData);
+  pd->GetCellData()->PassData(newCellData);
   pd->RemoveDeletedCells();
-  pd->BuildLinks();
 
   pd->GetPointData()->GetArray(this->CutPointsArrayName)->SetTuple1(startPt0, 0);
   pd->GetPointData()->GetArray(this->CutPointsArrayName)->SetTuple1(startPt1, 0);

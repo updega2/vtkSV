@@ -302,15 +302,21 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
   {
     fprintf(stdout,"Diverging child is %d\n", parent->Children[1]->GroupId);
     vtkMath::Cross(this->ReferenceVecs[0], vec1, this->ReferenceVecs[2]);
+    parent->Diverging = 1;
+    parent->Aligning  = 0;
   }
   else
   {
     fprintf(stdout,"Diverging child is %d\n", parent->Children[0]->GroupId);
     vtkMath::Cross(this->ReferenceVecs[0], vec0, this->ReferenceVecs[2]);
+    parent->Diverging = 0;
+    parent->Aligning  = 1;
   }
   vtkMath::Normalize(this->ReferenceVecs[2]);
   vtkMath::Cross(this->ReferenceVecs[2], this->ReferenceVecs[0], this->ReferenceVecs[1]);
   vtkMath::Normalize(this->ReferenceVecs[1]);
+
+  vtkMath::Cross(this->ReferenceVecs[1], this->ReferenceVecs[0], parent->FrontDir);
 
   return 1;
 }
@@ -422,12 +428,18 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   if (ang0 > ang1)
   {
     vtkMath::Cross(vec0, vec2, vec3);
+    vtkMath::Cross(vec2, vec0, parent->FrontDir);
     parent->Children[0]->Dir = direction0;
+    parent->Diverging = 1;
+    parent->Aligning  = 0;
   }
   else
   {
     vtkMath::Cross(vec0, vec1, vec3);
+    vtkMath::Cross(vec1, vec0, parent->FrontDir);
     parent->Children[1]->Dir = direction0;
+    parent->Diverging = 0;
+    parent->Aligning  = 1;
   }
 
   //Check to see orientation with respect to reference vectors. Angle that
@@ -509,7 +521,9 @@ svGCell* svGraph::NewCell(int a_GroupId, svGCell *a_Parent)
   newCell->Children[1] = NULL;
   newCell->Id       = this->NumberOfCells++;
   newCell->GroupId  = a_GroupId;
-  newCell->Dir = -1;
+  newCell->Dir      = -1;
+  newCell->Diverging= -1;
+  newCell->Aligning = -1;
   for (int i=0; i<3; i++)
   {
     if (a_Parent != NULL)
@@ -521,6 +535,7 @@ svGCell* svGraph::NewCell(int a_GroupId, svGCell *a_Parent)
       newCell->StartPt[i] = -1;
     }
     newCell->EndPt[i]   = -1;
+    newCell->FrontDir[i]   = -1;
   }
 
   return newCell;
@@ -535,10 +550,13 @@ svGCell* svGraph::NewCell(int a_GroupId, int a_Dir, double a_StartPt[3], double 
   newCell->Id       = this->NumberOfCells++;
   newCell->GroupId  = a_GroupId;
   newCell->Dir      = a_Dir;
+  newCell->Diverging= -1;
+  newCell->Aligning = -1;
   for (int i=0; i<3; i++)
   {
     newCell->StartPt[i] = a_StartPt[i];
     newCell->EndPt[i]   = a_EndPt[i];
+    newCell->FrontDir[i]= -1;
   }
 
   return newCell;

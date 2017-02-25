@@ -53,17 +53,17 @@ public:
 
   // Origin is front, left, bottom corner of cube when axis aligned
   int InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int cubetype);
+                        const int cubetype, const int parentdirection, const int childdirection);
   int SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int cubetype);
+                        const int cubetype, const int parentdirection, const int childdirection);
   int SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int cubetype, const double topNormal[3], const double rightNormal[3], const int corners[4]);
+                        const int cubetype, const int parentdirection, const int childdirection, const double topNormal[3], const double rightNormal[3], const int corners[4]);
   int InsertGridWithCenter(const int cellId, const double center[3], const double dims[3],
-                        const int cubetype);
+                        const int cubetype, const int parentdirection, const int childdirection);
   int SetGridWithCenter(const int cellId, const double center[3], const double dims[3],
-                        const int cubetype);
-  int InsertGrid(const int cellId, vtkPoints *points, const int cubetype);
-  int SetGrid(const int cellId, vtkPoints *points, const int cubetype);
+                        const int cubetype, const int parentdirection, const int childdirection);
+  int InsertGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection);
+  int SetGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection);
   int GetFullRepresentation(vtkUnstructuredGrid *fullRepresentation) {return 0;}
   int GetGrid(const int cellId, const int spacing, vtkStructuredGrid *gridRepresentation) {return 0;}
   void SetNumberOfGrids(const int numberOfGrids);

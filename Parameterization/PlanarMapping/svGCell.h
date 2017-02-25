@@ -59,6 +59,9 @@ public:
   int Dir;
   double StartPt[3];
   double EndPt[3];
+  double FrontDir[3];
+  int Diverging;
+  int Aligning;
 };
 
 #endif

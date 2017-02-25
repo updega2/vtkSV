@@ -42,6 +42,13 @@ vtkGeneralizedPolycube::vtkGeneralizedPolycube()
   cubeType->SetName("CubeType");
   this->GetCellData()->AddArray(cubeType);
 
+  vtkNew(vtkIntArray, parentDirection);
+  parentDirection->SetName("ParentDirection");
+  this->GetCellData()->AddArray(parentDirection);
+  vtkNew(vtkIntArray, childDirection);
+  childDirection->SetName("ChildDirection");
+  this->GetCellData()->AddArray(childDirection);
+
   vtkNew(vtkIntArray, corners);
   corners->SetNumberOfComponents(8);
   corners->SetName("CornerPtIds");
@@ -124,6 +131,8 @@ void vtkGeneralizedPolycube::SetNumberOfGrids(const int numberOfGrids)
   {
     this->InsertNextCell(VTK_HEXAHEDRON, blankIds);
     this->GetCellData()->GetArray("CubeType")->InsertNextTuple1(-1);
+    this->GetCellData()->GetArray("ParentDirection")->InsertNextTuple1(-1);
+    this->GetCellData()->GetArray("ChildDirection")->InsertNextTuple1(-1);
     double blankCorner[8];
     for (int i=0; i<8; i++)
     {
@@ -155,13 +164,13 @@ int vtkGeneralizedPolycube::GetNumberOfGrids()
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::InsertGridWithCenter(const int cellId, const double center[3], const double dims[3], const int cubetype)
+int vtkGeneralizedPolycube::InsertGridWithCenter(const int cellId, const double center[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection)
 {
   if (cellId >= this->GetNumberOfCells())
   {
     this->SetNumberOfGrids(cellId);
   }
-  this->SetGridWithCenter(cellId, center, dims, cubetype);
+  this->SetGridWithCenter(cellId, center, dims, cubetype, parentdirection, childdirection);
 
   return 1;
 }
@@ -172,7 +181,7 @@ int vtkGeneralizedPolycube::InsertGridWithCenter(const int cellId, const double 
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::SetGridWithCenter(const int cellId, const double center[3], const double dims[3], const int cubetype)
+int vtkGeneralizedPolycube::SetGridWithCenter(const int cellId, const double center[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection)
 {
   double origin[3];
 
@@ -181,7 +190,7 @@ int vtkGeneralizedPolycube::SetGridWithCenter(const int cellId, const double cen
     origin[i] = center[i] - dims[i]/2.0;
   }
 
-  this->SetGridWithOrigin(cellId, origin, dims, cubetype);
+  this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
   return 1;
 }
 
@@ -191,13 +200,13 @@ int vtkGeneralizedPolycube::SetGridWithCenter(const int cellId, const double cen
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype)
+int vtkGeneralizedPolycube::InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection)
 {
   if (cellId >= this->GetNumberOfCells())
   {
     this->SetNumberOfGrids(cellId);
   }
-  this->SetGridWithOrigin(cellId, origin, dims, cubetype);
+  this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
 
   return 1;
 }
@@ -207,7 +216,7 @@ int vtkGeneralizedPolycube::InsertGridWithOrigin(const int cellId, const double 
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const double topNormal[3], const double rightNormal[3], const int corners[8])
+int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection, const double topNormal[3], const double rightNormal[3], const int corners[8])
 {
   this->GetCellData()->GetArray("TopNormal")->SetTuple(cellId, topNormal);
   this->GetCellData()->GetArray("RightNormal")->SetTuple(cellId, rightNormal);
@@ -215,21 +224,21 @@ int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double ori
   {
     this->GetCellData()->GetArray("CornerPtIds")->SetComponent(cellId, i, corners[i]);
   }
-  this->SetGridWithOrigin(cellId, origin, dims, cubetype);
+  this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
 
   return 1;
 }
 
 /**
- *               7---------6
+ *               2---------1
  *              /|        /|
  *             / |       / |
- *            4---------5  |
+ *            3---------0  |
  *            |  |      |  |
- *            |  3------|--2
+ *            |  6------|--5
  *            | /       | /
  *            |/        |/
- *            0---------1
+ *            7---------4
  */
 //---------------------------------------------------------------------------
 /**
@@ -237,7 +246,7 @@ int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double ori
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype)
+int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection)
 {
   vtkNew(vtkPoints, points);
   points->SetNumberOfPoints(8);
@@ -254,31 +263,31 @@ int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double ori
     vtkMath::Add(origin, zero, pts[i]);
   }
 
-  pts[1][0] = origin[0] + dims[0];
-
-  pts[2][0] = origin[0] + dims[0];
-  pts[2][1] = origin[1] + dims[1];
-
-  pts[3][1] = origin[1] + dims[1];
-
-  pts[4][2] = origin[2] + dims[2];
+  pts[4][0] = origin[0] + dims[0];
 
   pts[5][0] = origin[0] + dims[0];
-  pts[5][2] = origin[2] + dims[2];
+  pts[5][1] = origin[1] + dims[1];
 
-  pts[6][0] = origin[0] + dims[0];
   pts[6][1] = origin[1] + dims[1];
-  pts[6][2] = origin[2] + dims[2];
 
-  pts[7][1] = origin[1] + dims[1];
-  pts[7][2] = origin[2] + dims[2];
+  pts[3][2] = origin[2] + dims[2];
+
+  pts[0][0] = origin[0] + dims[0];
+  pts[0][2] = origin[2] + dims[2];
+
+  pts[1][0] = origin[0] + dims[0];
+  pts[1][1] = origin[1] + dims[1];
+  pts[1][2] = origin[2] + dims[2];
+
+  pts[2][1] = origin[1] + dims[1];
+  pts[2][2] = origin[2] + dims[2];
 
   for (int i=0; i<8; i++)
   {
     points->SetPoint(i, pts[i]);
   }
 
-  this->SetGrid(cellId, points, cubetype);
+  this->SetGrid(cellId, points, cubetype, parentdirection, childdirection);
 
   return 1;
 }
@@ -289,13 +298,13 @@ int vtkGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double ori
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::InsertGrid(const int cellId, vtkPoints *points, const int cubetype)
+int vtkGeneralizedPolycube::InsertGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection)
 {
   if (cellId >= this->GetNumberOfCells())
   {
     this->SetNumberOfGrids(cellId);
   }
-  this->SetGrid(cellId, points, cubetype);
+  this->SetGrid(cellId, points, cubetype, parentdirection, childdirection);
 
   return 1;
 }
@@ -306,7 +315,7 @@ int vtkGeneralizedPolycube::InsertGrid(const int cellId, vtkPoints *points, cons
  * @param *pd
  * @return
  */
-int vtkGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const int cubetype)
+int vtkGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection)
 {
   int numPts = points->GetNumberOfPoints();
   if (numPts != 8)
@@ -335,6 +344,8 @@ int vtkGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const i
     return 0;
   }
   this->GetCellData()->GetArray("CubeType")->SetTuple1(cellId, cubetype);
+  this->GetCellData()->GetArray("ParentDirection")->SetTuple1(cellId, parentdirection);
+  this->GetCellData()->GetArray("ChildDirection")->SetTuple1(cellId, childdirection);
   this->Modified();
 
   return 1;
