@@ -1004,10 +1004,15 @@ int vtkPolyDataSliceAndDiceFilter::DetermineSliceStrategy(vtkPolyData *branchPd,
   {
     if (int(surgeryIds[i]) != -1)
       numSurgeryPoints++;
-    cellIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
+    if (branchId == 0 || gCell->Children[0] != NULL)
+      cellIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->Diverging]->Dir, i);
+    else
+      cellIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
+
   }
   this->SliceDirection = 0;
   centerlineStartPtId = 0;
+  fprintf(stdout,"NUM SURGERY POINTS!: %d\n", numSurgeryPoints);
   if (numSurgeryPoints == 0)
   {
     strategy = 0;
@@ -1060,10 +1065,7 @@ int vtkPolyDataSliceAndDiceFilter::DetermineSliceStrategy(vtkPolyData *branchPd,
     else
     {
       for (int i=0; i<4; i++)
-      {
-        fprintf(stdout,"HOLY MOLY: %d\n", int(surgeryIds[int(cellIndices[i])]));
         surgeryPoints->InsertNextId(int(surgeryIds[int(cellIndices[i])]));
-      }
       branchStartPtId = surgeryPoints->GetId(0);
     }
   }
@@ -1391,22 +1393,25 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   defaultDirs[LEFT]  = DOWN;
   defaultDirs[BACK]  = RIGHT;
   defaultDirs[FRONT] = RIGHT;
-  fprintf(stdout,"WHAT THE: %d %d\n", gCell->Dir, defaultDirs[gCell->Dir]);
-  int cellIndices[8];
+  int newIndices[8];
   for (int i=0; i<8; i++)
-    cellIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
+  {
+    if (branchId == 0 || gCell->Children[0] != NULL)
+      newIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->Diverging]->Dir, i);
+    else
+      newIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
+  }
 
-  fprintf(stdout,"START SURGERY POINTS:\n");
   double cornerPts[8];
   if (this->SliceDirection == 1)
   {
     for (int i=0; i<4; i++)
-      cornerPts[cellIndices[i+4]] = surgeryPoints->GetId(i);
+      cornerPts[newIndices[i+4]] = surgeryPoints->GetId(i);
   }
   else
   {
     for (int i=0; i<4; i++)
-      cornerPts[cellIndices[i]] = surgeryPoints->GetId(i);
+      cornerPts[newIndices[i]] = surgeryPoints->GetId(i);
   }
 
   if (branchId != 0)
@@ -1504,24 +1509,24 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
       double dummyIds[8];
       for (int j=0; j<8; j++)
         dummyIds[j] = -1.0;
-      this->GetNextSurgeryPoints(connectedPd, contourClosePt, surgeryPoints, dummyIds, xvec, zvec, contourRadius, surgeryLineIds, cellIndices);
+      this->GetNextSurgeryPoints(connectedPd, contourClosePt, surgeryPoints, dummyIds, xvec, zvec, contourRadius, surgeryLineIds, newIndices);
     }
     else
     {
       double surgeryIds[8];
       this->Polycube->GetCellData()->GetArray("CornerPtIds")->GetTuple(branchId, surgeryIds);
       //this->GetNextSurgeryPoints(branchPd, contourClosePt, surgeryPoints, int(surgeryIds[5]), xvec, zvec, surgeryLineIds);
-      this->GetNextSurgeryPoints(branchPd, contourClosePt, surgeryPoints, surgeryIds, xvec, zvec, contourRadius, surgeryLineIds, cellIndices);
+      this->GetNextSurgeryPoints(branchPd, contourClosePt, surgeryPoints, surgeryIds, xvec, zvec, contourRadius, surgeryLineIds, newIndices);
     }
 
     sliceId++;
   }
   if (this->SliceDirection == 1)
   {
-    cornerPts[cellIndices[0]] = surgeryPoints->GetId(0);
-    cornerPts[cellIndices[1]] = surgeryPoints->GetId(3);
-    cornerPts[cellIndices[2]] = surgeryPoints->GetId(2);
-    cornerPts[cellIndices[3]] = surgeryPoints->GetId(1);
+    cornerPts[newIndices[0]] = surgeryPoints->GetId(0);
+    cornerPts[newIndices[1]] = surgeryPoints->GetId(3);
+    cornerPts[newIndices[2]] = surgeryPoints->GetId(2);
+    cornerPts[newIndices[3]] = surgeryPoints->GetId(1);
     double veryFirst[3], verySecond[3], topZvec[3], topXvec[3], surfacePt[3];
     branchCenterline->GetPoint(0, veryFirst);
     branchCenterline->GetPoint(1, verySecond);
@@ -1535,7 +1540,7 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   else
   {
     for (int i=0; i<4; i++)
-      cornerPts[cellIndices[i+4]] = surgeryPoints->GetId(i);
+      cornerPts[newIndices[i+4]] = surgeryPoints->GetId(i);
   }
   this->Polycube->GetCellData()->GetArray("CornerPtIds")->InsertTuple(branchId, cornerPts);
   this->AddSurgeryPoints(surgeryLineIds, surgeryPts, surgeryLines, surgeryData);
@@ -1728,9 +1733,19 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
     return 0;
   }
 
+
+  vtkNew(vtkIdList, slicePoints);
+  vtkDataArray *section2Ids =
+    section2Loop->GetPointData()->GetArray(this->InternalIdsArrayName);
+  int front = section2Ids->LookupValue(criticalPoints.front());
+  int back = section2Ids->LookupValue(criticalPoints.back());
+  fprintf(stdout,"WHAT IS FRONT DIR: %.4f %.4f %.4f\n", gCell->FrontDir[0], gCell->FrontDir[1],
+                                                        gCell->FrontDir[2]);
+  this->GetCorrectFrontPoint(section2Loop, gCell->FrontDir, front, back);
+
   double pt0[3], pt1[3];
-  this->WorkPd->GetPoint(criticalPoints.front(), pt0);
-  this->WorkPd->GetPoint(criticalPoints.back(), pt1);
+  this->WorkPd->GetPoint(section2Ids->GetTuple1(front), pt0);
+  this->WorkPd->GetPoint(section2Ids->GetTuple1(back), pt1);
   double vec0[3], vec1[3], normal[3], normal2[3];
   vtkMath::Subtract(pt1, pt0, vec0);
   vtkMath::Subtract(centroid, pt0, vec1);
@@ -1739,15 +1754,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   vtkMath::Normalize(normal);
   vtkMath::Normalize(normal2);
 
-  vtkNew(vtkIdList, slicePoints);
-  vtkDataArray *section2Ids =
-    section2Loop->GetPointData()->GetArray(this->InternalIdsArrayName);
-  int front = section2Ids->LookupValue(criticalPoints.front());
-  int back = section2Ids->LookupValue(criticalPoints.back());
-  this->GetCorrectFrontPoint(this->WorkPd, gCell->FrontDir, front, back);
-
-  fprintf(stdout,"FRONT!!!!: %d\n", criticalPoints.front());
-  fprintf(stdout,"BACK!!!!: %d\n", criticalPoints.back());
+  fprintf(stdout,"FRONT!!!!: %f\n", section2Ids->GetTuple1(front));
+  fprintf(stdout,"BACK!!!!: %f\n", section2Ids->GetTuple1(back));
   double dummy[3];
   this->GetSurgeryPoints(section2Loop, this->WorkPd, section2Ids, inPt0, inPt1, front, back, parentId, this->GroupIdsArrayName, slicePoints, dummy);
   fprintf(stdout,"ORDER: %lld %lld %lld %lld\n", slicePoints->GetId(0), slicePoints->GetId(1), slicePoints->GetId(2), slicePoints->GetId(3));
@@ -1995,20 +2003,9 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   singleCompArray0->SetNumberOfTuples(pd->GetNumberOfPoints());
   singleCompArray0->CopyComponent(0, pd->GetPointData()->GetArray("SurgeryPoints"), parentId);
 
-  int defaultDirs[6];
-  defaultDirs[DOWN]  = RIGHT;
-  defaultDirs[UP]    = LEFT;
-  defaultDirs[RIGHT] = UP;
-  defaultDirs[LEFT]  = DOWN;
-  defaultDirs[BACK]  = RIGHT;
-  defaultDirs[FRONT] = RIGHT;
   int parIndices[8];
-  int divIndices[8];
   for (int i=0; i<8; i++)
-  {
-    parIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
-    divIndices[i] = this->LookupIndex(gCell->Children[gCell->Diverging]->Dir, defaultDirs[gCell->Children[gCell->Diverging]->Dir], i);
-  }
+    parIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->Diverging]->Dir, i);
 
   cornerIds->SetComponent(fixedSlicePoints0->GetId(0),   parentId, parIndices[4]);
   cornerIds->SetComponent(fixedSlicePoints0->GetId(1),   parentId, parIndices[5]);
@@ -2058,10 +2055,10 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   singleCompArray2->SetNumberOfTuples(pd->GetNumberOfPoints());
   singleCompArray2->CopyComponent(0, pd->GetPointData()->GetArray("SurgeryPoints"), badKidId);
 
-  cornerIds->SetComponent(fixedSlicePoints0->GetId(1), badKidId, divIndices[0]);
-  cornerIds->SetComponent(fixedSlicePoints0->GetId(0), badKidId, divIndices[1]);
-  cornerIds->SetComponent(fixedSlicePoints1->GetId(1), badKidId, divIndices[2]);
-  cornerIds->SetComponent(fixedSlicePoints1->GetId(0), badKidId, divIndices[3]);
+  cornerIds->SetComponent(fixedSlicePoints0->GetId(0), badKidId, parIndices[3]);
+  cornerIds->SetComponent(fixedSlicePoints0->GetId(1), badKidId, parIndices[2]);
+  cornerIds->SetComponent(fixedSlicePoints1->GetId(1), badKidId, parIndices[6]);
+  cornerIds->SetComponent(fixedSlicePoints1->GetId(0), badKidId, parIndices[7]);
 
   fprintf(stdout,"TEST TRY: %lld %lld %lld %lld %lld %lld %lld %lld\n", fixedSlicePoints0->GetId(0),
                                                                         fixedSlicePoints0->GetId(1),
@@ -2091,10 +2088,18 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   cornerIds->SetComponent(fixedSurgeryPoints1->GetId(1), segmentId, parIndices[6]);
   cornerIds->SetComponent(fixedSurgeryPoints1->GetId(0), segmentId, parIndices[7]);
 
-  fprintf(stdout,"Other surgery POINTS are: %lld %lld %lld %lld\n", fixedSurgeryPoints0->GetId(2),
-                                                                    fixedSurgeryPoints0->GetId(3),
-                                                                    fixedSurgeryPoints1->GetId(2),
-                                                                    fixedSurgeryPoints1->GetId(3));
+  fprintf(stdout,"SLICE POINTS 0: %lld %lld\n", fixedSlicePoints0->GetId(0),
+                                                fixedSlicePoints0->GetId(1));
+  fprintf(stdout,"SLICE POINTS 1: %lld %lld\n", fixedSlicePoints1->GetId(0),
+                                                fixedSlicePoints1->GetId(1));
+  fprintf(stdout,"SURGE POINTS 0: %lld %lld\n", fixedSurgeryPoints0->GetId(0),
+                                                fixedSurgeryPoints0->GetId(1));
+  fprintf(stdout,"SURGE POINTS 1: %lld %lld\n", fixedSurgeryPoints1->GetId(0),
+                                                fixedSurgeryPoints1->GetId(1));
+  fprintf(stdout,"PAR CHANGE: ");
+  for (int i=0; i<8; i++)
+    fprintf(stdout,"%d ",parIndices[i]);
+  fprintf(stdout,"\n");
 
   return 1;
 }
@@ -2116,8 +2121,10 @@ int vtkPolyDataSliceAndDiceFilter::GetCorrectFrontPoint(vtkPolyData *pd,
   vtkMath::Subtract(frontPt, backPt, checkVec);
   vtkMath::Normalize(checkVec);
   double dotCheck = vtkMath::Dot(checkVec, frontDir);
+    //fprintf(stdout,"What the eff is the dot! %.4f\n", vtkMath::Dot(checkVec, frontDir));
   if (dotCheck < 0)
   {
+    fprintf(stdout,"Wrong front point!\n");
     int tmp = frontId;
     frontId = backId;
     backId  = tmp;
@@ -2383,13 +2390,6 @@ int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
 {
   if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
   {
-    int defaultDirs[6];
-    defaultDirs[DOWN]  = RIGHT;
-    defaultDirs[UP]    = LEFT;
-    defaultDirs[RIGHT] = UP;
-    defaultDirs[LEFT]  = DOWN;
-    defaultDirs[BACK]  = RIGHT;
-    defaultDirs[FRONT] = RIGHT;
     vtkGeneralizedPolycube *polycube =
       reinterpret_cast<vtkGeneralizedPolycube*>(arg0);
     vtkIntArray *segmentIds =
@@ -2399,12 +2399,24 @@ int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
     polycube->SetGridWithCenter(id, gCell->EndPt,
                                 dims, vtkGeneralizedPolycube::CUBE_BIFURCATION,
                                 gCell->Dir,
-                                defaultDirs[gCell->Dir]);
+                                gCell->Children[gCell->Diverging]->Dir);
     segmentIds->InsertTuple1(id, id);
 
+    int defaultDirs[6];
+    defaultDirs[DOWN]  = RIGHT;
+    defaultDirs[UP]    = LEFT;
+    defaultDirs[RIGHT] = UP;
+    defaultDirs[LEFT]  = DOWN;
+    defaultDirs[BACK]  = RIGHT;
+    defaultDirs[FRONT] = RIGHT;
     //Two children
     for (int i=0; i<2; i++)
     {
+      int newDir;
+      if (gCell->Children[i]->Children[0] != NULL)
+        newDir = gCell->Children[i]->Children[gCell->Children[i]->Diverging]->Dir;
+      else
+        newDir = defaultDirs[gCell->Children[i]->Dir];
       id = gCell->Children[i]->GroupId;
       double centerPt[3];
       vtkMath::Add(gCell->Children[i]->StartPt,
@@ -2413,7 +2425,7 @@ int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
       polycube->SetGridWithCenter(id, centerPt,
                                   dims, vtkGeneralizedPolycube::CUBE_BRANCH,
                                   gCell->Children[i]->Dir,
-                                  defaultDirs[gCell->Children[i]->Dir]);
+                                  newDir);
       segmentIds->InsertTuple1(id, id);
     }
 
@@ -2567,7 +2579,7 @@ int vtkPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, double 
 
     }
   }
-  fprintf(stdout,"Ending point to use is : %d\n", contourPtId);
+  //fprintf(stdout,"Ending point to use is : %d\n", contourPtId);
   surgeryPoints->SetId(0, contourPtId);
 
   int pointId = boundary->GetPointData()->GetArray(this->InternalIdsArrayName)->
@@ -2647,8 +2659,6 @@ int vtkPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, double 
     }
     iter++;
   }
-  fprintf(stdout,"WHWHWWH: %lld\n", surgeryPoints->GetId(0));
-  fprintf(stdout,"WHWHWWH: %d\n", initialSurgeryPt);
   vtkNew(vtkFindGeodesicPath, finder);
   finder->SetInputData(pd);
   finder->SetStartPtId(pd->GetPointData()->GetArray(this->InternalIdsArrayName)->

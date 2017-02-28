@@ -479,7 +479,6 @@ int vtkFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
     GetArray(this->InternalIdsArrayName);
 
   vtkNew(vtkIdList, cells);
-  fprintf(stdout,"ID IS: %d\n", ptId);
   this->WorkPd->GetPointCells(ptId, cells);
   int offLimits[2]; offLimits[0] = -1; offLimits[1] = -1;
   int count = 0;
