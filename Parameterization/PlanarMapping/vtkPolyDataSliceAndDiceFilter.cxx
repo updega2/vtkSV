@@ -360,7 +360,7 @@ int vtkPolyDataSliceAndDiceFilter::FormDirectionTable(int dirTable[6][4])
  * P    R   -1   -1   xzzy xyyy yyy  zzy
  * A    L   -1   -1   xy   xxxy xxy  y
  * R    B   x    yyx  -1   -1   yyyx yx
- * E    F   xxx  xyy  -1   -1   zxyy zxxx
+ * E    F   xxx  xyy  -1   -1   zxxy yxxx
  * N    U   xx   yy   zyy  zxx  -1   -1
  * T    D   i    zz   z    zzz  -1   -1
  *
@@ -422,9 +422,9 @@ int vtkPolyDataSliceAndDiceFilter::LookupIndex(const int PARENT, const int DIVCH
     if (DIVCHILD == LEFT)
       return iT[0][iT[4][index]];
     if (DIVCHILD == UP)
-      return iT[2][iT[0][iT[4][index]]];
+      return iT[2][iT[3][iT[1][index]]];
     if (DIVCHILD == DOWN)
-      return iT[2][iT[6][index]];
+      return iT[1][iT[6][index]];
   }
   if (PARENT == UP)
   {
