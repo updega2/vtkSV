@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkIntersectionPolyDataFilterOld.h
+  Module:    vtkLoopIntersectionPolyDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,22 +12,22 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkIntersectionPolyDataFilterOld
+// .NAME vtkLoopIntersectionPolyDataFilter
 // .SECTION Description
 //
-// vtkIntersectionPolyDataFilter computes the intersection between two
+// vtkLoopIntersectionPolyDataFilter computes the intersection between two
 // vtkPolyData objects. The first output is a set of lines that marks
 // the intersection of the input vtkPolyData objects. This contains five
 // different attached data arrays:
 //
-// SurfaceID: Point data array that contatins information about the orgin
+// SurfaceID: Point data array that contains information about the origin
 // surface of each point
 //
-// Input0CellID: Cell data array that says the contains the original
-// cell id number on the first input mesh
+// Input0CellID: Cell data array that contains the original
+// cell ID number on the first input mesh
 //
-// Input1CellID: Cell data array that says the contains the original
-// cell id number on the second input mesh
+// Input1CellID: Cell data array that contains the original
+// cell ID number on the second input mesh
 //
 // NewCell0ID: Cell data array that contains information about which cells
 // of the remeshed first input surface it touches (If split)
@@ -42,44 +42,36 @@
 // If the meshes are split, The output vtkPolyDatas contain three possible
 // data arrays:
 //
-// BoundaryPoints: This is a boolean indicating whether or not the point is
+// IntersectionPoint: This is a boolean indicating whether or not the point is
 // on the boundary of the two input objects
 //
-// BadTri: If the surface is cleaned and checked, this is a cell data array
+// BadTriangle: If the surface is cleaned and checked, this is a cell data array
 // indicating whether or not the cell has edges with multiple neighbors
 // A manifold surface will have 0 everywhere for this array!
 //
 // FreeEdge: If the surface is cleaned and checked, this is a cell data array
 // indicating if the cell has any free edges. A watertight surface will have
 // 0 everywhere for this array!
-/** @file vtkIntersectionPolyDataFilterOld.cxx
- *  @brief This is a filter that performs the intersection of surfaces
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- */
+//
+// Author: Adam Updegrove updega2@gmail.com
 
-#ifndef __vtkIntersectionPolyDataFilterOld_h
-#define __vtkIntersectionPolyDataFilterOld_h
+#ifndef vtkLoopIntersectionPolyDataFilter_h
+#define vtkLoopIntersectionPolyDataFilter_h
 
-#include "vtkFiltersGeneralModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
 
-class VTKFILTERSGENERAL_EXPORT vtkIntersectionPolyDataFilterOld :
+class vtkLoopIntersectionPolyDataFilter :
         public vtkPolyDataAlgorithm
 {
 public:
-  static vtkIntersectionPolyDataFilterOld *New();
-  vtkTypeMacro(vtkIntersectionPolyDataFilterOld, vtkPolyDataAlgorithm);
+  static vtkLoopIntersectionPolyDataFilter *New();
+  vtkTypeMacro(vtkLoopIntersectionPolyDataFilter, vtkPolyDataAlgorithm);
   virtual void PrintSelf(ostream &os, vtkIndent indent);
 
   // Description:
   // Integer describing the number of intersection points and lines
   vtkGetMacro(NumberOfIntersectionPoints, int);
-  vtkSetMacro(NumberOfIntersectionPoints, int);
-  vtkBooleanMacro(NumberOfIntersectionPoints, int);
   vtkGetMacro(NumberOfIntersectionLines, int);
-  vtkSetMacro(NumberOfIntersectionLines, int);
-  vtkBooleanMacro(NumberOfIntersectionLines, int);
 
   // Description:
   // If on, the second output will be the first input mesh split by the
@@ -97,10 +89,10 @@ public:
 
   // Description:
   // If on, the output split surfaces will contain information about which
-  // points are on the boundary of the two inputs. Default: ON
-  vtkGetMacro(ApplyBoundaryPointArray, int);
-  vtkSetMacro(ApplyBoundaryPointArray, int);
-  vtkBooleanMacro(ApplyBoundaryPointArray, int);
+  // points are on the intersection of the two inputs. Default: ON
+  vtkGetMacro(ComputeIntersectionPointArray, int);
+  vtkSetMacro(ComputeIntersectionPointArray, int);
+  vtkBooleanMacro(ComputeIntersectionPointArray, int);
 
   // Description:
   // If on, the normals of the input will be checked. Default: OFF
@@ -131,7 +123,10 @@ public:
   // r2), returns whether the two triangles intersect. If they do,
   // the endpoints of the line forming the intersection are returned
   // in pt1 and pt2. The parameter coplanar is set to 1 if the
-  // triangles are coplanar and 0 otherwise.
+  // triangles are coplanar and 0 otherwise. The surfaceid array
+  // is filled with the surface on which the first and second
+  // intersection points resides, respectively. A geometric tolerance
+  // can be specified in the last argument.
   static int TriangleTriangleIntersection(double p1[3], double q1[3],
                                           double r1[3], double p2[3],
                                           double q2[3], double r2[3],
@@ -142,33 +137,31 @@ public:
   // Description:
   // Function to clean and check the output surfaces for bad triangles and
   // free edges
-  static void CleanAndCheckSurface(vtkPolyData *pd,double stats[2],
+  static void CleanAndCheckSurface(vtkPolyData *pd, double stats[2],
                   double tolerance);
 
   // Description:
   // Function to clean and check the inputs
-  static void CleanAndCheckInput(vtkPolyData *pd,double tolerance);
+  static void CleanAndCheckInput(vtkPolyData *pd, double tolerance);
 
 
 protected:
-  vtkIntersectionPolyDataFilterOld();  //Constructor
-  ~vtkIntersectionPolyDataFilterOld();  //Destructor
+  vtkLoopIntersectionPolyDataFilter();  //Constructor
+  ~vtkLoopIntersectionPolyDataFilter();  //Destructor
 
   int RequestData(vtkInformation*, vtkInformationVector**,
                   vtkInformationVector*);  //Update
   int FillInputPortInformation(int, vtkInformation*); //Input,Output
 
 private:
-  // Not implemented
-  vtkIntersectionPolyDataFilterOld(const vtkIntersectionPolyDataFilterOld&);
-  // Not implemented
-  void operator=(const vtkIntersectionPolyDataFilterOld&);
+  vtkLoopIntersectionPolyDataFilter(const vtkLoopIntersectionPolyDataFilter&) VTK_DELETE_FUNCTION;
+  void operator=(const vtkLoopIntersectionPolyDataFilter&) VTK_DELETE_FUNCTION;
 
   int NumberOfIntersectionPoints;
   int NumberOfIntersectionLines;
   int SplitFirstOutput;
   int SplitSecondOutput;
-  int ApplyBoundaryPointArray;
+  int ComputeIntersectionPointArray;
   int CheckMesh;
   int CheckInput;
   int Status;
@@ -178,4 +171,4 @@ private:
 };
 
 
-#endif // __vtkIntersectionPolyDataFilterOld_h
+#endif // vtkLoopIntersectionPolyDataFilter_h

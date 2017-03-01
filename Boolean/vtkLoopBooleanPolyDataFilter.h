@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkBooleanOperationPolyDataFilterOld.h
+  Module:    vtkLoopBooleanPolyDataFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkBooleanOperationPolyDataFilterOld
+// .NAME vtkLoopBooleanPolyDataFilter
 // .SECTION Description
 //
 // Computes the boundary of the union, intersection, or difference
@@ -22,37 +22,35 @@
 // available in the first output of the filter. The second output
 // contains a set of polylines that represent the intersection between
 // the two input surfaces.
-// The filter uses vtkIntersectionPolyDataFilterOld. Must have information
+// The filter uses vtkIntersectionPolyDataFilter. Must have information
 // about the cells on mesh that the intersection lines touch. Filter assumes
 // this information is given.
 // The ouput result will have data about the Original Surface,
 // BoundaryPoints, Boundary Cells,
 // Free Edges, and Bad Triangles
-/** @file vtkBooleanOperationPolyDataFilterOld.cxx
+/** @file vtkLoopBooleanPolyDataFilter.cxx
  *  @brief This is the filter to perform boolean operations
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
  */
 
-#ifndef __vtkBooleanOperationPolyDataFilterOld_h
-#define __vtkBooleanOperationPolyDataFilterOld_h
+#ifndef vtkLoopBooleanPolyDataFilter_h
+#define vtkLoopBooleanPolyDataFilter_h
 
-#include "vtkFiltersGeneralModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
-
 #include "vtkDataSetAttributes.h" // Needed for CopyCells() method
 
 class vtkIdList;
 
-class VTKFILTERSGENERAL_EXPORT vtkBooleanOperationPolyDataFilterOld :
+class vtkLoopBooleanPolyDataFilter :
         public vtkPolyDataAlgorithm
 {
 public:
   // Description:
   // Construct object that computes the boolean surface.
-  static vtkBooleanOperationPolyDataFilterOld *New();
+  static vtkLoopBooleanPolyDataFilter *New();
 
-  vtkTypeMacro(vtkBooleanOperationPolyDataFilterOld,
+  vtkTypeMacro(vtkLoopBooleanPolyDataFilter,
                vtkPolyDataAlgorithm);
 
   void PrintSelf(ostream& os, vtkIndent indent);
@@ -60,11 +58,7 @@ public:
   // Description:
   // Integer describing the number of intersection points and lines
   vtkGetMacro(NumberOfIntersectionPoints, int);
-  vtkSetMacro(NumberOfIntersectionPoints, int);
-  vtkBooleanMacro(NumberOfIntersectionPoints, int);
   vtkGetMacro(NumberOfIntersectionLines, int);
-  vtkSetMacro(NumberOfIntersectionLines, int);
-  vtkBooleanMacro(NumberOfIntersectionLines, int);
 
   // Description:
   // ONLY USED IF NO INTERSECTION BETWEEN SURFACES
@@ -113,19 +107,16 @@ public:
   vtkSetMacro(Tolerance, double);
 
 protected:
-  vtkBooleanOperationPolyDataFilterOld();
-  ~vtkBooleanOperationPolyDataFilterOld();
+  vtkLoopBooleanPolyDataFilter();
+  ~vtkLoopBooleanPolyDataFilter();
 
   int RequestData(vtkInformation*, vtkInformationVector**,
                   vtkInformationVector*);
   int FillInputPortInformation(int, vtkInformation*);
 
 private:
-  // Not implemented
-  vtkBooleanOperationPolyDataFilterOld(
-                  const vtkBooleanOperationPolyDataFilterOld&);
-  // Not implemented
-  void operator=(const vtkBooleanOperationPolyDataFilterOld&);
+  vtkLoopBooleanPolyDataFilter(const vtkLoopBooleanPolyDataFilter&);  // Not implemented
+  void operator=(const vtkLoopBooleanPolyDataFilter&);  // Not implemented
 
   // Description:
   // PolyDatas for each surface out of intersection and also the intersection
@@ -139,7 +130,6 @@ private:
   int NumberOfIntersectionPoints;
   int NumberOfIntersectionLines;
 
-  int Verbose;
   int Status;
   double Tolerance;
 
