@@ -56,7 +56,7 @@ public:
   vtkTypeMacro(vtkNURBSUtils,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static int GetUs(vtkPoints *xyz, int p, std::string type, vtkDoubleArray *U);
+  static int GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U);
   static int LinSpace(double min, double max, int num, vtkDoubleArray *U);
   static int LinSpaceClamp(double min, double max, int num, int p, vtkDoubleArray *U);
   static int GetAvgKnots(double min, double max, int num, int p, vtkDoubleArray *U,

@@ -384,14 +384,18 @@ int vtkLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   {
     tmpPoints->SetPoint(i, inputs[i]->GetPoint(0));
   }
-  if (vtkNURBSUtils::GetUs(tmpPoints, p, putype, U) != 1)
+  if (vtkNURBSUtils::GetUs(tmpPoints, putype, U) != 1)
   {
     return 0;
   }
-  if (vtkNURBSUtils::GetUs(inputs[0]->GetPoints(), q, pvtype, V) != 1)
+  if (vtkNURBSUtils::GetUs(inputs[0]->GetPoints(), pvtype, V) != 1)
   {
     return 0;
   }
+  fprintf(stdout,"U:\n");
+  vtkNURBSUtils::PrintArray(U);
+  fprintf(stdout,"V:\n");
+  vtkNURBSUtils::PrintArray(V);
 
   vtkNew(vtkStructuredGrid, inputPoints);
   if (vtkNURBSUtils::PolyDatasToStructuredGrid(inputs, numInputs, inputPoints) != 1)

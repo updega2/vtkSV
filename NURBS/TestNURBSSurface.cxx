@@ -168,8 +168,8 @@ int main(int argc, char *argv[])
       return EXIT_FAILURE;
   }
 
-  int nU = 7;
-  int nV = 5;
+  int nU = 12;
+  int nV = 15;
   vtkPolyData **inputPolys = new vtkPolyData*[nU];
   for (int i=0; i<nU; i++)
   {
@@ -227,16 +227,16 @@ int main(int argc, char *argv[])
   {
     lofter->AddInputData(inputPolys[i]);
   }
-  lofter->SetUDegree(2);
-  lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(0.01);
-  lofter->SetPolyDataVSpacing(0.01);
+  lofter->SetUDegree(3);
+  lofter->SetVDegree(3);
+  lofter->SetPolyDataUSpacing(0.05);
+  lofter->SetPolyDataVSpacing(0.05);
   lofter->SetUKnotSpanType("equal");
-  lofter->SetUParametricSpanType("chord");
+  lofter->SetUParametricSpanType("equal");
   //lofter->SetStartUDerivatives(uders);
   //lofter->SetEndUDerivatives(uders);
   lofter->SetVKnotSpanType("equal");
-  lofter->SetVParametricSpanType("chord");
+  lofter->SetVParametricSpanType("equal");
   //lofter->SetStartVDerivatives(vders);
   //lofter->SetEndVDerivatives(vders);
   lofter->Update();

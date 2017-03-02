@@ -265,7 +265,7 @@ int vtkNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleArra
  * @param *pd
  * @return
  */
-int vtkNURBSUtils::GetUs(vtkPoints *xyz, int p, std::string type, vtkDoubleArray *U)
+int vtkNURBSUtils::GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U)
 {
   int nCon = xyz->GetNumberOfPoints();
 
@@ -319,6 +319,7 @@ int vtkNURBSUtils::GetKnots(vtkDoubleArray *U, int p, std::string type, vtkDoubl
     fprintf(stderr,"Type specified is not recognized\n");
     return 0;
   }
+  fprintf(stdout,"Length of Knots: %lld\n", knots->GetNumberOfTuples());
 
   return 1;
 }
@@ -344,6 +345,8 @@ int vtkNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, int p, std::string k
     fprintf(stderr,"Error getting knots with average spacing\n");
     return 0;
   }
+  fprintf(stdout,"Knots\n");
+  vtkNURBSUtils::PrintArray(knots);
 
   vtkNew(vtkIntArray, greater);
   vtkNew(vtkIntArray, less);
@@ -584,6 +587,8 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
     vtkNURBSUtils::DeepCopy(pointMatTmp, pointMatFinal);
   }
 
+  fprintf(stdout,"Basis functions U:\n");
+  vtkNURBSUtils::PrintMatrix(NPUFinal);
   vtkNew(vtkSparseArray<double>, NPUinv);
   if (vtkNURBSUtils::InvertSystem(NPUFinal, NPUinv) != 1)
   {
@@ -591,6 +596,8 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
     return 0;
   }
 
+  fprintf(stdout,"Basis functions V:\n");
+  vtkNURBSUtils::PrintMatrix(NPVFinal);
   vtkNew(vtkSparseArray<double>, NPVinv);
   if (vtkNURBSUtils::InvertSystem(NPVFinal, NPVinv) != 1)
   {
@@ -599,6 +606,10 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
   }
 
 
+  fprintf(stdout,"Inverted system U:\n");
+  vtkNURBSUtils::PrintMatrix(NPUinv);
+  fprintf(stdout,"Multiplied against:\n");
+  vtkNURBSUtils::PrintMatrix(pointMatFinal);
   vtkNew(vtkDenseArray<double>, tmpUGrid);
   if (vtkNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != 1)
   {
@@ -619,6 +630,8 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
   vtkNew(vtkDenseArray<double>, tmpVGridT);
   vtkNURBSUtils::MatrixTranspose(tmpVGrid, 1, tmpVGridT);
   vtkNURBSUtils::TypedArrayToStructuredGrid(tmpVGridT, cPoints);
+  fprintf(stdout,"Final structured grid of control points\n");
+  vtkNURBSUtils::PrintStructuredGrid(cPoints);
 
   return 1;
 }

@@ -146,7 +146,7 @@ int vtkLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
 
   vtkNew(vtkDoubleArray, U);
   vtkNew(vtkDoubleArray, weights);
-  if (vtkNURBSUtils::GetUs(input->GetPoints(), p, ptype, U) != 1)
+  if (vtkNURBSUtils::GetUs(input->GetPoints(), ptype, U) != 1)
   {
     return 0;
   }
