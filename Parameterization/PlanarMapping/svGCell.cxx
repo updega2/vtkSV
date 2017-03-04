@@ -47,14 +47,20 @@ svGCell::svGCell()
   this->Id       = -1;
   this->GroupId  = -1;
   this->Dir      = -1;
-  this->Diverging= -1;
-  this->Aligning = -1;
+  this->DivergingChild = -1;
+  this->AligningChild  = -1;
+  this->IsAlign        = -1;
+  this->RefAngle = 0.0;
   for (int i=0; i<3; i++)
   {
-    this->StartPt[i] = -1.0;
-    this->EndPt[i]   = -1.0;
-    this->FrontDir[i]   = -1.0;
+    this->StartPt[i]  = -1.0;
+    this->EndPt[i]    = -1.0;
+    this->FrontDir[i] = -1.0;
+    this->TopVec[i]   = -1.0;
+    this->RightVec[i] = -1.0;
   }
+  for (int i=0; i<8; i++)
+    this->CornerPtIds[i] = -1;
 }
 
 svGCell::~svGCell()

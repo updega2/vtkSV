@@ -486,7 +486,7 @@ int vtkPolyDataToNURBSFilter::MapBranch(const int branchId,
       std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
       this->WriteToGroupsFile(mappedPd, groupfile);
       vtkNew(vtkPolyData, loftedPd);
-      this->LoftNURBSSurface(mappedPd, loftedPd);
+      //this->LoftNURBSSurface(mappedPd, loftedPd);
       loftAppender->AddInputData(loftedPd);
     }
   }
@@ -574,7 +574,7 @@ int vtkPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
     this->WriteToGroupsFile(mappedPd, groupfile);
     vtkNew(vtkPolyData, loftedPd);
-    this->LoftNURBSSurface(mappedPd, loftedPd);
+    //this->LoftNURBSSurface(mappedPd, loftedPd);
     loftAppender->AddInputData(loftedPd);
 
   }

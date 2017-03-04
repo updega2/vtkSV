@@ -57,11 +57,16 @@ public:
   int Id;
   int GroupId;
   int Dir;
+  double RefAngle;
   double StartPt[3];
   double EndPt[3];
   double FrontDir[3];
-  int Diverging;
-  int Aligning;
+  double RightVec[3];
+  double TopVec[3];
+  int CornerPtIds[8];
+  int DivergingChild;
+  int AligningChild;
+  int IsAlign;
 };
 
 #endif

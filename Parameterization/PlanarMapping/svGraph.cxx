@@ -201,6 +201,9 @@ int svGraph::BuildGraph()
     }
   }
 
+  svGraph::Recurse(this->Root, svGraph::UpdateCellDirection,
+                   this->DirectionTable, NULL, NULL);
+
   return 1;
 }
 
@@ -302,16 +305,18 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
   {
     fprintf(stdout,"Diverging child is %d\n", parent->Children[1]->GroupId);
     vtkMath::Cross(this->ReferenceVecs[0], vec1, this->ReferenceVecs[2]);
-    parent->Diverging = 1;
-    parent->Aligning  = 0;
+    parent->DivergingChild = 1;
+    parent->AligningChild  = 0;
   }
   else
   {
     fprintf(stdout,"Diverging child is %d\n", parent->Children[0]->GroupId);
     vtkMath::Cross(this->ReferenceVecs[0], vec0, this->ReferenceVecs[2]);
-    parent->Diverging = 0;
-    parent->Aligning  = 1;
+    parent->DivergingChild = 0;
+    parent->AligningChild  = 1;
   }
+  parent->Children[parent->AligningChild]->IsAlign = 1;
+  parent->Children[parent->DivergingChild]->IsAlign = 1;
   vtkMath::Normalize(this->ReferenceVecs[2]);
   vtkMath::Cross(this->ReferenceVecs[2], this->ReferenceVecs[0], this->ReferenceVecs[1]);
   vtkMath::Normalize(this->ReferenceVecs[1]);
@@ -424,23 +429,22 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec2, vec0));
 
   double vec3[3];
-  int direction0 = parent->Dir;
   if (ang0 > ang1)
   {
     vtkMath::Cross(vec0, vec2, vec3);
     vtkMath::Cross(vec2, vec0, parent->FrontDir);
-    parent->Children[0]->Dir = direction0;
-    parent->Diverging = 1;
-    parent->Aligning  = 0;
+    parent->DivergingChild = 1;
+    parent->AligningChild  = 0;
   }
   else
   {
     vtkMath::Cross(vec0, vec1, vec3);
     vtkMath::Cross(vec1, vec0, parent->FrontDir);
-    parent->Children[1]->Dir = direction0;
-    parent->Diverging = 0;
-    parent->Aligning  = 1;
+    parent->DivergingChild = 0;
+    parent->AligningChild  = 1;
   }
+  parent->Children[parent->AligningChild]->IsAlign  = 1;
+  parent->Children[parent->DivergingChild]->IsAlign = 0;
 
   //Check to see orientation with respect to reference vectors. Angle that
   //it makes with reference vector determines the input angle to a
@@ -465,6 +469,7 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
     if (vtkMath::Dot(vec3, dotVec) < 0.0)
       ang2 = ang2 + M_PI;
   }
+  parent->Children[parent->DivergingChild]->RefAngle = ang2;
 
   fprintf(stdout,"Angle check dir: %.4f %.4f %.4f\n", checkVec[0], checkVec[1], checkVec[2]);
   fprintf(stdout,"Dot check dir: %.4f %.4f %.4f\n", dotVec[0], dotVec[1], dotVec[2]);
@@ -472,70 +477,57 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   fprintf(stdout,"Parent direction: %d\n", parent->Dir);
   fprintf(stdout,"Angle is: %.4f\n", 180*ang2/M_PI);
   fprintf(stdout,"Dot is: %.4f\n", vtkMath::Dot(vec3, dotVec));
-  int direction1;
-  if (ang2 >= 7.0*M_PI/4.0 || ang2 < M_PI/4.0)
-  {
-    direction1 = this->DirectionTable[direction0][0];
-  }
-  else if (ang2 >= M_PI/4.0 && ang2 < 3.0*M_PI/4.0)
-  {
-    direction1 = this->DirectionTable[direction0][1];
-  }
-  else if (ang2 >= 3.0*M_PI/4.0 && ang2 < 5.0*M_PI/4.0)
-  {
-    direction1 = this->DirectionTable[direction0][2];
-  }
-  else if (ang2 >= 5.0*M_PI/4.0 && ang2 < 7.0*M_PI/4.0)
-  {
-    direction1 = this->DirectionTable[direction0][3];
-  }
-  if (ang0 > ang1)
-  {
-    parent->Children[1]->Dir = direction1;
-  }
-  else
-  {
-    parent->Children[0]->Dir = direction1;
-  }
-  double dirVector0[3], dirVector1[3];
-  this->GetDirectionVector(parent->Children[0]->Dir , dirVector0);
-  this->GetDirectionVector(parent->Children[1]->Dir , dirVector1);
 
-  for (int i=0; i<3; i++)
-  {
-    parent->Children[0]->EndPt[i] = parent->Children[0]->StartPt[i] + dirVector0[i];
-    parent->Children[1]->EndPt[i] = parent->Children[1]->StartPt[i] + dirVector1[i];
-  }
-  fprintf(stdout,"So Parent Dir was: %d\n", direction0);
-  fprintf(stdout,"Angle was: %.4f\n", 180*ang2/M_PI);
-  fprintf(stdout,"And final diverging branch direction: %d\n", direction1);
+  return 1;
+}
 
+int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
+                                 void *arg1, void *arg2)
+{
+  fprintf(stdout,"Doing it\n");
+  if (gCell->Parent != NULL)
+  {
+    int direction0 = gCell->Parent->Dir;
+    int direction1;
+    if (gCell->IsAlign == 1)
+      direction1 = gCell->Parent->Dir;
+    else
+    {
+      int ang = gCell->RefAngle;
+      if (ang >= 7.0*M_PI/4.0 || ang < M_PI/4.0)
+        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 0);
+
+      else if (ang >= M_PI/4.0 && ang < 3.0*M_PI/4.0)
+        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 1);
+
+      else if (ang >= 3.0*M_PI/4.0 && ang < 5.0*M_PI/4.0)
+        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 2);
+
+      else if (ang >= 5.0*M_PI/4.0 && ang < 7.0*M_PI/4.0)
+        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 3);
+    }
+    gCell->Dir = direction1;
+    double dirVector[3];
+    svGraph::GetDirectionVector(direction1, dirVector);
+    for (int i=0; i<3; i++)
+    {
+      gCell->StartPt[i] = gCell->Parent->EndPt[i];
+      gCell->EndPt[i]   = gCell->StartPt[i] + dirVector[i];
+    }
+  }
   return 1;
 }
 
 svGCell* svGraph::NewCell(int a_GroupId, svGCell *a_Parent)
 {
   svGCell *newCell = new svGCell;
-  newCell->Parent      = a_Parent;
-  newCell->Children[0] = NULL;
-  newCell->Children[1] = NULL;
-  newCell->Id       = this->NumberOfCells++;
-  newCell->GroupId  = a_GroupId;
-  newCell->Dir      = -1;
-  newCell->Diverging= -1;
-  newCell->Aligning = -1;
-  for (int i=0; i<3; i++)
+  newCell->Parent  = a_Parent;
+  newCell->Id      = this->NumberOfCells++;
+  newCell->GroupId = a_GroupId;
+  if (a_Parent != NULL)
   {
-    if (a_Parent != NULL)
-    {
+    for (int i=0; i<3; i++)
       newCell->StartPt[i] = a_Parent->EndPt[i];
-    }
-    else
-    {
-      newCell->StartPt[i] = -1;
-    }
-    newCell->EndPt[i]   = -1;
-    newCell->FrontDir[i]   = -1;
   }
 
   return newCell;
@@ -544,19 +536,13 @@ svGCell* svGraph::NewCell(int a_GroupId, svGCell *a_Parent)
 svGCell* svGraph::NewCell(int a_GroupId, int a_Dir, double a_StartPt[3], double a_EndPt[3])
 {
   svGCell *newCell = new svGCell;
-  newCell->Parent      = NULL;
-  newCell->Children[0] = NULL;
-  newCell->Children[1] = NULL;
-  newCell->Id       = this->NumberOfCells++;
-  newCell->GroupId  = a_GroupId;
-  newCell->Dir      = a_Dir;
-  newCell->Diverging= -1;
-  newCell->Aligning = -1;
+  newCell->Id      = this->NumberOfCells++;
+  newCell->GroupId = a_GroupId;
+  newCell->Dir     = a_Dir;
   for (int i=0; i<3; i++)
   {
     newCell->StartPt[i] = a_StartPt[i];
     newCell->EndPt[i]   = a_EndPt[i];
-    newCell->FrontDir[i]= -1;
   }
 
   return newCell;

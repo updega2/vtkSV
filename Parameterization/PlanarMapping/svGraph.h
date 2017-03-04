@@ -71,13 +71,14 @@ public:
   int GrowGraph(svGCell *parent);
   int ComputeReferenceVectors(svGCell *parent);
   int GetNewBranchDirections(svGCell *parent);
-  int GetDirectionVector(const int dir, double dirVector[3]);
   int GetGraphPolyData(vtkPolyData *pd);
 
   //Static Member functions
+  static int GetDirectionVector(const int dir, double dirVector[3]);
   static int Recurse(svGCell *rootsvGCell,
          int(*function)(svGCell *currentsvGCell, void *arg0, void *arg1, void *arg2),
          void *rec_arg0, void *rec_arg1, void *rec_arg2);
+  static int UpdateCellDirection(svGCell *gCell, void *arg0, void *arg1, void *arg2);
   static int PrintGCell(svGCell *gCell, void *arg0, void *arg1, void *arg2);
   static int InsertGCellPoints(svGCell *gCell, void *arg0, void *arg1, void *arg2);
 

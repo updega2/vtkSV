@@ -130,6 +130,7 @@ public:
                                             vtkPolyData *outPd);
   static int GraphToPolycube(svGCell *gCell, void *arg0,
                              void *arg1, void *arg2);
+  static int LookupDirection(const int dir, const int ang);
   static int LookupIndex(const int PARENT, const int DIVCHILD, const int index);
 
 

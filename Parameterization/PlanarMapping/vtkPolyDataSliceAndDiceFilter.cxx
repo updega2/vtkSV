@@ -301,11 +301,11 @@ int vtkPolyDataSliceAndDiceFilter::PrepFilter()
 //---------------------------------------------------------------------------
 /**
  *                     315-45°  45-135° 135-225° 225-315°
- *          P   RIGHT:  UP       FRONT   DOWN     BACK
- *          A   LEFT:   DOWN     FRONT   UP       BACK
- *          R   BACK:   RIGHT    DOWN    LEFT     UP
- *          E   FRONT:  RIGHT    UP      LEFT     DOWN
- *          N   UP:     LEFT     FRONT   RIGHT    BACK
+ *          P   RIGHT:  FRONT    UP      BACK     DOWN
+ *          A   LEFT:   BACK     DOWN    FRONT    UP
+ *          R   BACK:   DOWN     RIGHT   UP       LEFT
+ *          E   FRONT:  UP       LEFT    DOWN     RIGHT
+ *          N   UP:     LEFT     BACK    RIGHT    FRONT
  *          T   DOWN:   RIGHT    FRONT   LEFT     BACK
  * @brief
  * @param *pd
@@ -325,6 +325,78 @@ int vtkPolyDataSliceAndDiceFilter::FormDirectionTable(int dirTable[6][4])
   return 1;
 }
 
+int vtkPolyDataSliceAndDiceFilter::LookupDirection(const int dir, const int ang)
+{
+  int newDir = -1;
+  if (dir == RIGHT)
+  {
+    if (ang == 0)
+      newDir = FRONT;
+    else if (ang == 1)
+      newDir = UP;
+    else if (ang == 2)
+      newDir = BACK;
+    else if (ang == 3)
+      newDir = DOWN;
+  }
+  else if (dir == LEFT)
+  {
+    if (ang == 0)
+      newDir = BACK;
+    else if (ang == 1)
+      newDir = DOWN;
+    else if (ang == 2)
+      newDir = FRONT;
+    else if (ang == 3)
+      newDir = UP;
+  }
+  else if (dir == BACK)
+  {
+    if (ang == 0)
+      newDir = DOWN;
+    else if (ang == 1)
+      newDir = RIGHT;
+    else if (ang == 2)
+      newDir = UP;
+    else if (ang == 3)
+      newDir = LEFT;
+  }
+  else if (dir == FRONT)
+  {
+    if (ang == 0)
+      newDir = UP;
+    else if (ang == 1)
+      newDir = LEFT;
+    else if (ang == 2)
+      newDir = DOWN;
+    else if (ang == 3)
+      newDir = RIGHT;
+  }
+  else if (dir == UP)
+  {
+    if (ang == 0)
+      newDir = LEFT;
+    else if (ang == 1)
+      newDir = BACK;
+    else if (ang == 2)
+      newDir = RIGHT;
+    else if (ang == 3)
+      newDir = FRONT;
+  }
+  else if (dir == DOWN)
+  {
+    if (ang == 0)
+      newDir = RIGHT;
+    else if (ang == 1)
+      newDir = FRONT;
+    else if (ang == 2)
+      newDir = LEFT;
+    else if (ang == 3)
+      newDir = BACK;
+  }
+
+  return newDir;
+}
 /**
  *                             2---------1
  *                            /|        /|
@@ -1005,7 +1077,7 @@ int vtkPolyDataSliceAndDiceFilter::DetermineSliceStrategy(vtkPolyData *branchPd,
     if (int(surgeryIds[i]) != -1)
       numSurgeryPoints++;
     if (branchId == 0 || gCell->Children[0] != NULL)
-      cellIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->Diverging]->Dir, i);
+      cellIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->DivergingChild]->Dir, i);
     else
       cellIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
 
@@ -1397,7 +1469,7 @@ int vtkPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   for (int i=0; i<8; i++)
   {
     if (branchId == 0 || gCell->Children[0] != NULL)
-      newIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->Diverging]->Dir, i);
+      newIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->DivergingChild]->Dir, i);
     else
       newIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
   }
@@ -1658,8 +1730,8 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
 {
   int parentId  = gCell->GroupId;
   int segmentId = parentId + 1;
-  int goodKidId = gCell->Children[gCell->Aligning]->GroupId;
-  int badKidId  = gCell->Children[gCell->Diverging]->GroupId;
+  int goodKidId = gCell->Children[gCell->AligningChild]->GroupId;
+  int badKidId  = gCell->Children[gCell->DivergingChild]->GroupId;
 
   vtkNew(vtkPolyData, centerlineBranchPd);
   vtkPolyDataSliceAndDiceFilter::ThresholdPd(this->Centerlines, badKidId, badKidId, 1,
@@ -2005,7 +2077,7 @@ int vtkPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
 
   int parIndices[8];
   for (int i=0; i<8; i++)
-    parIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->Diverging]->Dir, i);
+    parIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->DivergingChild]->Dir, i);
 
   cornerIds->SetComponent(fixedSlicePoints0->GetId(0),   parentId, parIndices[4]);
   cornerIds->SetComponent(fixedSlicePoints0->GetId(1),   parentId, parIndices[5]);
@@ -2348,7 +2420,7 @@ int vtkPolyDataSliceAndDiceFilter::BuildPolycube()
   double startPt[3];
   int parentDir = this->CenterlineGraph->Root->Dir;
   int childDir  = this->CenterlineGraph->Root->Children[
-    this->CenterlineGraph->Root->Diverging]->Dir;
+    this->CenterlineGraph->Root->DivergingChild]->Dir;
   vtkMath::Add(this->CenterlineGraph->Root->StartPt,
                this->CenterlineGraph->Root->EndPt, startPt);
   vtkMath::MultiplyScalar(startPt, 0.5);
@@ -2399,7 +2471,7 @@ int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
     polycube->SetGridWithCenter(id, gCell->EndPt,
                                 dims, vtkGeneralizedPolycube::CUBE_BIFURCATION,
                                 gCell->Dir,
-                                gCell->Children[gCell->Diverging]->Dir);
+                                gCell->Children[gCell->DivergingChild]->Dir);
     segmentIds->InsertTuple1(id, id);
 
     int defaultDirs[6];
@@ -2414,7 +2486,7 @@ int vtkPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
     {
       int newDir;
       if (gCell->Children[i]->Children[0] != NULL)
-        newDir = gCell->Children[i]->Children[gCell->Children[i]->Diverging]->Dir;
+        newDir = gCell->Children[i]->Children[gCell->Children[i]->DivergingChild]->Dir;
       else
         newDir = defaultDirs[gCell->Children[i]->Dir];
       id = gCell->Children[i]->GroupId;
