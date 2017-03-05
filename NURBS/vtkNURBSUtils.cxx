@@ -330,23 +330,11 @@ int vtkNURBSUtils::GetKnots(vtkDoubleArray *U, int p, std::string type, vtkDoubl
  * @param *pd
  * @return
  */
-int vtkNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, int p, std::string ktype, vtkTypedArray<double> *N0, vtkDoubleArray *knots)
+int vtkNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots,
+                                         vtkTypedArray<double> *N0)
 {
   int nCon  = U->GetNumberOfTuples();
-  int nKnot = nCon + p + 1;
-  if (!strncmp(ktype.c_str(), "derivative", 10))
-  {
-    nKnot = nKnot + 2;
-  }
-
-//Calculate the knot vector, uniform interp for middle knots
-  if (vtkNURBSUtils::GetKnots(U, p, ktype, knots) != 1)
-  {
-    fprintf(stderr,"Error getting knots with average spacing\n");
-    return 0;
-  }
-  fprintf(stdout,"Knots\n");
-  vtkNURBSUtils::PrintArray(knots);
+  int nKnot = knots->GetNumberOfTuples();
 
   vtkNew(vtkIntArray, greater);
   vtkNew(vtkIntArray, less);
@@ -355,14 +343,13 @@ int vtkNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, int p, std::string k
   knotsShift->SetNumberOfTuples(nKnot);
   knotsShift->SetTuple1(nKnot-1, -1);
   for (int i=0; i<nKnot-1; i++)
-  {
-    knotsShift->SetTuple1(i,knots->GetTuple1(i+1));
-  }
+    knotsShift->SetTuple1(i, knots->GetTuple1(i+1));
+
   for (int i=0; i<nCon; i++)
   {
     double val = U->GetTuple1(i);
     vtkNURBSUtils::WhereGreaterEqual(val, knots, greater);
-    vtkNURBSUtils::WhereLessEqual(val, knotsShift, less);
+    vtkNURBSUtils::WhereLess(val, knotsShift, less);
     vtkNURBSUtils::Intersect1D(greater, less, spots);
     for (int j=0; j<nKnot-1; j++)
     {
@@ -379,19 +366,17 @@ int vtkNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, int p, std::string k
  * @param *pd
  * @return
  */
-int vtkNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, const int p, const std::string ktype, vtkTypedArray<double> *NP, vtkDoubleArray *knots)
+int vtkNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots,
+                                      const int p,
+                                      vtkTypedArray<double> *NP)
 {
   int nCon  = U->GetNumberOfTuples();
-  int nKnot = nCon + p + 1;
-  if (!strncmp(ktype.c_str(), "derivative", 10))
-  {
-    nKnot = nKnot + 2;
-  }
+  int nKnot = knots->GetNumberOfTuples();
 
   //Get zero order basis function first
   vtkNew(vtkSparseArray<double>, N0);
   N0->Resize(nCon, nKnot-1);
-  if (vtkNURBSUtils::GetZeroBasisFunctions(U, p, ktype, N0, knots) != 1)
+  if (vtkNURBSUtils::GetZeroBasisFunctions(U, knots, N0) != 1)
   {
     return 0;
   }
@@ -404,17 +389,15 @@ int vtkNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, const int p, const std:
   vtkNew(vtkDoubleArray, term0);
   vtkNew(vtkDoubleArray, term1);
 
-  vtkNew(vtkDenseArray<double>, tmpN);
-  tmpN->Resize(nCon, nKnot-1);
+  double **tmpN = new double*[nCon];
   for (int i=0; i<nCon; i++)
   {
+    tmpN[i] = new double[nKnot-1];
     for (int j=0; j<nKnot-1; j++)
-    {
-      tmpN->SetValue(i, j, N0->GetValue(i, j));
-    }
+      tmpN[i][j] =  N0->GetValue(i, j);
   }
 
-  int blength = tmpN->GetExtents()[1].GetSize() + 1;
+  int blength = nKnot;
   for (int i=1; i<p+1; i++)
   {
     blength -= 1;
@@ -448,10 +431,9 @@ int vtkNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, const int p, const std:
       }
       for (int k=0; k<nCon; k++)
       {
-        tmpN->GetValue(k, j);
-        double final0 = term0->GetTuple1(k) * (tmpN->GetValue(k, j));
-        double final1 = term1->GetTuple1(k) * (tmpN->GetValue(k, j+1));
-        tmpN->SetValue(k, j, final0 + final1);
+        double final0 = term0->GetTuple1(k) * (tmpN[k][j]);
+        double final1 = term1->GetTuple1(k) * (tmpN[k][j+1]);
+        tmpN[k][j] = final0 + final1;
       }
     }
   }
@@ -460,10 +442,13 @@ int vtkNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, const int p, const std:
   {
     for (int j=0; j<blength-1; j++)
     {
-      NP->SetValue(i, j, tmpN->GetValue(i, j));
+      NP->SetValue(i, j, tmpN[i][j]);
     }
   }
 
+  for (int i=0; i<nCon; i++)
+    delete [] tmpN[i];
+  delete [] tmpN;
   return 1;
 }
 
@@ -474,17 +459,19 @@ int vtkNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, const int p, const std:
  * @return
  */
 int vtkNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U, vtkDoubleArray *weights,
+                                          vtkDoubleArray *knots,
                                           const int p, std::string ktype, const double D0[3], const double DN[3],
-                                          vtkPoints *cPoints, vtkDoubleArray *knots)
+                                          vtkPoints *cPoints)
 {
   int nCon = points->GetNumberOfPoints();
 
   vtkNew(vtkSparseArray<double>, NPTmp);
   vtkNew(vtkSparseArray<double>, NPFinal);
-  if( vtkNURBSUtils::GetPBasisFunctions(U, p, ktype, NPTmp, knots) != 1)
+  if( vtkNURBSUtils::GetPBasisFunctions(U, knots, p, NPTmp) != 1)
   {
     return 0;
   }
+  NPTmp->SetValue(NPTmp->GetExtents()[0].GetSize()-1, NPTmp->GetExtents()[1].GetSize()-1, 1.0);
 
   vtkNew(vtkDenseArray<double>, pointArrayTmp);
   vtkNew(vtkDenseArray<double>, pointArrayFinal);
@@ -531,13 +518,13 @@ int vtkNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U,
  * @return
  */
 int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
-                                             vtkDoubleArray *V, vtkDoubleArray *uWeigths,
-                                             vtkDoubleArray *vWeights, const int p, const int q,
+                                             vtkDoubleArray *V, vtkDoubleArray *uWeights,
+                                             vtkDoubleArray *vWeights, vtkDoubleArray *uKnots,
+                                             vtkDoubleArray *vKnots, const int p, const int q,
                                              std::string kutype, std::string kvtype,
                                              vtkDoubleArray *DU0, vtkDoubleArray *DUN,
                                              vtkDoubleArray *DV0, vtkDoubleArray *DVN,
-                                             vtkStructuredGrid *cPoints,
-                                             vtkDoubleArray *uKnots, vtkDoubleArray *vKnots)
+                                             vtkStructuredGrid *cPoints)
 {
   int dim[3];
   points->GetDimensions(dim);
@@ -547,17 +534,19 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
 
   vtkNew(vtkSparseArray<double>, NPUTmp);
   vtkNew(vtkSparseArray<double>, NPUFinal);
-  if( vtkNURBSUtils::GetPBasisFunctions(U, p, kutype, NPUTmp, uKnots) != 1)
+  if( vtkNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != 1)
   {
     return 0;
   }
+  NPUTmp->SetValue(NPUTmp->GetExtents()[0].GetSize()-1, NPUTmp->GetExtents()[1].GetSize()-1, 1.0);
 
   vtkNew(vtkSparseArray<double>, NPVTmp);
   vtkNew(vtkSparseArray<double>, NPVFinal);
-  if( vtkNURBSUtils::GetPBasisFunctions(V, q, kvtype, NPVTmp, vKnots) != 1)
+  if( vtkNURBSUtils::GetPBasisFunctions(V, vKnots, q, NPVTmp) != 1)
   {
     return 0;
   }
+  NPVTmp->SetValue(NPVTmp->GetExtents()[0].GetSize()-1, NPVTmp->GetExtents()[1].GetSize()-1, 1.0);
 
   vtkNew(vtkDenseArray<double>, pointMatTmp);
   vtkNew(vtkDenseArray<double>, pointMatFinal);
@@ -587,8 +576,8 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
     vtkNURBSUtils::DeepCopy(pointMatTmp, pointMatFinal);
   }
 
-  fprintf(stdout,"Basis functions U:\n");
-  vtkNURBSUtils::PrintMatrix(NPUFinal);
+  //fprintf(stdout,"Basis functions U:\n");
+  //vtkNURBSUtils::PrintMatrix(NPUFinal);
   vtkNew(vtkSparseArray<double>, NPUinv);
   if (vtkNURBSUtils::InvertSystem(NPUFinal, NPUinv) != 1)
   {
@@ -596,8 +585,8 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
     return 0;
   }
 
-  fprintf(stdout,"Basis functions V:\n");
-  vtkNURBSUtils::PrintMatrix(NPVFinal);
+  //fprintf(stdout,"Basis functions V:\n");
+  //vtkNURBSUtils::PrintMatrix(NPVFinal);
   vtkNew(vtkSparseArray<double>, NPVinv);
   if (vtkNURBSUtils::InvertSystem(NPVFinal, NPVinv) != 1)
   {
@@ -606,10 +595,10 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
   }
 
 
-  fprintf(stdout,"Inverted system U:\n");
-  vtkNURBSUtils::PrintMatrix(NPUinv);
-  fprintf(stdout,"Multiplied against:\n");
-  vtkNURBSUtils::PrintMatrix(pointMatFinal);
+  //fprintf(stdout,"Inverted system U:\n");
+  //vtkNURBSUtils::PrintMatrix(NPUinv);
+  //fprintf(stdout,"Inverted system V:\n");
+  //vtkNURBSUtils::PrintMatrix(NPVinv);
   vtkNew(vtkDenseArray<double>, tmpUGrid);
   if (vtkNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != 1)
   {
@@ -630,8 +619,8 @@ int vtkNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubl
   vtkNew(vtkDenseArray<double>, tmpVGridT);
   vtkNURBSUtils::MatrixTranspose(tmpVGrid, 1, tmpVGridT);
   vtkNURBSUtils::TypedArrayToStructuredGrid(tmpVGridT, cPoints);
-  fprintf(stdout,"Final structured grid of control points\n");
-  vtkNURBSUtils::PrintStructuredGrid(cPoints);
+  //fprintf(stdout,"Final structured grid of control points\n");
+  //vtkNURBSUtils::PrintStructuredGrid(cPoints);
 
   return 1;
 }
@@ -1336,18 +1325,6 @@ int vtkNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int m
   {
     output->Resize(nrM0, ncM1);
   }
-
-  //vtkNew(vtkDenseArray<double>, tmpIn);
-  //vtkNew(vtkDenseArray<double>, tmpOut);
-  //for (int i=0; i<ncM1; i++)
-  //{
-  //  vtkNURBSUtils::GetMatrixComp(mat1, i, 0, mat1IsPoints, tmpIn);
-  //  if (vtkNURBSUtils::MatrixVecMultiply(mat0, mat0IsPoints, tmpIn, mat1IsPoints, tmpOut) != 1)
-  //  {
-  //    return 0;
-  //  }
-  //  vtkNURBSUtils::SetMatrixComp(tmpOut, i, 0, either, output);
-  //}
 
   if (!mat0IsPoints && !mat1IsPoints)
   {

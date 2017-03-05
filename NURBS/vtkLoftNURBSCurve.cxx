@@ -145,16 +145,20 @@ int vtkLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   std::string ptype = this->ParametricSpanType;
 
   vtkNew(vtkDoubleArray, U);
-  vtkNew(vtkDoubleArray, weights);
   if (vtkNURBSUtils::GetUs(input->GetPoints(), ptype, U) != 1)
   {
     return 0;
   }
-  weights->SetNumberOfTuples(nCon);
-  for (int i=0; i<nCon; i++)
+
+  vtkNew(vtkDoubleArray, knots);
+  if (vtkNURBSUtils::GetKnots(U, p, ktype, knots) != 1)
   {
-    weights->SetTuple1(i, 1.0);
+    fprintf(stderr,"Error getting knots\n");
+    return 0;
   }
+  vtkNew(vtkDoubleArray, weights);
+  weights->SetNumberOfTuples(nCon);
+  weights->FillComponent(0 , 1.0);
 
   double D0[3], DN[3];
   if (!strncmp(ktype.c_str(), "derivative", 10))
@@ -176,9 +180,8 @@ int vtkLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   }
 
   vtkNew(vtkPoints, cpoints);
-  vtkNew(vtkDoubleArray, knots);
   if (vtkNURBSUtils::GetControlPointsOfCurve(input->GetPoints(), U, weights,
-                                             p, ktype, D0, DN, cpoints, knots) != 1)
+                                             knots, p, ktype, D0, DN, cpoints) != 1)
   {
     return 0;
   }

@@ -193,9 +193,10 @@ int main(int argc, char *argv[])
   vtkSmartPointer<vtkLoftNURBSCurve> lofter =
     vtkSmartPointer<vtkLoftNURBSCurve>::New();
   lofter->SetInputData(inputPoly);
-  lofter->SetDegree(2);
+  lofter->SetDegree(3);
   lofter->SetPolyDataSpacing(0.01);
-  lofter->SetKnotSpanType("average");
+  lofter->SetKnotSpanType("derivative");
+  lofter->SetParametricSpanType("chord");
   lofter->Update();
 
   std::string newDirName = getcwd(NULL, 0);

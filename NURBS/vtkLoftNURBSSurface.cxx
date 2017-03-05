@@ -376,26 +376,43 @@ int vtkLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
     }
   }
 
-  vtkNew(vtkDoubleArray, U);
-  vtkNew(vtkDoubleArray, V);
   vtkNew(vtkPoints, tmpPoints);
   tmpPoints->SetNumberOfPoints(nUCon);
   for (int i=0; i<nUCon; i++)
   {
     tmpPoints->SetPoint(i, inputs[i]->GetPoint(0));
   }
+  vtkNew(vtkDoubleArray, U);
   if (vtkNURBSUtils::GetUs(tmpPoints, putype, U) != 1)
   {
     return 0;
   }
+  //fprintf(stdout,"U:\n");
+  //vtkNURBSUtils::PrintArray(U);
+  vtkNew(vtkDoubleArray, uKnots);
+  if (vtkNURBSUtils::GetKnots(U, p, kutype, uKnots) != 1)
+  {
+    fprintf(stderr,"Error getting knots\n");
+    return 0;
+  }
+  //fprintf(stdout,"X knots\n");
+  //vtkNURBSUtils::PrintArray(uKnots);
+  vtkNew(vtkDoubleArray, V);
   if (vtkNURBSUtils::GetUs(inputs[0]->GetPoints(), pvtype, V) != 1)
   {
     return 0;
   }
-  fprintf(stdout,"U:\n");
-  vtkNURBSUtils::PrintArray(U);
-  fprintf(stdout,"V:\n");
-  vtkNURBSUtils::PrintArray(V);
+  //fprintf(stdout,"V:\n");
+  //vtkNURBSUtils::PrintArray(V);
+
+  vtkNew(vtkDoubleArray, vKnots);
+  if (vtkNURBSUtils::GetKnots(V, q, kvtype, vKnots) != 1)
+  {
+    fprintf(stderr,"Error getting knots\n");
+    return 0;
+  }
+  //fprintf(stdout,"Y knots\n");
+  //vtkNURBSUtils::PrintArray(vKnots);
 
   vtkNew(vtkStructuredGrid, inputPoints);
   if (vtkNURBSUtils::PolyDatasToStructuredGrid(inputs, numInputs, inputPoints) != 1)
@@ -425,14 +442,11 @@ int vtkLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   }
 
   vtkNew(vtkStructuredGrid, cPoints);
-  vtkNew(vtkDoubleArray, uKnots);
-  vtkNew(vtkDoubleArray, vKnots);
   vtkNew(vtkDoubleArray, uWeights);
   vtkNew(vtkDoubleArray, vWeights);
   if (vtkNURBSUtils::GetControlPointsOfSurface(inputPoints, U, V, uWeights, vWeights,
-                                               p, q, kutype, kvtype,
-                                               DU0, DUN, DV0, DVN,
-                                               cPoints, uKnots, vKnots) != 1)
+                                               uKnots, vKnots, p, q, kutype, kvtype,
+                                               DU0, DUN, DV0, DVN, cPoints) != 1)
   {
     return 0;
   }

@@ -65,31 +65,32 @@ public:
                          vtkDoubleArray *knots);
   static int GetChordSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U);
   static int GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U);
-  static int GetZeroBasisFunctions(vtkDoubleArray *U, int p, std::string ktype,
-         vtkTypedArray<double> *N0, vtkDoubleArray *knots);
-  static int GetPBasisFunctions(vtkDoubleArray *u, const int p, const std::string ktype,
-         vtkTypedArray<double> *NP, vtkDoubleArray *knots);
+  static int GetZeroBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots,
+                                   vtkTypedArray<double> *N0);
+  static int GetPBasisFunctions(vtkDoubleArray *u, vtkDoubleArray *knots,
+                                const int p,
+                                vtkTypedArray<double> *N);
   static int GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U,
-                                     vtkDoubleArray *weights, const int p,
+                                     vtkDoubleArray *weights, vtkDoubleArray *knots,
+                                     const int p,
                                      std::string ktype,
                                      const double D0[3], const double DN[3],
-                                     vtkPoints *cPoints,
-                                     vtkDoubleArray *knots);
+                                     vtkPoints *cPoints);
   static int GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
-                                       vtkDoubleArray *V, vtkDoubleArray *uWeigths,
-                                       vtkDoubleArray *vWeights, const int p, const int q,
+                                       vtkDoubleArray *V, vtkDoubleArray *uWeights,
+                                       vtkDoubleArray *vWeights, vtkDoubleArray *uKnots,
+                                       vtkDoubleArray *vKnots, const int p, const int q,
                                        std::string kutype, std::string kvtype,
                                        vtkDoubleArray *DU0, vtkDoubleArray *DUN,
                                        vtkDoubleArray *DV0, vtkDoubleArray *DVN,
-                                       vtkStructuredGrid *cPoints,
-                                       vtkDoubleArray *uKnots, vtkDoubleArray *vKnots);
+                                       vtkStructuredGrid *cPoints);
   static int SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
-		                    const int p, const double D0[3], const double DN[3],
+		                                const int p, const double D0[3], const double DN[3],
                                     vtkDoubleArray *U, vtkDoubleArray *knots,
                                     vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints);
   static int SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTypedArray<double> *NPV,
                                       vtkTypedArray<double> *points,
-		                      const int p, const int q,
+		                                  const int p, const int q,
                                       std::string kutype, std::string kvtype,
                                       vtkTypedArray<double> *DU0, vtkTypedArray<double> *DUN,
                                       vtkTypedArray<double> *DV0, vtkTypedArray<double> *DVN,
@@ -100,7 +101,7 @@ public:
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
   static int AddDerivativePoints(vtkTypedArray<double> *points,
-		                 const int p, const double D0[3],
+		                             const int p, const double D0[3],
                                  const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
                                  vtkTypedArray<double> *newPoints);
   static int GetKnots(vtkDoubleArray *u, int p, std::string type,
@@ -170,6 +171,7 @@ public:
   static int WhereEqual(double val, vtkDoubleArray *in, vtkIntArray *out);
   static int WhereNotEqual(double val, vtkDoubleArray *in, vtkIntArray *out);
 
+  //Print operations
   static int PrintArray(vtkIntArray *arr);
   static int PrintArray(vtkDoubleArray *arr);
   static int PrintVector(vtkTypedArray<double> *vec);
@@ -177,6 +179,7 @@ public:
   static int PrintStructuredGrid(vtkStructuredGrid *mat);
   static int PrintPoints(vtkPoints *points);
   static int Print2DArray(const double *arr, const int nr, const int nc);
+
 protected:
   vtkNURBSUtils();
   ~vtkNURBSUtils();
