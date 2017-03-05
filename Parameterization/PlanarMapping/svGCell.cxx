@@ -56,8 +56,8 @@ svGCell::svGCell()
     this->StartPt[i]  = -1.0;
     this->EndPt[i]    = -1.0;
     this->FrontDir[i] = -1.0;
-    this->TopVec[i]   = -1.0;
-    this->RightVec[i] = -1.0;
+    this->ZVec[i]   = -1.0;
+    this->XVec[i] = -1.0;
   }
   for (int i=0; i<8; i++)
     this->CornerPtIds[i] = -1;

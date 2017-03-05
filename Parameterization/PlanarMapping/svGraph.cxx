@@ -202,7 +202,7 @@ int svGraph::BuildGraph()
   }
 
   svGraph::Recurse(this->Root, svGraph::UpdateCellDirection,
-                   this->DirectionTable, NULL, NULL);
+                   NULL, NULL, NULL);
 
   return 1;
 }
@@ -484,7 +484,6 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
 int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
                                  void *arg1, void *arg2)
 {
-  fprintf(stdout,"Doing it\n");
   if (gCell->Parent != NULL)
   {
     int direction0 = gCell->Parent->Dir;
@@ -513,6 +512,22 @@ int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
     {
       gCell->StartPt[i] = gCell->Parent->EndPt[i];
       gCell->EndPt[i]   = gCell->StartPt[i] + dirVector[i];
+    }
+    vtkIntArray *rotIndices = reinterpret_cast<vtkIntArray*>(arg0);
+    if (rotIndices != NULL)
+    {
+      int cellIndices[8];
+      int tmpIds[8];
+      for (int i=0; i<8; i++)
+      {
+        cellIndices[i] = vtkPolyDataSliceAndDiceFilter::LookupIndex(gCell->Parent->Dir, gCell->Parent->Children[gCell->Parent->DivergingChild]->Dir, i);
+        tmpIds[i] = gCell->CornerPtIds[i];
+      }
+      for (int i=0; i<8; i++)
+      {
+        fprintf(stdout,"%d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i]], tmpIds[cellIndices[rotIndices->GetValue(i)]]);
+        gCell->CornerPtIds[cellIndices[i]] = tmpIds[cellIndices[rotIndices->GetValue(i)]];
+      }
     }
   }
   return 1;

@@ -201,9 +201,10 @@ protected:
                            const int front,
                            const int back,
                            vtkIdList *surgeryPoints);
-  int GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3],
+  int GetNextSurgeryPoints(vtkPolyData *pd, svGCell *gCell,
+                           double centerPt[3],
                            vtkIdList *surgeryPoints,
-                           double endSurgeryIds[8],
+                           int endSurgeryIds[8],
                            double xvec[3], double zvec[3],
                            double radius,
                            vtkIdList *surgeryLineIds,
@@ -231,6 +232,8 @@ protected:
   int SliceBifurcations();
   int SliceBifurcation(vtkPolyData *pd,
                        svGCell *gCell);
+  int FixGraphDirections(svGCell *gCell, const int actualId,
+                         int cellIndices[8]);
   int GetSectionZAxis(const double endPt[3], const double startPt[3],
                       double zvec[3]);
   int GetSectionXAxis(const double endPt[3], const double startPt[3],
