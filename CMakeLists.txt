@@ -56,7 +56,7 @@ include(vtkSVOptions)
 #-----------------------------------------------------------------------------
 # Set build dirs
 if(VTKSV_BUILD_FILTERS)
-  set(VTKSV_FILTER_DIRS ${VTKSV_FILTER_DIRS} "Filters/FindGeodesicPath")
+  set(VTKSV_FILTER_DIRS ${VTKSV_FILTER_DIRS} "Filters")
 endif()
 #-----------------------------------------------------------------------------
 
