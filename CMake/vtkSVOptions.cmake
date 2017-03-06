@@ -40,12 +40,20 @@ option(BUILD_SHARED_LIBS "Build ${PROJECT_NAME} as shared libraries." OFF)
 
 set(VTKSV_LIBRARY_TYPE "STATIC" CACHE STRING "Options are STATIC or SHARED" FORCE)
 set_property(CACHE VTKSV_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED)
+mark_as_advanced(VTKSV_LIBRARY_TYPE)
+if(BUILD_SHARED_LIBS)
+	set(SV_LIBRARY_TYPE "SHARED" CACHE STRING "Shared cache" FORCE)
+else()
+  set(SV_LIBRARY_TYPE "STATIC" CACHE STRING "Static cache" FORCE)
+endif()
 #----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Specify which filters to build
 option(VTKSV_BUILD_FILTERS "Option to build the filters" ON)
+option(VTKSV_BUILD_FILTER_EXES "Option to build the executables for each filter" ON)
 #-----------------------------------------------------------------------------
+
 #-----------------------------------------------------------------------------
 # Specify which modules to build
 option(VTKSV_BUILD_MODULE_NURBS "Option to build the NURBS code" ON)

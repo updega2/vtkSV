@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   VMTK
-Module:    $RCSfile: vtksvPolyBallLine.h,v $
+Module:    $RCSfile: vtkSVPolyBallLine.h,v $
 Language:  C++
 Date:      $Date: 2006/04/06 16:46:43 $
 Version:   $Revision: 1.4 $
@@ -18,23 +18,23 @@ Version:   $Revision: 1.4 $
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
-  // .NAME vtksvPolyBallLine -
+  // .NAME vtkSVPolyBallLine -
   // .SECTION Description
   // ..
 
-#ifndef __vtksvPolyBallLine_h
-#define __vtksvPolyBallLine_h
+#ifndef __vtkSVPolyBallLine_h
+#define __vtkSVPolyBallLine_h
 
 #include "vtkImplicitFunction.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtksvPolyBallLine : public vtkImplicitFunction
+class vtkSVPolyBallLine : public vtkImplicitFunction
 {
   public:
 
-  static vtksvPolyBallLine *New();
-  vtkTypeMacro(vtksvPolyBallLine,vtkImplicitFunction);
+  static vtkSVPolyBallLine *New();
+  vtkTypeMacro(vtkSVPolyBallLine,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description
@@ -82,8 +82,8 @@ class vtksvPolyBallLine : public vtkImplicitFunction
   static double ComplexDot(double x[4], double y[4]);
 
   protected:
-  vtksvPolyBallLine();
-  ~vtksvPolyBallLine();
+  vtkSVPolyBallLine();
+  ~vtkSVPolyBallLine();
 
   vtkPolyData* Input;
   vtkIdList* InputCellIds;
@@ -99,8 +99,8 @@ class vtksvPolyBallLine : public vtkImplicitFunction
   int UseRadiusInformation;
 
   private:
-  vtksvPolyBallLine(const vtksvPolyBallLine&);  // Not implemented.
-  void operator=(const vtksvPolyBallLine&);  // Not implemented.
+  vtkSVPolyBallLine(const vtkSVPolyBallLine&);  // Not implemented.
+  void operator=(const vtkSVPolyBallLine&);  // Not implemented.
 };
 
 #endif

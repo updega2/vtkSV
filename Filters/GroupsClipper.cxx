@@ -22,7 +22,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkHausdorffDistance.h"
+#include "vtkSVPolyDataCenterlineGroupsClipper.h"
 #include "vtkSTLReader.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 {
   if (argc != 3)
   {
-      std::cout << "Need two surfaces: ./HausdorffDistance [Source Surface] [Target Surface]!" <<endl;
+      std::cout << "Need two surfaces: ./HausdorffDistance [Surface] [Centerlines]!" <<endl;
       return EXIT_FAILURE;
   }
 
@@ -155,8 +155,8 @@ int main(int argc, char *argv[])
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
   vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkHausdorffDistance> Distancer =
-	  vtkSmartPointer<vtkHausdorffDistance>::New();
+  vtkSmartPointer<vtkSVPolyDataCenterlineGroupsClipper> Grouper =
+	  vtkSmartPointer<vtkSVPolyDataCenterlineGroupsClipper>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
@@ -164,21 +164,26 @@ int main(int argc, char *argv[])
   ReadInputFile(inputFilename2,pd2);
 
   //OPERATION
-  std::string newDirName = getPath(inputFilename2)+"/"+getRawName(inputFilename2);
-  std::string newOutName = getPath(inputFilename2)+"/"+getRawName(inputFilename2)+"/"+getRawName(inputFilename2);
+  std::string newDirName = getPath(inputFilename1)+"/"+getRawName(inputFilename1);
+  std::string newOutName = getPath(inputFilename1)+"/"+getRawName(inputFilename1)+"/"+getRawName(inputFilename1);
   system(("mkdir -p "+newDirName).c_str());
   std::cout<<"Performing Operation..."<<endl;
-  Distancer->SetInputData(0, pd1);
-  Distancer->SetInputData(1, pd2);
-  Distancer->SetDistanceArrayName("Distance");
-  Distancer->Update();
+  Grouper->SetInputData(pd1);
+  Grouper->SetCenterlines(pd2);
+  Grouper->SetCenterlineGroupIdsArrayName("GroupIds");
+  Grouper->SetGroupIdsArrayName("GroupIds");
+  Grouper->SetCenterlineRadiusArrayName("MaximumInscribedSphereRadius");
+  Grouper->SetBlankingArrayName("Blanking");
+  Grouper->SetCutoffRadiusFactor(1.0e16);
+  Grouper->SetClipValue(0.0);
+  Grouper->ClipAllCenterlineGroupIdsOn();
+  Grouper->SetUseRadiusInformation(1);
+  Grouper->Update();
 
-  std::cout<<"Hausdorff Distance: "<<Distancer->GetHausdorffDistance()<<endl;
-  std::cout<<"Average Distance:   "<<Distancer->GetAverageDistance()<<endl;
   //Write Files
   std::cout<<"Done...Writing Files..."<<endl;
-  std::string attachName = "_Distanced";
-  WriteVTPFile(newOutName+".vtp",Distancer->GetOutput(0),attachName);
+  std::string attachName = "_Grouped";
+  WriteVTPFile(newOutName+".vtp",Grouper->GetOutput(0),attachName);
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   VMTK
-Module:    $RCSfile: vtksvPolyDataCenterlineGroupsClipper.cxx,v $
+Module:    $RCSfile: vtkSVPolyDataCenterlineGroupsClipper.cxx,v $
 Language:  C++
 Date:      $Date: 2006/04/06 16:46:43 $
 Version:   $Revision: 1.9 $
@@ -19,7 +19,7 @@ Version:   $Revision: 1.9 $
 
 =========================================================================*/
 
-#include "vtksvPolyDataCenterlineGroupsClipper.h"
+#include "vtkSVPolyDataCenterlineGroupsClipper.h"
 #include "vtkAppendPolyData.h"
 #include "vtkExecutive.h"
 #include "vtkCellLocator.h"
@@ -37,7 +37,7 @@ Version:   $Revision: 1.9 $
 #include "vtkClipPolyData.h"
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
-#include "vtksvPolyBallLine.h"
+#include "vtkSVPolyBallLine.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
 #include "vtkSphere.h"
@@ -62,9 +62,9 @@ Version:   $Revision: 1.9 $
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
-vtkStandardNewMacro(vtksvPolyDataCenterlineGroupsClipper);
+vtkStandardNewMacro(vtkSVPolyDataCenterlineGroupsClipper);
 
-vtksvPolyDataCenterlineGroupsClipper::vtksvPolyDataCenterlineGroupsClipper()
+vtkSVPolyDataCenterlineGroupsClipper::vtkSVPolyDataCenterlineGroupsClipper()
 {
   this->Centerlines = NULL;
   this->CenterlineGroupIdsArrayName = NULL;
@@ -84,7 +84,7 @@ vtksvPolyDataCenterlineGroupsClipper::vtksvPolyDataCenterlineGroupsClipper()
   output2->Delete();
 }
 
-vtksvPolyDataCenterlineGroupsClipper::~vtksvPolyDataCenterlineGroupsClipper()
+vtkSVPolyDataCenterlineGroupsClipper::~vtkSVPolyDataCenterlineGroupsClipper()
 {
   if (this->Centerlines)
     {
@@ -123,7 +123,7 @@ vtksvPolyDataCenterlineGroupsClipper::~vtksvPolyDataCenterlineGroupsClipper()
     }
 }
 
-vtkPolyData *vtksvPolyDataCenterlineGroupsClipper::GetClippedOutput()
+vtkPolyData *vtkSVPolyDataCenterlineGroupsClipper::GetClippedOutput()
 {
   if (this->GetNumberOfOutputPorts() < 2)
     {
@@ -133,7 +133,7 @@ vtkPolyData *vtksvPolyDataCenterlineGroupsClipper::GetClippedOutput()
   return vtkPolyData::SafeDownCast(this->GetExecutive()->GetOutputData(1));
 }
 
-int vtksvPolyDataCenterlineGroupsClipper::RequestData(
+int vtkSVPolyDataCenterlineGroupsClipper::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
@@ -226,14 +226,14 @@ int vtksvPolyDataCenterlineGroupsClipper::RequestData(
 
   // for each group, compute the clipping array, clip, add group ids array and append.
 
-  vtkSmartPointer<vtksvPolyBallLine> groupTubes =
-    vtkSmartPointer<vtksvPolyBallLine>::New();
+  vtkSmartPointer<vtkSVPolyBallLine> groupTubes =
+    vtkSmartPointer<vtkSVPolyBallLine>::New();
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
 
-  vtkSmartPointer<vtksvPolyBallLine> nonGroupTubes =
-    vtkSmartPointer<vtksvPolyBallLine>::New();
+  vtkSmartPointer<vtkSVPolyBallLine> nonGroupTubes =
+    vtkSmartPointer<vtkSVPolyBallLine>::New();
   nonGroupTubes->SetInput(this->Centerlines);
   nonGroupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   nonGroupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
@@ -474,7 +474,7 @@ int vtksvPolyDataCenterlineGroupsClipper::RequestData(
   return 1;
 }
 
-void vtksvPolyDataCenterlineGroupsClipper::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVPolyDataCenterlineGroupsClipper::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
@@ -485,7 +485,7 @@ void vtksvPolyDataCenterlineGroupsClipper::PrintSelf(ostream& os, vtkIndent inde
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::ReplaceDataOnCells(vtkPointSet *pointset,
+int vtkSVPolyDataCenterlineGroupsClipper::ReplaceDataOnCells(vtkPointSet *pointset,
                                                                const int replaceVal,
                                                                const int currVal,
                                                                const std::string &arrName)
@@ -511,7 +511,7 @@ int vtksvPolyDataCenterlineGroupsClipper::ReplaceDataOnCells(vtkPointSet *points
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::FindGroupSeparatingPoints(vtkPolyData *pd,
+int vtkSVPolyDataCenterlineGroupsClipper::FindGroupSeparatingPoints(vtkPolyData *pd,
                                                                       vtkIdList *separateIds)
 {
   pd->BuildLinks();
@@ -541,7 +541,7 @@ int vtksvPolyDataCenterlineGroupsClipper::FindGroupSeparatingPoints(vtkPolyData 
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::GetPointGroups(vtkPolyData *pd, std::string arrayName,
+int vtkSVPolyDataCenterlineGroupsClipper::GetPointGroups(vtkPolyData *pd, std::string arrayName,
                                                   const int pointId, vtkIdList *groupIds)
 {
   vtkDataArray *groupIdsArray =
@@ -568,7 +568,7 @@ int vtksvPolyDataCenterlineGroupsClipper::GetPointGroups(vtkPolyData *pd, std::s
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints)
+int vtkSVPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints)
 {
   int numIds = separateIds->GetNumberOfIds();
   vtkSmartPointer<vtkIntArray> used =
@@ -649,7 +649,7 @@ int vtksvPolyDataCenterlineGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList
 }
 
 
-int vtksvPolyDataCenterlineGroupsClipper::ThresholdPd(vtkPolyData *pd, int minVal,
+int vtkSVPolyDataCenterlineGroupsClipper::ThresholdPd(vtkPolyData *pd, int minVal,
                                                         int maxVal, int dataType,
                                                         std::string arrayName,
                                                         vtkPolyData *returnPd)
@@ -676,7 +676,7 @@ int vtksvPolyDataCenterlineGroupsClipper::ThresholdPd(vtkPolyData *pd, int minVa
 }
 
 
-int vtksvPolyDataCenterlineGroupsClipper::FillGroups(vtkPolyData *pd,
+int vtkSVPolyDataCenterlineGroupsClipper::FillGroups(vtkPolyData *pd,
                                                      vtkPoints *newPoints)
 {
   vtkNew(vtkIdFilter, ider);
@@ -704,7 +704,7 @@ int vtksvPolyDataCenterlineGroupsClipper::FillGroups(vtkPolyData *pd,
   return 1;
 }
 
-int vtksvPolyDataCenterlineGroupsClipper::FillRegionGroups(vtkPolyData *pd,
+int vtkSVPolyDataCenterlineGroupsClipper::FillRegionGroups(vtkPolyData *pd,
                                                            vtkPolyData *boundary,
                                                            double center[3])
 {
@@ -757,7 +757,7 @@ int vtksvPolyDataCenterlineGroupsClipper::FillRegionGroups(vtkPolyData *pd,
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
+int vtkSVPolyDataCenterlineGroupsClipper::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
 {
   massCenter[0] = 0.0;
   massCenter[1] = 0.0;
@@ -777,7 +777,7 @@ int vtksvPolyDataCenterlineGroupsClipper::ComputeMassCenter(vtkPolyData *pd, dou
  * @param *pd
  * @return
  */
-int vtksvPolyDataCenterlineGroupsClipper::GetClosestPointConnectedRegion(vtkPolyData *inPd,
+int vtkSVPolyDataCenterlineGroupsClipper::GetClosestPointConnectedRegion(vtkPolyData *inPd,
                                                                          double origin[3],
                                                                          vtkPolyData *outPd)
 {

@@ -24,9 +24,9 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A convenience class to find the shortest path between two points on a surface. If one point is given, a boundary of the surface is used to find closest distance to. Shortest path nodes are returned as well as original surface with field data containing distance to every node from the start node.")
+set(DOCUMENTATION "A filter to pass the data from one polydata to another polydata. They do not have to be the same polydata topologically. vtkPointLocators and vtkCellLocators are used to determine the closest point on the other surface to pass the data to.")
 
-vtk_module(vtkSVFindGeodesicPath
+vtk_module(vtkSVPassDataArray
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
@@ -36,5 +36,5 @@ vtk_module(vtkSVFindGeodesicPath
   TEST_DEPENDS
   vtkTestingCore
   TCL_NAME
-  vtkSVFindGeodesicPath
+  vtkSVPassDataArray
   )

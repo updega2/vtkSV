@@ -28,9 +28,9 @@
  *
  *=========================================================================*/
 
-// .NAME vtkPassDataArray - Get Boundary Faces from poldata and label them with integers
+// .NAME vtkSVHausdorffDistance - Get Boundary Faces from poldata and label them with integers
 // .SECTION Description
-// vtkPassDataArray is a filter to extract the boundary surfaces of a model, separate the surace into multiple regions and number each region.
+// vtkSVHausdorffDistance is a filter to extract the boundary surfaces of a model, separate the surace into multiple regions and number each region.
 
 // .SECTION Caveats
 // To see the coloring of the lines you may have to set the ScalarMode
@@ -40,7 +40,7 @@
 // .SECTION See Also
 // vtkExtractEdges
 
-/** @file vtkPassDataArray.h
+/** @file vtkSVHausdorffDistance.h
  *  @brief This filter passes data information from one vtkPolyData to another.
  *  These polydatas do not need to be associated in any way. It uses
  *  vtkPointLocator and vtkCellLocators to find the closest points and pass
@@ -53,77 +53,51 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkPassDataArray_h
-#define __vtkPassDataArray_h
+#ifndef __vtkSVHausdorffDistance_h
+#define __vtkSVHausdorffDistance_h
 
 #include "vtkPolyDataAlgorithm.h"
 
-class vtkPassDataArray : public vtkPolyDataAlgorithm
+class vtkSVHausdorffDistance : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkPassDataArray* New();
-  //vtkTypeRevisionMacro(vtkPassDataArray, vtkPolyDataAlgorithm);
+  static vtkSVHausdorffDistance* New();
+  //vtkTypeRevisionMacro(vtkSVHausdorffDistance, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Set name for data array to be used to determine the in between sections
-  vtkGetStringMacro(PassArrayName);
-  vtkSetStringMacro(PassArrayName);
+  vtkGetStringMacro(DistanceArrayName);
+  vtkSetStringMacro(DistanceArrayName);
 
   // Description:
-  // Set/get macros for telling whether source is cell or point data
-  // and how the information should be transferred
-  vtkGetMacro(PassDataIsCellData, int);
-  vtkSetMacro(PassDataIsCellData, int);
-  vtkGetMacro(PassDataToCellData, int);
-  vtkSetMacro(PassDataToCellData, int);
-
-
-  // Description:
-  // Set/get macros for whether to use cell centroid. Default is true
-  // As false, each point of the cell will be tested and the value returned
-  // the most times from the locator will be used. In the case that multiple
-  // values are returned the same amount, the first is used.
-  vtkGetMacro(UseCellCentroid, int);
-  vtkSetMacro(UseCellCentroid, int);
+  // Variables to get the hausdorff and average distance found
+  vtkGetMacro(HausdorffDistance, double);
+  vtkGetMacro(AverageDistance, double);
 
 protected:
-  vtkPassDataArray();
-  ~vtkPassDataArray();
+  vtkSVHausdorffDistance();
+  ~vtkSVHausdorffDistance();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  char* PassArrayName;
+  int PrepFilter();
+  int RunFilter();
 
-  vtkDataArray *PassDataArray;
-  vtkDataArray *NewDataArray;
+  char* DistanceArrayName;
 
   vtkPolyData *SourcePd;
   vtkPolyData *TargetPd;
 
-  int PassDataIsCellData;
-  int PassDataToCellData;
-  int UseCellCentroid;
-
-  int GetArrays(vtkPolyData *object,int type);
-  void GetMostOccuringId(vtkIdList *idList, vtkIdType &output);
-
-  int PassDataInformation();
-  int PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData *targetPd,
-                              const int sourceIsCellData, vtkDataArray *sourceDataArray,
-                              vtkDataArray *targetDataArray);
-
-  int PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData *targetPd,
-                             const int sourceIsCellData, const int useCellCentroid,
-                             vtkDataArray *sourceDataArray,
-                             vtkDataArray *targetDataArray);
+  double AverageDistance;
+  double HausdorffDistance;
 
 private:
-  vtkPassDataArray(const vtkPassDataArray&);  // Not implemented.
-  void operator=(const vtkPassDataArray&);  // Not implemented.
+  vtkSVHausdorffDistance(const vtkSVHausdorffDistance&);  // Not implemented.
+  void operator=(const vtkSVHausdorffDistance&);  // Not implemented.
 };
 
 #endif

@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkPullApartPolyData.h
+/** @file vtkSVPullApartPolyData.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,8 +43,8 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkPullApartPolyData_h
-#define vtkPullApartPolyData_h
+#ifndef vtkSVPullApartPolyData_h
+#define vtkSVPullApartPolyData_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -53,11 +53,11 @@
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtkPullApartPolyData : public vtkPolyDataAlgorithm
+class vtkSVPullApartPolyData : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkPullApartPolyData* New();
-  //vtkTypeRevisionMacro(vtkPullApartPolyData, vtkPolyDataAlgorithm);
+  static vtkSVPullApartPolyData* New();
+  //vtkTypeRevisionMacro(vtkSVPullApartPolyData, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -92,8 +92,8 @@ public:
   vtkSetMacro(StartPtId, int);
 
 protected:
-  vtkPullApartPolyData();
-  ~vtkPullApartPolyData();
+  vtkSVPullApartPolyData();
+  ~vtkSVPullApartPolyData();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
@@ -109,8 +109,8 @@ protected:
   int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
 
 private:
-  vtkPullApartPolyData(const vtkPullApartPolyData&);  // Not implemented.
-  void operator=(const vtkPullApartPolyData&);  // Not implemented.
+  vtkSVPullApartPolyData(const vtkSVPullApartPolyData&);  // Not implemented.
+  void operator=(const vtkSVPullApartPolyData&);  // Not implemented.
 
   char *CutPointsArrayName;
 

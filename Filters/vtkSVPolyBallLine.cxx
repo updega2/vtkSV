@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   VMTK
-Module:    $RCSfile: vtksvPolyBallLine.cxx,v $
+Module:    $RCSfile: vtkSVPolyBallLine.cxx,v $
 Language:  C++
 Date:      $Date: 2006/04/06 16:46:43 $
 Version:   $Revision: 1.5 $
@@ -18,7 +18,7 @@ Version:   $Revision: 1.5 $
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
-#include "vtksvPolyBallLine.h"
+#include "vtkSVPolyBallLine.h"
 #include "vtkPointData.h"
 #include "vtkPolyLine.h"
 #include "vtkObjectFactory.h"
@@ -32,9 +32,9 @@ Version:   $Revision: 1.5 $
 #define VTK_SV_LARGE_DOUBLE 1.0E+32
 #endif
 
-vtkStandardNewMacro(vtksvPolyBallLine);
+vtkStandardNewMacro(vtkSVPolyBallLine);
 
-vtksvPolyBallLine::vtksvPolyBallLine()
+vtkSVPolyBallLine::vtkSVPolyBallLine()
 {
   this->Input = NULL;
   this->InputCellIds = NULL;
@@ -48,7 +48,7 @@ vtksvPolyBallLine::vtksvPolyBallLine()
   this->UseRadiusInformation = 1;
 }
 
-vtksvPolyBallLine::~vtksvPolyBallLine()
+vtkSVPolyBallLine::~vtkSVPolyBallLine()
 {
   if (this->Input)
     {
@@ -69,12 +69,12 @@ vtksvPolyBallLine::~vtksvPolyBallLine()
     }
 }
 
-double vtksvPolyBallLine::ComplexDot(double x[4], double y[4])
+double vtkSVPolyBallLine::ComplexDot(double x[4], double y[4])
 {
   return x[0]*y[0] + x[1]*y[1] + x[2]*y[2] - x[3]*y[3];
 }
 
-double vtksvPolyBallLine::EvaluateFunction(double x[3])
+double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 {
   vtkIdType i, k;
   vtkIdType npts, *pts;
@@ -246,13 +246,13 @@ double vtksvPolyBallLine::EvaluateFunction(double x[3])
   return minPolyBallFunctionValue;
 }
 
-void vtksvPolyBallLine::EvaluateGradient(double x[3], double n[3])
+void vtkSVPolyBallLine::EvaluateGradient(double x[3], double n[3])
 {
   vtkWarningMacro("Poly ball gradient computation not yet implemented!");
   // TODO
 }
 
-void vtksvPolyBallLine::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVPolyBallLine::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 

@@ -24,6 +24,51 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#-----------------------------------------------------------------------------
+# Setup vtkSV Install options and directories
+#-----------------------------------------------------------------------------
+  #  "Enabling this option will install automatically SimVascular in Superbuild Mode" OFF)
+if(NOT VTKSV_INSTALL_HOME_DIR)
+  set(VTKSV_INSTALL_HOME_DIR ".")
+endif()
+
+if(NOT VTKSV_INSTALL_TIMESTAMP_DIR)
+  set(VTKSV_INSTALL_TIMESTAMP_DIR "timestamp")
+endif()
+
+if(NOT VTKSV_INSTALL_SCRIPT_DIR)
+  set(VTKSV_INSTALL_SCRIPT_DIR ".")
+endif()
+
+if(NOT VTKSV_INSTALL_RUNTIME_DIR)
+  set(VTKSV_INSTALL_RUNTIME_DIR bin)
+endif()
+
+if(NOT VTKSV_INSTALL_LIBRARY_DIR)
+  set(VTKSV_INSTALL_LIBRARY_DIR lib)
+endif()
+
+if(NOT VTKSV_INSTALL_ARCHIVE_DIR)
+  set(VTKSV_INSTALL_ARCHIVE_DIR lib)
+endif()
+
+if(NOT VTKSV_INSTALL_INCLUDE_DIR)
+  set(VTKSV_INSTALL_INCLUDE_DIR include)
+endif()
+
+if(NOT VTKSV_INSTALL_DATA_DIR)
+  set(VTKSV_INSTALL_DATA_DIR data)
+endif()
+
+if(NOT VTKSV_INSTALL_DOC_DIR)
+ set(VTKSV_INSTALL_DOC_DIR doc)
+endif()
+
+if(NOT VTKSV_INSTALL_DOXYGEN_DIR)
+  set(VTKSV_INSTALL_DOXYGEN_DIR ${VTKSV_INSTALL_DOC_DIR}/doxygen)
+endif()
+#-----------------------------------------------------------------------------
+
 #------------------------------------------------------------------------------
 # Setup install directories (we use names with VTK_ prefix, since vtkSV
 # is built as a custom "VTK" library.

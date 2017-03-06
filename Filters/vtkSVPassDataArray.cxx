@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkPassDataArray.cxx
- *  @brief This implements the vtkPassDataArray filter as a class
+/** @file vtkSVPassDataArray.cxx
+ *  @brief This implements the vtkSVPassDataArray filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkPassDataArray.h"
+#include "vtkSVPassDataArray.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -73,10 +73,10 @@
 
 #include <iostream>
 
-//vtkCxxRevisionMacro(vtkPassDataArray, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkPassDataArray);
+//vtkCxxRevisionMacro(vtkSVPassDataArray, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVPassDataArray);
 
-vtkPassDataArray::vtkPassDataArray()
+vtkSVPassDataArray::vtkSVPassDataArray()
 {
   this->SetNumberOfInputPorts(2);
 
@@ -94,7 +94,7 @@ vtkPassDataArray::vtkPassDataArray()
   this->UseCellCentroid = 1;
 }
 
-vtkPassDataArray::~vtkPassDataArray()
+vtkSVPassDataArray::~vtkSVPassDataArray()
 {
   if (this->SourcePd)
   {
@@ -113,12 +113,12 @@ vtkPassDataArray::~vtkPassDataArray()
   }
 }
 
-void vtkPassDataArray::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVPassDataArray::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
-int vtkPassDataArray::RequestData(
+int vtkSVPassDataArray::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -176,7 +176,7 @@ int vtkPassDataArray::RequestData(
  * @param *pd
  * @return
  */
-int vtkPassDataArray::GetArrays(vtkPolyData *object,int type)
+int vtkSVPassDataArray::GetArrays(vtkPolyData *object,int type)
 {
   vtkIdType i;
   int exists = 0;
@@ -232,7 +232,7 @@ int vtkPassDataArray::GetArrays(vtkPolyData *object,int type)
  * @param *pd
  * @return
  */
-int vtkPassDataArray::PassDataInformation()
+int vtkSVPassDataArray::PassDataInformation()
 {
 
   if (this->PassDataToCellData == 0)
@@ -266,7 +266,7 @@ int vtkPassDataArray::PassDataInformation()
  * @param *pd
  * @return
  */
-int vtkPassDataArray::PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData *targetPd,
+int vtkSVPassDataArray::PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData *targetPd,
                                               const int sourceIsCellData, vtkDataArray *sourceDataArray,
                                               vtkDataArray *targetDataArray)
 {
@@ -331,7 +331,7 @@ int vtkPassDataArray::PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData
  * @param *pd
  * @return
  */
-int vtkPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData *targetPd,
+int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData *targetPd,
                                               const int sourceIsCellData, const int useCellCentroid, vtkDataArray *sourceDataArray,
                                               vtkDataArray *targetDataArray)
 {
@@ -438,7 +438,7 @@ int vtkPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData 
   return 1;
 }
 
-void vtkPassDataArray::GetMostOccuringId(vtkIdList *idList, vtkIdType &output)
+void vtkSVPassDataArray::GetMostOccuringId(vtkIdList *idList, vtkIdType &output)
 {
   int numIds = idList->GetNumberOfIds();
 

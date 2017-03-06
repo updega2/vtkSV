@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkHausdorffDistance.cxx
- *  @brief This implements the vtkHausdorffDistance filter as a class
+/** @file vtkSVHausdorffDistance.cxx
+ *  @brief This implements the vtkSVHausdorffDistance filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkHausdorffDistance.h"
+#include "vtkSVHausdorffDistance.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -73,10 +73,10 @@
 
 #include <iostream>
 
-//vtkCxxRevisionMacro(vtkHausdorffDistance, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkHausdorffDistance);
+//vtkCxxRevisionMacro(vtkSVHausdorffDistance, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVHausdorffDistance);
 
-vtkHausdorffDistance::vtkHausdorffDistance()
+vtkSVHausdorffDistance::vtkSVHausdorffDistance()
 {
   this->SetNumberOfInputPorts(2);
 
@@ -89,7 +89,7 @@ vtkHausdorffDistance::vtkHausdorffDistance()
   this->HausdorffDistance = 0.0;
 }
 
-vtkHausdorffDistance::~vtkHausdorffDistance()
+vtkSVHausdorffDistance::~vtkSVHausdorffDistance()
 {
   if (this->SourcePd)
   {
@@ -108,12 +108,12 @@ vtkHausdorffDistance::~vtkHausdorffDistance()
   }
 }
 
-void vtkHausdorffDistance::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVHausdorffDistance::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
-int vtkHausdorffDistance::RequestData(
+int vtkSVHausdorffDistance::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -154,7 +154,7 @@ int vtkHausdorffDistance::RequestData(
     return 1;
 }
 
-int vtkHausdorffDistance::PrepFilter()
+int vtkSVHausdorffDistance::PrepFilter()
 {
   if (this->DistanceArrayName == NULL)
   {
@@ -166,7 +166,7 @@ int vtkHausdorffDistance::PrepFilter()
   return 1;
 }
 
-int vtkHausdorffDistance::RunFilter()
+int vtkSVHausdorffDistance::RunFilter()
 {
   int numPoints = this->TargetPd->GetNumberOfPoints();
   vtkNew(vtkDoubleArray, distances);

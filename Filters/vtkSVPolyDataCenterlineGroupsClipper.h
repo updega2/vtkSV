@@ -1,7 +1,7 @@
 /*=========================================================================
 
 Program:   VMTK
-Module:    $RCSfile: vtksvPolyDataCenterlineGroupsClipper.h,v $
+Module:    $RCSfile: vtkSVPolyDataCenterlineGroupsClipper.h,v $
 Language:  C++
 Date:      $Date: 2006/04/06 16:46:43 $
 Version:   $Revision: 1.7 $
@@ -18,24 +18,24 @@ Version:   $Revision: 1.7 $
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
-  // .NAME vtksvPolyDataCenterlineGroupsClipper - .
+  // .NAME vtkSVPolyDataCenterlineGroupsClipper - .
   // .SECTION Description
   // ...
 
-#ifndef __vtksvPolyDataCenterlineGroupsClipper_h
-#define __vtksvPolyDataCenterlineGroupsClipper_h
+#ifndef __vtkSVPolyDataCenterlineGroupsClipper_h
+#define __vtkSVPolyDataCenterlineGroupsClipper_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtksvPolyDataCenterlineGroupsClipper : public vtkPolyDataAlgorithm
+class vtkSVPolyDataCenterlineGroupsClipper : public vtkPolyDataAlgorithm
 {
   public:
-  vtkTypeMacro(vtksvPolyDataCenterlineGroupsClipper,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVPolyDataCenterlineGroupsClipper,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static vtksvPolyDataCenterlineGroupsClipper *New();
+  static vtkSVPolyDataCenterlineGroupsClipper *New();
 
   vtkSetObjectMacro(Centerlines,vtkPolyData);
   vtkGetObjectMacro(Centerlines,vtkPolyData);
@@ -76,8 +76,8 @@ class vtksvPolyDataCenterlineGroupsClipper : public vtkPolyDataAlgorithm
   vtkBooleanMacro(UseRadiusInformation,int);
 
   protected:
-  vtksvPolyDataCenterlineGroupsClipper();
-  ~vtksvPolyDataCenterlineGroupsClipper();
+  vtkSVPolyDataCenterlineGroupsClipper();
+  ~vtkSVPolyDataCenterlineGroupsClipper();
 
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int ReplaceDataOnCells(vtkPointSet *pointset,
@@ -116,8 +116,8 @@ class vtksvPolyDataCenterlineGroupsClipper : public vtkPolyDataAlgorithm
   int UseRadiusInformation;
 
   private:
-  vtksvPolyDataCenterlineGroupsClipper(const vtksvPolyDataCenterlineGroupsClipper&);  // Not implemented.
-  void operator=(const vtksvPolyDataCenterlineGroupsClipper&);  // Not implemented.
+  vtkSVPolyDataCenterlineGroupsClipper(const vtkSVPolyDataCenterlineGroupsClipper&);  // Not implemented.
+  void operator=(const vtkSVPolyDataCenterlineGroupsClipper&);  // Not implemented.
 };
 
 #endif

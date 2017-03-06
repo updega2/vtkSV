@@ -1,5 +1,5 @@
 //
-//  PassDataArray.cxx
+//  SphericalConformalChecker.cxx
 //
 //
 //  Created by Adam Updegrove on 10/4/14.
@@ -16,14 +16,15 @@
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
 #include "vtkDataWriter.h"
+#include "vtkSVPullApartPolyData.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkIntArray.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtksvPolyDataCenterlineGroupsClipper.h"
 #include "vtkSTLReader.h"
+#include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
@@ -142,49 +143,37 @@ void WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyData,std::stri
 
 int main(int argc, char *argv[])
 {
-  if (argc != 3)
+  if (argc != 2)
   {
-      std::cout << "Need two surfaces: ./HausdorffDistance [Surface] [Centerlines]!" <<endl;
+      std::cout << "Incorrect Usage! Should be:" <<endl;
+      std::cout << "./FindClosestGeodesicPoint [filename]" <<endl;
       return EXIT_FAILURE;
   }
 
   //Create string from input File Name on command line
   std::string inputFilename1 = argv[1];
-  std::string inputFilename2 = argv[2];
 
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtksvPolyDataCenterlineGroupsClipper> Grouper =
-	  vtkSmartPointer<vtksvPolyDataCenterlineGroupsClipper>::New();
+  vtkSmartPointer<vtkSVPullApartPolyData> Ripper =
+	  vtkSmartPointer<vtkSVPullApartPolyData>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   ReadInputFile(inputFilename1,pd1);
-  ReadInputFile(inputFilename2,pd2);
 
-  //OPERATION
   std::string newDirName = getPath(inputFilename1)+"/"+getRawName(inputFilename1);
   std::string newOutName = getPath(inputFilename1)+"/"+getRawName(inputFilename1)+"/"+getRawName(inputFilename1);
   system(("mkdir -p "+newDirName).c_str());
+  //OPERATION
   std::cout<<"Performing Operation..."<<endl;
-  Grouper->SetInputData(pd1);
-  Grouper->SetCenterlines(pd2);
-  Grouper->SetCenterlineGroupIdsArrayName("GroupIds");
-  Grouper->SetGroupIdsArrayName("GroupIds");
-  Grouper->SetCenterlineRadiusArrayName("MaximumInscribedSphereRadius");
-  Grouper->SetBlankingArrayName("Blanking");
-  Grouper->SetCutoffRadiusFactor(1.0e16);
-  Grouper->SetClipValue(0.0);
-  Grouper->ClipAllCenterlineGroupIdsOn();
-  Grouper->SetUseRadiusInformation(1);
-  Grouper->Update();
+  Ripper->SetInputData(0, pd1);
+  Ripper->SetCutPointsArrayName("IsPath");
+  Ripper->Update();
 
   //Write Files
-  std::cout<<"Done...Writing Files..."<<endl;
-  std::string attachName = "_Grouped";
-  WriteVTPFile(newOutName+".vtp",Grouper->GetOutput(0),attachName);
   std::cout<<"Done"<<endl;
+  WriteVTPFile(newOutName+".vtp", Ripper->GetOutput(0),"_Ripped");
 
   //Exit the program without errors
   return EXIT_SUCCESS;

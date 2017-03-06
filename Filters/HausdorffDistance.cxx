@@ -22,7 +22,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkPassDataArray.h"
+#include "vtkSVHausdorffDistance.h"
 #include "vtkSTLReader.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -142,22 +142,21 @@ void WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyData,std::stri
 
 int main(int argc, char *argv[])
 {
-  if (argc != 4)
+  if (argc != 3)
   {
-      std::cout << "Need two surfaces and array name: ./PassDataArray [Source Surface] [Target Surface] [Array Name]!" <<endl;
+      std::cout << "Need two surfaces: ./HausdorffDistance [Source Surface] [Target Surface]!" <<endl;
       return EXIT_FAILURE;
   }
 
   //Create string from input File Name on command line
   std::string inputFilename1 = argv[1];
   std::string inputFilename2 = argv[2];
-  std::string arrayName      = argv[3];
 
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
   vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPassDataArray> Passer =
-	  vtkSmartPointer<vtkPassDataArray>::New();
+  vtkSmartPointer<vtkSVHausdorffDistance> Distancer =
+	  vtkSmartPointer<vtkSVHausdorffDistance>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
@@ -169,17 +168,17 @@ int main(int argc, char *argv[])
   std::string newOutName = getPath(inputFilename2)+"/"+getRawName(inputFilename2)+"/"+getRawName(inputFilename2);
   system(("mkdir -p "+newDirName).c_str());
   std::cout<<"Performing Operation..."<<endl;
-  Passer->SetInputData(0, pd1);
-  Passer->SetInputData(1, pd2);
-  Passer->SetPassArrayName(arrayName.c_str());
-  Passer->SetPassDataIsCellData(1);
-  Passer->SetPassDataToCellData(1);
-  Passer->Update();
+  Distancer->SetInputData(0, pd1);
+  Distancer->SetInputData(1, pd2);
+  Distancer->SetDistanceArrayName("Distance");
+  Distancer->Update();
 
+  std::cout<<"Hausdorff Distance: "<<Distancer->GetHausdorffDistance()<<endl;
+  std::cout<<"Average Distance:   "<<Distancer->GetAverageDistance()<<endl;
   //Write Files
   std::cout<<"Done...Writing Files..."<<endl;
-  std::string attachName = "_With_"+arrayName;
-  WriteVTPFile(newOutName+".vtp",Passer->GetOutput(0),attachName);
+  std::string attachName = "_Distanced";
+  WriteVTPFile(newOutName+".vtp",Distancer->GetOutput(0),attachName);
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

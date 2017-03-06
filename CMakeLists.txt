@@ -39,6 +39,13 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake"
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
+# vtkSV Includes
+include(vtkSVSystemCheck)
+include(vtkSVSetup)
+include(vtkSVOptions)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
 # Find VTK, only major dependency
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
@@ -47,22 +54,16 @@ include(vtkExternalModuleMacros)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
-# vtkSV Includes
-include(vtkSVSystemCheck)
-include(vtkSVSetup)
-include(vtkSVOptions)
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
 # Set build dirs
+set(VTKSV_BUILD_DIRS "")
 if(VTKSV_BUILD_FILTERS)
-  set(VTKSV_FILTER_DIRS ${VTKSV_FILTER_DIRS} "Filters")
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Filters")
 endif()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Include for headers
-foreach(dir ${VTKSV_FILTER_DIRS})
+foreach(dir ${VTKSV_BUILD_DIRS})
   include_directories(${CMAKE_SOURCE_DIR}/${dir})
   include_directories(${CMAKE_BINARY_DIR}/${dir})
 endforeach()
@@ -70,8 +71,8 @@ endforeach()
 
 #-----------------------------------------------------------------------------
 # Add each subdirectory
-message(STATUS "Filters:")
-foreach(dir ${VTKSV_FILTER_DIRS})
+message(STATUS "Build Dirs:")
+foreach(dir ${VTKSV_BUILD_DIRS})
   message(STATUS "  ${dir}")
   add_subdirectory(${CMAKE_SOURCE_DIR}/${dir})
 endforeach()

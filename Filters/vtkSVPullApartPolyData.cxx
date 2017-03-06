@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkPullApartPolyData.cxx
- *  @brief This implements the vtkPullApartPolyData filter as a class
+/** @file vtkSVPullApartPolyData.cxx
+ *  @brief This implements the vtkSVPullApartPolyData filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkPullApartPolyData.h"
+#include "vtkSVPullApartPolyData.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -64,12 +64,12 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkPullApartPolyData, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkPullApartPolyData);
+//vtkCxxRevisionMacro(vtkSVPullApartPolyData, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVPullApartPolyData);
 
 
 //---------------------------------------------------------------------------
-vtkPullApartPolyData::vtkPullApartPolyData()
+vtkSVPullApartPolyData::vtkSVPullApartPolyData()
 {
   this->SetNumberOfInputPorts(1);
 
@@ -86,7 +86,7 @@ vtkPullApartPolyData::vtkPullApartPolyData()
 }
 
 //---------------------------------------------------------------------------
-vtkPullApartPolyData::~vtkPullApartPolyData()
+vtkSVPullApartPolyData::~vtkSVPullApartPolyData()
 {
   if (this->WorkPd != NULL)
   {
@@ -122,13 +122,13 @@ vtkPullApartPolyData::~vtkPullApartPolyData()
 }
 
 //---------------------------------------------------------------------------
-void vtkPullApartPolyData::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVPullApartPolyData::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
 //---------------------------------------------------------------------------
-int vtkPullApartPolyData::RequestData(
+int vtkSVPullApartPolyData::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -166,7 +166,7 @@ int vtkPullApartPolyData::RequestData(
  * @param *pd
  * @return
  */
-int vtkPullApartPolyData::PrepFilter()
+int vtkSVPullApartPolyData::PrepFilter()
 {
   vtkIdType numPolys  = this->WorkPd->GetNumberOfPolys();
   vtkIdType numPoints = this->WorkPd->GetNumberOfPoints();
@@ -216,7 +216,7 @@ int vtkPullApartPolyData::PrepFilter()
  * @param *pd
  * @return
  */
-int vtkPullApartPolyData::RunFilter()
+int vtkSVPullApartPolyData::RunFilter()
 {
   // Create edge table with neighbors
   if (!this->FindEdgeCells())
@@ -240,7 +240,7 @@ int vtkPullApartPolyData::RunFilter()
  * @param *pd
  * @return
  */
-int vtkPullApartPolyData::PullApartCutEdges()
+int vtkSVPullApartPolyData::PullApartCutEdges()
 {
   this->WorkPd->DeleteLinks();
   int numPoints = this->ReplacePointVector.size();
@@ -295,7 +295,7 @@ int vtkPullApartPolyData::PullApartCutEdges()
  * @param *pd
  * @return
  */
-int vtkPullApartPolyData::FindEdgeCells()
+int vtkSVPullApartPolyData::FindEdgeCells()
 {
   int numPts = this->WorkPd->GetNumberOfPoints();
   this->WorkPd->BuildLinks();
@@ -399,7 +399,7 @@ int vtkPullApartPolyData::FindEdgeCells()
  * @param *pd
  * @return
  */
-int vtkPullApartPolyData::FindStartingEdge(int &p0, int &p1, int &p2, int &cellId)
+int vtkSVPullApartPolyData::FindStartingEdge(int &p0, int &p1, int &p2, int &cellId)
 {
   int numTris = this->WorkPd->GetNumberOfCells();
   vtkIntArray *cutPointValues = vtkIntArray::SafeDownCast(
@@ -444,7 +444,7 @@ int vtkPullApartPolyData::FindStartingEdge(int &p0, int &p1, int &p2, int &cellI
  * @param *pd
  * @return
  */
-int vtkPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first)
+int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first)
 {
   vtkIntArray *cutPointValues = vtkIntArray::SafeDownCast(
     this->WorkPd->GetPointData()->GetArray(this->CutPointsArrayName));
@@ -517,7 +517,7 @@ int vtkPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std::
  * or the function does not return properly.
  */
 
-int vtkPullApartPolyData::CheckArrayExists(vtkPolyData *pd,
+int vtkSVPullApartPolyData::CheckArrayExists(vtkPolyData *pd,
                                           int datatype,
                                           std::string arrayname )
 {
