@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkFindGeodesicPath.cxx
- *  @brief This implements the vtkFindGeodesicPath filter as a class
+/** @file vtkSVFindGeodesicPath.cxx
+ *  @brief This implements the vtkSVFindGeodesicPath filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkFindGeodesicPath.h"
+#include "vtkSVFindGeodesicPath.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -64,12 +64,12 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkFindGeodesicPath, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkFindGeodesicPath);
+//vtkCxxRevisionMacro(vtkSVFindGeodesicPath, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVFindGeodesicPath);
 
 
 //---------------------------------------------------------------------------
-vtkFindGeodesicPath::vtkFindGeodesicPath()
+vtkSVFindGeodesicPath::vtkSVFindGeodesicPath()
 {
   this->SetNumberOfInputPorts(1);
   this->Verbose                  = 0;
@@ -96,7 +96,7 @@ vtkFindGeodesicPath::vtkFindGeodesicPath()
 }
 
 //---------------------------------------------------------------------------
-vtkFindGeodesicPath::~vtkFindGeodesicPath()
+vtkSVFindGeodesicPath::~vtkSVFindGeodesicPath()
 {
   if (this->WorkPd != NULL)
   {
@@ -137,13 +137,13 @@ vtkFindGeodesicPath::~vtkFindGeodesicPath()
 }
 
 //---------------------------------------------------------------------------
-void vtkFindGeodesicPath::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVFindGeodesicPath::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
 //---------------------------------------------------------------------------
-int vtkFindGeodesicPath::RequestData(
+int vtkSVFindGeodesicPath::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -186,7 +186,7 @@ int vtkFindGeodesicPath::RequestData(
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::RunFilter()
+int vtkSVFindGeodesicPath::PrepFilter()
 {
   vtkIdType numPolys  = this->WorkPd->GetNumberOfPolys();
   vtkIdType numPoints = this->WorkPd->GetNumberOfPoints();
@@ -271,7 +271,7 @@ int vtkFindGeodesicPath::RunFilter()
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::RunFilter()
+int vtkSVFindGeodesicPath::RunFilter()
 {
   int runItChrisBrown = 0;
   if (this->EndPtId != -1 || this->AddPathBooleanArray)
@@ -327,7 +327,7 @@ int vtkFindGeodesicPath::RunFilter()
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::FindClosestBoundaryPoint()
+int vtkSVFindGeodesicPath::FindClosestBoundaryPoint()
 {
   if (this->RunDijkstra(NULL) != 1)
   {
@@ -380,7 +380,7 @@ int vtkFindGeodesicPath::FindClosestBoundaryPoint()
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::RunDijkstra(vtkPoints *repelPoints)
+int vtkSVFindGeodesicPath::RunDijkstra(vtkPoints *repelPoints)
 {
   vtkNew(vtkDijkstraGraphGeodesicPath, dijkstra);
   dijkstra->SetInputData(this->WorkPd);
@@ -415,12 +415,10 @@ int vtkFindGeodesicPath::RunDijkstra(vtkPoints *repelPoints)
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
+int vtkSVFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
                                                 const int endPtId,
                                                 vtkPoints *repelPoints)
 {
-  vtkDataArray *internalIds = this->WorkPd->GetPointData()->
-    GetArray(this->InternalIdsArrayName);
   vtkNew(vtkFeatureEdges, boundaries);
   boundaries->SetInputData(this->WorkPd);
   boundaries->BoundaryEdgesOn();
@@ -441,32 +439,26 @@ int vtkFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
-  vtkDataArray *sInternalIds = surfacer->GetOutput()->GetPointData()->
-    GetArray(this->InternalIdsArrayName);
-  int bStartId = sInternalIds->LookupValue(int(internalIds->GetTuple1(startPtId)));
-  if (bStartId != -1)
+
+  if (this->GetNeighborBoundaryPoints(startPtId, surfacer->GetOutput(), repelPoints) != 1)
   {
-    if (this->GetNeighborBoundaryPoints(bStartId, surfacer->GetOutput(), repelPoints) != 1)
-    {
-      vtkErrorMacro("Error getting neighbor boundary points");
-      return 0;
-    }
+    vtkErrorMacro("Error getting neighbor boundary points");
+    return 0;
   }
 
-  connector->SetClosestPoint(endPt);
-  connector->Update();
-  surfacer->SetInputData(connector->GetOutput());
-  surfacer->Update();
-  vtkDataArray *eInternalIds = surfacer->GetOutput()->GetPointData()->
-    GetArray(this->InternalIdsArrayName);
-  int bEndId = eInternalIds->LookupValue(int(internalIds->GetTuple1(endPtId)));
-  if (bEndId != -1)
+  vtkNew(vtkConnectivityFilter, connector2);
+  connector2->SetInputData(boundaries->GetOutput());
+  connector2->SetExtractionModeToClosestPointRegion();
+  connector2->SetClosestPoint(endPt);
+  connector2->Update();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer2);
+  surfacer2->SetInputData(connector2->GetOutput());
+  surfacer2->Update();
+
+  if (this->GetNeighborBoundaryPoints(endPtId, surfacer2->GetOutput(), repelPoints) != 1)
   {
-    if (this->GetNeighborBoundaryPoints(bEndId, surfacer->GetOutput(), repelPoints) != 1)
-    {
-      vtkErrorMacro("Error getting neighbor boundary points");
-      return 0;
-    }
+    vtkErrorMacro("Error getting neighbor boundary points");
+    return 0;
   }
 
   return 1;
@@ -477,41 +469,48 @@ int vtkFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
  * @param *pd
  * @return
  */
-int vtkFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
+int vtkSVFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
                                                    vtkPolyData *pd,
                                                    vtkPoints *repelPoints)
 {
-  if (ptId == -1 || ptId >= pd->GetNumberOfPoints())
+  vtkDataArray *internalIds = this->WorkPd->GetPointData()->
+    GetArray(this->InternalIdsArrayName);
+  vtkDataArray *eInternalIds = pd->GetPointData()->
+    GetArray(this->InternalIdsArrayName);
+
+  vtkNew(vtkIdList, cells);
+  this->WorkPd->GetPointCells(ptId, cells);
+  int offLimits[2]; offLimits[0] = -1; offLimits[1] = -1;
+  int count = 0;
+  if (cells->GetNumberOfIds() == 1)
   {
-    vtkErrorMacro("Point id is not valid " << ptId);
-    return 0;
-  }
-  for (int i=0; i<pd->GetNumberOfPoints(); i++)
-  {
-    if (i != ptId)
+    vtkIdType npts, *pts;
+    this->WorkPd->GetCellPoints(cells->GetId(0), npts, pts);
+    for (int j=0; j<npts; j++)
     {
-      double pt[3];
-      pd->GetPoint(i, pt);
-      repelPoints->InsertNextPoint(pt);
+      if (pts[j] != ptId)
+        offLimits[count++] = eInternalIds->LookupValue(int(internalIds->GetTuple1(pts[j])));
     }
   }
-  //pd->BuildLinks();
-  //vtkNew(vtkIdList, pointCells);
-  //pd->GetPointCells(ptId, pointCells);
-  //for (int i=0; i<pointCells->GetNumberOfIds(); i++)
-  //{
-  //  vtkIdType npts, *pts;
-  //  pd->GetCellPoints(pointCells->GetId(i), npts, pts);
-  //  for (int j=0; j<npts; j++)
-  //  {
-  //    if (pts[j]  != ptId)
-  //    {
-  //      double pt[3];
-  //      pd->GetPoint(pts[j], pt);
-  //      repelPoints->InsertNextPoint(pt);
-  //    }
-  //  }
-  //}
+
+  int bId = eInternalIds->LookupValue(int(internalIds->GetTuple1(ptId)));
+  if (bId != -1)
+  {
+    if (bId >= pd->GetNumberOfPoints())
+    {
+      vtkErrorMacro("Point id is not valid " << ptId);
+      return 0;
+    }
+    for (int i=0; i<pd->GetNumberOfPoints(); i++)
+    {
+      if (i != bId && i != offLimits[0] && i != offLimits[1])
+      {
+        double pt[3];
+        pd->GetPoint(i, pt);
+        repelPoints->InsertNextPoint(pt);
+      }
+    }
+  }
 
   return 1;
 }
@@ -528,7 +527,7 @@ int vtkFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
  * or the function does not return properly.
  */
 
-int vtkFindGeodesicPath::CheckArrayExists(vtkPolyData *pd,
+int vtkSVFindGeodesicPath::CheckArrayExists(vtkPolyData *pd,
                                           int datatype,
                                           std::string arrayname )
 {

@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkFindGeodesicPath.h
+/** @file vtkSVFindGeodesicPath.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,8 +43,8 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkFindGeodesicPath_h
-#define vtkFindGeodesicPath_h
+#ifndef vtkSVFindGeodesicPath_h
+#define vtkSVFindGeodesicPath_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -53,11 +53,11 @@
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtkFindGeodesicPath : public vtkPolyDataAlgorithm
+class vtkSVFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkFindGeodesicPath* New();
-  //vtkTypeRevisionMacro(vtkFindGeodesicPath, vtkPolyDataAlgorithm);
+  static vtkSVFindGeodesicPath* New();
+  //vtkTypeRevisionMacro(vtkSVFindGeodesicPath, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -107,8 +107,8 @@ public:
   vtkSetStringMacro(PathBooleanArrayName);
 
 protected:
-  vtkFindGeodesicPath();
-  ~vtkFindGeodesicPath();
+  vtkSVFindGeodesicPath();
+  ~vtkSVFindGeodesicPath();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
@@ -126,8 +126,8 @@ protected:
                                 vtkPoints *repelPoints);
 
 private:
-  vtkFindGeodesicPath(const vtkFindGeodesicPath&);  // Not implemented.
-  void operator=(const vtkFindGeodesicPath&);  // Not implemented.
+  vtkSVFindGeodesicPath(const vtkSVFindGeodesicPath&);  // Not implemented.
+  void operator=(const vtkSVFindGeodesicPath&);  // Not implemented.
 
   int Verbose;
   double ClosePt[3];

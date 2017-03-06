@@ -16,7 +16,7 @@
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
 #include "vtkDataWriter.h"
-#include "vtkFindGeodesicPath.h"
+#include "vtkSVFindGeodesicPath.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkIntArray.h"
@@ -161,8 +161,8 @@ int main(int argc, char *argv[])
 
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkFindGeodesicPath> Finder =
-	  vtkSmartPointer<vtkFindGeodesicPath>::New();
+  vtkSmartPointer<vtkSVFindGeodesicPath> Finder =
+	  vtkSmartPointer<vtkSVFindGeodesicPath>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

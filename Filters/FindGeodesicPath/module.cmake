@@ -24,22 +24,17 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(mod vtkSVFindGeodesicPath)
-set(exe FindGeodesicPath)
-set(CXXSRCS ${mod}.cxx)
+set(DOCUMENTATION "A convenience class to find the shortest path between two points on a surface. If one point is given, a boundary of the surface is used to find closest distance to. Shortest path nodes are returned as well as original surface with field data containing distance to every node from the start node.")
 
-include(module.cmake)
-set(${mod}_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-vtk_module_library(${mod} ${CXXSRCS})
-target_include_directories(${mod} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-
-set(${mod}_HDRS
-  ${mod}.h)
-
-set_source_files_properties(
-  ${mod}
-  ABSTRACT
+vtk_module(vtkSVFindGeodesicPath
+  DESCRIPTION
+  "${DOCUMENTATION}"
+  DEPENDS
+  vtkCommonDataModel
+  vtkFiltersCore
+  vtkFiltersModeling
+  TEST_DEPENDS
+  vtkTestingCore
+  TCL_NAME
+  vtkSVFindGeodesicPath
   )
-
-add_executable(${exe} ${exe}.cxx ${CSSSRCS})
-target_link_libraries(${exe} ${VTK_LIBRARIES})
