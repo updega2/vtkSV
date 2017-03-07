@@ -35,7 +35,7 @@ class vtkSVSuperSquareBoundaryMapper : public vtkSVBoundaryMapper
 public:
   static vtkSVSuperSquareBoundaryMapper* New();
   vtkTypeMacro(vtkSVSuperSquareBoundaryMapper,vtkSVBoundaryMapper);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Vector describing how many divisions on each of the four boundaries
   // The total number of divisions should be equal to the total number of
@@ -50,7 +50,7 @@ protected:
   vtkSVSuperSquareBoundaryMapper();
   ~vtkSVSuperSquareBoundaryMapper();
 
-  int SetBoundaries() VTK_OVERRIDE;
+  int SetBoundaries();
   int CalculateSquareEdgeLengths(vtkIntArray *actualIds);
   int SetSquareBoundary(vtkIntArray *actualIds);
 
@@ -59,8 +59,8 @@ protected:
   double SuperBoundaryLengths[4];
 
 private:
-  vtkSVSuperSquareBoundaryMapper(const vtkSVSuperSquareBoundaryMapper&) VTK_DELETE_FUNCTION;
-  void operator=(const vtkSVSuperSquareBoundaryMapper&) VTK_DELETE_FUNCTION;
+  vtkSVSuperSquareBoundaryMapper(const vtkSVSuperSquareBoundaryMapper&);
+  void operator=(const vtkSVSuperSquareBoundaryMapper&);
 };
 
 #endif

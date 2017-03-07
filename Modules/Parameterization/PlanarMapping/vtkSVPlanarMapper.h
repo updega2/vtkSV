@@ -60,7 +60,7 @@ class vtkSVPlanarMapper : public vtkPolyDataAlgorithm
 public:
   static vtkSVPlanarMapper* New();
   vtkTypeMacro(vtkSVPlanarMapper, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // CG Update method
   vtkGetObjectMacro(BoundaryMapper, vtkSVBoundaryMapper);
@@ -121,7 +121,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector) VTK_OVERRIDE;
+		  vtkInformationVector *outputVector);
 
   // Main functions in filter
   int PrepFilter();

@@ -67,7 +67,7 @@ class vtkSVGetBoundaryFaces : public vtkPolyDataAlgorithm
 public:
   static vtkSVGetBoundaryFaces* New();
   vtkTypeMacro(vtkSVGetBoundaryFaces, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   // Specify the feature angle for extracting feature edges.
@@ -117,7 +117,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector) VTK_OVERRIDE;
+		  vtkInformationVector *outputVector);
 
   vtkFeatureEdges* boundaries;
   vtkIntArray *newScalars;

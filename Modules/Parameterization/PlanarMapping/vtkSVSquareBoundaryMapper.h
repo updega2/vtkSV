@@ -34,20 +34,20 @@ class vtkSVSquareBoundaryMapper : public vtkSVBoundaryMapper
 public:
   static vtkSVSquareBoundaryMapper* New();
   vtkTypeMacro(vtkSVSquareBoundaryMapper,vtkSVBoundaryMapper);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
 protected:
   vtkSVSquareBoundaryMapper() {}
 
-  int SetBoundaries() VTK_OVERRIDE;
+  int SetBoundaries();
   int CalculateSquareEdgeLengths();
   int SetSquareBoundary();
 
   double BoundaryLengths[4];
 
 private:
-  vtkSVSquareBoundaryMapper(const vtkSVSquareBoundaryMapper&) VTK_DELETE_FUNCTION;
-  void operator=(const vtkSVSquareBoundaryMapper&) VTK_DELETE_FUNCTION;
+  vtkSVSquareBoundaryMapper(const vtkSVSquareBoundaryMapper&);
+  void operator=(const vtkSVSquareBoundaryMapper&);
 };
 
 #endif

@@ -36,7 +36,7 @@ public:
   vtkSVGeneralizedPolycube(int m, vtkPoints *controlPoints, vtkDoubleArray *knotPoints, vtkIntArray *knotMultiplicity, int deg) {;}
 
   vtkTypeMacro(vtkSVGeneralizedPolycube,vtkUnstructuredGrid);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description: Surgerylines that define a more exact path in between individual starting points of the polycube. Do not have to be used
   vtkGetObjectMacro(SurgeryLines, vtkPolyData);
@@ -49,7 +49,7 @@ public:
     CUBE_BIFURCATION
   };
 
-  void Initialize() VTK_OVERRIDE;
+  void Initialize();
 
   // Origin is front, left, bottom corner of cube when axis aligned
   int InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3],

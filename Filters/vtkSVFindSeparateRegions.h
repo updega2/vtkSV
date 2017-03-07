@@ -66,7 +66,7 @@ class vtkSVFindSeparateRegions : public vtkPolyDataAlgorithm
 public:
   static vtkSVFindSeparateRegions* New();
   vtkTypeMacro(vtkSVFindSeparateRegions, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
   vtkGetStringMacro(ArrayName);
@@ -84,7 +84,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector) VTK_OVERRIDE;
+		  vtkInformationVector *outputVector);
 
   vtkIntArray *intCellScalars;
   vtkIdList *targetCellIds;

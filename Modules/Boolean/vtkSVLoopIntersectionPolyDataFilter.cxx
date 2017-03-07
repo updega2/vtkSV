@@ -199,8 +199,8 @@ public:
   vtkSVLoopIntersectionPolyDataFilter *ParentFilter;
 
 protected:
-  Impl(const Impl&) VTK_DELETE_FUNCTION;
-  void operator=(const Impl&) VTK_DELETE_FUNCTION;
+  Impl(const Impl&);
+  void operator=(const Impl&);
 
 };
 

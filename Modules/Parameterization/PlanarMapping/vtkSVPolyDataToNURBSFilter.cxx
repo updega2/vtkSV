@@ -609,8 +609,8 @@ int vtkSVPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   vtkIntArray *seamIds = vtkIntArray::SafeDownCast(surgeryLinePd->GetPointData()->GetArray(this->InternalIdsArrayName));
   vtkDataArray *pointIds = slicePd->GetPointData()->GetArray(this->InternalIdsArrayName);
   ripIds->SetNumberOfComponents(1);
-  ripIds->SetNumberOfTuples(seamIds->GetNumberOfValues());
-  for (int i=0; i<seamIds->GetNumberOfValues(); i++)
+  ripIds->SetNumberOfTuples(seamIds->GetNumberOfTuples());
+  for (int i=0; i<seamIds->GetNumberOfTuples(); i++)
   {
     ripIds->SetValue(i, pointIds->LookupValue(seamIds->GetValue(i)));
   }

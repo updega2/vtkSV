@@ -194,7 +194,7 @@ int vtkSVPullApartPolyData::PrepFilter()
       seamArray->SetNumberOfTuples(numPoints);
       seamArray->FillComponent(0, 0);
       seamArray->SetName(this->CutPointsArrayName);
-      for (int i=0; i<this->SeamPointIds->GetNumberOfValues(); i++)
+      for (int i=0; i<this->SeamPointIds->GetNumberOfTuples(); i++)
       {
         seamArray->SetValue(this->SeamPointIds->GetValue(i), 1);
       }

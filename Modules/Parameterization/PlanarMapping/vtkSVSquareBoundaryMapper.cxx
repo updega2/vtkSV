@@ -22,8 +22,10 @@
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedCharArray.h"
 
@@ -104,9 +106,9 @@ int vtkSVSquareBoundaryMapper::CalculateSquareEdgeLengths()
       if (checkPt == (otherPt2))
         fprintf(stdout,"Found corner %d\n", this->BoundaryIds->GetValue(i));
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                         pow(pt0[1]-pt1[1], 2.0) +
+                         pow(pt0[2]-pt1[2], 2.0));
       this->BoundaryLengths[i] += dist;
 
       currCell++;
@@ -152,9 +154,9 @@ int vtkSVSquareBoundaryMapper::SetSquareBoundary()
       this->BoundaryLoop->GetPoint(pts[1], pt1);
       checkPt = pts[1];
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                         pow(pt0[1]-pt1[1], 2.0) +
+                         pow(pt0[2]-pt1[2], 2.0));
       currLength += dist;
 
       if (i == 0)

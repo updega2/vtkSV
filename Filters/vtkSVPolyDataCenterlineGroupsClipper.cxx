@@ -37,6 +37,7 @@ Version:   $Revision: 1.9 $
 #include "vtkClipPolyData.h"
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVPolyBallLine.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"

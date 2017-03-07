@@ -154,8 +154,8 @@ protected:
   int FillInputPortInformation(int, vtkInformation*); //Input,Output
 
 private:
-  vtkSVLoopIntersectionPolyDataFilter(const vtkSVLoopIntersectionPolyDataFilter&) VTK_DELETE_FUNCTION;
-  void operator=(const vtkSVLoopIntersectionPolyDataFilter&) VTK_DELETE_FUNCTION;
+  vtkSVLoopIntersectionPolyDataFilter(const vtkSVLoopIntersectionPolyDataFilter&);
+  void operator=(const vtkSVLoopIntersectionPolyDataFilter&);
 
   int NumberOfIntersectionPoints;
   int NumberOfIntersectionLines;

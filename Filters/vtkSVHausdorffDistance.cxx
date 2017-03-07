@@ -193,9 +193,9 @@ int vtkSVHausdorffDistance::RunFilter()
       vtkSmartPointer<vtkGenericCell>::New();
     locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
                               dist2);
-    double distance = std::sqrt(std::pow(pt[0] - closestPt[0], 2.0) +
-                                std::pow(pt[1] - closestPt[1], 2.0) +
-                                std::pow(pt[2] - closestPt[2], 2.0));
+    double distance = sqrt(pow(pt[0] - closestPt[0], 2.0) +
+                           pow(pt[1] - closestPt[1], 2.0) +
+                           pow(pt[2] - closestPt[2], 2.0));
     distances->SetTuple1(i, distance);
     if (distance > maxDistance)
       maxDistance = distance;

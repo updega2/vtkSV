@@ -34,7 +34,7 @@ class vtkSVBoundaryMapper : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVBoundaryMapper,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent) VTK_OVERRIDE;
+  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Boundary Corners
   vtkGetObjectMacro(BoundaryIds, vtkIntArray);
@@ -64,12 +64,12 @@ public:
 
 protected:
   vtkSVBoundaryMapper();
-  ~vtkSVBoundaryMapper() VTK_OVERRIDE;
+  ~vtkSVBoundaryMapper();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector) VTK_OVERRIDE;
+		  vtkInformationVector *outputVector);
 
   int RemoveInternalIds;
 
@@ -94,8 +94,8 @@ protected:
 
   char *InternalIdsArrayName;
 private:
-  vtkSVBoundaryMapper(const vtkSVBoundaryMapper&) VTK_DELETE_FUNCTION;
-  void operator=(const vtkSVBoundaryMapper&) VTK_DELETE_FUNCTION;
+  vtkSVBoundaryMapper(const vtkSVBoundaryMapper&);
+  void operator=(const vtkSVBoundaryMapper&);
 };
 
 #endif

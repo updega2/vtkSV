@@ -22,8 +22,10 @@
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedCharArray.h"
 
@@ -127,9 +129,9 @@ int vtkSVSuperSquareBoundaryMapper::CalculateSquareEdgeLengths(vtkIntArray *actu
         }
       }
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                         pow(pt0[1]-pt1[1], 2.0) +
+                         pow(pt0[2]-pt1[2], 2.0));
       boundaryDistance += dist;
 
       currCell++;
@@ -185,9 +187,9 @@ int vtkSVSuperSquareBoundaryMapper::SetSquareBoundary(vtkIntArray *actualIds)
       this->BoundaryLoop->GetPoint(pts[1], pt1);
       checkPt = pts[1];
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt((pt0[0]-pt1[0], 2.0) +
+                         (pt0[1]-pt1[1], 2.0) +
+                         (pt0[2]-pt1[2], 2.0));
       currLength += dist;
 
       double unitLength = this->SuperBoundaryLengths[boundaryNumber]/(this->SuperBoundaryDivisions[boundaryNumber]+1.0);
