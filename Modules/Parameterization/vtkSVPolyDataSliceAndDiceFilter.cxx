@@ -68,6 +68,7 @@
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
+#include "vtkSVGlobals.h"
 #include "vtkThreshold.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
@@ -76,9 +77,6 @@
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <iostream>
 #include <sstream>

@@ -61,15 +61,13 @@
 #include "vtkSignedCharArray.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGlobals.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedIntArray.h"
 #include "vtkUnsignedLongArray.h"
 #include "vtkUnsignedLongLongArray.h"
 #include "vtkUnsignedShortArray.h"
 #include "vtkUnstructuredGrid.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <iostream>
 

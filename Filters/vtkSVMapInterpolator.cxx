@@ -56,6 +56,7 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkTriangle.h"
 #include "vtkWarpVector.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -193,8 +194,7 @@ int vtkSVMapInterpolator::SubdivideAndInterpolate()
 {
   if (this->NumSourceSubdivisions != 0)
   {
-    vtkSmartPointer<vtkLoopSubdivisionFilter> subdivider =
-      vtkSmartPointer<vtkLoopSubdivisionFilter>::New();
+    vtkNew(vtkLoopSubdivisionFilter, subdivider);
     subdivider->SetInputData(this->SourceS2Pd);
     subdivider->SetNumberOfSubdivisions(this->NumSourceSubdivisions);
     subdivider->Update();
@@ -228,8 +228,7 @@ int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
                                                  vtkPolyData *originalTargetPd,
                                                  vtkPolyData *sourceToTargetPd)
 {
-  vtkSmartPointer<vtkCellLocator> locator =
-    vtkSmartPointer<vtkCellLocator>::New();
+  vtkNew(vtkCellLocator, locator);
 
   locator->SetDataSet(mappedTargetPd);
   locator->BuildLocator();
@@ -245,8 +244,7 @@ int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
     vtkIdType closestCell;
     int subId;
     double distance;
-    vtkSmartPointer<vtkGenericCell> genericCell =
-      vtkSmartPointer<vtkGenericCell>::New();
+    vtkNew(vtkGenericCell, genericCell);
     locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
                               distance);
 
@@ -393,8 +391,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
       p0 = pts[j];
       p1 = pts[(j+1)%npts];
 
-      vtkSmartPointer<vtkIdList> edgeNeighbor =
-        vtkSmartPointer<vtkIdList>::New();
+      vtkNew(vtkIdList, edgeNeighbor);
       pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
 
       if (edgeNeighbor->GetNumberOfIds() == 0)
@@ -417,8 +414,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
 int vtkSVMapInterpolator::MoveBoundaryPoints()
 {
   int numPoints = this->SourceS2Pd->GetNumberOfPoints();
-  vtkSmartPointer<vtkCellLocator> locator =
-    vtkSmartPointer<vtkCellLocator>::New();
+  vtkNew(vtkCellLocator, locator);
 
   locator->SetDataSet(this->TargetS2Pd);
   locator->BuildLocator();
@@ -433,8 +429,7 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
       vtkIdType closestCell;
       int subId;
       double distance;
-      vtkSmartPointer<vtkGenericCell> genericCell =
-	      vtkSmartPointer<vtkGenericCell>::New();
+      vtkNew(vtkGenericCell, genericCell);
       locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
 				distance);
       double newPt[3];
@@ -458,8 +453,7 @@ int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, 
 {
   double srcPt[3];
   this->SourceS2Pd->GetPoint(srcPtId, srcPt);
-  vtkSmartPointer<vtkIdList> boundaryPts =
-    vtkSmartPointer<vtkIdList>::New();
+  vtkNew(vtkIdList, boundaryPts);
   int numBoundaryPts = this->BoundaryPointsOnCell(this->TargetS2Pd, targCellId, boundaryPts, this->TargetBoundary);
 
   if (numBoundaryPts == 1)
@@ -516,8 +510,7 @@ int vtkSVMapInterpolator::BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, 
   }
   if (numBounds == 2)
   {
-    vtkSmartPointer<vtkIdList> edgeNeighbor =
-      vtkSmartPointer<vtkIdList>::New();
+    vtkNew(vtkIdList, edgeNeighbor);
     int p0 = boundaryPts->GetId(0);
     int p1 = boundaryPts->GetId(1);
     pd->GetCellEdgeNeighbors(targCellId, p0, p1, edgeNeighbor);

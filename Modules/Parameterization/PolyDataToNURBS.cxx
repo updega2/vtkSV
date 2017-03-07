@@ -23,6 +23,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVPolyDataToNURBSFilter.h"
 
@@ -45,12 +46,11 @@ int main(int argc, char *argv[])
   std::string inputFilename4 = argv[4];
 
   //creating the full poly data to read in from file and the operation filter
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd3 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd4 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVPolyDataToNURBSFilter> Converter =
-	  vtkSmartPointer<vtkSVPolyDataToNURBSFilter>::New();
+  vtkNew(vtkPolyData, pd1);
+  vtkNew(vtkPolyData, pd2);
+  vtkNew(vtkPolyData, pd3);
+  vtkNew(vtkPolyData, pd4);
+  vtkNew(vtkSVPolyDataToNURBSFilter, Converter);
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

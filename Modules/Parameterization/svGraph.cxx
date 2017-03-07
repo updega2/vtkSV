@@ -37,12 +37,10 @@
 #include "vtkMath.h"
 #include "vtkPoints.h"
 #include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSmartPointer.h"
 #include "vtkThreshold.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 svGraph::svGraph()
 {

@@ -27,7 +27,7 @@
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx)
-set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h)
+set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   vtkSVGlobals.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

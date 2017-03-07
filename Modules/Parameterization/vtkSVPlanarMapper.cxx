@@ -52,12 +52,10 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkTransform.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <iostream>
 #include <sstream>
@@ -224,8 +222,7 @@ int vtkSVPlanarMapper::CheckSurface(vtkPolyData *pd)
       p0 = pts[j];
       p1 = pts[(j+1)%npts];
 
-      vtkSmartPointer<vtkIdList> edgeNeighbor =
-        vtkSmartPointer<vtkIdList>::New();
+      vtkNew(vtkIdList, edgeNeighbor);
       pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
 
       if (edgeNeighbor->GetNumberOfIds() > 1)
@@ -332,8 +329,7 @@ int vtkSVPlanarMapper::CreateEdgeTable(vtkPolyData *pd,
     {
       vtkIdType p0 = pts[j];
       vtkIdType p1 = pts[(j+1)%npts];
-      vtkSmartPointer<vtkIdList> neighborCellIds =
-        vtkSmartPointer<vtkIdList>::New();
+      vtkNew(vtkIdList, neighborCellIds);
       pd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
       vtkIdType neighborCellId = 0;
       if (neighborCellIds->GetNumberOfIds() > 0)

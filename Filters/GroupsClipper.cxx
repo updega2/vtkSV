@@ -20,6 +20,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVGroupsClipper.h"
 
@@ -36,10 +37,9 @@ int main(int argc, char *argv[])
   std::string inputFilename2 = argv[2];
 
   //creating the full poly data to read in from file and the operation filter
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVGroupsClipper> Grouper =
-	  vtkSmartPointer<vtkSVGroupsClipper>::New();
+  vtkNew(vtkPolyData, pd1);
+  vtkNew(vtkPolyData, pd2);
+  vtkNew(vtkSVGroupsClipper, Grouper);
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

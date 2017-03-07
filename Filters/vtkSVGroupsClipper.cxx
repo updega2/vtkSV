@@ -38,6 +38,7 @@ Version:   $Revision: 1.9 $
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVPolyBallLine.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
@@ -51,17 +52,6 @@ Version:   $Revision: 1.9 $
 #include "vtkUnstructuredGrid.h"
 #include "vtkVersion.h"
 #include "vtkXMLPolyDataWriter.h"
-
-#ifndef VTK_SV_DOUBLE_TOL
-#define VTK_SV_DOUBLE_TOL 1.0E-12
-#endif
-
-#ifndef VTK_SV_LARGE_DOUBLE
-#define VTK_SV_LARGE_DOUBLE 1.0E+32
-#endif
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 vtkStandardNewMacro(vtkSVGroupsClipper);
 
@@ -227,14 +217,12 @@ int vtkSVGroupsClipper::RequestData(
 
   // for each group, compute the clipping array, clip, add group ids array and append.
 
-  vtkSmartPointer<vtkSVPolyBallLine> groupTubes =
-    vtkSmartPointer<vtkSVPolyBallLine>::New();
+  vtkNew(vtkSVPolyBallLine, groupTubes);
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
 
-  vtkSmartPointer<vtkSVPolyBallLine> nonGroupTubes =
-    vtkSmartPointer<vtkSVPolyBallLine>::New();
+  vtkNew(vtkSVPolyBallLine, nonGroupTubes);
   nonGroupTubes->SetInput(this->Centerlines);
   nonGroupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   nonGroupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
@@ -245,9 +233,7 @@ int vtkSVGroupsClipper::RequestData(
 
   vtkIdType groupId;
 
-  vtkSmartPointer<vtkIdList> centerlineGroupIds =
-    vtkSmartPointer<vtkIdList>::New();
-
+  vtkNew(vtkIdList, centerlineGroupIds);
   int i;
   if (this->ClipAllCenterlineGroupIds)
     {
@@ -273,8 +259,7 @@ int vtkSVGroupsClipper::RequestData(
   startGroupIds->SetNumberOfTuples(clippingInput->GetNumberOfCells());
   startGroupIds->FillComponent(0,-1);
   clippingInput->GetCellData()->AddArray(startGroupIds);
-  vtkSmartPointer<vtkAppendPolyData> appendBranches =
-    vtkSmartPointer<vtkAppendPolyData>::New();
+  vtkNew(vtkAppendPolyData, appendBranches);
   int numberOfPoints = clippingInput->GetNumberOfPoints();
 
   // Set up clipping arrays
@@ -286,8 +271,7 @@ int vtkSVGroupsClipper::RequestData(
     groupstr << groupId;
     std::string clipName = "ClippingArray_"+groupstr.str();
 
-    vtkSmartPointer<vtkDoubleArray> clippingArray =
-      vtkSmartPointer<vtkDoubleArray>::New();
+    vtkNew(vtkDoubleArray, clippingArray);
     clippingArray->SetNumberOfComponents(1);
     clippingArray->SetNumberOfTuples(numberOfPoints);
     clippingArray->FillComponent(0,0.0);
@@ -295,10 +279,8 @@ int vtkSVGroupsClipper::RequestData(
 
     clippingInput->GetPointData()->AddArray(clippingArray);
 
-    vtkSmartPointer<vtkIdList> groupTubesGroupIds =
-      vtkSmartPointer<vtkIdList>::New();
-    vtkSmartPointer<vtkIdList> nonGroupTubesGroupIds =
-      vtkSmartPointer<vtkIdList>::New();
+    vtkNew(vtkIdList, groupTubesGroupIds);
+    vtkNew(vtkIdList, nonGroupTubesGroupIds);
     groupTubesGroupIds->Initialize();
     nonGroupTubesGroupIds->Initialize();
 
@@ -349,8 +331,7 @@ int vtkSVGroupsClipper::RequestData(
     std::string clipName = "ClippingArray_"+groupstr.str();
     clippingInput->GetPointData()->SetActiveScalars(clipName.c_str());
 
-    vtkSmartPointer<vtkClipPolyData> clipper =
-      vtkSmartPointer<vtkClipPolyData>::New();
+    vtkNew(vtkClipPolyData, clipper);
 #if (VTK_MAJOR_VERSION <= 5)
     clipper->SetInput(clippingInput);
 #else
@@ -366,20 +347,16 @@ int vtkSVGroupsClipper::RequestData(
       continue;
       }
 
-    vtkSmartPointer<vtkPolyData> clippedBranch =
-      vtkSmartPointer<vtkPolyData>::New();
+    vtkNew(vtkPolyData, clippedBranch);
     clippedBranch->DeepCopy(clipper->GetOutput());
 
-    vtkSmartPointer<vtkPolyData> clippedOutputBranch =
-      vtkSmartPointer<vtkPolyData>::New();
+    vtkNew(vtkPolyData, clippedOutputBranch);
     clippedOutputBranch->DeepCopy(clipper->GetClippedOutput());
 
-    vtkSmartPointer<vtkCleanPolyData> cleaner =
-      vtkSmartPointer<vtkCleanPolyData>::New();
+    vtkNew(vtkCleanPolyData, cleaner);
     cleaner->SetInputData(clippedBranch);
     cleaner->Update();
-    vtkSmartPointer<vtkTriangleFilter> triangulator =
-      vtkSmartPointer<vtkTriangleFilter>::New();
+    vtkNew(vtkTriangleFilter, triangulator);
     triangulator->SetInputData(cleaner->GetOutput());
     triangulator->Update();
     clippedBranch->DeepCopy(triangulator->GetOutput());
@@ -393,18 +370,15 @@ int vtkSVGroupsClipper::RequestData(
     iterstr << groupId;
     std::string iterName = "/Users/adamupdegrove/Desktop/tmp/Clipper";
     std::string filename =  iterName+"_"+iterstr.str()+".vtp";
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer =
-      vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+    vtkNew(vtkXMLPolyDataWriter, writer);
     writer->SetInputData(clippedBranch);
     writer->SetFileName(filename.c_str());
     writer->Write();
 
-    vtkSmartPointer<vtkCleanPolyData> cleanerClipped =
-      vtkSmartPointer<vtkCleanPolyData>::New();
+    vtkNew(vtkCleanPolyData, cleanerClipped);
     cleanerClipped->SetInputData(clippedOutputBranch);
     cleanerClipped->Update();
-    vtkSmartPointer<vtkTriangleFilter> triangulatorClipped =
-      vtkSmartPointer<vtkTriangleFilter>::New();
+    vtkNew(vtkTriangleFilter, triangulatorClipped);
     triangulatorClipped->SetInputData(cleanerClipped->GetOutput());
     triangulatorClipped->Update();
     clippedOutputBranch->DeepCopy(triangulatorClipped->GetOutput());
@@ -522,8 +496,7 @@ int vtkSVGroupsClipper::FindGroupSeparatingPoints(vtkPolyData *pd,
 
   for (int i=0; i<numPoints; i++)
   {
-    vtkSmartPointer<vtkIdList> groupIds =
-      vtkSmartPointer<vtkIdList>::New();
+    vtkNew(vtkIdList, groupIds);
     this->GetPointGroups(pd, this->GroupIdsArrayName, i, groupIds);
     int pointType = groupIds->GetNumberOfIds();
     if (pointType == 3)
@@ -572,8 +545,7 @@ int vtkSVGroupsClipper::GetPointGroups(vtkPolyData *pd, std::string arrayName,
 int vtkSVGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints)
 {
   int numIds = separateIds->GetNumberOfIds();
-  vtkSmartPointer<vtkIntArray> used =
-    vtkSmartPointer<vtkIntArray>::New();
+  vtkNew(vtkIntArray, used);
   used->SetNumberOfComponents(0);
   used->SetNumberOfTuples(numIds);
   used->FillComponent(0, -1);
@@ -763,8 +735,7 @@ int vtkSVGroupsClipper::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
   massCenter[0] = 0.0;
   massCenter[1] = 0.0;
   massCenter[2] = 0.0;
-  vtkSmartPointer<vtkCenterOfMass> centerFinder =
-    vtkSmartPointer<vtkCenterOfMass>::New();
+  vtkNew(vtkCenterOfMass, centerFinder);
   centerFinder->SetInputData(pd);
   centerFinder->Update();
   centerFinder->GetCenter(massCenter);

@@ -36,8 +36,8 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/delaunay_options.h.in" "${CMAKE_CURR
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkSVLoopBooleanPolyDataFilter.cxx vtkSVLoopIntersectionPolyDataFilter.cxx)
-set(HDRS vtkSVLoopBooleanPolyDataFilter.h   vtkSVLoopIntersectionPolyDataFilter.h)
+set(SRCS vtkSVLoopBooleanPolyDataFilter.cxx vtkSVLoopIntersectionPolyDataFilter.cxx vtkSVMultiplePolyDataIntersectionFilter.cxx)
+set(HDRS vtkSVLoopBooleanPolyDataFilter.h   vtkSVLoopIntersectionPolyDataFilter.h   vtkSVMultiplePolyDataIntersectionFilter.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -74,10 +74,12 @@ vtksv_add_module(vtkSVBoolean
 #------------------------------------------------------------------------------
 # Executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(exe Boolean)
-  add_executable(${exe} ${exe}.cxx)
-  target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVBoolean vtkSVCommon)
-  install(TARGETS ${exe}
-    RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT BooleanExecutables)
+  set(EXE_LIST Boolean VesselIntersection)
+  foreach(exe ${EXE_LIST})
+    add_executable(${exe} ${exe}.cxx)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVBoolean vtkSVCommon)
+    install(TARGETS ${exe}
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT BooleanExecutables)
+  endforeach()
 endif()
 #------------------------------------------------------------------------------

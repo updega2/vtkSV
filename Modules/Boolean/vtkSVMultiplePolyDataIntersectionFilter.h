@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkMultiplePolyDataIntersectionFilter.h
+  Module:    vtkSVMultiplePolyDataIntersectionFilter.h
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,13 +12,13 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-// .NAME vtkMultiplePolyDataIntersectionFilter
+// .NAME vtkSVMultiplePolyDataIntersectionFilter
 // .SECTION Description
 //
-// vtkMultiplePolyDataIntersectionFilter 
+// vtkSVMultiplePolyDataIntersectionFilter
 
-#ifndef __vtkMultiplePolyDataIntersectionFilter_h
-#define __vtkMultiplePolyDataIntersectionFilter_h
+#ifndef __vtkSVMultiplePolyDataIntersectionFilter_h
+#define __vtkSVMultiplePolyDataIntersectionFilter_h
 
 #include "vtkFiltersCoreModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
@@ -28,12 +28,12 @@ class vtkDataArray;
 class vtkPoints;
 class vtkPolyData;
 
-class VTKFILTERSCORE_EXPORT vtkMultiplePolyDataIntersectionFilter : public vtkPolyDataAlgorithm
+class VTKFILTERSCORE_EXPORT vtkSVMultiplePolyDataIntersectionFilter : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkMultiplePolyDataIntersectionFilter *New();
+  static vtkSVMultiplePolyDataIntersectionFilter *New();
 
-  vtkTypeMacro(vtkMultiplePolyDataIntersectionFilter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVMultiplePolyDataIntersectionFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -85,9 +85,9 @@ public:
   vtkBooleanMacro(ParallelStreaming, int);
 
   // Description:
-  // Set/get the boolean determing the output when two objects don't 
+  // Set/get the boolean determing the output when two objects don't
   // intersect. With a value of 1, either objects output. With a value of 1,
-  // both objects are output. 
+  // both objects are output.
   vtkSetMacro(NoIntersectionOutput,int);
   vtkGetMacro(NoIntersectionOutput,int);
 
@@ -106,8 +106,8 @@ public:
 
 //ETX
 protected:
-  vtkMultiplePolyDataIntersectionFilter();
-  ~vtkMultiplePolyDataIntersectionFilter();
+  vtkSVMultiplePolyDataIntersectionFilter();
+  ~vtkSVMultiplePolyDataIntersectionFilter();
 
   // Flag for selecting parallel streaming behavior
   int ParallelStreaming;
@@ -148,8 +148,8 @@ protected:
   void PrintTable(int numInputs);
 
 private:
-  vtkMultiplePolyDataIntersectionFilter(const vtkMultiplePolyDataIntersectionFilter&);  // Not implemented.
-  void operator=(const vtkMultiplePolyDataIntersectionFilter&);  // Not implemented.
+  vtkSVMultiplePolyDataIntersectionFilter(const vtkSVMultiplePolyDataIntersectionFilter&);  // Not implemented.
+  void operator=(const vtkSVMultiplePolyDataIntersectionFilter&);  // Not implemented.
 };
 
 #endif

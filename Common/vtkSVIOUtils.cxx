@@ -42,7 +42,9 @@
 
 #include "vtkDataArray.h"
 #include "vtkObjectFactory.h"
+#include "vtkSmartPointer.h"
 #include "vtkSTLReader.h"
+#include "vtkSVGlobals.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -92,7 +94,7 @@ std::string vtkSVIOUtils::GetExt(std::string fullName)
 int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
 {
   //Create an STL reader for reading the file
-  vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
+  vtkNew(vtkSTLReader, reader);
   reader->SetFileName(inputFilename.c_str());
   reader->Update();
 
@@ -107,8 +109,7 @@ int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
 int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
 {
   //Create an STL reader for reading the file
-  vtkSmartPointer<vtkXMLPolyDataReader> reader =
-	  vtkSmartPointer<vtkXMLPolyDataReader>::New();
+  vtkNew(vtkXMLPolyDataReader, reader);
   reader->SetFileName(inputFilename.c_str());
   reader->Update();
 
@@ -146,7 +147,7 @@ int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyD
 {
   std::string rawName, pathName, outputFilename;
 
-  vtkSmartPointer<vtkXMLPolyDataWriter> writer  = vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+  vtkNew(vtkXMLPolyDataWriter, writer);
 
   pathName = vtkSVIOUtils::GetPath(inputFilename);
   rawName = vtkSVIOUtils::GetRawName(inputFilename);
@@ -169,7 +170,7 @@ int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writ
 {
   std::string rawName, pathName, outputFilename;
 
-  vtkSmartPointer<vtkXMLStructuredGridWriter> writer  = vtkSmartPointer<vtkXMLStructuredGridWriter>::New();
+  vtkNew(vtkXMLStructuredGridWriter, writer);
 
   pathName = vtkSVIOUtils::GetPath(inputFilename);
   rawName = vtkSVIOUtils::GetRawName(inputFilename);

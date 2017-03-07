@@ -55,11 +55,9 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <iostream>
 #include <cmath>

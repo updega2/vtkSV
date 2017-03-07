@@ -19,9 +19,7 @@
 #include "vtkMath.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+#include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVGeneralizedPolycube);
 

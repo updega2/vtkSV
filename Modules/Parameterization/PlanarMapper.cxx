@@ -23,6 +23,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVPlanarMapper.h"
 
@@ -43,16 +44,14 @@ int main(int argc, char *argv[])
   std::string inputFilename1 = argv[1];
 
   //creating the full poly data to read in from file and the operation filter
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVPlanarMapper> Mapper =
-	  vtkSmartPointer<vtkSVPlanarMapper>::New();
+  vtkNew(vtkPolyData, pd1);
+  vtkNew(vtkSVPlanarMapper, Mapper);
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkSVIOUtils::ReadInputFile(inputFilename1,pd1);
 
-  vtkSmartPointer<vtkIntArray> boundaryCorners =
-    vtkSmartPointer<vtkIntArray>::New();
+  vtkNew(vtkIntArray, boundaryCorners);
   boundaryCorners->SetNumberOfComponents(1);
   boundaryCorners->SetNumberOfTuples(4);
   // 0103_0001
@@ -85,8 +84,7 @@ int main(int argc, char *argv[])
   //boundaryCorners->SetValue(1,220);
   //boundaryCorners->SetValue(2,213);
   //boundaryCorners->SetValue(3,164);
-  vtkSmartPointer<vtkSVSquareBoundaryMapper> boundaryMapper =
-    vtkSmartPointer<vtkSVSquareBoundaryMapper>::New();
+  vtkNew(vtkSVSquareBoundaryMapper, boundaryMapper);
   boundaryMapper->SetBoundaryIds(boundaryCorners);
 
   std::string newDirName = vtkSVIOUtils::GetPath(inputFilename1)+"/"+vtkSVIOUtils::GetRawName(inputFilename1);

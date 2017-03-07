@@ -23,6 +23,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVPullApartPolyData.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 
 #include <string>
@@ -42,9 +43,8 @@ int main(int argc, char *argv[])
   std::string inputFilename1 = argv[1];
 
   //creating the full poly data to read in from file and the operation filter
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVPullApartPolyData> Ripper =
-	  vtkSmartPointer<vtkSVPullApartPolyData>::New();
+  vtkNew(vtkPolyData, pd1);;
+  vtkNew(vtkSVPullApartPolyData, Ripper);
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

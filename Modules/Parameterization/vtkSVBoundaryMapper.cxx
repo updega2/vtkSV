@@ -33,12 +33,9 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGlobals.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkXMLPolyDataWriter.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <sstream>
 #include <map>
@@ -222,7 +219,7 @@ int vtkSVBoundaryMapper::RunFilter()
 int vtkSVBoundaryMapper::GetBoundaryLoop()
 {
   vtkIdType nextCell;
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
+  vtkNew(vtkIdList, cellIds);
   vtkDataArray *pointIds = this->Boundaries->GetPointData()->GetArray(this->InternalIdsArrayName);
   vtkDataArray *oPointIds = this->InitialPd->GetPointData()->GetArray(this->InternalIdsArrayName);
   int numInterPts = this->Boundaries->GetNumberOfPoints();
@@ -336,8 +333,8 @@ int vtkSVBoundaryMapper::RunLoopFind(vtkPolyData *pd,
 {
   vtkIdType prevPt = startPt;
   vtkIdType nextPt = startPt;
-  vtkSmartPointer<vtkIdList> pointIds = vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
+  vtkNew(vtkIdList, pointIds);
+  vtkNew(vtkIdList, cellIds);
 
   pd->GetCellPoints(nextCell,pointIds);
 
@@ -345,7 +342,7 @@ int vtkSVBoundaryMapper::RunLoopFind(vtkPolyData *pd,
     nextPt = pointIds->GetId(1);
   else
     nextPt = pointIds->GetId(0);
-  vtkSmartPointer<vtkIdList> newline = vtkSmartPointer<vtkIdList>::New();
+  vtkNew(vtkIdList, newline);
   newline->SetNumberOfIds(2);
   newline->SetId(0, prevPt);
   newline->SetId(1, nextPt);
@@ -367,7 +364,7 @@ int vtkSVBoundaryMapper::RunLoopFind(vtkPolyData *pd,
     else
       nextPt = pointIds->GetId(0);
 
-    vtkSmartPointer<vtkIdList> newestline = vtkSmartPointer<vtkIdList>::New();
+    vtkNew(vtkIdList, newestline);
     newestline->SetNumberOfIds(2);
     newestline->InsertId(0, prevPt);
     newestline->InsertId(1, nextPt);
@@ -406,8 +403,7 @@ int vtkSVBoundaryMapper::CheckSurface(vtkPolyData *pd)
       p0 = pts[j];
       p1 = pts[(j+1)%npts];
 
-      vtkSmartPointer<vtkIdList> edgeNeighbor =
-        vtkSmartPointer<vtkIdList>::New();
+      vtkNew(vtkIdList, edgeNeighbor);
       pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
 
       if (edgeNeighbor->GetNumberOfIds() > 1)

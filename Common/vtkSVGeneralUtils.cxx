@@ -49,13 +49,11 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
 #include "vtkDataSet.h"
 #include "vtkUnstructuredGrid.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 // ----------------------
 // CheckArrayExists

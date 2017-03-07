@@ -60,6 +60,7 @@
 #include "vtkShortArray.h"
 #include "vtkSignedCharArray.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnsignedIntArray.h"
@@ -67,9 +68,6 @@
 #include "vtkUnsignedLongLongArray.h"
 #include "vtkUnsignedShortArray.h"
 #include "vtkUnstructuredGrid.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <iostream>
 
@@ -189,8 +187,7 @@ int vtkSVHausdorffDistance::RunFilter()
     vtkIdType closestCell;
     int subId;
     double dist2;
-    vtkSmartPointer<vtkGenericCell> genericCell =
-      vtkSmartPointer<vtkGenericCell>::New();
+    vtkNew(vtkGenericCell, genericCell);
     locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
                               dist2);
     double distance = sqrt(pow(pt[0] - closestPt[0], 2.0) +

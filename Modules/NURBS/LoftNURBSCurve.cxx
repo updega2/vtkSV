@@ -15,6 +15,7 @@
 #include "vtkDataObject.h"
 #include "vtkPoints.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSCurve.h"
 #include "vtkSVNURBSUtils.h"
@@ -36,13 +37,11 @@ int main(int argc, char *argv[])
 
   int nc = 11;
 
-  vtkSmartPointer<vtkDoubleArray> x_data =
-    vtkSmartPointer<vtkDoubleArray>::New();
+  vtkNew(vtkDoubleArray, x_data);
   x_data->SetNumberOfTuples(nc);
   vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nc, x_data);
 
-  vtkSmartPointer<vtkPoints> inputPoints =
-    vtkSmartPointer<vtkPoints>::New();
+  vtkNew(vtkPoints, inputPoints);
   inputPoints->Reset();
   for (int i=0; i<nc; i++)
   {
@@ -53,11 +52,9 @@ int main(int argc, char *argv[])
     inputPoints->InsertNextPoint(xval, yval, zval);
   }
 
-  vtkSmartPointer<vtkPolyData> inputPoly =
-    vtkSmartPointer<vtkPolyData>::New();
+  vtkNew(vtkPolyData, inputPoly);
   inputPoly->SetPoints(inputPoints);
-  vtkSmartPointer<vtkSVLoftNURBSCurve> lofter =
-    vtkSmartPointer<vtkSVLoftNURBSCurve>::New();
+  vtkNew(vtkSVLoftNURBSCurve, lofter);
   lofter->SetInputData(inputPoly);
   lofter->SetDegree(3);
   lofter->SetPolyDataSpacing(0.01);

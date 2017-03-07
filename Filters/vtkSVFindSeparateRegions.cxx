@@ -39,26 +39,27 @@
 
 #include "vtkSVFindSeparateRegions.h"
 
-#include "vtkFloatArray.h"
-#include "vtkMath.h"
+#include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkCellDataToPointData.h"
+#include "vtkDataSetSurfaceFilter.h"
+#include "vtkDoubleArray.h"
+#include "vtkEdgeTable.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkIntArray.h"
+#include "vtkFloatArray.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkPolygon.h"
+#include "vtkThreshold.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkCellArray.h"
-#include "vtkIntArray.h"
-#include "vtkDoubleArray.h"
-#include "vtkCellData.h"
-#include "vtkPointData.h"
-#include "vtkCellDataToPointData.h"
-#include "vtkEdgeTable.h"
+#include "vtkSVGlobals.h"
 #include "vtkXMLPolyDataWriter.h"
-#include "vtkThreshold.h"
-#include "vtkDataSetSurfaceFilter.h"
-#include "vtkPolygon.h"
 
 #include <iostream>
 
@@ -97,8 +98,8 @@ int vtkSVFindSeparateRegions::RequestData(
     vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
     // Define variables used by the algorithm
-    vtkSmartPointer<vtkPoints> inpts = vtkSmartPointer<vtkPoints>::New();
-    vtkSmartPointer<vtkCellArray> inPolys = vtkSmartPointer<vtkCellArray>::New();
+    vtkNew(vtkPoints, inpts);
+    vtkNew(vtkCellArray, inPolys);
     vtkIdType numPts, numPolys;
     vtkIdType newId, cellId,pointId;
 
@@ -129,12 +130,9 @@ int vtkSVFindSeparateRegions::RequestData(
     }
 
     input->BuildLinks();
-    vtkSmartPointer<vtkIntArray> newPointArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIdList> pointCells =
-      vtkSmartPointer<vtkIdList>::New();
-    vtkSmartPointer<vtkIdList> checkList =
-      vtkSmartPointer<vtkIdList>::New();
+    vtkNew(vtkIntArray, newPointArray);
+    vtkNew(vtkIdList, pointCells);
+    vtkNew(vtkIdList, checkList);
 
     if (this->targetCellIds == NULL)
       this->SetAllCellIds();

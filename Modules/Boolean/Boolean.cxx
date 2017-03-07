@@ -17,6 +17,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkUnstructuredGrid.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVLoopBooleanPolyDataFilter.h"
 #include "vtkSVLoopIntersectionPolyDataFilter.h"
@@ -40,10 +41,9 @@ int main(int argc, char *argv[])
 
   //Create pointers for reading the STL, creating the full unstructured grid,
   //creating the full poly data, and create the region poly data sets
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVLoopBooleanPolyDataFilter> myBoolean =
-	  vtkSmartPointer<vtkSVLoopBooleanPolyDataFilter>::New();
+  vtkNew(vtkPolyData, pd1);
+  vtkNew(vtkPolyData, pd2);
+  vtkNew(vtkSVLoopBooleanPolyDataFilter, myBoolean);
 
   //Call Function to Read File
   double testTolerance = 1e-6;
@@ -52,8 +52,7 @@ int main(int argc, char *argv[])
   vtkSVIOUtils::ReadInputFile(inputFilename2,pd2);
 
   //BOOLEAN OPERATION EMBEDDED INTERSECTION
-  vtkSmartPointer<vtkPolyData> fullpd =
-	  vtkSmartPointer<vtkPolyData>::New();
+  vtkNew(vtkPolyData, fullpd);
   myBoolean->SetInputData(0,pd1);
   myBoolean->SetInputData(1,pd2);
   myBoolean->SetTolerance(testTolerance);

@@ -30,10 +30,8 @@
 #include "vtkPoints.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
+#include "vtkSVGlobals.h"
 #include "vtkStructuredData.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <cassert>
 #include <cmath>

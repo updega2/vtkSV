@@ -63,6 +63,7 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVPlanarMapper.h"
@@ -75,9 +76,6 @@
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
 #include <iostream>
 #include <cmath>
@@ -826,9 +824,6 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
   double xSpacing, ySpacing;
   vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(pd, xSpacing, ySpacing);
 
-  //vtkSmartPointer<vtkIntArray> newPointOrder =
-  //  vtkSmartPointer<vtkIntArray>::New();
-  //vtkSVPolyDataToNURBSFilter::GetNewPointOrder(pd, xSpacing, ySpacing, newPointOrder);
   vtkNew(vtkSVLoftNURBSSurface, lofter);
 
   int xNum = 1.0/xSpacing + 2;
@@ -880,10 +875,6 @@ int vtkSVPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string f
 
   double xSpacing, ySpacing;
   vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(pd, xSpacing, ySpacing);
-
-  //vtkSmartPointer<vtkIntArray> newPointOrder =
-  //  vtkSmartPointer<vtkIntArray>::New();
-  //vtkSVPolyDataToNURBSFilter::GetNewPointOrder(pd, xSpacing, ySpacing, newPointOrder);
 
   FILE *pFile;
   pFile = fopen(fileName.c_str(), "w");

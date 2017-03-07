@@ -23,6 +23,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVPassDataArray.h"
+#include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 
 #include <string>
@@ -43,10 +44,9 @@ int main(int argc, char *argv[])
   std::string arrayName      = argv[3];
 
   //creating the full poly data to read in from file and the operation filter
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVPassDataArray> Passer =
-	  vtkSmartPointer<vtkSVPassDataArray>::New();
+  vtkNew(vtkPolyData, pd1);
+  vtkNew(vtkPolyData, pd2);
+  vtkNew(vtkSVPassDataArray, Passer);
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

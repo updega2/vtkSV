@@ -1,7 +1,7 @@
 /*=========================================================================
 
   Program:   Visualization Toolkit
-  Module:    vtkMultiplePolyDataIntersectionFilter.cxx
+  Module:    vtkSVMultiplePolyDataIntersectionFilter.cxx
 
   Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
   All rights reserved.
@@ -12,7 +12,7 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkMultiplePolyDataIntersectionFilter.h"
+#include "vtkSVMultiplePolyDataIntersectionFilter.h"
 
 #include "vtkAlgorithmOutput.h"
 #include "vtkCellArray.h"
@@ -24,17 +24,18 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkBooleanOperationPolyDataFilter2.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVLoopBooleanPolyDataFilter.h"
 #include "vtkTrivialProducer.h"
 #include "vtkSmartPointer.h"
 #include "vtkBoundingBox.h"
 #include "vtkIntArray.h"
 #include "vtkAppendPolyData.h"
 
-vtkStandardNewMacro(vtkMultiplePolyDataIntersectionFilter);
+vtkStandardNewMacro(vtkSVMultiplePolyDataIntersectionFilter);
 
 //----------------------------------------------------------------------------
-vtkMultiplePolyDataIntersectionFilter::vtkMultiplePolyDataIntersectionFilter()
+vtkSVMultiplePolyDataIntersectionFilter::vtkSVMultiplePolyDataIntersectionFilter()
 {
   this->ParallelStreaming = 0;
   this->UserManagedInputs = 0;
@@ -47,7 +48,7 @@ vtkMultiplePolyDataIntersectionFilter::vtkMultiplePolyDataIntersectionFilter()
 }
 
 //----------------------------------------------------------------------------
-vtkMultiplePolyDataIntersectionFilter::~vtkMultiplePolyDataIntersectionFilter()
+vtkSVMultiplePolyDataIntersectionFilter::~vtkSVMultiplePolyDataIntersectionFilter()
 {
   if (this->BooleanObject)
     BooleanObject->Delete();
@@ -55,7 +56,7 @@ vtkMultiplePolyDataIntersectionFilter::~vtkMultiplePolyDataIntersectionFilter()
 
 //----------------------------------------------------------------------------
 // Add a dataset to the list of data to append.
-void vtkMultiplePolyDataIntersectionFilter::AddInputData(vtkPolyData *ds)
+void vtkSVMultiplePolyDataIntersectionFilter::AddInputData(vtkPolyData *ds)
 {
   if (this->UserManagedInputs)
     {
@@ -68,7 +69,7 @@ void vtkMultiplePolyDataIntersectionFilter::AddInputData(vtkPolyData *ds)
 
 //----------------------------------------------------------------------------
 // Remove a dataset from the list of data to append.
-void vtkMultiplePolyDataIntersectionFilter::RemoveInputData(vtkPolyData *ds)
+void vtkSVMultiplePolyDataIntersectionFilter::RemoveInputData(vtkPolyData *ds)
 {
   if (this->UserManagedInputs)
     {
@@ -95,7 +96,7 @@ void vtkMultiplePolyDataIntersectionFilter::RemoveInputData(vtkPolyData *ds)
 //----------------------------------------------------------------------------
 // make ProcessObject function visible
 // should only be used when UserManagedInputs is true.
-void vtkMultiplePolyDataIntersectionFilter::SetNumberOfInputs(int num)
+void vtkSVMultiplePolyDataIntersectionFilter::SetNumberOfInputs(int num)
 {
   if (!this->UserManagedInputs)
     {
@@ -109,7 +110,7 @@ void vtkMultiplePolyDataIntersectionFilter::SetNumberOfInputs(int num)
 }
 
 //----------------------------------------------------------------------------
-void vtkMultiplePolyDataIntersectionFilter::
+void vtkSVMultiplePolyDataIntersectionFilter::
 SetInputDataByNumber(int num, vtkPolyData* input)
 {
   vtkTrivialProducer* tp = vtkTrivialProducer::New();
@@ -120,7 +121,7 @@ SetInputDataByNumber(int num, vtkPolyData* input)
 
 //----------------------------------------------------------------------------
 // Set Nth input, should only be used when UserManagedInputs is true.
-void vtkMultiplePolyDataIntersectionFilter::
+void vtkSVMultiplePolyDataIntersectionFilter::
 SetInputConnectionByNumber(int num,vtkAlgorithmOutput *input)
 {
   if (!this->UserManagedInputs)
@@ -135,7 +136,7 @@ SetInputConnectionByNumber(int num,vtkAlgorithmOutput *input)
   this->SetNthInputConnection(0, num, input);
 }
 
-int vtkMultiplePolyDataIntersectionFilter::BuildIntersectionTable(
+int vtkSVMultiplePolyDataIntersectionFilter::BuildIntersectionTable(
     vtkPolyData* inputs[], int numInputs)
 {
   for (int i = 0;i < numInputs;i++)
@@ -180,17 +181,14 @@ int vtkMultiplePolyDataIntersectionFilter::BuildIntersectionTable(
   return totalIntersections;
 }
 
-int vtkMultiplePolyDataIntersectionFilter::ExecuteIntersection(
+int vtkSVMultiplePolyDataIntersectionFilter::ExecuteIntersection(
     vtkPolyData* inputs[], int numInputs,int start)
 {
   int numChecks = 0;
   int totalIntersections = 0;
-  vtkSmartPointer<vtkIdList> checkInputArray =
-    vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> checkInputArray2 =
-    vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> tmp =
-    vtkSmartPointer<vtkIdList>::New();
+  vtkNew(vtkIdList, checkInputArray);
+  vtkNew(vtkIdList, checkInputArray2);
+  vtkNew(vtkIdList, tmp);
 
   this->inResult[start] = 1;
   checkInputArray->InsertNextId(start);
@@ -208,8 +206,7 @@ int vtkMultiplePolyDataIntersectionFilter::ExecuteIntersection(
 	    this->IntersectionTable[i][j] = -1;
 	    this->IntersectionTable[j][i] = -1;
 
-	  vtkSmartPointer<vtkBooleanOperationPolyDataFilter2> boolean =
-	    vtkSmartPointer<vtkBooleanOperationPolyDataFilter2>::New();
+	  vtkNew(vtkSVLoopBooleanPolyDataFilter, boolean);
 	  if (this->PassInfoAsGlobal && totalIntersections != 0)
 	    this->PreSetGlobalArrays(inputs[j]);
 
@@ -257,13 +254,11 @@ int vtkMultiplePolyDataIntersectionFilter::ExecuteIntersection(
   return 1;
 }
 
-void vtkMultiplePolyDataIntersectionFilter::PreSetGlobalArrays(
+void vtkSVMultiplePolyDataIntersectionFilter::PreSetGlobalArrays(
     vtkPolyData *input)
 {
-  vtkSmartPointer<vtkIntArray> newPointArray =
-    vtkSmartPointer<vtkIntArray>::New();
-  vtkSmartPointer<vtkIntArray> newCellArray =
-    vtkSmartPointer<vtkIntArray>::New();
+  vtkNew(vtkIntArray, newPointArray);
+  vtkNew(vtkIntArray, newCellArray);
   int numPts = input->GetNumberOfPoints();
   int numCells = input->GetNumberOfCells();
   for (int i = 0;i < numPts; i++)
@@ -280,16 +275,14 @@ void vtkMultiplePolyDataIntersectionFilter::PreSetGlobalArrays(
   input->GetCellData()->AddArray(newCellArray);
 }
 
-void vtkMultiplePolyDataIntersectionFilter::PostSetGlobalArrays(
+void vtkSVMultiplePolyDataIntersectionFilter::PostSetGlobalArrays(
     int numIntersections)
 {
   std::cout<<"Passing Data"<<endl;
   if (numIntersections == 1)
   {
-    vtkSmartPointer<vtkIntArray> currentPointArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIntArray> currentCellArray =
-      vtkSmartPointer<vtkIntArray>::New();
+    vtkNew(vtkIntArray, currentPointArray);
+    vtkNew(vtkIntArray, currentCellArray);
     currentPointArray = vtkIntArray::SafeDownCast(
 	this->BooleanObject->GetPointData()->GetArray("BoundaryPoints"));
     currentCellArray = vtkIntArray::SafeDownCast(
@@ -302,18 +295,12 @@ void vtkMultiplePolyDataIntersectionFilter::PostSetGlobalArrays(
   }
   else
   {
-    vtkSmartPointer<vtkIntArray> currentPointArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIntArray> globalPointArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIntArray> newPointArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIntArray> currentCellArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIntArray> globalCellArray =
-      vtkSmartPointer<vtkIntArray>::New();
-    vtkSmartPointer<vtkIntArray> newCellArray =
-      vtkSmartPointer<vtkIntArray>::New();
+    vtkNew(vtkIntArray, currentPointArray);
+    vtkNew(vtkIntArray, globalPointArray);
+    vtkNew(vtkIntArray, newPointArray);
+    vtkNew(vtkIntArray, currentCellArray);
+    vtkNew(vtkIntArray, globalCellArray);
+    vtkNew(vtkIntArray, newCellArray);
 
     currentPointArray = vtkIntArray::SafeDownCast(
 	this->BooleanObject->GetPointData()->GetArray("BoundaryPoints"));
@@ -351,11 +338,10 @@ void vtkMultiplePolyDataIntersectionFilter::PostSetGlobalArrays(
   }
 }
 
-void vtkMultiplePolyDataIntersectionFilter::SetSurfaceId(
+void vtkSVMultiplePolyDataIntersectionFilter::SetSurfaceId(
     vtkPolyData *input,int surfaceid)
 {
-  vtkSmartPointer<vtkIntArray> surfaceIdArray =
-    vtkSmartPointer<vtkIntArray>::New();
+  vtkNew(vtkIntArray, surfaceIdArray);
   int numCells = input->GetNumberOfCells();
   for (int i = 0;i < numCells; i++)
   {
@@ -365,7 +351,7 @@ void vtkMultiplePolyDataIntersectionFilter::SetSurfaceId(
   input->GetCellData()->AddArray(surfaceIdArray);
 }
 
-void vtkMultiplePolyDataIntersectionFilter::PrintTable(int numInputs)
+void vtkSVMultiplePolyDataIntersectionFilter::PrintTable(int numInputs)
 {
   std::cout<<"INTERSECTION TABLE"<<endl;
   for (int i = 0; i < numInputs; i++)
@@ -382,7 +368,7 @@ void vtkMultiplePolyDataIntersectionFilter::PrintTable(int numInputs)
 //----------------------------------------------------------------------------
 // This method is much too long, and has to be broken up!
 // Append data sets into single polygonal data set.
-int vtkMultiplePolyDataIntersectionFilter::RequestData(
+int vtkSVMultiplePolyDataIntersectionFilter::RequestData(
     vtkInformation *vtkNotUsed(request),
     vtkInformationVector **inputVector,
     vtkInformationVector *outputVector)
@@ -419,10 +405,8 @@ int vtkMultiplePolyDataIntersectionFilter::RequestData(
 
   this->BooleanObject->DeepCopy(inputs[0]);
   int retVal = this->ExecuteIntersection(inputs,numInputs,0);
-  vtkSmartPointer<vtkAppendPolyData> appender =
-    vtkSmartPointer<vtkAppendPolyData>::New();
-  vtkSmartPointer<vtkPolyData> tmp =
-    vtkSmartPointer<vtkPolyData>::New();
+  vtkNew(vtkAppendPolyData, appender);
+  vtkNew(vtkPolyData, tmp);
   if (this->NoIntersectionOutput)
   {
     tmp->DeepCopy(this->BooleanObject);
@@ -434,8 +418,7 @@ int vtkMultiplePolyDataIntersectionFilter::RequestData(
 	std::cout<<"Adding in!!"<<endl;
 	this->BooleanObject->DeepCopy(inputs[i]);
 	this->ExecuteIntersection(inputs,numInputs,i);
-	vtkSmartPointer<vtkPolyData> tmp2 =
-	  vtkSmartPointer<vtkPolyData>::New();
+	vtkNew(vtkPolyData, tmp2);
 	tmp2->DeepCopy(this->BooleanObject);
         appender->AddInputData(tmp2);
       }
@@ -457,7 +440,7 @@ int vtkMultiplePolyDataIntersectionFilter::RequestData(
 }
 
 //----------------------------------------------------------------------------
-int vtkMultiplePolyDataIntersectionFilter::RequestUpdateExtent(
+int vtkSVMultiplePolyDataIntersectionFilter::RequestUpdateExtent(
     vtkInformation *vtkNotUsed(request),
     vtkInformationVector **inputVector,
     vtkInformationVector *outputVector)
@@ -526,14 +509,14 @@ int vtkMultiplePolyDataIntersectionFilter::RequestUpdateExtent(
 }
 
 //----------------------------------------------------------------------------
-vtkPolyData *vtkMultiplePolyDataIntersectionFilter::GetInput(int idx)
+vtkPolyData *vtkSVMultiplePolyDataIntersectionFilter::GetInput(int idx)
 {
   return vtkPolyData::SafeDownCast(
     this->GetExecutive()->GetInputData(0, idx));
 }
 
 //----------------------------------------------------------------------------
-void vtkMultiplePolyDataIntersectionFilter::PrintSelf(ostream& os,
+void vtkSVMultiplePolyDataIntersectionFilter::PrintSelf(ostream& os,
     vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -545,7 +528,7 @@ void vtkMultiplePolyDataIntersectionFilter::PrintSelf(ostream& os,
 }
 
 //----------------------------------------------------------------------------
-int vtkMultiplePolyDataIntersectionFilter::FillInputPortInformation(
+int vtkSVMultiplePolyDataIntersectionFilter::FillInputPortInformation(
     int port, vtkInformation *info)
 {
   if (!this->Superclass::FillInputPortInformation(port, info))

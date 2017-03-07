@@ -19,9 +19,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
-
-#define vtkNew(type,name) \
-  vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
+#include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVNURBSCurve);
 

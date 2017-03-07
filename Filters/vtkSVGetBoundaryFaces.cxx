@@ -57,6 +57,7 @@
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkThreshold.h"
 #include "vtkTriangle.h"
@@ -190,8 +191,8 @@ int vtkSVGetBoundaryFaces::RequestData(
     // Define variables used by the algorithm
     int reg = 0;
     int pt = 0;
-    vtkSmartPointer<vtkPoints> inpts = vtkSmartPointer<vtkPoints>::New();
-    vtkSmartPointer<vtkCellArray> inPolys = vtkSmartPointer<vtkCellArray>::New();
+    vtkNew(vtkPoints,  inpts);
+    vtkNew(vtkCellArray,  inPolys);
     vtkPoints *newPts;
     vtkIdType numPts, numPolys;
     vtkIdType newId, cellId;
@@ -304,16 +305,14 @@ int vtkSVGetBoundaryFaces::RequestData(
           maxRegion = i+1;
         }
       }
-      vtkSmartPointer<vtkThreshold> thresholder =
-        vtkSmartPointer<vtkThreshold>::New();
+      vtkNew(vtkThreshold, thresholder);
       thresholder->SetInputData(output);
       //Set Input Array to 0 port,0 connection, dataType (0 - point, 1 - cell, and Regions is the type name
       thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->RegionIdsArrayName);
       thresholder->ThresholdBetween(maxRegion, maxRegion);
       thresholder->Update();
 
-      vtkSmartPointer<vtkDataSetSurfaceFilter> surfacer =
-        vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+      vtkNew(vtkDataSetSurfaceFilter, surfacer);
       surfacer->SetInputData(thresholder->GetOutput());
       surfacer->Update();
 
@@ -327,231 +326,226 @@ int vtkSVGetBoundaryFaces::RequestData(
 
 void vtkSVGetBoundaryFaces::FindBoundaryRegion(int reg, int start, double &area)
 {
-    //Variables used in function
-    int i;
-    vtkIdType j,k,l,cellId;
-    vtkIdType *pts = 0;
-    vtkIdType npts = 0;
-    vtkIdType numNei, nei, p1, p2, nIds, neis;
+  //Variables used in function
+  int i;
+  vtkIdType j,k,l,cellId;
+  vtkIdType *pts = 0;
+  vtkIdType npts = 0;
+  vtkIdType numNei, nei, p1, p2, nIds, neis;
 
-    //Id List to store neighbor cells for each set of nodes and a cell
-    vtkSmartPointer<vtkIdList> neighbors = vtkSmartPointer<vtkIdList>::New();
-    vtkSmartPointer<vtkIdList> tmp = vtkSmartPointer<vtkIdList>::New();
+  //Id List to store neighbor cells for each set of nodes and a cell
+  vtkNew(vtkIdList, neighbors);
+  vtkNew(vtkIdList, tmp);
 
-    //Variable for accessing neiIds list
-    vtkIdType sz = 0;
+  //Variable for accessing neiIds list
+  vtkIdType sz = 0;
 
-    //Variables for the boundary cells adjacent to the boundary point
-    vtkSmartPointer<vtkIdList> bLinesOne = vtkSmartPointer<vtkIdList>::New();
-    vtkSmartPointer<vtkIdList> bLinesTwo = vtkSmartPointer<vtkIdList>::New();
+  //Variables for the boundary cells adjacent to the boundary point
+  vtkNew(vtkIdList, bLinesOne);
+  vtkNew(vtkIdList, bLinesTwo);
 
-    vtkIdType numCheckCells;
-    //Get neighboring cell for each pair of points in current cell
-    while ((numCheckCells = this->CheckCells->GetNumberOfIds()) > 0)
+  vtkIdType numCheckCells;
+  //Get neighboring cell for each pair of points in current cell
+  while ((numCheckCells = this->CheckCells->GetNumberOfIds()) > 0)
+  {
+    for (int c=0;c<numCheckCells;c++)
     {
-      for (int c=0;c<numCheckCells;c++)
+      cellId = this->CheckCells->GetId(c);
+      //Get the three points of the cell
+      this->mesh->GetCellPoints(cellId,npts,pts);
+      if (this->checked[cellId] == 0)
       {
-	cellId = this->CheckCells->GetId(c);
-	//Get the three points of the cell
-	this->mesh->GetCellPoints(cellId,npts,pts);
-	if (this->checked[cellId] == 0)
-	{
-	  //Mark cell as checked and insert the fillnumber value to cell
-          this->newScalars->InsertValue(cellId,reg);
-          this->AddCellArea(cellId, area);
-	  this->checked[cellId] = 1;
-          for (i=0; i < npts; i++)
+        //Mark cell as checked and insert the fillnumber value to cell
+        this->newScalars->InsertValue(cellId,reg);
+        this->AddCellArea(cellId, area);
+        this->checked[cellId] = 1;
+        for (i=0; i < npts; i++)
+        {
+          p1 = pts[i];
+          //Get the cells attached to each point
+          this->mesh->GetPointCells(p1,neighbors);
+          numNei = neighbors->GetNumberOfIds();
+
+          //For each neighboring cell
+          for (j=0;j < numNei;j++)
           {
-	    p1 = pts[i];
-	    //Get the cells attached to each point
-	    this->mesh->GetPointCells(p1,neighbors);
-	    numNei = neighbors->GetNumberOfIds();
+            //If this cell is close to a boundary
+            if (this->BoundaryCellArray->GetValue(neighbors->GetId(j)))
+            {
+              //If this cell hasn't been checked already
+              if (this->checkedcarefully[neighbors->GetId(j)] == 0)
+              {
+              //Add this cell to the careful check cells list and run
+              //the region finding tip toe code
+                this->CheckCellsCareful->
+                InsertNextId(neighbors->GetId(j));
+                this->FindBoundaryRegionTipToe(reg, area);
 
-	    //For each neighboring cell
-	    for (j=0;j < numNei;j++)
-	    {
-	      //If this cell is close to a boundary
-	      if (this->BoundaryCellArray->GetValue(neighbors->GetId(j)))
-	      {
-		//If this cell hasn't been checked already
-		if (this->checkedcarefully[neighbors->GetId(j)] == 0)
-		{
-		  //Add this cell to the careful check cells list and run
-		  //the region finding tip toe code
-	          this->CheckCellsCareful->
-		    InsertNextId(neighbors->GetId(j));
-		  this->FindBoundaryRegionTipToe(reg, area);
-
-		  this->CheckCellsCareful->Reset();
-		  this->CheckCellsCareful2->Reset();
-		}
-	      }
-	      //Cell needs to be added to check list
-	      else
-	      {
-		this->CheckCells2->InsertNextId(neighbors->GetId(j));
-	      }
-	    }
-
-	  }
-
-	}
-	//This statement is for if the start cell is a boundary cell
-	else if (this->checkedcarefully[cellId] == 0 && start)
-	{
-	  //std::cout<<"Aqui senor"<<endl;
-	  start=0;
-	  this->CheckCells->Reset();
-          //std::cout<<"I have been added begin"<<cellId<<endl;
-	  this->CheckCellsCareful->InsertNextId(cellId);
-	  this->FindBoundaryRegionTipToe(reg, area);
-	}
+                this->CheckCellsCareful->Reset();
+                this->CheckCellsCareful2->Reset();
+              }
+            }
+            //Cell needs to be added to check list
+            else
+            {
+              this->CheckCells2->InsertNextId(neighbors->GetId(j));
+            }
+          }
+        }
       }
-
-      //Swap the current check list to the full check list and continue
-      tmp = this->CheckCells;
-      this->CheckCells = this->CheckCells2;
-      this->CheckCells2 = tmp;
-      tmp->Reset();
+      //This statement is for if the start cell is a boundary cell
+      else if (this->checkedcarefully[cellId] == 0 && start)
+      {
+        //std::cout<<"Aqui senor"<<endl;
+        start=0;
+        this->CheckCells->Reset();
+              //std::cout<<"I have been added begin"<<cellId<<endl;
+        this->CheckCellsCareful->InsertNextId(cellId);
+        this->FindBoundaryRegionTipToe(reg, area);
+      }
     }
 
+    //Swap the current check list to the full check list and continue
+    tmp = this->CheckCells;
+    this->CheckCells = this->CheckCells2;
+    this->CheckCells2 = tmp;
+    tmp->Reset();
+  }
 }
 
 void vtkSVGetBoundaryFaces::FindBoundaryRegionTipToe(int reg, double &area)
 {
   //std::cout<<"Am tip toeing"<<endl;
-    //Variables used in function
-    int i;
-    vtkIdType j,k,l;
-    vtkIdType *pts = 0;
-    vtkIdType npts = 0;
-    vtkIdType cellId;
-    vtkIdType numNei, nei, p1, p2, nIds, neiId;
+  //Variables used in function
+  int i;
+  vtkIdType j,k,l;
+  vtkIdType *pts = 0;
+  vtkIdType npts = 0;
+  vtkIdType cellId;
+  vtkIdType numNei, nei, p1, p2, nIds, neiId;
 
-    //Id List to store neighbor cells for each set of nodes and a cell
-    vtkSmartPointer<vtkIdList> tmp = vtkSmartPointer<vtkIdList>::New();
-    vtkSmartPointer<vtkIdList> neiIds = vtkSmartPointer<vtkIdList>::New();
+  //Id List to store neighbor cells for each set of nodes and a cell
+  vtkNew(vtkIdList, tmp);
+  vtkNew(vtkIdList, neiIds);
 
-    //Variable for accessing neiIds list
-    vtkIdType sz = 0;
+  //Variable for accessing neiIds list
+  vtkIdType sz = 0;
 
-    //Variables for the boundary cells adjacent to the boundary point
-    vtkSmartPointer<vtkIdList> bLinesOne = vtkSmartPointer<vtkIdList>::New();
-    vtkSmartPointer<vtkIdList> bLinesTwo = vtkSmartPointer<vtkIdList>::New();
+  //Variables for the boundary cells adjacent to the boundary point
+  vtkNew(vtkIdList, bLinesOne);
+  vtkNew(vtkIdList, bLinesTwo);
 
-    vtkIdType numCheckCells;
-    //Get neighboring cell for each pair of points in current cell
-    //While there are still cells to be checked
-    while ((numCheckCells = this->CheckCellsCareful->GetNumberOfIds()) > 0)
+  vtkIdType numCheckCells;
+  //Get neighboring cell for each pair of points in current cell
+  //While there are still cells to be checked
+  while ((numCheckCells = this->CheckCellsCareful->GetNumberOfIds()) > 0)
+  {
+    for (int c=0;c<numCheckCells;c++)
     {
-      for (int c=0;c<numCheckCells;c++)
+      neiIds->Reset();
+      cellId = this->CheckCellsCareful->GetId(c);
+      //Get the three points of the cell
+      this->mesh->GetCellPoints(cellId,npts,pts);
+      if (this->checkedcarefully[cellId] == 0)
       {
-        neiIds->Reset();
-	cellId = this->CheckCellsCareful->GetId(c);
-	//Get the three points of the cell
-	this->mesh->GetCellPoints(cellId,npts,pts);
-	if (this->checkedcarefully[cellId] == 0)
-	{
-          //Update this cell to have been checked carefully and assign it
-	  //with the fillnumber scalar
-          this->newScalars->InsertValue(cellId,reg);
-          this->AddCellArea(cellId, area);
-	  this->checkedcarefully[cellId] = 1;
-	  //For each edge of the cell
-	  //std::cout<<"Checking edges of cell "<<cellId<<endl;
-          for (i=0; i < npts; i++)
+        //Update this cell to have been checked carefully and assign it
+        //with the fillnumber scalar
+        this->newScalars->InsertValue(cellId,reg);
+        this->AddCellArea(cellId, area);
+        this->checkedcarefully[cellId] = 1;
+        //For each edge of the cell
+        //std::cout<<"Checking edges of cell "<<cellId<<endl;
+        for (i=0; i < npts; i++)
+        {
+          p1 = pts[i];
+          p2 = pts[(i+1)%(npts)];
+
+          vtkNew(vtkIdList, neighbors);
+          //Initial check to make sure the cell is in fact a face cell
+          this->mesh->GetCellEdgeNeighbors(cellId,p1,p2,neighbors);
+          numNei = neighbors->GetNumberOfIds();
+
+          //Check to make sure it is an oustide surface cell,
+          //i.e. one neighbor
+          if (numNei==1)
           {
-	    p1 = pts[i];
-	    p2 = pts[(i+1)%(npts)];
+            int count = 0;
+            //Check to see if cell is on the boundary,
+            //if it is get adjacent lines
+            if (this->BoundaryPointArray->GetValue(p1) == 1)
+              count++;
 
-            vtkSmartPointer<vtkIdList> neighbors =
-	      vtkSmartPointer<vtkIdList>::New();
-	    //Initial check to make sure the cell is in fact a face cell
-	    this->mesh->GetCellEdgeNeighbors(cellId,p1,p2,neighbors);
-	    numNei = neighbors->GetNumberOfIds();
+            if (this->BoundaryPointArray->GetValue(p2) == 1)
+              count++;
 
-	    //Check to make sure it is an oustide surface cell,
-	    //i.e. one neighbor
-	    if (numNei==1)
-	    {
-              int count = 0;
-		//Check to see if cell is on the boundary,
-		//if it is get adjacent lines
-	      if (this->BoundaryPointArray->GetValue(p1) == 1)
-	        count++;
+            nei=neighbors->GetId(0);
+            //if cell is not on the boundary, add new cell to check list
+            if (count < 2)
+              neiIds->InsertNextId(nei);
 
-              if (this->BoundaryPointArray->GetValue(p2) == 1)
-	        count++;
+            //if cell is on boundary, check to make sure it isn't
+            //false positive; don't add to check list. This is done by
+            //getting the boundary lines attached to each point, then
+            //intersecting the two lists. If the result is zero, then this
+            //is a false positive
+            else
+            {
+              this->boundaryLines->BuildLinks();
+              vtkIdType bPt1 = pointMapper[p1];
+              this->boundaryLines->GetPointCells(bPt1,bLinesOne);
 
-	      nei=neighbors->GetId(0);
-	      //if cell is not on the boundary, add new cell to check list
-	      if (count < 2)
-	      {
-		neiIds->InsertNextId(nei);
-	      }
-	      //if cell is on boundary, check to make sure it isn't
-	      //false positive; don't add to check list. This is done by
-	      //getting the boundary lines attached to each point, then
-	      //intersecting the two lists. If the result is zero, then this
-	      //is a false positive
-	      else
-	      {
-                this->boundaryLines->BuildLinks();
-		vtkIdType bPt1 = pointMapper[p1];
-		this->boundaryLines->GetPointCells(bPt1,bLinesOne);
+              vtkIdType bPt2 = pointMapper[p2];
+              this->boundaryLines->GetPointCells(bPt2,bLinesTwo);
 
-		vtkIdType bPt2 = pointMapper[p2];
-		this->boundaryLines->GetPointCells(bPt2,bLinesTwo);
+              bLinesOne->IntersectWith(bLinesTwo);
+              //Cell is false positive. Add to check list.
+              if (bLinesOne->GetNumberOfIds() == 0)
+              {
+                      //std::cout<<"False positive! "<<nei<<endl;
+                neiIds->InsertNextId(nei);
+              }
+              //else
+                //std::cout<<"I have not been added because false"<<endl;
+            }
+          }
+          else
+          {
+            //cout<<"NumNei is not 1"<<endl;
+            //cout<<"Number of Neighbors "<<numNei<<endl;
+            //cout<<"Cell is "<<cellId<<endl;
+            for (k=0;k<numNei;k++)
+            {
+              //cout<<"Id!!! "<<neighbors->GetId(k)<<endl;
+            }
+          }
+        }
 
-		bLinesOne->IntersectWith(bLinesTwo);
-		//Cell is false positive. Add to check list.
-		if (bLinesOne->GetNumberOfIds() == 0)
-		{
-	          //std::cout<<"False positive! "<<nei<<endl;
-		  neiIds->InsertNextId(nei);
-		}
-		//else
-		  //std::cout<<"I have not been added because false"<<endl;
-	      }
-	    }
-	    else
-	    {
-	      //cout<<"NumNei is not 1"<<endl;
-	      //cout<<"Number of Neighbors "<<numNei<<endl;
-	      //cout<<"Cell is "<<cellId<<endl;
-	      for (k=0;k<numNei;k++)
-	      {
-	        //cout<<"Id!!! "<<neighbors->GetId(k)<<endl;
-	      }
-	    }
-	  }
-
-	  nIds = neiIds->GetNumberOfIds();
-	  if (nIds>0)
-	  {
-	    //Add all Ids in current list to global list of Ids
-	    for (k=0; k< nIds;k++)
-	    {
-		neiId = neiIds->GetId(k);
-		if (this->checkedcarefully[neiId]==0)
-		{
-		  this->CheckCellsCareful2->InsertNextId(neiId);
-		}
-		else if (this->checked[neiId]==0)
-		{
-		  this->CheckCells2->InsertNextId(neiId);
-		}
-	    }
-	  }
-	}
+        nIds = neiIds->GetNumberOfIds();
+        if (nIds>0)
+        {
+          //Add all Ids in current list to global list of Ids
+          for (k=0; k< nIds;k++)
+          {
+            neiId = neiIds->GetId(k);
+            if (this->checkedcarefully[neiId]==0)
+            {
+              this->CheckCellsCareful2->InsertNextId(neiId);
+            }
+            else if (this->checked[neiId]==0)
+            {
+              this->CheckCells2->InsertNextId(neiId);
+            }
+          }
+        }
       }
-
-      //Add current list of checked cells to the full list and continue
-      tmp = this->CheckCellsCareful;
-      this->CheckCellsCareful = this->CheckCellsCareful2;
-      this->CheckCellsCareful2 = tmp;
-      tmp->Reset();
     }
+
+    //Add current list of checked cells to the full list and continue
+    tmp = this->CheckCellsCareful;
+    this->CheckCellsCareful = this->CheckCellsCareful2;
+    this->CheckCellsCareful2 = tmp;
+    tmp->Reset();
+  }
 }
 
 
@@ -560,12 +554,10 @@ void vtkSVGetBoundaryFaces::SetBoundaryArrays()
   //Variables used in the function
   double pt[3];
   vtkIdType pointId,bp,bp2,i;
-  vtkSmartPointer<vtkIdList> bpCellIds =
-    vtkSmartPointer<vtkIdList>::New();
+  vtkNew(vtkIdList, bpCellIds);
   //Point locator to find points on mesh that are the points on the boundary
   //lines
-  vtkSmartPointer<vtkPointLocator> pointLocator =
-    vtkSmartPointer<vtkPointLocator>::New();
+  vtkNew(vtkPointLocator, pointLocator);
   pointLocator->SetDataSet(this->mesh);
   pointLocator->BuildLocator();
 
