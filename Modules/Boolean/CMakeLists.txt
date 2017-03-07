@@ -65,10 +65,19 @@ endif()
 
 #------------------------------------------------------------------------------
 # FindGeodesicPath
-vtksv_add_module(vtkSVLoopBoolean
-  INSTALL_EXES
-  EXECUTABLE_NAME Boolean
+vtksv_add_module(vtkSVBoolean
   SRCS ${SRCS}
   HDRS ${HDRS}
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Executables
+if(VTKSV_BUILD_FILTER_EXES)
+  set(exe Boolean)
+  add_executable(${exe} ${exe}.cxx)
+  target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVBoolean)
+  install(TARGETS ${exe}
+    RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT BooleanExecutables)
+endif()
 #------------------------------------------------------------------------------

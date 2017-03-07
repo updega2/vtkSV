@@ -42,15 +42,15 @@ vtksv_add_module(vtkSVNURBS
 
 #------------------------------------------------------------------------------
 # Create two executables for lofting of curve and surface
-set(curve_exe LoftNURBSCurve)
-add_executable(${curve_exe} ${curve_exe}.cxx ${SRCS})
-target_link_libraries(${curve_exe} ${VTK_LIBRARIES})
-install(TARGETS ${curve_exe}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
+# Create additional executables
+if(VTKSV_BUILD_FILTER_EXES)
+  set(EXE_LIST LoftNURBSCurve LoftNURBSSurface)
+  foreach(exe ${EXE_LIST})
+    add_executable(${exe} ${exe}.cxx)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVNURBS)
+    install(TARGETS ${exe}
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT NURBSExecutables)
+  endforeach()
+endif()
 
-set(surface_exe LoftNURBSSurface)
-add_executable(${surface_exe} ${surface_exe}.cxx ${SRCS})
-target_link_libraries(${surface_exe} ${VTK_LIBRARIES})
-install(TARGETS ${surface_exe}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
 #------------------------------------------------------------------------------

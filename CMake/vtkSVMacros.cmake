@@ -62,21 +62,9 @@ macro(vtksv_add_module MODULE_NAME)
   # Call vtk module setup
   set(${vtk-module}_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
   set(${vtk-module}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-  include(module_${vtk-module}.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/module.cmake)
   vtk_module_library(${vtk-module} ${${vtk-module}_SRCS})
   list(APPEND VTK_MODULES_ALL ${vtk-module})
-  set(VTKSV_MODULES_ENABLED ${VTKSV_MODULES_ENABLED} ${vtk-module} CACHE INTERNAL "List of enabled modules")
   #------------------------------------------------------------------------------
 
-  #------------------------------------------------------------------------------
-  # Install
-  if(vtksv_add_module_EXECUTABLE_NAME)
-    add_executable(${exe} ${exe}.cxx ${${vtk-module}_SRCS})
-    target_link_libraries(${exe} ${vtksv_add_module_LIBRARY_DEPENDS} ${vtksv_add_module_PACKAGE_DEPENDS})
-  endif()
-  if(vtksv_add_module_INSTALL_EXES)
-    install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
-  endif()
-  #------------------------------------------------------------------------------
 endmacro()

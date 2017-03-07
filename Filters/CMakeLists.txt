@@ -25,75 +25,33 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #------------------------------------------------------------------------------
+# Core SRCS and HDRS
+set(SRCS vtkSVFindGeodesicPath.cxx vtkSVFindSeparateRegions.cxx vtkSVGetBoundaryFaces.cxx
+  vtkSVPolyDataCenterlineGroupsClipper.cxx vtkSVPolyBallLine.cxx
+  vtkSVHausdorffDistance.cxx vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx)
+set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundaryFaces.h
+  vtkSVPolyDataCenterlineGroupsClipper.h   vtkSVPolyBallLine.h
+  vtkSVHausdorffDistance.h   vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h)
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
 # FindGeodesicPath
-vtksv_add_module(vtkSVFindGeodesicPath
-  INSTALL_EXES
-  EXECUTABLE_NAME FindGeodesicPath
-  SRCS vtkSVFindGeodesicPath.cxx
-  HDRS vtkSVFindGeodesicPath.h
+vtksv_add_module(vtkSVFilters
+  SRCS ${SRCS}
+  HDRS ${HDRS}
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# FindSeparateRegions
-vtksv_add_module(vtkSVFindSeparateRegions
-  SRCS vtkSVFindSeparateRegions.cxx
-  HDRS vtkSVFindSeparateRegions.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# GetBoundaryFaces
-vtksv_add_module(vtkSVGetBoundaryFaces
-  SRCS vtkSVGetBoundaryFaces.cxx
-  HDRS vtkSVGetBoundaryFaces.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# GroupClipper
-vtksv_add_module(vtkSVGroupsClipper
-  INSTALL_EXES
-  EXECUTABLE_NAME GroupsClipper
-  SRCS vtkSVPolyDataCenterlineGroupsClipper.cxx vtkSVPolyBallLine.cxx
-  HDRS vtkSVPolyDataCenterlineGroupsClipper.h vtkSVPolyBallLine.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# HausdorffDistance
-vtksv_add_module(vtkSVHausdorffDistance
-  INSTALL_EXES
-  EXECUTABLE_NAME HausdorffDistance
-  SRCS vtkSVHausdorffDistance.cxx
-  HDRS vtkSVHausdorffDistance.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# MapInterpolator
-vtksv_add_module(vtkSVMapInterpolator
-  SRCS vtkSVMapInterpolator.cxx
-  HDRS vtkSVMapInterpolator.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# PassDataArray
-vtksv_add_module(vtkSVPassDataArray
-  INSTALL_EXES
-  EXECUTABLE_NAME PassDataArray
-  SRCS vtkSVPassDataArray.cxx
-  HDRS vtkSVPassDataArray.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# PullApartPolyData
-vtksv_add_module(vtkSVPullApartPolyData
-  INSTALL_EXES
-  EXECUTABLE_NAME PullApartPolyData
-  SRCS vtkSVPullApartPolyData.cxx
-  HDRS vtkSVPullApartPolyData.h
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+# Executables
+if(VTKSV_BUILD_FILTER_EXES)
+  set(EXE_LIST FindGeodesicPath GroupsClipper HausdorffDistance
+    PassDataArray PullApartPolyData)
+  foreach(exe ${EXE_LIST})
+    add_executable(${exe} ${exe}.cxx)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters)
+    install(TARGETS ${exe}
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT FilterExecutables)
+  endforeach()
+endif()
 #------------------------------------------------------------------------------

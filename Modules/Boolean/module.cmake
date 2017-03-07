@@ -24,9 +24,9 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A filter that takes to inputs that are different triangulations of the same surface. It uses barycentric coordinates to map the triangulation to a third surface that contains the same nodes and cells and the second surface. Typically used after parameterizing a surface to a base domain and mapping that base domain back.")
+set(DOCUMENTATION "A module that contains code to perform a boolean operation between two input polydata surfaces.")
 
-vtk_module(vtkSVMapInterpolator
+vtk_module(vtkSVBoolean
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
@@ -37,5 +37,5 @@ vtk_module(vtkSVMapInterpolator
   TEST_DEPENDS
   vtkTestingCore
   TCL_NAME
-  vtkSVMapInterpolator
+  vtkSVBoolean
   )

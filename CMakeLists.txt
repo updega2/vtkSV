@@ -48,8 +48,10 @@ include(vtkSVMacros)
 
 #-----------------------------------------------------------------------------
 # Find VTK, only major dependency
-find_package(VTK REQUIRED)
-include(${VTK_USE_FILE})
+if(NOT VTK_LIBRARIES)
+  find_package(VTK REQUIRED)
+  include(${VTK_USE_FILE})
+endif()
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${VTK_CMAKE_DIR}")
 include(vtkExternalModuleMacros)
 #-----------------------------------------------------------------------------
@@ -67,7 +69,7 @@ if(VTKSV_BUILD_MODULE_NURBS)
   set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/NURBS")
 endif()
 if(VTKSV_BUILD_MODULE_PARAMETERIZATION)
-  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Parameterization/PlanarMapping")
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Parameterization")
 endif()
 #-----------------------------------------------------------------------------
 
@@ -85,8 +87,8 @@ endforeach()
 message(STATUS "Build Dirs:")
 foreach(dir ${VTKSV_BUILD_DIRS})
   message(STATUS "  ${dir}")
-  set(VTKSV_MODULES_ENABLED "" CACHE INTERNAL "List of enabled modules")
   add_subdirectory(${CMAKE_SOURCE_DIR}/${dir})
-  set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} ${VTKSV_MODULES_ENABLED})
+  get_filename_component(MODULE_DIR ${dir} NAME)
+  set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} vtkSV${MODULE_DIR})
 endforeach()
 #-----------------------------------------------------------------------------

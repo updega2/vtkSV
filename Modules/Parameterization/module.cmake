@@ -24,17 +24,30 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "Given a list of ids or an the name of an array on the surface of the polydata, this filter will pull apart the polydata at these points and create a seam along the surface. Currently, it actually duplicates points and moves them a specified tolerance so that a clean of the polydata will not remove the seam. Also, the filter currently needs the polydata to have two boundaries to cut the seam between and it helps to five the id of one of these as the start point.")
+set(DOCUMENTATION "A module containing code to parameterize and arbitrary input vasular surface.")
 
-vtk_module(vtkSVPullApartPolyData
+#------------------------------------------------------------------------------
+# NURBS addition
+set(EXTRA_DEPENDS "")
+if(VTKSV_BUILD_FILTERS)
+  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVFilters)
+  if(VTKSV_BUILD_MODULE_NURBS)
+    set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVNURBS)
+  endif()
+endif()
+#------------------------------------------------------------------------------
+
+vtk_module(vtkSVParameterization
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
   vtkCommonDataModel
   vtkFiltersCore
+  vtkFiltersGeometry
   vtkFiltersModeling
+  ${EXTRA_DEPENDS}
   TEST_DEPENDS
   vtkTestingCore
   TCL_NAME
-  vtkSVPullApartPolyData
+  vtkSVParameterization
   )

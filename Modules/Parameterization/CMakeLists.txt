@@ -28,36 +28,35 @@
 # Core SRCS and HDRS
 set(SRCS
   vtkSVGeneralizedPolycube.cxx
-  vtkSVPolyDataSliceAndDiceFilter.cxx
-  vtkSVPolyDataToNURBSFilter.cxx
   vtkSVPlanarMapper.cxx
   vtkSVBoundaryMapper.cxx
   vtkSVSquareBoundaryMapper.cxx
   vtkSVSuperSquareBoundaryMapper.cxx
   sparse_matrix.cxx
-  svMath.cxx
-  svGraph.cxx
-  svGCell.cxx)
+  svMath.cxx)
 
 set(HDRS
   vtkSVGeneralizedPolycube.h
-  vtkSVPolyDataSliceAndDiceFilter.h
-  vtkSVPolyDataToNURBSFilter.h
   vtkSVPlanarMapper.h
   vtkSVBoundaryMapper.h
   vtkSVSquareBoundaryMapper.h
   vtkSVSuperSquareBoundaryMapper.h
   sparse_matrix.h
-  svMath.h
-  svGraph.h
-  svGCell.h)
+  svMath.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# NURBS addition
-if(VTKSV_BUILD_MODULE_NURBS)
-  set(SRCS ${SRCS} vtkSVPolyDataToNURBSFilter.cxx)
-  set(HDRS ${HDRS} vtkSVPolyDataToNURBSFilter.h)
+# Filters addition
+if(VTKSV_BUILD_FILTERS)
+  set(SRCS ${SRCS} vtkSVPolyDataSliceAndDiceFilter.cxx
+    svGraph.cxx svGCell.cxx)
+  set(HDRS ${HDRS} vtkSVPolyDataSliceAndDiceFilter.h
+    svGraph.h   svGCell.h)
+  # NURBS addition
+  if(VTKSV_BUILD_MODULE_NURBS)
+    set(SRCS ${SRCS} vtkSVPolyDataToNURBSFilter.cxx)
+    set(HDRS ${HDRS} vtkSVPolyDataToNURBSFilter.h)
+  endif()
 endif()
 #------------------------------------------------------------------------------
 
@@ -71,34 +70,21 @@ vtksv_add_module(vtkSVParameterization
 
 #------------------------------------------------------------------------------
 # Create additional executables
-set(EXTRA_LIBRARIES vtkSVMapInterpolator vtkSVFindGeodesicPath
-  vtkSVPullApartPolyData vtkSVFindSeparateRegions)
-if(VTKSV_BUILD_MODULE_NURBS)
-  set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} vtkSVNURBS)
-endif()
-set(planar_mapper_exe PlanarMapper)
-add_executable(${planar_mapper_exe} ${planar_mapper_exe}.cxx ${SRCS})
-target_link_libraries(${planar_mapper_exe} ${VTK_LIBRARIES} ${EXTRA_LIBRARIES})
-install(TARGETS ${planar_mapper_exe}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
-
-set(super_square_planar_mapper SuperSquarePlanarMapper)
-add_executable(${super_square_planar_mapper} ${super_square_planar_mapper}.cxx ${SRCS})
-target_link_libraries(${super_square_planar_mapper} ${VTK_LIBRARIES} ${EXTRA_LIBRARIES})
-install(TARGETS ${super_square_planar_mapper}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
-
-set(slicer_exe SliceAndDice)
-add_executable(${slicer_exe} ${slicer_exe}.cxx ${SRCS})
-target_link_libraries(${slicer_exe} ${VTK_LIBRARIES} ${EXTRA_LIBRARIES})
-install(TARGETS ${slicer_exe}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
-
-if(VTKSV_BUILD_MODULE_NURBS)
-  set(converter_exe PolyDataToNURBS)
-  add_executable(${converter_exe} ${converter_exe}.cxx ${SRCS})
-  target_link_libraries(${converter_exe} ${VTK_LIBRARIES} ${EXTRA_LIBRARIES})
-  install(TARGETS ${converter_exe}
-    RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
+if(VTKSV_BUILD_FILTER_EXES)
+  set(EXTRA_LIBRARIES "")
+  if(VTKSV_BUILD_FILTERS)
+    set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} vtkSVFilters)
+    set(EXE_LIST ${EXE_LIST} SliceAndDice)
+    if(VTKSV_BUILD_MODULE_NURBS)
+      set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} vtkSVNURBS)
+      set(EXE_LIST ${EXE_LIST} PolyDataToNURBS)
+    endif()
+  endif()
+  foreach(exe ${EXE_LIST})
+    add_executable(${exe} ${exe}.cxx)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVParameterization ${EXTRA_LIBRARIES})
+    install(TARGETS ${exe}
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT ParameterizationExecutables)
+  endforeach()
 endif()
 #------------------------------------------------------------------------------

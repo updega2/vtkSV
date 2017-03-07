@@ -51,7 +51,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Specify which filters to build
 option(VTKSV_BUILD_FILTERS "Option to build the filters" ON)
-option(VTKSV_BUILD_FILTER_EXES "Option to build the executables for each filter" ON)
+option(VTKSV_BUILD_FILTER_EXES "Option to build the executables for each filter" OFF)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------

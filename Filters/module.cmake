@@ -24,17 +24,18 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A filter to pass the data from one polydata to another polydata. They do not have to be the same polydata topologically. vtkPointLocators and vtkCellLocators are used to determine the closest point on the other surface to pass the data to.")
+set(DOCUMENTATION "A variety of filters performing geometric operations, data operations, and prep operations.")
 
-vtk_module(vtkSVPassDataArray
+vtk_module(vtkSVFilters
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
   vtkCommonDataModel
   vtkFiltersCore
+  vtkFiltersGeometry
   vtkFiltersModeling
   TEST_DEPENDS
   vtkTestingCore
   TCL_NAME
-  vtkSVPassDataArray
+  vtkSVFilters
   )
