@@ -24,16 +24,16 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#------------------------------------------------------------------------------
-# Core SRCS and HDRS
-set(SRCS vtkSVIOUtils.cxx)
-set(HDRS vtkSVIOUtils.h)
-#------------------------------------------------------------------------------
+set(DOCUMENTATION "Globals and common functions.")
 
-#------------------------------------------------------------------------------
-# Common module
-vtksv_add_module(vtkSVCommon
-  SRCS ${SRCS}
-  HDRS ${HDRS}
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
+vtk_module(vtkSVCommon
+  DESCRIPTION
+  "${DOCUMENTATION}"
+  DEPENDS
+  vtkCommonDataModel
+  vtkIOXML
+  TEST_DEPENDS
+  vtkTestingCore
+  TCL_NAME
+  vtkSVCommon
+  )

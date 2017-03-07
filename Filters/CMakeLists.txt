@@ -35,7 +35,7 @@ set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundary
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# FindGeodesicPath
+# Filters module
 vtksv_add_module(vtkSVFilters
   SRCS ${SRCS}
   HDRS ${HDRS}
@@ -49,7 +49,7 @@ if(VTKSV_BUILD_FILTER_EXES)
     PassDataArray PullApartPolyData)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters vtkSVCommon)
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT FilterExecutables)
   endforeach()

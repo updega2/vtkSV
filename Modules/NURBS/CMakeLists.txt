@@ -47,7 +47,7 @@ if(VTKSV_BUILD_FILTER_EXES)
   set(EXE_LIST LoftNURBSCurve LoftNURBSSurface)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVNURBS)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVNURBS vtkSVCommon)
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT NURBSExecutables)
   endforeach()

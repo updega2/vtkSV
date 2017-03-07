@@ -76,7 +76,7 @@ vtksv_add_module(vtkSVBoolean
 if(VTKSV_BUILD_FILTER_EXES)
   set(exe Boolean)
   add_executable(${exe} ${exe}.cxx)
-  target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVBoolean)
+  target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVBoolean vtkSVCommon)
   install(TARGETS ${exe}
     RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT BooleanExecutables)
 endif()

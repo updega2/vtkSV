@@ -72,6 +72,7 @@ vtksv_add_module(vtkSVParameterization
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXTRA_LIBRARIES "")
+  set(EXE_LIST PlanarMapper SuperSquarePlanarMapper)
   if(VTKSV_BUILD_FILTERS)
     set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} vtkSVFilters)
     set(EXE_LIST ${EXE_LIST} SliceAndDice)
@@ -82,7 +83,7 @@ if(VTKSV_BUILD_FILTER_EXES)
   endif()
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVParameterization ${EXTRA_LIBRARIES})
+    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVParameterization ${EXTRA_LIBRARIES} vtkSVCommon)
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT ParameterizationExecutables)
   endforeach()
