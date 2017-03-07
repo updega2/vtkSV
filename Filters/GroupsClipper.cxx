@@ -21,7 +21,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVIOUtils.h"
-#include "vtkSVPolyDataCenterlineGroupsClipper.h"
+#include "vtkSVGroupsClipper.h"
 
 int main(int argc, char *argv[])
 {
@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
   vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVPolyDataCenterlineGroupsClipper> Grouper =
-	  vtkSmartPointer<vtkSVPolyDataCenterlineGroupsClipper>::New();
+  vtkSmartPointer<vtkSVGroupsClipper> Grouper =
+	  vtkSmartPointer<vtkSVGroupsClipper>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

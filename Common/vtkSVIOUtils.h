@@ -43,14 +43,9 @@
 
 #include "vtkObject.h"
 
-#include "vtkDenseArray.h"
-#include "vtkIntArray.h"
-#include "vtkDoubleArray.h"
 #include "vtkObjectFactory.h"
-#include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
-#include "vtkTypedArray.h"
 
 #include <string>
 #include <sstream>

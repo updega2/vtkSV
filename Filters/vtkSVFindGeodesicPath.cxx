@@ -54,6 +54,7 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
 
@@ -222,7 +223,7 @@ int vtkSVFindGeodesicPath::PrepFilter()
     strcpy(this->DijkstraArrayName, "DijkstraDistance");
   }
   // Check if array dijkstra is already on pd
-  if (this->CheckArrayExists(this->WorkPd, 0, this->DijkstraArrayName))
+  if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->DijkstraArrayName))
   {
     this->WorkPd->GetPointData()->RemoveArray(this->DijkstraArrayName);
   }
@@ -235,7 +236,7 @@ int vtkSVFindGeodesicPath::PrepFilter()
     strcpy(this->InternalIdsArrayName, "InternalIds");
   }
   // Check if array internal ids is already on pd
-  if (this->CheckArrayExists(this->WorkPd, 0, this->InternalIdsArrayName))
+  if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->InternalIdsArrayName))
   {
     this->RemoveInternalIds = 0;
   }
@@ -256,7 +257,7 @@ int vtkSVFindGeodesicPath::PrepFilter()
     strcpy(this->PathBooleanArrayName, "PathBoolean");
   }
   // Check if array path booleana is already on pd
-  if (this->CheckArrayExists(this->WorkPd, 0, this->PathBooleanArrayName))
+  if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->PathBooleanArrayName))
   {
     this->WorkPd->GetPointData()->RemoveArray(this->PathBooleanArrayName);
   }
@@ -515,46 +516,3 @@ int vtkSVFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
   return 1;
 }
 
-// ----------------------
-// CheckArrayExists
-// ----------------------
-/**
- * @brief Function to check is array with name exists in cell or point data
- * @param pd this is the object to check if the array exists
- * @param datatype this is point or cell. point=0,cell=1
- * @param arrayname this is the name of the array to check
- * @reutrn this returns 1 if the array exists and zero if it doesn't
- * or the function does not return properly.
- */
-
-int vtkSVFindGeodesicPath::CheckArrayExists(vtkPolyData *pd,
-                                          int datatype,
-                                          std::string arrayname )
-{
-  int exists =0;
-
-  if (datatype == 0)
-  {
-    int numArrays = pd->GetPointData()->GetNumberOfArrays();
-    for (int i=0;i<numArrays;i++)
-    {
-      if (!strcmp(pd->GetPointData()->GetArrayName(i),arrayname.c_str()))
-      {
-	      exists =1;
-      }
-    }
-  }
-  else
-  {
-    int numArrays = pd->GetCellData()->GetNumberOfArrays();
-    for (int i=0;i<numArrays;i++)
-    {
-      if (!strcmp(pd->GetCellData()->GetArrayName(i),arrayname.c_str()))
-      {
-	      exists =1;
-      }
-    }
-  }
-
-  return exists;
-}

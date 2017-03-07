@@ -45,15 +45,14 @@
 #include "vtkCellData.h"
 #include "vtkCenterOfMass.h"
 #include "vtkCleanPolyData.h"
-#include "vtkClipPolyData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkCutter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
-#include "vtkExtractGeometry.h"
 #include "vtkFeatureEdges.h"
 #include "vtkSVFindGeodesicPath.h"
 #include "vtkSVFindSeparateRegions.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkFloatArray.h"
 #include "vtkGradientFilter.h"
 #include "vtkIdFilter.h"
@@ -73,7 +72,6 @@
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkTriangle.h"
-#include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -531,37 +529,6 @@ int vtkSVPolyDataSliceAndDiceFilter::LookupIndex(const int PARENT, const int DIV
  * @param *pd
  * @return
  */
-int vtkSVPolyDataSliceAndDiceFilter::GetUniqueNeighbors(std::multimap<int, int> &map, const int key, std::list<int> &keyVals,
-                                                      std::list<int> &uniqueKeys)
-{
-  int numVals = keyVals.size();
-
-  std::list<int>::iterator valit = keyVals.begin();
-  for (int i=0; valit != keyVals.end(); ++valit)
-  {
-    std::list<int> valKeys;
-    vtkSVPolyDataSliceAndDiceFilter::GetKeysFromMap(map, *valit, valKeys);
-    std::list<int>::iterator keyit = valKeys.begin();
-    for (int j=0; keyit != valKeys.end(); ++keyit)
-    {
-      if (*keyit != key)
-      {
-        uniqueKeys.push_back(*keyit);
-      }
-    }
-  }
-  uniqueKeys.sort();
-  uniqueKeys.unique();
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkSVPolyDataSliceAndDiceFilter::FindGroupBoundaries()
 {
   vtkNew(vtkSVFindSeparateRegions, separator);
@@ -597,7 +564,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCriticalPoints()
     vtkNew(vtkIdList, groupIds);
     if (isBoundary)
     {
-      this->GetPointGroups(this->WorkPd, this->GroupIdsArrayName, i, groupIds);
+      vtkSVGeneralUtils::GetPointGroups(this->WorkPd, this->GroupIdsArrayName, i, groupIds);
       int pointType = groupIds->GetNumberOfIds();
       if (pointType < 2)
       {
@@ -613,32 +580,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCriticalPoints()
   return 1;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetPointGroups(vtkPolyData *pd, std::string arrayName,
-                                                  const int pointId, vtkIdList *groupIds)
-{
-  vtkDataArray *groupIdsArray =
-    pd->GetCellData()->GetArray(arrayName.c_str());
-
-  vtkNew(vtkIdList, cellIds);
-  pd->GetPointCells(pointId, cellIds);
-  groupIds->Reset();
-  for (int i=0; i<cellIds->GetNumberOfIds(); i++)
-  {
-    int groupValue = groupIdsArray->GetTuple1(cellIds->GetId(i));
-    if (groupIds->IsId(groupValue) == -1)
-    {
-      groupIds->InsertNextId(groupValue);
-    }
-  }
-
-  return 1;
-}
 
 //---------------------------------------------------------------------------
 /**
@@ -669,13 +610,13 @@ int vtkSVPolyDataSliceAndDiceFilter::InsertCriticalPoints(const int pointId, vtk
 int vtkSVPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *branchPd,
                                              vtkPolyData *branchCenterlines)
 {
-  this->ThresholdPd(this->WorkPd, branchId, branchId, 1,
+  vtkSVGeneralUtils::ThresholdPd(this->WorkPd, branchId, branchId, 1,
     this->SegmentIdsArrayName, branchPd);
 
   if (branchPd != NULL)
   {
     vtkNew(vtkPolyData, centerlineBranchPd);
-    this->ThresholdPd(this->Centerlines, branchId, branchId, 1,
+    vtkSVGeneralUtils::ThresholdPd(this->Centerlines, branchId, branchId, 1,
       this->GroupIdsArrayName, centerlineBranchPd);
 
     //Need to get just first cell of centerlines. There are duplicate for each centerline running through
@@ -686,129 +627,12 @@ int vtkSVPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *
     vtkNew(vtkPolyData, tmpPd);
     tmpPd->ShallowCopy(ider->GetOutput());
 
-    this->ThresholdPd(tmpPd, 0, 0, 1,
+    vtkSVGeneralUtils::ThresholdPd(tmpPd, 0, 0, 1,
       this->InternalIdsArrayName, branchCenterlines);
 
     branchCenterlines->GetCellData()->RemoveArray(this->InternalIdsArrayName);
     branchCenterlines->GetPointData()->RemoveArray(this->InternalIdsArrayName);
   }
-
-  return 1;
-}
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetAllMapKeys(std::multimap<int, int> &map,
-                                                 std::list<int> &list)
-{
-  std::multimap<int, int>::iterator it = map.begin();
-
-  for (int i=0; it != map.end(); ++it)
-  {
-    list.push_back(it->first);
-  }
-  list.unique();
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetAllMapValues(std::multimap<int, int> &map,
-                                                   std::list<int> &list)
-{
-  std::multimap<int, int>::iterator it = map.begin();
-
-  for (int i=0; it != map.end(); ++it)
-  {
-    list.push_back(it->second);
-  }
-  list.unique();
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(std::multimap<int, int> &map,
-                                                    const int key,
-                                                    std::list<int> &list)
-{
-  std::multimap<int, int>::iterator it = map.begin();
-
-  for (int i=0; it != map.end(); ++it)
-  {
-    if (it->first == key)
-    {
-      list.push_back(it->second);
-    }
-  }
-  return 1;
-}
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetKeysFromMap(std::multimap<int, int> &map,
-                                                  const int value,
-                                                  std::list<int> &list)
-{
-  std::multimap<int, int>::iterator it = map.begin();
-
-  for (int i=0; it != map.end(); ++it)
-  {
-    if (it->second == value)
-    {
-      list.push_back(it->first);
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetCommonValues(std::multimap<int, int> &map,
-                                                   const int keyA, const int keyB,
-                                                   std::list<int> &returnList)
-{
-  std::list<int> listA, listB;
-  vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(map, keyA, listA);
-  vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(map, keyB, listB);
-  vtkSVPolyDataSliceAndDiceFilter::ListIntersection(listA, listB, returnList);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::ListIntersection(std::list<int> &listA,
-                                                    std::list<int> &listB,
-                                                    std::list<int> &returnList)
-{
-  std::set_intersection(listA.begin(), listA.end(),
-                        listB.begin(), listB.end(),
-                        std::inserter(returnList,returnList.begin()));
 
   return 1;
 }
@@ -909,119 +733,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GetSectionXAxis(const double endPt[3], cons
   return 1;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetCutPlane(const double endPt[3], const double startPt[3],
-                                               const double length, double origin[3], vtkPlane *cutPlane)
-{
-  double normal[3];
-  vtkMath::Subtract(endPt, startPt, normal);
-  vtkMath::Normalize(normal);
-
-  //vtkMath::MultiplyScalar(normal, length);
-  //vtkMath::Add(startPt, normal, origin);
-  //vtkMath::Normalize(normal);
-  for (int i=0; i<3; i++)
-  {
-    origin[i] = endPt[i];
-  }
-
-  cutPlane->SetOrigin(origin);
-  cutPlane->SetNormal(normal);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::ExtractionCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
-                                                 const int extractBoundaryCells,
-                                                 const int extractInside,
-                                                 vtkPolyData *outPd)
-{
-    vtkNew(vtkExtractGeometry, cutter);
-    cutter->SetInputData(inPd);
-    cutter->SetImplicitFunction(cutFunction);
-    cutter->SetExtractBoundaryCells(extractBoundaryCells);
-    cutter->ExtractOnlyBoundaryCellsOff();
-    cutter->SetExtractInside(extractInside);
-    cutter->Update();
-
-    vtkNew(vtkDataSetSurfaceFilter, surfacer);
-    surfacer->SetInputData(cutter->GetOutput());
-    surfacer->Update();
-
-    outPd->DeepCopy(surfacer->GetOutput());
-
-    return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
-                                           const int generateClippedOutput,
-                                           const int extractInside,
-                                           vtkPolyData *outPd,
-                                           vtkPolyData *clippedOutPd)
-{
-    vtkNew(vtkClipPolyData, cutter);
-    cutter->SetInputData(inPd);
-    cutter->SetClipFunction(cutFunction);
-    cutter->SetInsideOut(extractInside);
-    cutter->SetGenerateClippedOutput(generateClippedOutput);
-    cutter->Update();
-
-    vtkNew(vtkTriangleFilter, triangulator);
-    triangulator->SetInputData(cutter->GetOutput(0));
-    triangulator->Update();
-
-    outPd->DeepCopy(triangulator->GetOutput());
-    if (generateClippedOutput)
-    {
-      triangulator->SetInputData(cutter->GetOutput(1));
-      triangulator->Update();
-      clippedOutPd->DeepCopy(triangulator->GetOutput());
-    }
-
-    return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetClosestPointConnectedRegion(vtkPolyData *inPd,
-                                                                  double origin[3],
-                                                                  vtkPolyData *outPd)
-{
-  vtkNew(vtkConnectivityFilter, connector);
-  connector->SetInputData(inPd);
-  connector->SetExtractionModeToClosestPointRegion();
-  connector->SetClosestPoint(origin);
-  connector->Update();
-
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(connector->GetOutput());
-  surfacer->Update();
-
-  outPd->DeepCopy(surfacer->GetOutput());
-
-  return 1;
-}
 
 //---------------------------------------------------------------------------
 /**
@@ -1053,8 +764,8 @@ int vtkSVPolyDataSliceAndDiceFilter::DetermineSliceStrategy(vtkPolyData *branchP
 
   vtkNew(vtkPolyData, topPoly);
   vtkNew(vtkPolyData, bottomPoly);
-  this->GetClosestPointConnectedRegion(boundaries->GetOutput(), topPt, topPoly);
-  this->GetClosestPointConnectedRegion(boundaries->GetOutput(), bottomPt, bottomPoly);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), topPt, topPoly);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), bottomPt, bottomPoly);
 
   vtkDataArray *topPointIds =
       topPoly->GetPointData()->GetArray(this->InternalIdsArrayName);
@@ -1177,7 +888,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetSurgeryPoints(vtkPolyData *pd,
   else
     secondPtId = pts[0];
   vtkNew(vtkIdList, checkIds);
-  this->GetPointGroups(parentPd, arrayName, pd->GetPointData()->GetArray(
+  vtkSVGeneralUtils::GetPointGroups(parentPd, arrayName, pd->GetPointData()->GetArray(
     this->InternalIdsArrayName)->GetTuple1(secondPtId), checkIds);
   fprintf(stdout,"Checking the id of %f\n", pd->GetPointData()->GetArray(
       this->InternalIdsArrayName)->GetTuple1(secondPtId));
@@ -1268,7 +979,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
   {
     double pt0[3], pt1[3];
     pd->GetPoint(pointId, pt0);
-    this->IteratePoint(pd, pointId, prevCellId);
+    vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
     length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
                         std::pow(pt1[1] - pt0[1], 2.0) +
@@ -1285,7 +996,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
   {
     double pt0[3], pt1[3];
     pd->GetPoint(pointId, pt0);
-    this->IteratePoint(pd, pointId, prevCellId);
+    vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
     currLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
                             std::pow(pt1[1] - pt0[1], 2.0) +
@@ -1296,83 +1007,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
       surgeryCount += 1.0;
     }
   }
-
-  return 1;
-}
-
-////---------------------------------------------------------------------------
-///**
-// * @brief
-// * @param *pd
-// * @return
-// */
-//int vtkSVPolyDataSliceAndDiceFilter::GetConsistentStartDirection(vtkPolyData *pd,
-//                                                               vtkIdList *cellIds,
-//                                                               const int startPointId,
-//                                                               int &startCellId)
-//{
-//  vtkIdType npts, *pts;
-//  pd->GetCellPoints(cellIds->GetId(0), npts, pts);
-//  double pt0[3], pt1[3];
-//  pd->GetPoint(pts[0],pt0);
-//  pd->GetPoint(pts[1],pt1);
-//  double vec0[3];
-//  if (pts[0] == startPointId)
-//  {
-//    vtkMath::Subtract(pt1, pt0, vec0);
-//  }
-//  else
-//  {
-//    vtkMath::Subtract(pt0, pt1, vec0);
-//  }
-//  vtkMath::Normalize(vec0);
-//  double vec1[3]; vec1[0] = 1.0; vec1[1] = 0.0; vec1[2] = 0.0;
-//  double testDir = vtkMath::Dot(vec0, vec1);
-//  if (testDir > 0)
-//  {
-//    startCellId = cellIds->GetId(0);
-//  }
-//  else
-//  {
-//    startCellId = cellIds->GetId(1);
-//  }
-//
-//  return 1;
-//}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::IteratePoint(vtkPolyData *pd, int &pointId, int &prevCellId)
-{
-  vtkNew(vtkIdList, ptCellIds);
-  pd->GetPointCells(pointId, ptCellIds);
-  int cellId;
-  if (ptCellIds->GetId(0) == prevCellId)
-  {
-    cellId = ptCellIds->GetId(1);
-  }
-  else
-  {
-    cellId = ptCellIds->GetId(0);
-  }
-  prevCellId = cellId;
-
-  vtkIdType npts, *pts;
-  pd->GetCellPoints(prevCellId, npts, pts);
-  int newId;
-  if (pts[0] == pointId)
-  {
-    newId = pts[1];
-  }
-  else
-  {
-    newId = pts[0];
-  }
-  pointId = newId;
 
   return 1;
 }
@@ -1447,7 +1081,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   vtkNew(vtkPolyData, leftovers); leftovers->DeepCopy(branchPd);
 
   double totalLength = 0.0;
-  this->GetBranchLength(branchCenterline, totalLength);
+  vtkSVGeneralUtils::GetPointsLength(branchCenterline, totalLength);
 
   int linePtId = 0;
   int startPtId = -1;
@@ -1547,15 +1181,15 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     //Get the cut plane
     double origin[3];
     vtkNew(vtkPlane, cutPlane);
-    this->GetCutPlane(pt1, pt0, centerlineLength, origin, cutPlane);
+    vtkSVGeneralUtils::GetCutPlane(pt1, pt0, centerlineLength, origin, cutPlane);
 
     //Cut the pds
     vtkNew(vtkPolyData, slicePd);
-    this->ExtractionCut(leftovers, cutPlane, 0, 1, slicePd);
+    vtkSVGeneralUtils::ExtractionCut(leftovers, cutPlane, 0, 1, slicePd);
 
     //Get closestPoint region
     vtkNew(vtkPolyData, connectedPd);
-    this->GetClosestPointConnectedRegion(slicePd, origin, connectedPd);
+    vtkSVGeneralUtils::GetClosestPointConnectedRegion(slicePd, origin, connectedPd);
 
     //fprintf(stdout,"What is val of done: %d\n", done);
     if (connectedPd->GetNumberOfCells() == numCells)
@@ -1611,8 +1245,8 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   }
   this->AddSurgeryPoints(surgeryLineIds, surgeryPts, surgeryLines, surgeryData);
 
-  this->ReplaceDataOnCells(branchPd, sliceIds,
-                           this->TotalSliceId, -1, this->InternalIdsArrayName);
+  vtkSVGeneralUtils::ReplaceDataOnCells(branchPd, sliceIds,
+                                        this->TotalSliceId, -1, this->InternalIdsArrayName);
   this->TotalSliceId++;
 
   return 1;
@@ -1729,7 +1363,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   int badKidId  = gCell->Children[gCell->DivergingChild]->GroupId;
 
   vtkNew(vtkPolyData, centerlineBranchPd);
-  vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(this->Centerlines, badKidId, badKidId, 1,
+  vtkSVGeneralUtils::ThresholdPd(this->Centerlines, badKidId, badKidId, 1,
     this->GroupIdsArrayName, centerlineBranchPd);
   vtkNew(vtkPolyData, branchCenterline);
   //Need to get just first cell of centerlines. There are duplicate for each centerline running through
@@ -1739,7 +1373,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   ider->Update();
   vtkNew(vtkPolyData, tmpPd);
   tmpPd->ShallowCopy(ider->GetOutput());
-  vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(tmpPd, 0, 0, 1,
+  vtkSVGeneralUtils::ThresholdPd(tmpPd, 0, 0, 1,
                                              this->InternalIdsArrayName,
                                              branchCenterline);
   double inPt0[3], inPt1[3];
@@ -1754,7 +1388,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   this->GetFourPolyDataRegions(pd, parentId, section0Pd, goodKidId, section1Pd, badKidId, section2Pd, theRestPd);
 
   vtkNew(vtkPolyData, special2Pd);
-  vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(this->WorkPd, badKidId, badKidId, 1, this->GroupIdsArrayName, special2Pd);
+  vtkSVGeneralUtils::ThresholdPd(this->WorkPd, badKidId, badKidId, 1, this->GroupIdsArrayName, special2Pd);
   vtkNew(vtkFeatureEdges, boundaries);
   boundaries->SetInputData(special2Pd);
   boundaries->BoundaryEdgesOn();
@@ -1762,7 +1396,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   boundaries->NonManifoldEdgesOff();
   boundaries->ManifoldEdgesOff();
   boundaries->Update();
-  vtkSVPolyDataSliceAndDiceFilter::GetClosestPointConnectedRegion(boundaries->GetOutput(), inPt0, section2Loop);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), inPt0, section2Loop);
 
   vtkNew(vtkAppendPolyData, appender);
   appender->AddInputData(section0Pd);
@@ -1790,10 +1424,10 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
     }
   }
   double centroid[3];
-  vtkSVPolyDataSliceAndDiceFilter::GetCentroidOfPoints(ringPoints, centroid);
+  vtkSVGeneralUtils::GetCentroidOfPoints(ringPoints, centroid);
 
   std::list<int> criticalPoints;
-  vtkSVPolyDataSliceAndDiceFilter::GetCommonValues(this->CriticalPointMap, parentId, goodKidId, criticalPoints);
+  vtkSVGeneralUtils::GetCommonValues(this->CriticalPointMap, parentId, goodKidId, criticalPoints);
   if (criticalPoints.size() != 2)
   {
     fprintf(stderr,"There should be two critical points between groups and there are %lu\n", criticalPoints.size());
@@ -1826,24 +1460,16 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   double dummy[3];
   this->GetSurgeryPoints(section2Loop, this->WorkPd, section2Ids, inPt0, inPt1, front, back, parentId, this->GroupIdsArrayName, slicePoints, dummy);
   fprintf(stdout,"ORDER: %lld %lld %lld %lld\n", slicePoints->GetId(0), slicePoints->GetId(1), slicePoints->GetId(2), slicePoints->GetId(3));
-  //vtkNew(vtkIdList, checkIds);
-  //this->GetPointGroups(this->WorkPd, this->GroupIdsArrayName, slicePoints->GetId(0), checkIds);
-  //if (checkIds->IsId(parentId) == -1)
-  //{
-  //  fprintf(stdout,"FLIPPP SlicePoints\n");
-  //  slicePoints->Reset();
-  //  this->GetSurgeryPoints(section2Loop, this->WorkPd, section2Ids, inPt0, inPt1, back, front, parentId, slicePoints, dummy);
-  //}
   vtkNew(vtkPoints, tmpPts0);
   tmpPts0->InsertNextPoint(this->WorkPd->GetPoint(slicePoints->GetId(0)));
   tmpPts0->InsertNextPoint(this->WorkPd->GetPoint(slicePoints->GetId(1)));
   double sliceFirst[3];
-  vtkSVPolyDataSliceAndDiceFilter::GetCentroidOfPoints(tmpPts0, sliceFirst);
+  vtkSVGeneralUtils::GetCentroidOfPoints(tmpPts0, sliceFirst);
   vtkNew(vtkPoints, tmpPts1);
   tmpPts1->InsertNextPoint(this->WorkPd->GetPoint(slicePoints->GetId(3)));
   tmpPts1->InsertNextPoint(this->WorkPd->GetPoint(slicePoints->GetId(2)));
   double sliceSecond[3];
-  vtkSVPolyDataSliceAndDiceFilter::GetCentroidOfPoints(tmpPts1, sliceSecond);
+  vtkSVGeneralUtils::GetCentroidOfPoints(tmpPts1, sliceSecond);
 
   double vec2[3], vec3[3];
   vtkMath::Subtract(sliceFirst, centroid, vec2);
@@ -1995,8 +1621,8 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   vtkNew(vtkPolyData, slicePd1);
   vtkNew(vtkPolyData, leftovers0);
   vtkNew(vtkPolyData, leftovers1);
-  this->ClipCut(separator->GetOutput(), cutPlane0, 1, 1, slicePd0, leftovers0);
-  this->ClipCut(slicePd0, cutPlane1, 1, 1, slicePd1, leftovers1);
+  vtkSVGeneralUtils::ClipCut(separator->GetOutput(), cutPlane0, 1, 1, slicePd0, leftovers0);
+  vtkSVGeneralUtils::ClipCut(slicePd0, cutPlane1, 1, 1, slicePd1, leftovers1);
 
   vtkNew(vtkIdFilter, ider3);
   ider3->SetInputData(slicePd1);
@@ -2004,7 +1630,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   ider3->Update();
   slicePd1->DeepCopy(ider3->GetOutput());
   vtkNew(vtkPolyData, onlyGood);
-  this->GetClosestPointConnectedRegion(slicePd1, centroid, onlyGood);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(slicePd1, centroid, onlyGood);
   int numCells = onlyGood->GetNumberOfCells();
   for (int i=0; i<numCells; i++)
   {
@@ -2047,17 +1673,6 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   this->CriticalSurgeryPoints(pd, frontId0, backId0, parentId, segmentId,
                              centroid, adjSlicePt0,
                              fixedSlicePoints0, fixedSurgeryPoints0, xvec);
-  //checkIds->Reset();
-  //this->GetPointGroups(pd, this->SegmentIdsArrayName, fixedSurgeryPoints0->GetId(0), checkIds);
-  //if (checkIds->IsId(segmentId) == -1)
-  //{
-  //  fprintf(stdout,"FLIPPP SurgeryPoints0\n");
-  //  fixedSurgeryPoints0->Reset();
-  //  this->CriticalSurgeryPoints(pd, backId0, frontId0, parentId, segmentId,
-  //                             centroid, adjSlicePt0,
-  //                             fixedSlicePoints0, fixedSurgeryPoints0, xvec);
-  //}
-  //this->Polycube->GetCellData()->GetArray("RightNormal")->InsertTuple(segmentId, xvec);
   fprintf(stdout,"TEST TRY: %lld %lld %lld %lld\n", fixedSlicePoints0->GetId(0),
                                                     fixedSlicePoints0->GetId(1),
                                                     fixedSurgeryPoints0->GetId(1),
@@ -2087,16 +1702,6 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   this->CriticalSurgeryPoints(pd, frontId1, backId1, goodKidId, segmentId,
                              centroid, adjSlicePt1,
                              fixedSlicePoints1, fixedSurgeryPoints1, dummy);
-  //checkIds->Reset();
-  //this->GetPointGroups(pd, this->SegmentIdsArrayName, fixedSurgeryPoints1->GetId(0), checkIds);
-  //if (checkIds->IsId(segmentId) == -1)
-  //{
-  //  fprintf(stdout,"FLIPPP SurgeryPoints1\n");
-  //  fixedSurgeryPoints1->Reset();
-  //  this->CriticalSurgeryPoints(pd, backId1, frontId1, goodKidId, segmentId,
-  //                             centroid, adjSlicePt1,
-  //                             fixedSlicePoints1, fixedSurgeryPoints1, dummy);
-  //}
   pd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
   pd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   fprintf(stdout,"TEST TRY: %lld %lld %lld %lld\n", fixedSlicePoints1->GetId(0),
@@ -2219,14 +1824,14 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFourPolyDataRegions(vtkPolyData *startPd
   vtkNew(vtkPolyData, tmpPd0);
   vtkNew(vtkPolyData, tmpPd1);
   vtkNew(vtkAppendPolyData, appender0);
-  vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(startPd, id0,  id0,  1,
+  vtkSVGeneralUtils::ThresholdPd(startPd, id0,  id0,  1,
                                              this->GroupIdsArrayName, pd0);
-  if (vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(startPd, -1,  id0-1,  1,
+  if (vtkSVGeneralUtils::ThresholdPd(startPd, -1,  id0-1,  1,
                                                  this->GroupIdsArrayName, tmpPd0) != 0)
   {
     appender0->AddInputData(tmpPd0);
   }
-  if (vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(startPd, id0+1, large,  1,
+  if (vtkSVGeneralUtils::ThresholdPd(startPd, id0+1, large,  1,
                                                  this->GroupIdsArrayName, tmpPd1) != 0)
   {
     appender0->AddInputData(tmpPd1);
@@ -2235,14 +1840,14 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFourPolyDataRegions(vtkPolyData *startPd
   leftovers->DeepCopy(appender0->GetOutput());
 
   vtkNew(vtkAppendPolyData, appender1);
-  vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(startPd, id1,  id1,  1,
+  vtkSVGeneralUtils::ThresholdPd(startPd, id1,  id1,  1,
                                              this->GroupIdsArrayName, pd1);
-  if (vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(leftovers, -1,  id1-1,  1,
+  if (vtkSVGeneralUtils::ThresholdPd(leftovers, -1,  id1-1,  1,
                                                  this->GroupIdsArrayName, tmpPd0) != 0)
   {
     appender1->AddInputData(tmpPd0);
   }
-  if (vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(leftovers, id1+1, large,  1,
+  if (vtkSVGeneralUtils::ThresholdPd(leftovers, id1+1, large,  1,
                                                  this->GroupIdsArrayName, tmpPd1) != 0)
   {
     appender1->AddInputData(tmpPd1);
@@ -2251,14 +1856,14 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFourPolyDataRegions(vtkPolyData *startPd
   leftovers->DeepCopy(appender1->GetOutput());
 
   vtkNew(vtkAppendPolyData, appender2);
-  vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(startPd, id2, id2, 1,
+  vtkSVGeneralUtils::ThresholdPd(startPd, id2, id2, 1,
                                              this->GroupIdsArrayName, pd2);
-  if (vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(leftovers, -1, id2-1, 1,
+  if (vtkSVGeneralUtils::ThresholdPd(leftovers, -1, id2-1, 1,
                                                  this->GroupIdsArrayName, tmpPd0) != 0)
   {
     appender2->AddInputData(tmpPd0);
   }
-  if (vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(leftovers, id2+1, large, 1,
+  if (vtkSVGeneralUtils::ThresholdPd(leftovers, id2+1, large, 1,
                                                  this->GroupIdsArrayName, tmpPd1) != 0)
   {
     appender2->AddInputData(tmpPd1);
@@ -2320,7 +1925,7 @@ int vtkSVPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
   fprintf(stdout,"Front is %d and back is %d\n", frontId, backId);
 
   vtkNew(vtkPolyData, thresholdPd);
-  this->ThresholdPd(pd, groupId, groupId, 1,
+  vtkSVGeneralUtils::ThresholdPd(pd, groupId, groupId, 1,
       this->SegmentIdsArrayName, thresholdPd);
 
   vtkNew(vtkFeatureEdges, boundaries);
@@ -2331,70 +1936,13 @@ int vtkSVPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
   boundaries->ManifoldEdgesOff();
   boundaries->Update();
   vtkNew(vtkPolyData, thresholdLoop);
-  this->GetClosestPointConnectedRegion(boundaries->GetOutput(), startPt, thresholdLoop);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), startPt, thresholdLoop);
 
   vtkDataArray *thresholdIds =
     thresholdLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
   int fixFront = thresholdIds->LookupValue(frontId);
   int fixBack = thresholdIds->LookupValue(backId);
   this->GetSurgeryPoints(thresholdLoop, pd, thresholdIds, startPt, secondPt, fixFront, fixBack, checkId, this->SegmentIdsArrayName, fixedSurgeryPoints, startDir);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetCentroidOfPoints(vtkPoints *points,
-                                                       double centroid[3])
-{
-  int numPoints = points->GetNumberOfPoints();
-  centroid[0] = 0.0; centroid[1] = 0.0; centroid[2] = 0.0;
-  for (int i=0; i<numPoints; i++)
-  {
-    double pt[3];
-    points->GetPoint(i, pt);
-    for (int j=0; j<3; j++)
-    {
-      centroid[j] += pt[j];
-    }
-  }
-
-  vtkMath::MultiplyScalar(centroid, 1.0/numPoints);
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::ThresholdPd(vtkPolyData *pd, int minVal,
-                                               int maxVal, int dataType,
-                                               std::string arrayName,
-                                               vtkPolyData *returnPd)
-{
-  vtkNew(vtkThreshold, thresholder);
-  thresholder->SetInputData(pd);
-  //Set Input Array to 0 port,0 connection, dataType (0 - point, 1 - cell, and Regions is the type name
-  thresholder->SetInputArrayToProcess(0, 0, 0, dataType, arrayName.c_str());
-  thresholder->ThresholdBetween(minVal, maxVal);
-  thresholder->Update();
-  if (thresholder->GetOutput()->GetNumberOfPoints() == 0)
-  {
-    //vtkDebugMacro("No points after threshold");
-    return 0;
-  }
-
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(thresholder->GetOutput());
-  surfacer->Update();
-
-  returnPd->DeepCopy(surfacer->GetOutput());
 
   return 1;
 }
@@ -2518,59 +2066,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
 
   return 1;
 }
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::ReplaceDataOnCells(vtkPointSet *pointset,
-                                                      vtkDataArray *sliceIds,
-                                                      const int sliceId,
-                                                      const int replaceVal,
-                                                      const std::string &arrName)
-{
-  int numCells = pointset->GetNumberOfCells();
-  vtkDataArray *cellIds = pointset->GetCellData()->GetArray(arrName.c_str());
-
-  for (int i=0; i<numCells; i++)
-  {
-    int cellId = cellIds->GetTuple1(i);
-    int currVal = sliceIds->GetTuple1(cellId);
-    if (currVal == replaceVal)
-    {
-      sliceIds->SetTuple1(cellId, sliceId);
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetBranchLength(vtkPolyData *points, double &length)
-{
-  int numPts = points->GetNumberOfPoints();
-
-  length = 0.0;
-
-  for (int i=1; i<numPts; i++)
-  {
-    double pt0[3], pt1[3];
-    points->GetPoint(i-1, pt0);
-    points->GetPoint(i, pt1);
-
-    length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                        std::pow(pt1[1] - pt0[1], 2.0) +
-                        std::pow(pt1[2] - pt0[2], 2.0));
-  }
-
-  return 1;
-}
 
 //---------------------------------------------------------------------------
 /**
@@ -2635,7 +2130,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCe
     boundaries->NonManifoldEdgesOff();
     boundaries->ManifoldEdgesOff();
     boundaries->Update();
-    this->GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
+    vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
 
     double projVec[3];
     for (int i=0; i<3; i++)
@@ -2712,7 +2207,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCe
   while (pointId != back || iter == 0)
   {
     boundary->GetPoint(pointId, pt0);
-    this->IteratePoint(boundary, pointId, cellId);
+    vtkSVGeneralUtils::IteratePoint(boundary, pointId, cellId);
     boundary->GetPoint(pointId, pt1);
     length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
                         std::pow(pt1[1] - pt0[1], 2.0) +
@@ -2732,7 +2227,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCe
     while (pointId != back || iter == 0)
     {
       boundary->GetPoint(pointId, pt0);
-      this->IteratePoint(boundary, pointId, prevCellId);
+      vtkSVGeneralUtils::IteratePoint(boundary, pointId, prevCellId);
       boundary->GetPoint(pointId, pt1);
       currLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
                               std::pow(pt1[1] - pt0[1], 2.0) +
@@ -2883,7 +2378,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
   while (pointId != back || iter == 0)
   {
     pd->GetPoint(pointId, pt0);
-    this->IteratePoint(pd, pointId, cellId);
+    vtkSVGeneralUtils::IteratePoint(pd, pointId, cellId);
     pd->GetPoint(pointId, pt1);
     length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
                         std::pow(pt1[1] - pt0[1], 2.0) +
@@ -2904,7 +2399,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
   while (pointId != back || iter == 0)
   {
     pd->GetPoint(pointId, pt0);
-    this->IteratePoint(pd, pointId, prevCellId);
+    vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
     currLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
                             std::pow(pt1[1] - pt0[1], 2.0) +
@@ -2956,7 +2451,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetClose3DPoint(vtkPolyData *pd, double cen
   //fprintf(stdout,"Input start Pt ID: %d\n", startPtId);
   //fprintf(stdout,"Close point is!: %.4f %.4f %.4f\n", closePt[0], closePt[1], closePt[2]);
 
-  this->GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
 
   int pointId = pd->GetPointData()->GetArray(this->InternalIdsArrayName)
     ->LookupValue(startPtId);

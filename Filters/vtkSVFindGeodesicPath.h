@@ -119,7 +119,6 @@ protected:
   int RunFilter();
   int RunDijkstra(vtkPoints *repelPoints);
   int FindClosestBoundaryPoint();
-  int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
   int GetCloseBoundaryPoints(const int startPtId, const int endPtId,
                              vtkPoints *repelPoints);
   int GetNeighborBoundaryPoints(const int ptId,vtkPolyData *pd,

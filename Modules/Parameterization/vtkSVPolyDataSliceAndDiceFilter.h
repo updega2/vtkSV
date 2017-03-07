@@ -51,8 +51,6 @@
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkSVGeneralizedPolycube.h"
-#include "vtkImplicitFunction.h"
-#include "vtkPlane.h"
 #include "vtkPolyData.h"
 
 #include "svGraph.h"
@@ -110,24 +108,6 @@ public:
   vtkGetObjectMacro(SurgeryLines, vtkPolyData);
   vtkSetObjectMacro(SurgeryLines, vtkPolyData);
 
-  static int GetAllMapKeys(std::multimap<int, int> &map, std::list<int> &list);
-  static int GetAllMapValues(std::multimap<int, int> &map, std::list<int> &list);
-  static int GetValuesFromMap(std::multimap<int, int> &map, const int key, std::list<int> &list);
-  static int GetKeysFromMap(std::multimap<int, int> &map, const int value, std::list<int> &list);
-  static int GetCommonValues(std::multimap<int, int> &map, const int keyA,
-                             const int keyB, std::list<int> &returnList);
-  static int GetUniqueNeighbors(std::multimap<int, int> &map, const int key, std::list<int> &keyVals,
-                                std::list<int> &uniqueKeys);
-  static int ListIntersection(std::list<int> &listA,
-                              std::list<int> &listB,
-                              std::list<int> &returnList);
-  static int IteratePoint(vtkPolyData *pd, int &pointId, int &prevCellId);
-  static int ThresholdPd(vtkPolyData *pd, int minVal, int maxVal, int dataType,
-                         std::string arrayName, vtkPolyData *returnPd);
-  static int GetCentroidOfPoints(vtkPoints *points, double centroid[3]);
-  static int GetClosestPointConnectedRegion(vtkPolyData *inPd,
-                                            double origin[3],
-                                            vtkPolyData *outPd);
   static int GraphToPolycube(svGCell *gCell, void *arg0,
                              void *arg1, void *arg2);
   static int LookupDirection(const int dir, const int ang);
@@ -216,8 +196,6 @@ protected:
                              vtkIdList *surgeryPoints,
                              int &centerlineStartPtId,
                              int &strategy);
-  int GetPointGroups(vtkPolyData *pd, std::string arrayName,
-                     const int pointId, vtkIdList *groupIds);
   int GetCriticalPoints();
   int InsertCriticalPoints(const int pointId, vtkIdList *groupIds);
   int GetBranch(const int branchId, vtkPolyData *branchPd,
@@ -238,22 +216,7 @@ protected:
                       double zvec[3]);
   int GetSectionXAxis(const double endPt[3], const double startPt[3],
                       const double surfacePt[3], double xvec[3]);
-  int GetCutPlane(const double endPt[3], const double startPt[3],
-                  const double length, double origin[3], vtkPlane *cutPlane);
-  int ExtractionCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
-                    const int extractBoundaryCells,
-                    const int extractInside,
-                    vtkPolyData *outPd);
-  int ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
-              const int generateClippedOutput,
-              const int extractInside,
-              vtkPolyData *outPd,
-              vtkPolyData *clippedOutPd);
 
-  int ReplaceDataOnCells(vtkPointSet *pointset, vtkDataArray *sliceIds,
-                         const int sliceId, const int replaceVal,
-                         const std::string &arrName);
-  int GetBranchLength(vtkPolyData *points, double &length);
   int GetCloseGeodesicPoint(vtkPolyData *pd, double centerPt[3],
                             const int startPtId, int &returnStartId,
                             double zvec[3], vtkPolyData *boundary);

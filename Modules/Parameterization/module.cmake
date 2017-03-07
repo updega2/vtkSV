@@ -45,6 +45,7 @@ vtk_module(vtkSVParameterization
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling
+  vtkSVCommon
   ${EXTRA_DEPENDS}
   TEST_DEPENDS
   vtkTestingCore

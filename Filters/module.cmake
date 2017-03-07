@@ -34,6 +34,7 @@ vtk_module(vtkSVFilters
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling
+  vtkSVCommon
   TEST_DEPENDS
   vtkTestingCore
   TCL_NAME

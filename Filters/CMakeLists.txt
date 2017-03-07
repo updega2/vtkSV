@@ -27,11 +27,11 @@
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS vtkSVFindGeodesicPath.cxx vtkSVFindSeparateRegions.cxx vtkSVGetBoundaryFaces.cxx
-  vtkSVPolyDataCenterlineGroupsClipper.cxx vtkSVPolyBallLine.cxx
-  vtkSVHausdorffDistance.cxx vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx)
+  vtkSVGroupsClipper.cxx vtkSVPolyBallLine.cxx vtkSVHausdorffDistance.cxx
+  vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx)
 set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundaryFaces.h
-  vtkSVPolyDataCenterlineGroupsClipper.h   vtkSVPolyBallLine.h
-  vtkSVHausdorffDistance.h   vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h)
+  vtkSVGroupsClipper.h   vtkSVPolyBallLine.h   vtkSVHausdorffDistance.h
+  vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

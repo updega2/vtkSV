@@ -36,6 +36,7 @@
 #include "vtkIdList.h"
 #include "vtkMath.h"
 #include "vtkPoints.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSmartPointer.h"
 #include "vtkThreshold.h"
@@ -182,11 +183,11 @@ int svGraph::BuildGraph()
   fprintf(stdout,"Building graph!!!\n");
 
   std::list<int> keyVals;
-  vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(this->CriticalPointMap, this->Root->GroupId, keyVals);
+  vtkSVGeneralUtils::GetValuesFromMap(this->CriticalPointMap, this->Root->GroupId, keyVals);
   if (keyVals.size() != 0)
   {
     std::list<int> children;
-    vtkSVPolyDataSliceAndDiceFilter::GetUniqueNeighbors(this->CriticalPointMap, this->Root->GroupId, keyVals, children);
+    vtkSVGeneralUtils::GetUniqueNeighbors(this->CriticalPointMap, this->Root->GroupId, keyVals, children);
     if (children.size() != 0)
     {
       std::list<int>::iterator childit = children.begin();
@@ -216,11 +217,11 @@ int svGraph::BuildGraph()
 int svGraph::GrowGraph(svGCell *parent)
 {
   std::list<int> keyVals;
-  vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(this->CriticalPointMap, parent->GroupId, keyVals);
+  vtkSVGeneralUtils::GetValuesFromMap(this->CriticalPointMap, parent->GroupId, keyVals);
   if (keyVals.size() != 0)
   {
     std::list<int> children;
-    vtkSVPolyDataSliceAndDiceFilter::GetUniqueNeighbors(this->CriticalPointMap, parent->GroupId, keyVals, children);
+    vtkSVGeneralUtils::GetUniqueNeighbors(this->CriticalPointMap, parent->GroupId, keyVals, children);
     if (children.size() > 2)
     {
       //fprintf(stdout,"Number of children!: %lu\n", children.size());
