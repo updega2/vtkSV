@@ -17,8 +17,8 @@
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
 #include "vtkDistancePolyDataFilter.h"
-#include "vtkLoopIntersectionPolyDataFilter.h"
-#include "vtkLoopBooleanPolyDataFilter.h"
+#include "vtkSVLoopIntersectionPolyDataFilter.h"
+#include "vtkSVLoopBooleanPolyDataFilter.h"
 #include "vtkPolyData.h"
 #include "vtkDataArray.h"
 #include "vtkIntArray.h"
@@ -165,8 +165,8 @@ int main(int argc, char *argv[])
   //creating the full poly data, and create the region poly data sets
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
   vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkLoopBooleanPolyDataFilter> myBoolean =
-	  vtkSmartPointer<vtkLoopBooleanPolyDataFilter>::New();
+  vtkSmartPointer<vtkSVLoopBooleanPolyDataFilter> myBoolean =
+	  vtkSmartPointer<vtkSVLoopBooleanPolyDataFilter>::New();
 
   //Call Function to Read File
   double testTolerance = 1e-6;
@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
   fullpd->GetCellData()->RemoveArray("FreeEdge");
 
   double dummy[2];
-  vtkLoopIntersectionPolyDataFilter::CleanAndCheckSurface(fullpd,dummy,testTolerance);
+  vtkSVLoopIntersectionPolyDataFilter::CleanAndCheckSurface(fullpd,dummy,testTolerance);
   double fullbadtri[2], fullfreeedge[2];
   fullpd->GetCellData()->GetArray("BadTriangle")->GetRange(fullbadtri);
   fullpd->GetCellData()->GetArray("FreeEdge")->GetRange(fullfreeedge);

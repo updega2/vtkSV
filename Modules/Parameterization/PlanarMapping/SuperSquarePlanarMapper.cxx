@@ -12,7 +12,7 @@
 
  =========================================================================*/
 
-#include "vtkSuperSquareBoundaryMapper.h"
+#include "vtkSVSuperSquareBoundaryMapper.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
@@ -23,7 +23,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkPlanarMapper.h"
+#include "vtkSVPlanarMapper.h"
 #include "vtkSTLReader.h"
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
@@ -156,8 +156,8 @@ int main(int argc, char *argv[])
 
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPlanarMapper> Mapper =
-	  vtkSmartPointer<vtkPlanarMapper>::New();
+  vtkSmartPointer<vtkSVPlanarMapper> Mapper =
+	  vtkSmartPointer<vtkSVPlanarMapper>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
@@ -181,8 +181,8 @@ int main(int argc, char *argv[])
   boundaryCorners->SetValue(9,4016); //Boundary 4
   boundaryDivisions[0] = 3; boundaryDivisions[1] = 0; boundaryDivisions[2] = 3; boundaryDivisions[3] = 0;
 
-  vtkSmartPointer<vtkSuperSquareBoundaryMapper> boundaryMapper =
-    vtkSmartPointer<vtkSuperSquareBoundaryMapper>::New();
+  vtkSmartPointer<vtkSVSuperSquareBoundaryMapper> boundaryMapper =
+    vtkSmartPointer<vtkSVSuperSquareBoundaryMapper>::New();
   boundaryMapper->SetBoundaryIds(boundaryCorners);
   boundaryMapper->SetSuperBoundaryDivisions(boundaryDivisions);
 

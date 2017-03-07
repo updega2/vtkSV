@@ -36,7 +36,7 @@
 #include "vtkIdList.h"
 #include "vtkMath.h"
 #include "vtkPoints.h"
-#include "vtkPolyDataSliceAndDiceFilter.h"
+#include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSmartPointer.h"
 #include "vtkThreshold.h"
 
@@ -62,7 +62,7 @@ svGraph::svGraph(int rootId,
   this->NumberOfNodes = 1; // The root
   double startPt[3]; startPt[0] = 0.0; startPt[1] = 0.0; startPt[2] = 0.0;
   double endPt[3]; endPt[0] = 0.0; endPt[1] = 0.0; endPt[2] = -1.0;
-  this->Root = this->NewCell(rootId, vtkPolyDataSliceAndDiceFilter::DOWN, startPt, endPt);
+  this->Root = this->NewCell(rootId, vtkSVPolyDataSliceAndDiceFilter::DOWN, startPt, endPt);
 
   this->Lines = vtkPolyData::New();
   this->Lines->DeepCopy(linesPd);
@@ -182,11 +182,11 @@ int svGraph::BuildGraph()
   fprintf(stdout,"Building graph!!!\n");
 
   std::list<int> keyVals;
-  vtkPolyDataSliceAndDiceFilter::GetValuesFromMap(this->CriticalPointMap, this->Root->GroupId, keyVals);
+  vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(this->CriticalPointMap, this->Root->GroupId, keyVals);
   if (keyVals.size() != 0)
   {
     std::list<int> children;
-    vtkPolyDataSliceAndDiceFilter::GetUniqueNeighbors(this->CriticalPointMap, this->Root->GroupId, keyVals, children);
+    vtkSVPolyDataSliceAndDiceFilter::GetUniqueNeighbors(this->CriticalPointMap, this->Root->GroupId, keyVals, children);
     if (children.size() != 0)
     {
       std::list<int>::iterator childit = children.begin();
@@ -216,11 +216,11 @@ int svGraph::BuildGraph()
 int svGraph::GrowGraph(svGCell *parent)
 {
   std::list<int> keyVals;
-  vtkPolyDataSliceAndDiceFilter::GetValuesFromMap(this->CriticalPointMap, parent->GroupId, keyVals);
+  vtkSVPolyDataSliceAndDiceFilter::GetValuesFromMap(this->CriticalPointMap, parent->GroupId, keyVals);
   if (keyVals.size() != 0)
   {
     std::list<int> children;
-    vtkPolyDataSliceAndDiceFilter::GetUniqueNeighbors(this->CriticalPointMap, parent->GroupId, keyVals, children);
+    vtkSVPolyDataSliceAndDiceFilter::GetUniqueNeighbors(this->CriticalPointMap, parent->GroupId, keyVals, children);
     if (children.size() > 2)
     {
       //fprintf(stdout,"Number of children!: %lu\n", children.size());
@@ -334,27 +334,27 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
  */
 int svGraph::GetDirectionVector(const int dir, double dirVector[3])
 {
-  if (dir == vtkPolyDataSliceAndDiceFilter::RIGHT)
+  if (dir == vtkSVPolyDataSliceAndDiceFilter::RIGHT)
   {
     dirVector[0] = 1.0; dirVector[1] = 0.0; dirVector[2] = 0.0;
   }
-  if (dir == vtkPolyDataSliceAndDiceFilter::LEFT)
+  if (dir == vtkSVPolyDataSliceAndDiceFilter::LEFT)
   {
     dirVector[0] = -1.0; dirVector[1] = 0.0; dirVector[2] = 0.0;
   }
-  if (dir == vtkPolyDataSliceAndDiceFilter::FRONT)
+  if (dir == vtkSVPolyDataSliceAndDiceFilter::FRONT)
   {
     dirVector[0] = 0.0; dirVector[1] = -1.0; dirVector[2] = 0.0;
   }
-  if (dir == vtkPolyDataSliceAndDiceFilter::BACK)
+  if (dir == vtkSVPolyDataSliceAndDiceFilter::BACK)
   {
     dirVector[0] = 0.0; dirVector[1] = 1.0; dirVector[2] = 0.0;
   }
-  if (dir == vtkPolyDataSliceAndDiceFilter::UP)
+  if (dir == vtkSVPolyDataSliceAndDiceFilter::UP)
   {
     dirVector[0] = 0.0; dirVector[1] = 0.0; dirVector[2] = 1.0;
   }
-  if (dir == vtkPolyDataSliceAndDiceFilter::DOWN)
+  if (dir == vtkSVPolyDataSliceAndDiceFilter::DOWN)
   {
     dirVector[0] = 0.0; dirVector[1] = 0.0; dirVector[2] = -1.0;
   }
@@ -494,16 +494,16 @@ int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
     {
       int ang = gCell->RefAngle;
       if (ang >= 7.0*M_PI/4.0 || ang < M_PI/4.0)
-        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 0);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 0);
 
       else if (ang >= M_PI/4.0 && ang < 3.0*M_PI/4.0)
-        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 1);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 1);
 
       else if (ang >= 3.0*M_PI/4.0 && ang < 5.0*M_PI/4.0)
-        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 2);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 2);
 
       else if (ang >= 5.0*M_PI/4.0 && ang < 7.0*M_PI/4.0)
-        direction1 = vtkPolyDataSliceAndDiceFilter::LookupDirection(direction0, 3);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 3);
     }
     gCell->Dir = direction1;
     double dirVector[3];
@@ -520,7 +520,7 @@ int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
       int tmpIds[8];
       for (int i=0; i<8; i++)
       {
-        cellIndices[i] = vtkPolyDataSliceAndDiceFilter::LookupIndex(gCell->Parent->Dir, gCell->Parent->Children[gCell->Parent->DivergingChild]->Dir, i);
+        cellIndices[i] = vtkSVPolyDataSliceAndDiceFilter::LookupIndex(gCell->Parent->Dir, gCell->Parent->Children[gCell->Parent->DivergingChild]->Dir, i);
         tmpIds[i] = gCell->CornerPtIds[i];
       }
       for (int i=0; i<8; i++)

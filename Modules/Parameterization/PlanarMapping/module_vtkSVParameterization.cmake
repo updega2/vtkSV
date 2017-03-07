@@ -24,33 +24,31 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#------------------------------------------------------------------------------
-# Core SRCS and HDRS
-set(SRCS vtkSVNURBSUtils.cxx vtkSVControlGrid.cxx vtkSVNURBSCurve.cxx vtkSVNURBSSurface.cxx
-  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx)
-set(HDRS vtkSVNURBSUtils.h   vtkSVControlGrid.h   vtkSVNURBSCurve.h   vtkSVNURBSSurface.h
-  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h)
-#------------------------------------------------------------------------------
+set(DOCUMENTATION "A module containing code to parameterize and arbitrary input vasular surface.")
 
 #------------------------------------------------------------------------------
-# FindGeodesicPath
-vtksv_add_module(vtkSVNURBS
-  SRCS ${SRCS}
-  HDRS ${HDRS}
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+# NURBS addition
+set(EXTRA_DEPENDS "")
+if(VTKSV_BUILD_MODULE_NURBS)
+  set(EXTRA_DEPENDS vtkSVNURBS)
+endif()
 #------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------
-# Create two executables for lofting of curve and surface
-set(curve_exe LoftNURBSCurve)
-add_executable(${curve_exe} ${curve_exe}.cxx ${SRCS})
-target_link_libraries(${curve_exe} ${VTK_LIBRARIES})
-install(TARGETS ${curve_exe}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
-
-set(surface_exe LoftNURBSSurface)
-add_executable(${surface_exe} ${surface_exe}.cxx ${SRCS})
-target_link_libraries(${surface_exe} ${VTK_LIBRARIES})
-install(TARGETS ${surface_exe}
-  RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT Executables)
-#------------------------------------------------------------------------------
+vtk_module(vtkSVParameterization
+  DESCRIPTION
+  "${DOCUMENTATION}"
+  DEPENDS
+  vtkCommonDataModel
+  vtkFiltersCore
+  vtkFiltersGeometry
+  vtkFiltersModeling
+  vtkSVFindGeodesicPath
+  vtkSVFindSeparateRegions
+  vtkSVMapInterpolator
+  vtkSVPullApartPolyData
+  ${EXTRA_DEPENDS}
+  TEST_DEPENDS
+  vtkTestingCore
+  TCL_NAME
+  vtkSVParameterization
+  )

@@ -1,8 +1,8 @@
 //
-//  PolyDataToNURBS.cxx
+//  TestControlGrid.cxx
 //
 //
-//  Created by Adam Updegrove on 10/4/14.
+//  Created by Adam Updegrove on 9/14/16.
 //
 //
 
@@ -12,27 +12,23 @@
 
  =========================================================================*/
 
-#include "vtkCellData.h"
-#include "vtkCleanPolyData.h"
-#include "vtkDataArray.h"
-#include "vtkDataWriter.h"
-#include "vtkDoubleArray.h"
-#include "vtkIdList.h"
-#include "vtkInformation.h"
-#include "vtkIntArray.h"
-#include "vtkPointData.h"
-#include "vtkPolyData.h"
+#include "vtkSVControlGrid.h"
+#include "vtkDataObject.h"
+#include "vtkSVLoftNURBSCurve.h"
+#include "vtkSVNURBSCurve.h"
+#include "vtkSVNURBSUtils.h"
+#include "vtkPoints.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVPolyDataToNURBSFilter.h"
 #include "vtkSTLReader.h"
-#include "vtkUnstructuredGrid.h"
-#include "vtkXMLPolyDataWriter.h"
-#include "vtkXMLUnstructuredGridWriter.h"
 #include "vtkXMLPolyDataReader.h"
+#include "vtkXMLPolyDataWriter.h"
+#include "vtkXMLStructuredGridWriter.h"
 
 #include <string>
 #include <sstream>
 #include <iostream>
+
+#include <unistd.h>
 
 //Function to turn an integer into a string
 std::string intToString(int i)
@@ -141,65 +137,75 @@ void WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyData,std::stri
   writer->Write();
 }
 
+void WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName)
+{
+  std::string rawName, pathName, outputFilename;
+
+  vtkSmartPointer<vtkXMLStructuredGridWriter> writer  = vtkSmartPointer<vtkXMLStructuredGridWriter>::New();
+
+  pathName = getPath(inputFilename);
+  rawName = getRawName(inputFilename);
+
+  outputFilename = pathName+"/"+rawName+attachName+".vts";
+
+  writer->SetFileName(outputFilename.c_str());
+#if VTK_MAJOR_VERSION <= 5
+  writer->SetInput(writeStructuredGrid);
+#else
+  writer->SetInputData(writeStructuredGrid);
+#endif
+  //writer->SetDataModeToAscii();
+
+  writer->Write();
+}
+
 int main(int argc, char *argv[])
 {
-  if (argc != 5)
+  if (argc != 1)
   {
-      std::cout << "Need four objects: [PolyData with Ids] [Centerlines] [S2 Matching Parameterization] [S2 Matching Open Parameterization]!" <<endl;
+      std::cout << "Incorrect Usage! Should be:" <<endl;
+      std::cout << "./TestNURBSCurve" <<endl;
       return EXIT_FAILURE;
   }
 
-  //Create string from input File Name on command line
-  std::string inputFilename1 = argv[1];
-  std::string inputFilename2 = argv[2];
-  std::string inputFilename3 = argv[3];
-  std::string inputFilename4 = argv[4];
+  int nc = 11;
 
-  //creating the full poly data to read in from file and the operation filter
-  vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd3 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyData> pd4 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkSVPolyDataToNURBSFilter> Converter =
-	  vtkSmartPointer<vtkSVPolyDataToNURBSFilter>::New();
+  vtkSmartPointer<vtkDoubleArray> x_data =
+    vtkSmartPointer<vtkDoubleArray>::New();
+  x_data->SetNumberOfTuples(nc);
+  vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nc, x_data);
 
-  //Call Function to Read File
-  std::cout<<"Reading Files..."<<endl;
-  ReadInputFile(inputFilename1,pd1);
-  ReadInputFile(inputFilename2,pd2);
-  ReadInputFile(inputFilename3,pd3);
-  ReadInputFile(inputFilename4,pd4);
+  vtkSmartPointer<vtkPoints> inputPoints =
+    vtkSmartPointer<vtkPoints>::New();
+  inputPoints->Reset();
+  for (int i=0; i<nc; i++)
+  {
+    double xval = x_data->GetTuple1(i);
+    double yval = sin(xval - M_PI/2.0);
+    double zval = 0.0;
 
-  //OPERATION
-  std::string newDirName = getPath(inputFilename1)+"/"+getRawName(inputFilename1);
-  std::string newOutName = getPath(inputFilename1)+"/"+getRawName(inputFilename1)+"/"+getRawName(inputFilename1);
-  system(("mkdir -p "+newDirName).c_str());
-  std::cout<<"Performing Operation..."<<endl;
-  Converter->SetInputData(pd1);
-  Converter->SetCenterlines(pd2);
-  Converter->SetCubeS2Pd(pd3);
-  Converter->SetOpenCubeS2Pd(pd4);
-  Converter->SetAddTextureCoordinates(1);
-  Converter->SetBoundaryPointsArrayName("BoundaryPoints");
-  Converter->SetGroupIdsArrayName("GroupIds");
-  Converter->SetSegmentIdsArrayName("SegmentIds");
-  Converter->SetSliceIdsArrayName("SliceIds");
-  Converter->SetSphereRadiusArrayName("MaximumInscribedSphereRadius");
-  Converter->SetInternalIdsArrayName("TmpInternalIds");
-  Converter->SetDijkstraArrayName("DijkstraDistance");
-  Converter->SetBooleanPathArrayName("IsPath");
-  Converter->Update();
+    inputPoints->InsertNextPoint(xval, yval, zval);
+  }
 
+  vtkSmartPointer<vtkPolyData> inputPoly =
+    vtkSmartPointer<vtkPolyData>::New();
+  inputPoly->SetPoints(inputPoints);
+  vtkSmartPointer<vtkSVLoftNURBSCurve> lofter =
+    vtkSmartPointer<vtkSVLoftNURBSCurve>::New();
+  lofter->SetInputData(inputPoly);
+  lofter->SetDegree(3);
+  lofter->SetPolyDataSpacing(0.01);
+  lofter->SetKnotSpanType("derivative");
+  lofter->SetParametricSpanType("chord");
+  lofter->Update();
+
+  std::string newDirName = getcwd(NULL, 0);
+  system(("mkdir -p "+newDirName+"/../Tests").c_str());
   //Write Files
   std::cout<<"Done...Writing Files..."<<endl;
-  std::string attachName = "_Converted";
-  WriteVTPFile(newOutName+".vtp",Converter->GetOutput(), attachName);
-  std::string attachName2 = "_Textured";
-  WriteVTPFile(newOutName+".vtp",Converter->GetTexturedPd(), attachName2);
-  std::string attachName3 = "_Lofted";
-  WriteVTPFile(newOutName+".vtp",Converter->GetLoftedPd(), attachName3);
+  WriteVTPFile(newDirName+"/../Tests/Loft_Curve.vtp",lofter->GetOutput(0),"");
+  WriteVTSFile(newDirName+"/../Tests/Loft_CurveControlPoints.vts",lofter->GetCurve()->GetControlPointGrid(),"");
   std::cout<<"Done"<<endl;
 
-  //Exit the program without errors
   return EXIT_SUCCESS;
 }

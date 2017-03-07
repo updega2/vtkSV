@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkSVPullApartPolyData.h
+/** @file vtkSVMapInterpolator.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,93 +43,86 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVPullApartPolyData_h
-#define vtkSVPullApartPolyData_h
+#ifndef __vtkSVMapInterpolator_h
+#define __vtkSVMapInterpolator_h
 
 #include "vtkPolyDataAlgorithm.h"
 
 #include "vtkEdgeTable.h"
-#include "vtkDoubleArray.h"
+#include "vtkFloatArray.h"
 #include "vtkPolyData.h"
-#include "vtkIdList.h"
 
-class vtkSVPullApartPolyData : public vtkPolyDataAlgorithm
+#include <complex>
+#include <vector>
+
+class vtkSVMapInterpolator : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkSVPullApartPolyData* New();
-  //vtkTypeRevisionMacro(vtkSVPullApartPolyData, vtkPolyDataAlgorithm);
+  static vtkSVMapInterpolator* New();
+  //vtkTypeRevisionMacro(vtkSVMapInterpolator, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
-  // String to separate the polydata at. 1 Indicates the points that are along
-  // separation line, everything else should be 0
-  vtkGetStringMacro(CutPointsArrayName);
-  vtkSetStringMacro(CutPointsArrayName);
+  // Print statements used for debugging
+  vtkGetMacro(Verbose, int);
+  vtkSetMacro(Verbose, int);
 
   // Description:
-  // The list of points that are to be replaced
-  vtkSetObjectMacro(SeamPointIds, vtkIntArray);
-  vtkGetObjectMacro(SeamPointIds, vtkIntArray);
+  // Print statements used for dnumber of subdivisions
+  vtkGetMacro(NumSourceSubdivisions, int);
+  vtkSetMacro(NumSourceSubdivisions, int);
 
-  // Description:
-  // The list of points that are to be replaced
-  vtkGetObjectMacro(ReplacePointList, vtkIdList);
+  // Functions to set up complex linear system for landmark constraint
+  static int InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
+                                      vtkPolyData *mappedTargetPd,
+                                      vtkPolyData *originalTargetPd,
+                                      vtkPolyData *sourceToTargetPd);
+  static int GetTriangleUV(double f[3], double pt0[3], double pt1[3],
+                           double pt2[3], double &a0, double &a1, double &a2);
 
-  // Description:
-  // The list that will be the same length as replacepoint list with the ids
-  // corresponding to the new points
-  vtkGetObjectMacro(NewPointList, vtkIdList);
+  static int ComputeArea(double pt0[], double pt1[], double pt2[], double &area);
+  static int PDCheckArrayName(vtkPolyData *pd, int datatype, std::string arrayname);
 
-  // Description:
-  // Axis of the object to use on orientation with sphee map
-  vtkSetVector3Macro(ObjectXAxis, double);
-  vtkSetVector3Macro(ObjectZAxis, double);
-
-  // Description:
-  // If start point is provided, it helps the algorithm go quicker because
-  // a start point does not need to be found
-  vtkGetMacro(StartPtId, int);
-  vtkSetMacro(StartPtId, int);
-
+  // Setup and Check Functions
 protected:
-  vtkSVPullApartPolyData();
-  ~vtkSVPullApartPolyData();
+  vtkSVMapInterpolator();
+  ~vtkSVMapInterpolator();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int PrepFilter();
-  int RunFilter();
-  int FindEdgeCells();
-  int PullApartCutEdges();
-  int FindStartingEdge(int &p0, int &p1, int &p2, int &cellId);
-  int FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first);
-  int FixTheBadStartCell(vtkPolyData *pd, const int pointId, const int cellId);
-  int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
+  // Main functions in filter
+  int SubdivideAndInterpolate();
+
+  int MatchBoundaries();
+  int FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary);
+  int MoveBoundaryPoints();
+  int GetPointOnTargetBoundary(int targPtId, int srcCellId, double returnPt[]);
+  int BoundaryPointsOnCell(vtkPolyData *pd, int srcCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary);
+  int GetProjectedPoint(double pt0[], double pt1[], double projPt[], double returnPt[]);
+  int GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1);
+
 
 private:
-  vtkSVPullApartPolyData(const vtkSVPullApartPolyData&);  // Not implemented.
-  void operator=(const vtkSVPullApartPolyData&);  // Not implemented.
+  vtkSVMapInterpolator(const vtkSVMapInterpolator&);  // Not implemented.
+  void operator=(const vtkSVMapInterpolator&);  // Not implemented.
 
-  char *CutPointsArrayName;
+  int Verbose;
+  int NumSourceSubdivisions;
+  int HasBoundary;
 
-  // TODO: Add start and end point ids
+  vtkPolyData *SourceS2Pd;
+  vtkPolyData *TargetPd;
+  vtkPolyData *TargetS2Pd;
+  vtkPolyData *MappedPd;
+  vtkPolyData *MappedS2Pd;
 
-  int StartPtId;
-  vtkPolyData  *WorkPd;
-  vtkEdgeTable *EdgeTable;
-  vtkIntArray  *SeamPointIds;
-  vtkIdList    *ReplacePointList;
-  vtkIdList    *NewPointList;
-
-  double ObjectXAxis[3];
-  double ObjectZAxis[3];
-
-  std::vector<int> ReplacePointVector;
-  std::vector<std::vector<int> > ReplaceCellVector;
-
+  vtkIntArray *SourceBoundary;
+  vtkIntArray *TargetBoundary;
 };
 
 #endif
+
+

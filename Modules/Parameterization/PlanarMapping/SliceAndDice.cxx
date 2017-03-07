@@ -23,7 +23,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkPolyDataSliceAndDiceFilter.h"
+#include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSTLReader.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -156,8 +156,8 @@ int main(int argc, char *argv[])
   //creating the full poly data to read in from file and the operation filter
   vtkSmartPointer<vtkPolyData> pd1 = vtkSmartPointer<vtkPolyData>::New();
   vtkSmartPointer<vtkPolyData> pd2 = vtkSmartPointer<vtkPolyData>::New();
-  vtkSmartPointer<vtkPolyDataSliceAndDiceFilter> Slicer =
-	  vtkSmartPointer<vtkPolyDataSliceAndDiceFilter>::New();
+  vtkSmartPointer<vtkSVPolyDataSliceAndDiceFilter> Slicer =
+	  vtkSmartPointer<vtkSVPolyDataSliceAndDiceFilter>::New();
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;

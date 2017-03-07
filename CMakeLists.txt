@@ -43,6 +43,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake"
 include(vtkSVSystemCheck)
 include(vtkSVSetup)
 include(vtkSVOptions)
+include(vtkSVMacros)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
@@ -59,13 +60,23 @@ set(VTKSV_BUILD_DIRS "")
 if(VTKSV_BUILD_FILTERS)
   set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Filters")
 endif()
+if(VTKSV_BUILD_MODULE_BOOLEAN)
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Boolean")
+endif()
+if(VTKSV_BUILD_MODULE_NURBS)
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/NURBS")
+endif()
+if(VTKSV_BUILD_MODULE_PARAMETERIZATION)
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Parameterization/PlanarMapping")
+endif()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Include for headers
 foreach(dir ${VTKSV_BUILD_DIRS})
-  include_directories(${CMAKE_SOURCE_DIR}/${dir})
-  include_directories(${CMAKE_BINARY_DIR}/${dir})
+  vtk_add_to_module_search_path("${CMAKE_CURRENT_SOURCE_DIR}/${dir}" "${CMAKE_CURRENT_BINARY_DIR}/${dir}")
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${dir})
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/${dir})
 endforeach()
 #-----------------------------------------------------------------------------
 
@@ -74,7 +85,8 @@ endforeach()
 message(STATUS "Build Dirs:")
 foreach(dir ${VTKSV_BUILD_DIRS})
   message(STATUS "  ${dir}")
+  set(VTKSV_MODULES_ENABLED "" CACHE INTERNAL "List of enabled modules")
   add_subdirectory(${CMAKE_SOURCE_DIR}/${dir})
+  set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} ${VTKSV_MODULES_ENABLED})
 endforeach()
 #-----------------------------------------------------------------------------
-

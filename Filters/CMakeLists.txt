@@ -25,91 +25,75 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #------------------------------------------------------------------------------
-# Macro to add a module
-macro(vtksv_add_module MODULE_NAME)
-    set(options INSTALL_EXES)
-    set(oneValueArgs EXECUTABLE_NAME)
-    set(multiValueArgs SRCS HDRS LIBRARY_DEPENDS PACKAGE_DEPENDS)
-
-    unset(vtksv_add_module_EXECUTABLE_NAME)
-
-    cmake_parse_arguments("vtksv_add_module"
-      "${options}"
-      "${oneValueArgs}"
-      "${multiValueArgs}" ${ARGN})
-
-  #------------------------------------------------------------------------------
-  # Set filter name and executable name
-  set(mod ${MODULE_NAME})
-  if(vtksv_add_module_EXECUTABLE_NAME)
-    set(exe ${vtksv_add_module_EXECUTABLE_NAME})
-  endif()
-  #------------------------------------------------------------------------------
-
-  #------------------------------------------------------------------------------
-  # Set filter name and executable name
-  if(NOT vtksv_add_module_SRCS)
-    message(ERROR "No SRCS provided for module ${mod}")
-  endif()
-  if(NOT vtksv_add_module_HDRS)
-    message(ERROR "No HDRS provided for module ${mod}")
-  endif()
-  set(${mod}_SRCS ${vtksv_add_module_SRCS})
-  set(${mod}_HDRS ${vtksv_add_module_HDRS})
-  #------------------------------------------------------------------------------
-
-  #------------------------------------------------------------------------------
-  # Call vtk module setup
-  set(${mod}_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-  include(module_${mod}.cmake)
-  vtk_module_library(${mod} ${${mod}_SRCS})
-  #target_link_libraries(${mod} ${vtksv_add_module_LIBRARY_DEPENDS} ${vtksv_add_module_PACKAGE_DEPENDS})
-  #------------------------------------------------------------------------------
-
-  #------------------------------------------------------------------------------
-  # Install
-  if(vtksv_add_module_EXECUTABLE_NAME)
-    add_executable(${exe} ${exe}.cxx ${${mod}_SRCS})
-    target_link_libraries(${exe} ${vtksv_add_module_LIBRARY_DEPENDS} ${vtksv_add_module_PACKAGE_DEPENDS})
-  endif()
-  if(vtksv_add_module_INSTALL_EXES)
-    install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT FilterExecutables)
-  endif()
-  #------------------------------------------------------------------------------
-endmacro()
-
+# FindGeodesicPath
 vtksv_add_module(vtkSVFindGeodesicPath
   INSTALL_EXES
   EXECUTABLE_NAME FindGeodesicPath
   SRCS vtkSVFindGeodesicPath.cxx
   HDRS vtkSVFindGeodesicPath.h
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# FindSeparateRegions
+vtksv_add_module(vtkSVFindSeparateRegions
+  SRCS vtkSVFindSeparateRegions.cxx
+  HDRS vtkSVFindSeparateRegions.h
+  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# GetBoundaryFaces
+vtksv_add_module(vtkSVGetBoundaryFaces
+  SRCS vtkSVGetBoundaryFaces.cxx
+  HDRS vtkSVGetBoundaryFaces.h
+  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# GroupClipper
 vtksv_add_module(vtkSVGroupsClipper
   INSTALL_EXES
   EXECUTABLE_NAME GroupsClipper
   SRCS vtkSVPolyDataCenterlineGroupsClipper.cxx vtkSVPolyBallLine.cxx
   HDRS vtkSVPolyDataCenterlineGroupsClipper.h vtkSVPolyBallLine.h
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# HausdorffDistance
 vtksv_add_module(vtkSVHausdorffDistance
   INSTALL_EXES
   EXECUTABLE_NAME HausdorffDistance
   SRCS vtkSVHausdorffDistance.cxx
   HDRS vtkSVHausdorffDistance.h
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# MapInterpolator
+vtksv_add_module(vtkSVMapInterpolator
+  SRCS vtkSVMapInterpolator.cxx
+  HDRS vtkSVMapInterpolator.h
+  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# PassDataArray
 vtksv_add_module(vtkSVPassDataArray
   INSTALL_EXES
   EXECUTABLE_NAME PassDataArray
   SRCS vtkSVPassDataArray.cxx
   HDRS vtkSVPassDataArray.h
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# PullApartPolyData
 vtksv_add_module(vtkSVPullApartPolyData
   INSTALL_EXES
   EXECUTABLE_NAME PullApartPolyData
   SRCS vtkSVPullApartPolyData.cxx
   HDRS vtkSVPullApartPolyData.h
   PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------

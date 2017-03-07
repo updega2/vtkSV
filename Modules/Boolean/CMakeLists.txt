@@ -1,43 +1,74 @@
-cmake_minimum_required(VERSION 2.8)
+# Copyright (c) 2014-2015 The Regents of the University of California.
+# All Rights Reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject
+# to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+# IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+# TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+# PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+# OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+# NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-PROJECT(Boolean)
+#-----------------------------------------------------------------------------
+# Some options specific to the Boolean code, PREDELAUNAY_SPLIT and DELAUNAY_TYPE
+option(VTKSV_PREDELAUNAY_SPLIT "Split cells manually before giving to delaunay" ON)
+mark_as_advanced(VTKSV_PREDELAUNAY_SPLIT)
+set(VTKSV_DELAUNAY_TYPE "CURRENT" CACHE STRING "Options are CURRENT, OLD, TRIANGLE")
+set_property(CACHE VTKSV_DELAUNAY_TYPE PROPERTY STRINGS CURRENT OLD TRIANGLE)
+mark_as_advanced(VTKSV_DELAUNAY_TYPE)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/delaunay_options.h.in" "${CMAKE_CURRENT_BINARY_DIR}/delaunay_options.h")
+#-----------------------------------------------------------------------------
 
-find_package(VTK REQUIRED)
-include(${VTK_USE_FILE})
+#------------------------------------------------------------------------------
+# Core SRCS and HDRS
+set(SRCS vtkSVLoopBooleanPolyDataFilter.cxx vtkSVLoopIntersectionPolyDataFilter.cxx)
+set(HDRS vtkSVLoopBooleanPolyDataFilter.h   vtkSVLoopIntersectionPolyDataFilter.h)
+#------------------------------------------------------------------------------
 
-option(PREDELAUNAY_SPLIT "Split cells manually before giving to delaunay" ON)
-set(DELAUNAY_TYPE "CURRENT" CACHE STRING "Options are CURRENT, OLD, TRIANGLE")
-set_property(CACHE DELAUNAY_TYPE PROPERTY STRINGS CURRENT OLD TRIANGLE)
-
-set(CXX_FILES Boolean.cxx
-  vtkLoopBooleanPolyDataFilter.cxx
-  vtkLoopIntersectionPolyDataFilter.cxx)
-
-if("${DELAUNAY_TYPE}" STREQUAL "OLD")
-  set(CXX_FILES ${CXX_FILES}
-    vtkDelaunay2D_60.cxx)
+#------------------------------------------------------------------------------
+if("${VTKSV_DELAUNAY_TYPE}" STREQUAL "OLD")
+  set(SRCS ${SRCS} vtkDelaunay2D_60.cxx)
+  set(HDRS ${HDRS} vtkDelaunay2D_60.h)
 endif()
+#------------------------------------------------------------------------------
 
-if("${DELAUNAY_TYPE}" STREQUAL "TRIANGLE")
+#------------------------------------------------------------------------------
+if("${VTKSV_DELAUNAY_TYPE}" STREQUAL "TRIANGLE")
 # Search for Schewchuk's Triangle thirdparty library
-  if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/triangle.c)
-    message(FATAL_ERROR "Shewchuk's Triangle sources not found in sources directory! Please copy triangle sources in module sources directory.")
-  endif()
   add_definitions(-DTRIANGLE_SAFE_PREDICATES)
   add_definitions(-DTRILIBRARY)
-  set(CXX_FILES ${CXX_FILES}
+  set(SRCS ${SRCS}
     vtkTriangleDelaunay2D.cxx
     predicates.c
     triangle.c)
+  set(HDRS ${HDRS}
+    vtkTriangleDelaunay2D.h
+    predicates.c
+    triangle.c)
 endif()
+#------------------------------------------------------------------------------
 
-add_executable(Boolean ${CXX_FILES})
-
-if(VTK_LIBRARIES)
-	target_link_libraries(Boolean ${VTK_LIBRARIES})
-else()
-	target_link_libraries(Boolean vtkHybrid)
-endif()
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/delaunay_options.h.in" "${CMAKE_CURRENT_BINARY_DIR}/delaunay_options.h")
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+#------------------------------------------------------------------------------
+# FindGeodesicPath
+vtksv_add_module(vtkSVLoopBoolean
+  INSTALL_EXES
+  EXECUTABLE_NAME Boolean
+  SRCS ${SRCS}
+  HDRS ${HDRS}
+  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+#------------------------------------------------------------------------------
