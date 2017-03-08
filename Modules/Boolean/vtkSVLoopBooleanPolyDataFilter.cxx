@@ -287,7 +287,7 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegion(int inputIndex,
     this->CheckCells2 = tmp;
     tmp->Reset();
     }
-  return 1;
+  return SV_OK;
 }
 
 //This is the slow version of the flood fill algorithm that is initiated
@@ -425,7 +425,7 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegionTipToe(
     this->CheckCellsCareful2 = tmp;
     tmp->Reset();
     }
-  return 1;
+  return SV_OK;
 }
 
 void vtkSVLoopBooleanPolyDataFilter::Impl::Initialize()
@@ -834,7 +834,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   if (!inInfo0 || !inInfo1 || !outInfo0 || !outInfo1)
     {
     this->Status = 0;
-    return 0;
+    return SV_ERROR;
     }
 
   vtkPolyData* input0 =
@@ -850,7 +850,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   if (!input0 || !input1 || !outputSurface || !outputIntersection)
     {
     this->Status = 0;
-    return 0;
+    return SV_ERROR;
     }
 
   // Get intersected versions
@@ -867,7 +867,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   if (polydataIntersection->GetStatus() != 1)
     {
     this->Status = 0;
-    return 0;
+    return SV_ERROR;
     }
   fprintf(stdout,"Intersection done\n");
 
@@ -894,7 +894,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
     if (this->NoIntersectionOutput == 0)
       {
       delete impl;
-      return 1;
+      return SV_OK;
       }
     else
       {
@@ -942,7 +942,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
         outputSurface->DeepCopy(appender->GetOutput());
         }
       delete impl;
-      return 1;
+      return SV_OK;
       }
     }
 
@@ -1010,7 +1010,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   vtkDebugMacro(<<" MAX: "<<fullfreeedge[1]);
 
   delete impl;
-  return 1;
+  return SV_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -1051,7 +1051,7 @@ int vtkSVLoopBooleanPolyDataFilter::FillInputPortInformation(
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
     {
-    return 0;
+    return SV_ERROR;
     }
   if (port == 0)
     {
@@ -1062,7 +1062,7 @@ int vtkSVLoopBooleanPolyDataFilter::FillInputPortInformation(
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
     info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 0);
     }
-  return 1;
+  return SV_OK;
 }
 
 //-----------------------------------------------------------------------------

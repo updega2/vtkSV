@@ -493,7 +493,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
       }
     }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -679,7 +679,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
       } // for (cells->InitTraversal(); ...
     } //if inputGetPolys()->GetNumberOfCells() > 1 ...
 
-  return 1;
+  return SV_OK;
 }
 
 vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
@@ -1438,7 +1438,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
         {
         delete [] ptBool;
         delete [] lineBool;
-        return 0;
+        return SV_ERROR;
         }
       //Add new loop
       loops->push_back(interloop);
@@ -1464,7 +1464,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
         {
         delete [] ptBool;
         delete [] lineBool;
-        return 0;
+        return SV_ERROR;
         }
       //Add new loop to loops
       loops->push_back(interloop);
@@ -1474,7 +1474,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   delete [] ptBool;
   delete [] lineBool;
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -1533,7 +1533,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
         if (this->FollowLoopOrientation(pd, loop, &nextCell, nextPt, prevPt,
               pointCells) != 1)
           {
-          return 0;
+          return SV_ERROR;
           }
         }
       }
@@ -1604,7 +1604,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
 
     loop->orientation = this->GetLoopOrientation(pd, nextCell, prevPt, nextPt);
     }
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -1668,7 +1668,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   if (foundcell == 0)
     {
     vtkWarningWithObjectMacro(this->ParentFilter, << "No cell with correct orientation found");
-    return 0;
+    return SV_ERROR;
     }
 
   //Set the next line to follow equal to the line that follows the
@@ -1676,7 +1676,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   //necessary because it is possible to have more than one line that follow
   //the loop orientation
   *nextCell = newcell;
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2037,7 +2037,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   if ((dist1[0]*dist1[1] > tolerance) && (dist1[0]*dist1[2] > tolerance))
     {
     //vtkDebugMacro(<<"Same side supporting plane 1!");
-    return 0;
+    return SV_ERROR;
     }
   // Do the same for p2, q2, r2 and supporting plane of first
   // triangle.
@@ -2051,7 +2051,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   if ((dist2[0]*dist2[1] > tolerance) && (dist2[0]*dist2[2] > tolerance))
     {
     //vtkDebugMacro(<<"Same side supporting plane 2!");
-    return 0;
+    return SV_ERROR;
     }
   // Check for coplanarity of the supporting planes.
   if (fabs(n1[0] - n2[0]) < 1e-9 &&
@@ -2061,7 +2061,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
     {
     coplanar = 1;
     //vtkDebugMacro(<<"Coplanar!");
-    return 0;
+    return SV_ERROR;
     }
 
   coplanar = 0;
@@ -2133,7 +2133,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   if (index1 != 2 || index2 != 2)
     {
     //vtkDebugMacro(<<"Only one edge intersecting!");
-    return 0;
+    return SV_ERROR;
     }
 
   // Check for NaNs
@@ -2141,7 +2141,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
       vtkMath::IsNan(t2[0]) || vtkMath::IsNan(t2[1]))
     {
     //vtkWarningMacro(<<"NaNs!");
-    return 0;
+    return SV_ERROR;
     }
 
   if (t1[0] > t1[1])
@@ -2157,7 +2157,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   if (t1[1] < t2[0] || t2[1] < t1[0])
     {
     //vtkDebugMacro(<<"No Overlap!");
-    return 0; // No overlap
+    return SV_ERROR; // No overlap
     }
   else if (t1[0] < t2[0])
     {
@@ -2207,7 +2207,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   pt2[1] = p[1] + tt2*v[1];
   pt2[2] = p[2] + tt2*v[2];
 
-  return 1;
+  return SV_OK;
 }
 
 void vtkSVLoopIntersectionPolyDataFilter::CleanAndCheckSurface(vtkPolyData *pd,
@@ -2496,7 +2496,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
     impl->SurfaceId->Delete();
 
     delete impl;
-    return 1;
+    return SV_OK;
     }
 
   impl->BoundaryPoints[0] = vtkIntArray::New();
@@ -2519,7 +2519,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
       impl->SurfaceId->Delete();
 
       delete impl;
-      return 0;
+      return SV_ERROR;
       }
 
     if (this->ComputeIntersectionPointArray)
@@ -2559,7 +2559,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
       impl->SurfaceId->Delete();
 
       delete impl;
-      return 0;
+      return SV_ERROR;
       }
 
     if (this->ComputeIntersectionPointArray)
@@ -2597,7 +2597,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
 
   delete impl;
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -2606,7 +2606,7 @@ int vtkSVLoopIntersectionPolyDataFilter::FillInputPortInformation(int port,
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
     {
-    return 0;
+    return SV_ERROR;
     }
   if (port == 0)
     {
@@ -2617,7 +2617,7 @@ int vtkSVLoopIntersectionPolyDataFilter::FillInputPortInformation(int port,
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
     info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 0);
     }
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------

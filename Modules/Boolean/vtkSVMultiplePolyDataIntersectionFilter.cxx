@@ -251,7 +251,7 @@ int vtkSVMultiplePolyDataIntersectionFilter::ExecuteIntersection(
       checkInputArray2 = tmp;
       tmp->Reset();
     }
-  return 1;
+  return SV_OK;
 }
 
 void vtkSVMultiplePolyDataIntersectionFilter::PreSetGlobalArrays(
@@ -381,7 +381,7 @@ int vtkSVMultiplePolyDataIntersectionFilter::RequestData(
   if (numInputs == 1)
     {
     output->ShallowCopy(vtkPolyData::GetData(inputVector[0], 0));
-    return 1;
+    return SV_OK;
     }
 
   this->inResult = new int[numInputs];
@@ -461,7 +461,7 @@ int vtkSVMultiplePolyDataIntersectionFilter::RequestUpdateExtent(
   // make sure piece is valid
   if (piece < 0 || piece >= numPieces)
     {
-    return 0;
+    return SV_ERROR;
     }
 
   int numInputs = this->GetNumberOfInputConnections(0);
@@ -505,7 +505,7 @@ int vtkSVMultiplePolyDataIntersectionFilter::RequestUpdateExtent(
       }
     }
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -533,8 +533,8 @@ int vtkSVMultiplePolyDataIntersectionFilter::FillInputPortInformation(
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
     {
-    return 0;
+    return SV_ERROR;
     }
   info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
-  return 1;
+  return SV_OK;
 }

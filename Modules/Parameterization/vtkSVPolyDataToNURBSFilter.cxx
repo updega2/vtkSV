@@ -229,17 +229,17 @@ int vtkSVPolyDataToNURBSFilter::RequestData(
   if (this->SliceAndDice() != 1)
   {
     vtkErrorMacro("Error in slicing polydata\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->PerformMappings() != 1)
   {
     vtkErrorMacro("Error in perform mappings\n");
-    return 0;
+    return SV_ERROR;
   }
 
   output->DeepCopy(this->ParameterizedPd);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -250,7 +250,7 @@ int vtkSVPolyDataToNURBSFilter::RequestData(
  */
 int vtkSVPolyDataToNURBSFilter::ComputeCenterlines()
 {
-  return 0;
+  return SV_ERROR;
 }
 
 //---------------------------------------------------------------------------
@@ -261,7 +261,7 @@ int vtkSVPolyDataToNURBSFilter::ComputeCenterlines()
  */
 int vtkSVPolyDataToNURBSFilter::ExtractBranches()
 {
-  return 0;
+  return SV_ERROR;
 }
 
 //---------------------------------------------------------------------------
@@ -290,7 +290,7 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
   this->Polycube->DeepCopy(slicer->GetPolycube());
   this->SurgeryLines->DeepCopy(slicer->GetSurgeryLines());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -338,7 +338,7 @@ int vtkSVPolyDataToNURBSFilter::PerformMappings()
   this->InputPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   this->InputPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -370,7 +370,7 @@ int vtkSVPolyDataToNURBSFilter::GetSegment(const int segmentId, vtkPolyData *seg
   surfacer->Update();
 
   surgeryLinePd->DeepCopy(surfacer->GetOutput());
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -394,7 +394,7 @@ int vtkSVPolyDataToNURBSFilter::GetSlice(const int sliceId, vtkPolyData *segment
 
   slicePd->DeepCopy(surfacer->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -489,7 +489,7 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -577,7 +577,7 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
 
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -685,7 +685,7 @@ int vtkSVPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
 
   sliceS2Pd->DeepCopy(mapper->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -753,7 +753,7 @@ int vtkSVPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
 
   sliceS2Pd->DeepCopy(mapper->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -776,7 +776,7 @@ int vtkSVPolyDataToNURBSFilter::InterpolateMapOntoTarget(vtkPolyData *sourceS2Pd
 
   mappedPd->DeepCopy(interpolator->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -807,7 +807,7 @@ int vtkSVPolyDataToNURBSFilter::UseMapToAddTextureCoordinates(vtkPolyData *pd,
 
   pd->GetPointData()->SetTCoords(textureCoordinates);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -859,7 +859,7 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
 
   loftedPd->DeepCopy(lofter->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -881,7 +881,7 @@ int vtkSVPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string f
   if (pFile == NULL)
   {
     fprintf(stderr,"Error opening file\n");
-    return 0;
+    return SV_ERROR;
   }
 
   int xNum = 1.0/xSpacing + 2;
@@ -904,7 +904,7 @@ int vtkSVPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string f
     fprintf(pFile, "\n");
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -938,7 +938,7 @@ int vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(vtkPolyData *pd, double &xSp
   fprintf(stdout,"yMin: %.4f\n", yMin);
   xSpacing = xMin;
   ySpacing = yMin;
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -968,5 +968,5 @@ int vtkSVPolyDataToNURBSFilter::GetNewPointOrder(vtkPolyData *pd, double xSpacin
     fprintf(stdout,"Point: %.6f %.6f %.6f\n", pt[0], pt[1], pt[2]);
     newPointOrder->InsertValue(loc, i);
   }
-  return 1;
+  return SV_OK;
 }

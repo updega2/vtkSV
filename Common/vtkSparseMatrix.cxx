@@ -68,7 +68,7 @@ double vtkSparseMatrix::GetElement(int row, int col) const {
     }
   }
 
-  return 0.0;
+  return SV_ERROR.0;
 }
 
 vtkSparseMatrix* vtkSparseMatrix::Transpose() const {

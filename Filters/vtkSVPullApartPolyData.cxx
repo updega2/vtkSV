@@ -144,7 +144,7 @@ int vtkSVPullApartPolyData::RequestData(
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
-    return 0;
+    return SV_ERROR;
   }
 
   // Run the filter
@@ -152,11 +152,11 @@ int vtkSVPullApartPolyData::RequestData(
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(input);
-    return 0;
+    return SV_ERROR;
   }
 
   output->DeepCopy(this->WorkPd);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ int vtkSVPullApartPolyData::PrepFilter()
   if (numPolys < 1)
   {
     vtkErrorMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   // Check if dijkstra array name is given
@@ -202,7 +202,7 @@ int vtkSVPullApartPolyData::PrepFilter()
     else
     {
       vtkErrorMacro("No point array on surface named " << this->CutPointsArrayName << " on surface and not SeamPointIds provided. Must provide one or the other to cut pd");
-      return 0;
+      return SV_ERROR;
     }
   }
 
@@ -236,7 +236,7 @@ int vtkSVPullApartPolyData::PrepFilter()
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -251,16 +251,16 @@ int vtkSVPullApartPolyData::RunFilter()
   if (!this->FindEdgeCells())
   {
     vtkErrorMacro("Failed finding edge cells");
-    return 0;
+    return SV_ERROR;
   }
 
   if (!this->PullApartCutEdges())
   {
     vtkErrorMacro("Failed cutting edges");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -315,7 +315,7 @@ int vtkSVPullApartPolyData::PullApartCutEdges()
 
   this->WorkPd->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -419,7 +419,7 @@ int vtkSVPullApartPolyData::FindEdgeCells()
     if (this->FindStartingEdge(startPt0, startPt1, startPt2, startCellId) != 1)
     {
       vtkErrorMacro("Starting edge could not be found");
-      return 0;
+      return SV_ERROR;
     }
     //fprintf(stdout,"Starts: %d %d %d\n", startPt0, startPt1, startPt2);
     std::vector<int> list0; list0.push_back(startCellId);
@@ -428,7 +428,7 @@ int vtkSVPullApartPolyData::FindEdgeCells()
     this->FindNextEdge(startPt1, startPt0, startPt2, startCellId, list1, 1);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -467,13 +467,13 @@ int vtkSVPullApartPolyData::FindStartingEdge(int &p0, int &p1, int &p2, int &cel
           cellId = i;
           vtkDebugMacro("First edge in list with points" << p0 << " and " << p1 << " on cell " << cellId);
           //fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p0, p1, i);
-          return 1;
+          return SV_OK;
         }
       }
     }
   }
 
-  return 0;
+  return SV_ERROR;
 }
 
 //---------------------------------------------------------------------------
@@ -540,7 +540,7 @@ int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std
     this->ReplacePointVector.push_back(p1);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -643,5 +643,5 @@ int vtkSVPullApartPolyData::FixTheBadStartCell(vtkPolyData *pd, const int pointI
   pd->GetPointData()->GetArray(this->CutPointsArrayName)->SetTuple1(startPt0, 0);
   pd->GetPointData()->GetArray(this->CutPointsArrayName)->SetTuple1(startPt1, 0);
 
-  return 1;
+  return SV_OK;
 }

@@ -77,6 +77,6 @@ int main() {
   transpose_test();
   multiply_column_test();
 
-  return 0;
+  return SV_ERROR;
 }
 

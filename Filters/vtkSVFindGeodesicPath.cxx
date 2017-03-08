@@ -159,7 +159,7 @@ int vtkSVFindGeodesicPath::RequestData(
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
-    return 0;
+    return SV_ERROR;
   }
 
   // Run the filter
@@ -167,7 +167,7 @@ int vtkSVFindGeodesicPath::RequestData(
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(input);
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->RemoveInternalIds)
@@ -176,7 +176,7 @@ int vtkSVFindGeodesicPath::RequestData(
     this->WorkPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   }
   output->DeepCopy(this->WorkPd);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -193,24 +193,24 @@ int vtkSVFindGeodesicPath::PrepFilter()
   if (numPolys < 1)
   {
     vtkErrorMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   // Check is start point id is given
   if (this->StartPtId == -1)
   {
     vtkErrorMacro("No input start id given");
-    return 0;
+    return SV_ERROR;
   }
   if (this->StartPtId > numPoints)
   {
     vtkErrorMacro("Start id is greater than number of pts on pd");
-    return 0;
+    return SV_ERROR;
   }
   if (this->EndPtId > numPoints)
   {
     vtkErrorMacro("End id is greater than number of pts on pd");
-    return 0;
+    return SV_ERROR;
   }
 
   // Check if dijkstra array name is given
@@ -261,7 +261,7 @@ int vtkSVFindGeodesicPath::PrepFilter()
   }
 
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -283,7 +283,7 @@ int vtkSVFindGeodesicPath::RunFilter()
     if (this->FindClosestBoundaryPoint() != 1)
     {
       vtkErrorMacro("Error finding a point close on the boundary");
-      return 0;
+      return SV_ERROR;
     }
   }
   vtkNew(vtkPoints, repelPoints);
@@ -292,7 +292,7 @@ int vtkSVFindGeodesicPath::RunFilter()
     if (this->GetCloseBoundaryPoints(this->StartPtId, this->EndPtId, repelPoints) != 1)
     {
       vtkErrorMacro("Error getting close points on the boundary to repel");
-      return 0;
+      return SV_ERROR;
     }
   }
 
@@ -301,7 +301,7 @@ int vtkSVFindGeodesicPath::RunFilter()
     if (this->RunDijkstra(repelPoints) != 1)
     {
       vtkErrorMacro("vtkDijkstraGraphGeodesicPath failed");
-      return 0;
+      return SV_ERROR;
     }
     if (this->AddPathBooleanArray)
     {
@@ -317,7 +317,7 @@ int vtkSVFindGeodesicPath::RunFilter()
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -331,7 +331,7 @@ int vtkSVFindGeodesicPath::FindClosestBoundaryPoint()
   if (this->RunDijkstra(NULL) != 1)
   {
     vtkErrorMacro("vtkDijkstraGraphGeodesicPath failed");
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkFeatureEdges, boundaries);
@@ -370,7 +370,7 @@ int vtkSVFindGeodesicPath::FindClosestBoundaryPoint()
 
   this->EndPtId = minId;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ int vtkSVFindGeodesicPath::RunDijkstra(vtkPoints *repelPoints)
   this->WorkPd->GetPointData()->AddArray(tmpWeights);
   this->PathIds->DeepCopy(dijkstra->GetIdList());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -442,7 +442,7 @@ int vtkSVFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
   if (this->GetNeighborBoundaryPoints(startPtId, surfacer->GetOutput(), repelPoints) != 1)
   {
     vtkErrorMacro("Error getting neighbor boundary points");
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkConnectivityFilter, connector2);
@@ -457,10 +457,10 @@ int vtkSVFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
   if (this->GetNeighborBoundaryPoints(endPtId, surfacer2->GetOutput(), repelPoints) != 1)
   {
     vtkErrorMacro("Error getting neighbor boundary points");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -498,7 +498,7 @@ int vtkSVFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
     if (bId >= pd->GetNumberOfPoints())
     {
       vtkErrorMacro("Point id is not valid " << ptId);
-      return 0;
+      return SV_ERROR;
     }
     for (int i=0; i<pd->GetNumberOfPoints(); i++)
     {
@@ -511,6 +511,6 @@ int vtkSVFindGeodesicPath::GetNeighborBoundaryPoints(const int ptId,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 

@@ -103,7 +103,7 @@ int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
   polydata->DeepCopy(reader->GetOutput());
   polydata->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
@@ -118,7 +118,7 @@ int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
   polydata->DeepCopy(reader->GetOutput());
   polydata->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVIOUtils::ReadInputFile(std::string inputFilename, vtkPolyData *polydata)
@@ -136,10 +136,10 @@ int vtkSVIOUtils::ReadInputFile(std::string inputFilename, vtkPolyData *polydata
   else
   {
     std::cout<<"Unrecognized file extension, stl and vtp accepted"<<endl;
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //Function to write the polydata to a vtp
@@ -163,7 +163,7 @@ int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyD
   //writer->SetDataModeToAscii();
 
   writer->Write();
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName)

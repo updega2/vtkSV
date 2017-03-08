@@ -121,30 +121,30 @@ int vtkSVPlacePointsOnS2::RequestData(
   if (this->MoveToOrigin() != 1)
   {
     vtkErrorMacro("Couldn't move to origin\n");
-    return 0;
+    return SV_ERROR;
   }
   if (this->UseCustomAxisAlign)
   {
     if (this->RotateToCubeCenterAxis() != 1)
     {
       vtkErrorMacro("Couldn't rotate\n");
-      return 0;
+      return SV_ERROR;
     }
   }
   if (this->ScaleToUnitCube() != 1)
   {
     vtkErrorMacro("Couldn't scale\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->DumbMapToSphere() != 1)
   {
     vtkErrorMacro("Point placement failed");
-    return 0;
+    return SV_ERROR;
   }
 
   output->DeepCopy(this->FinalPd);
-  return 1;
+  return SV_OK;
 }
 
 
@@ -158,13 +158,13 @@ int vtkSVPlacePointsOnS2::DumbMapToSphere()
 {
   if (this->TextureMap() != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   if (this->ConvertTextureFieldToPolyData() != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ int vtkSVPlacePointsOnS2::TextureMap()
 
   this->FinalPd->DeepCopy(texturer->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -212,7 +212,7 @@ int vtkSVPlacePointsOnS2::ConvertTextureFieldToPolyData()
     this->FinalPd->GetPoints()->SetPoint(i, pt);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ int vtkSVPlacePointsOnS2::RotateToCubeCenterAxis()
   vtkSVGeneralUtils::GetRotationMatrix(rotZ, realZ, rotMatrix1);
   vtkSVGeneralUtils::ApplyRotationMatrix(this->FinalPd, rotMatrix1);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -280,7 +280,7 @@ int vtkSVPlacePointsOnS2::MoveToOrigin()
     this->FinalPd->GetPoints()->SetPoint(i, movePt);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -309,5 +309,5 @@ int vtkSVPlacePointsOnS2::ScaleToUnitCube()
   this->FinalPd->DeepCopy(pdTransformer->GetOutput());
   this->FinalPd->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }

@@ -123,7 +123,7 @@ int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
     if (npts != 3)
     {
       //vtkErrorMacro("Surface contains elements that aren't triangles");
-      return 0;
+      return SV_ERROR;
     }
     for (int j=0; j<npts; j++)
     {
@@ -137,11 +137,11 @@ int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
       if (edgeNeighbor->GetNumberOfIds() > 1)
       {
         //vtkErrorMacro("Surface contains triangles with multiple neighbors, not manifold");
-        return 0;
+        return SV_ERROR;
       }
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 
@@ -166,7 +166,7 @@ int vtkSVGeneralUtils::GetClosestPointConnectedRegion(vtkPolyData *pd,
 
   pd->DeepCopy(surfacer->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ int vtkSVGeneralUtils::GetClosestPointConnectedRegion(vtkPolyData *inPd,
   outPd->DeepCopy(inPd);
   vtkSVGeneralUtils::GetClosestPointConnectedRegion(outPd, origin);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -219,7 +219,7 @@ int vtkSVGeneralUtils::IteratePoint(vtkPolyData *pd, int &pointId, int &prevCell
   }
   pointId = newId;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -242,7 +242,7 @@ int vtkSVGeneralUtils::ThresholdPd(vtkPolyData *pd, int minVal,
   if (thresholder->GetOutput()->GetNumberOfPoints() == 0)
   {
     //vtkDebugMacro("No points after threshold");
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
@@ -251,7 +251,7 @@ int vtkSVGeneralUtils::ThresholdPd(vtkPolyData *pd, int minVal,
 
   returnPd->DeepCopy(surfacer->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -277,7 +277,7 @@ int vtkSVGeneralUtils::GetCentroidOfPoints(vtkPoints *points,
   }
 
   vtkMath::MultiplyScalar(centroid, 1.0/numPoints);
-  return 1;
+  return SV_OK;
 }
 
 
@@ -305,7 +305,7 @@ int vtkSVGeneralUtils::GetPointGroups(vtkPolyData *pd, std::string arrayName,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -333,7 +333,7 @@ int vtkSVGeneralUtils::ExtractionCut(vtkPolyData *inPd, vtkImplicitFunction *cut
 
     outPd->DeepCopy(surfacer->GetOutput());
 
-    return 1;
+    return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -367,7 +367,7 @@ int vtkSVGeneralUtils::ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFuncti
       clippedOutPd->DeepCopy(triangulator->GetOutput());
     }
 
-    return 1;
+    return SV_OK;
 }
 
 
@@ -394,7 +394,7 @@ int vtkSVGeneralUtils::GetPointsLength(vtkPolyData *points, double &length)
                         std::pow(pt1[2] - pt0[2], 2.0));
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -422,7 +422,7 @@ int vtkSVGeneralUtils::ReplaceDataOnCells(vtkPointSet *pointset,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -444,7 +444,7 @@ int vtkSVGeneralUtils::GetCutPlane(const double endPt[3], const double startPt[3
   cutPlane->SetOrigin(origin);
   cutPlane->SetNormal(normal);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -462,7 +462,7 @@ int vtkSVGeneralUtils::ComputeTriangleArea(double pt0[], double pt1[],
   area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
   area *= 0.5;
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -482,7 +482,7 @@ int vtkSVGeneralUtils::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
   centerFinder->Update();
   centerFinder->GetCenter(massCenter);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -515,7 +515,7 @@ int vtkSVGeneralUtils::GetBarycentricCoordinates(double f[3], double pt0[3],
   a0 = vtkMath::Norm(vA0)/area;// * Sign(vtkMath::Dot(vArea, vA0));
   a1 = vtkMath::Norm(vA1)/area;// * Sign(vtkMath::Dot(vArea, vA1));
   a2 = vtkMath::Norm(vA2)/area;// * Sign(vtkMath::Dot(vArea, vA2));
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -547,7 +547,7 @@ int vtkSVGeneralUtils::GetPointNeighbors(vtkIdType p0,
       }
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -584,7 +584,7 @@ int vtkSVGeneralUtils::GetEdgeCotangentAngle(double pt0[3], double pt1[3],
   double denominator = vtkMath::Norm(cross);
   angle = numerator/denominator;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -649,7 +649,7 @@ int vtkSVGeneralUtils::CreateEdgeTable(vtkPolyData *pd,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -694,7 +694,7 @@ int vtkSVGeneralUtils::ComputeHarmonicEdgeWeight(vtkPolyData *pd,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -731,7 +731,7 @@ int vtkSVGeneralUtils::ConvertFieldToPolyData(vtkPolyData *inPd, std::string fie
   outPd->SetPoints(fieldPts);
   outPd->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -769,7 +769,7 @@ int vtkSVGeneralUtils::ProjectOntoUnitSphere(vtkPolyData *inPd,
   outPd->SetPolys(newCells);
   outPd->SetPoints(newPts);
   outPd->BuildLinks();
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -789,7 +789,7 @@ int vtkSVGeneralUtils::ComputeNormals(vtkPolyData *pd)
   pd->DeepCopy(normaler->GetOutput());
   pd->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -816,7 +816,7 @@ int vtkSVGeneralUtils::ComputeMeshLaplacian(vtkPolyData *pd,
     laplacian->SetTuple(i, pointLaplacian);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -861,7 +861,7 @@ int vtkSVGeneralUtils::ComputePointLaplacian(vtkIdType p0,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -908,7 +908,7 @@ int vtkSVGeneralUtils::ComputeDataLaplacian(vtkIdType p0,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -935,7 +935,7 @@ int vtkSVGeneralUtils::ComputeDataArrayLaplacian(vtkFloatArray *data,
     laplacian->SetTuple(i, pointLaplacian);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -990,7 +990,7 @@ int vtkSVGeneralUtils::RunLoopFind(vtkPolyData *pd,
     loop->InsertNextCell(VTK_LINE, newestline);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1051,7 +1051,7 @@ int vtkSVGeneralUtils::SeparateLoops(vtkPolyData *pd,
     loops[count++] = newloop;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1077,7 +1077,7 @@ int vtkSVGeneralUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, do
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1127,7 +1127,7 @@ int vtkSVGeneralUtils::GetRotationMatrix(double vec0[3], double vec1[3], vtkMatr
   }
   rotMatrix->SetElement(3, 3, 1.0);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1146,7 +1146,7 @@ int vtkSVGeneralUtils::GetRotationMatrix(double vec0[3], double vec1[3], double 
       rotMatrix[i*4+j] = rotMatrix4x4->GetElement(i, j);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -1171,7 +1171,7 @@ int vtkSVGeneralUtils::ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMat
   pd->DeepCopy(pdTransformer->GetOutput());
   pd->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1194,7 +1194,7 @@ int vtkSVGeneralUtils::ApplyRotationMatrix(vtkPolyData *pd, double rotMatrix[16]
 
   pd->DeepCopy(pdTransformer->GetOutput());
   pd->BuildLinks();
-  return 1;
+  return SV_OK;
 }
 
 
@@ -1243,7 +1243,7 @@ int vtkSVGeneralUtils::GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAng
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -1268,7 +1268,7 @@ int vtkSVGeneralUtils::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double sc
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -1290,7 +1290,7 @@ int vtkSVGeneralUtils::GetAllMapKeys(std::multimap<int, int> &map,
   }
   list.unique();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1310,7 +1310,7 @@ int vtkSVGeneralUtils::GetAllMapValues(std::multimap<int, int> &map,
   }
   list.unique();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1332,7 +1332,7 @@ int vtkSVGeneralUtils::GetValuesFromMap(std::multimap<int, int> &map,
       list.push_back(it->second);
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1354,7 +1354,7 @@ int vtkSVGeneralUtils::GetKeysFromMap(std::multimap<int, int> &map,
       list.push_back(it->first);
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1372,7 +1372,7 @@ int vtkSVGeneralUtils::GetCommonValues(std::multimap<int, int> &map,
   vtkSVGeneralUtils::GetValuesFromMap(map, keyB, listB);
   vtkSVGeneralUtils::ListIntersection(listA, listB, returnList);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1405,7 +1405,7 @@ int vtkSVGeneralUtils::GetUniqueNeighbors(std::multimap<int, int> &map,
   uniqueKeys.sort();
   uniqueKeys.unique();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1422,6 +1422,6 @@ int vtkSVGeneralUtils::ListIntersection(std::list<int> &listA,
                         listB.begin(), listB.end(),
                         std::inserter(returnList,returnList.begin()));
 
-  return 1;
+  return SV_OK;
 }
 

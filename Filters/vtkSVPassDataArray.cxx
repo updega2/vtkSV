@@ -136,7 +136,7 @@ int vtkSVPassDataArray::RequestData(
     if (numPolys0 < 1 || numPolys1 < 1)
     {
        vtkDebugMacro("No input!");
-       return 0;
+       return SV_ERROR;
     }
     this->SourcePd->DeepCopy(input0);
     this->TargetPd->DeepCopy(input1);
@@ -146,7 +146,7 @@ int vtkSVPassDataArray::RequestData(
       if (this->GetArrays(this->SourcePd,0) != 1)
       {
         std::cout<<"No Point Array Named "<<this->PassArrayName<<" on surface"<<endl;
-        return 0;
+        return SV_ERROR;
       }
     }
     if (this->PassDataIsCellData == 1)
@@ -154,18 +154,18 @@ int vtkSVPassDataArray::RequestData(
       if (this->GetArrays(this->SourcePd,1) != 1)
       {
         std::cout<<"No Cell Array Named "<<this->PassArrayName<<" on surface"<<endl;
-        return 0;
+        return SV_ERROR;
       }
     }
 
     if (this->PassDataInformation() != 1)
     {
       vtkErrorMacro("Could not pass information\n");
-      return 0;
+      return SV_ERROR;
     }
 
     output->DeepCopy(this->TargetPd);
-    return 1;
+    return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -239,7 +239,7 @@ int vtkSVPassDataArray::PassDataInformation()
                                       this->PassDataIsCellData, this->PassDataArray,
                                       this->NewDataArray) != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
   }
 
@@ -251,11 +251,11 @@ int vtkSVPassDataArray::PassDataInformation()
                                      this->PassDataArray,
                                      this->NewDataArray) != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -320,7 +320,7 @@ int vtkSVPassDataArray::PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyDa
 
   targetPd->GetPointData()->AddArray(targetDataArray);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -433,7 +433,7 @@ int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyDat
 
   targetPd->GetCellData()->AddArray(targetDataArray);
 
-  return 1;
+  return SV_OK;
 }
 
 void vtkSVPassDataArray::GetMostOccuringId(vtkIdList *idList, vtkIdType &output)

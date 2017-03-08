@@ -166,7 +166,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
             if (contLines->GetNumberOfCells() == 0) {
                 vtkErrorMacro("Inputs have no contact.");
 
-                return 1;
+                return SV_OK;
             }
 
             // in den CellDatas steht drin, welche polygone einander schneiden
@@ -329,7 +329,7 @@ int vtkPolyDataBooleanFilter::ProcessRequest(vtkInformation *request, vtkInforma
 
     }
 
-    return 1;
+    return SV_OK;
 
 }
 

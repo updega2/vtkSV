@@ -144,25 +144,25 @@ int vtkSVGroupsClipper::RequestData(
   if (!this->Centerlines)
     {
     vtkErrorMacro(<< "Centerlines not set.");
-    return 1;
+    return SV_OK;
     }
 
   if (!this->ClipAllCenterlineGroupIds && !this->CenterlineGroupIds)
     {
     vtkErrorMacro(<< "CenterlineGroupIds not set.");
-    return 1;
+    return SV_OK;
     }
 
   if (!this->CenterlineGroupIdsArrayName)
     {
     vtkErrorMacro(<< "CenterlineGroupIdsArrayName not set.");
-    return 1;
+    return SV_OK;
     }
 
   if (!this->GroupIdsArrayName)
     {
     vtkErrorMacro(<< "GroupIdsArrayName not set.");
-    return 1;
+    return SV_OK;
     }
 
   centerlineGroupIdsArray = this->Centerlines->GetCellData()->GetArray(this->CenterlineGroupIdsArrayName);
@@ -170,13 +170,13 @@ int vtkSVGroupsClipper::RequestData(
   if (!centerlineGroupIdsArray)
     {
     vtkErrorMacro(<< "CenterlineGroupIdsArray with name specified does not exist");
-    return 1;
+    return SV_OK;
     }
 
   if (!this->BlankingArrayName)
     {
     vtkErrorMacro(<< "BlankingArrayName not set.");
-    return 1;
+    return SV_OK;
     }
 
   blankingArray = vtkIntArray::SafeDownCast(this->Centerlines->GetCellData()->GetArray(this->BlankingArrayName));
@@ -184,19 +184,19 @@ int vtkSVGroupsClipper::RequestData(
   if (!blankingArray)
     {
     vtkErrorMacro(<< "BlankingArrayName with name specified does not exist");
-    return 1;
+    return SV_OK;
     }
 
   if (!this->CenterlineRadiusArrayName)
     {
     vtkErrorMacro(<< "CenterlineRadiusArrayName not set.");
-    return 1;
+    return SV_OK;
     }
 
   if (!this->Centerlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
     {
     vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
-    return 1;
+    return SV_OK;
     }
 
   if (this->Centerlines->GetNumberOfCells() == 1)
@@ -208,7 +208,7 @@ int vtkSVGroupsClipper::RequestData(
     groupIdsArray->FillComponent(0,centerlineGroupIdsArray->GetComponent(0,0));
     output->GetCellData()->AddArray(groupIdsArray);
     groupIdsArray->Delete();
-    return 1;
+    return SV_OK;
     }
 
   //if (this->GenerateClippedOutput)
@@ -446,7 +446,7 @@ int vtkSVGroupsClipper::RequestData(
 
   output->DeepCopy(finisher);
 
-  return 1;
+  return SV_OK;
 }
 
 void vtkSVGroupsClipper::PrintSelf(ostream& os, vtkIndent indent)
@@ -477,7 +477,7 @@ int vtkSVGroupsClipper::ReplaceDataOnCells(vtkPointSet *pointset,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -506,7 +506,7 @@ int vtkSVGroupsClipper::FindGroupSeparatingPoints(vtkPolyData *pd,
   }
   fprintf(stdout,"Number Of Ids: %lld\n", separateIds->GetNumberOfIds());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -591,7 +591,7 @@ int vtkSVGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtk
     pd->DeepCopy(cutter->GetOutput());
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -620,7 +620,7 @@ int vtkSVGroupsClipper::FillGroups(vtkPolyData *pd,
     this->FillRegionGroups(pd, pointLoop, pt);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVGroupsClipper::FillRegionGroups(vtkPolyData *pd,
@@ -650,7 +650,7 @@ int vtkSVGroupsClipper::FillRegionGroups(vtkPolyData *pd,
     if (npts != 2)
     {
       vtkErrorMacro("Should only have 2 points on line!");
-      return 0;
+      return SV_ERROR;
     }
     vtkNew(vtkIdList, newCellPoints);
     int newId = pd->GetPoints()->InsertNextPoint(center);
@@ -667,5 +667,5 @@ int vtkSVGroupsClipper::FillRegionGroups(vtkPolyData *pd,
   pd->GetPointData()->PassData(newPointData);
   pd->GetCellData()->PassData(newCellData);
 
-  return 1;
+  return SV_OK;
 }

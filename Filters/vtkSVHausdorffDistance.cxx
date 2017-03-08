@@ -131,7 +131,7 @@ int vtkSVHausdorffDistance::RequestData(
     if (numPolys0 < 1 || numPolys1 < 1)
     {
        vtkDebugMacro("No input!");
-       return 0;
+       return SV_ERROR;
     }
     this->SourcePd->DeepCopy(input0);
     this->TargetPd->DeepCopy(input1);
@@ -139,17 +139,17 @@ int vtkSVHausdorffDistance::RequestData(
     if (this->PrepFilter() != 1)
     {
       vtkErrorMacro("Error in prepping filter\n");
-      return 0;
+      return SV_ERROR;
     }
 
     if (this->RunFilter() != 1)
     {
       vtkErrorMacro("Error in running filter\n");
-      return 0;
+      return SV_ERROR;
     }
 
     output->DeepCopy(this->TargetPd);
-    return 1;
+    return SV_OK;
 }
 
 int vtkSVHausdorffDistance::PrepFilter()
@@ -161,7 +161,7 @@ int vtkSVHausdorffDistance::PrepFilter()
     strcpy(this->DistanceArrayName, "Distance");
   }
 
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVHausdorffDistance::RunFilter()
@@ -204,6 +204,6 @@ int vtkSVHausdorffDistance::RunFilter()
   this->AverageDistance   = totalDistance/numPoints;
   this->HausdorffDistance = maxDistance;
 
-  return 1;
+  return SV_OK;
 }
 

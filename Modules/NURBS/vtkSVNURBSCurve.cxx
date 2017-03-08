@@ -163,12 +163,12 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
   if (nCon == 0)
   {
     vtkErrorMacro("No control points");
-    return 0;
+    return SV_ERROR;
   }
   if (nKnot == 0)
   {
     vtkErrorMacro("No knot points");
-    return 0;
+    return SV_ERROR;
   }
 
   int p = nKnot - nCon - 1;
@@ -194,7 +194,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
     if (vtkSVNURBSUtils::BasisEvaluationVec(this->KnotVector, p,
                                        i, uEvals, Nus) != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
     for (int j=0; j<numDiv; j++)
     {
@@ -231,7 +231,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
   if(vtkSVNURBSUtils::MatrixPointsMultiply(Nfinal, this->ControlPointGrid->GetPoints(),
                                        surfacePoints) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkCellArray, surfaceLines);
@@ -240,7 +240,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
   this->CurveRepresentation->SetPoints(surfacePoints);
   this->CurveRepresentation->SetLines(surfaceLines);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -261,5 +261,5 @@ int vtkSVNURBSCurve::GetStructuredGridConnectivity(const int numPoints, vtkCellA
     connectivity->InsertNextCell(ptIds);
   }
 
-  return 1;
+  return SV_OK;
 }

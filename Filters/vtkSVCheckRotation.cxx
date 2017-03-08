@@ -126,29 +126,29 @@ int vtkSVCheckRotation::RequestData(
   if (numSourcePolys < 1)
   {
     vtkDebugMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->MoveCenters() != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->FindAndCheckRotation() != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->OriginalPd != NULL)
   {
     if (this->CheckAnglesWithOriginal() != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
   }
 
   output->DeepCopy(this->MappedPd);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ int vtkSVCheckRotation::MoveCenters()
     this->TargetPd->GetPoints()->SetPoint(i, newTargPt);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ int vtkSVCheckRotation::FindAndCheckRotation()
   fprintf(stdout, "Minimum point distance is: %.8f\n",minDist);
   fprintf(stdout, "Maximum point distance is: %.8f\n",maxDist);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -260,24 +260,24 @@ int vtkSVCheckRotation::CheckAnglesWithOriginal()
 {
   if (this->MatchPointOrder() != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   vtkNew(vtkFloatArray, mappedS2Angles);
   if (vtkSVGeneralUtils::GetPolyDataAngles(this->MappedPd, mappedS2Angles) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkFloatArray, targetS2Angles);
   if (vtkSVGeneralUtils::GetPolyDataAngles(this->TargetPd, targetS2Angles) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkFloatArray, originalPdAngles);
   if (vtkSVGeneralUtils::GetPolyDataAngles(this->OriginalPd, originalPdAngles) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   int numCells = this->OriginalPd->GetNumberOfCells();
@@ -324,7 +324,7 @@ int vtkSVCheckRotation::CheckAnglesWithOriginal()
   fprintf(stdout, "Minimum angle difference between target and original is: %.8f\n",minTAng);
   fprintf(stdout, "Maximum angle difference between target and original is: %.8f\n",maxTAng);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -346,5 +346,5 @@ int vtkSVCheckRotation::MatchPointOrder()
 
     this->OriginalPd->ReplaceCell(i, npts, pts);
   }
-  return 1;
+  return SV_OK;
 }

@@ -105,14 +105,14 @@ int vtkSVBoundaryMapper::RequestData(vtkInformation *vtkNotUsed(request),
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->RunFilter() != 1)
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->RemoveInternalIds)
@@ -122,7 +122,7 @@ int vtkSVBoundaryMapper::RequestData(vtkInformation *vtkNotUsed(request),
   }
   output->DeepCopy(this->BoundaryPd);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -139,14 +139,14 @@ int vtkSVBoundaryMapper::PrepFilter()
   if (numPolys < 1)
   {
     vtkDebugMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
   if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
   {
     vtkErrorMacro("Error when checking input surface");
-    return 0;
+    return SV_ERROR;
   }
 
   // Check if internal id array name is given
@@ -176,10 +176,10 @@ int vtkSVBoundaryMapper::PrepFilter()
   if (this->EdgeTable->GetNumberOfEdges() == 0)
   {
     vtkErrorMacro("No Edges! Use SetEdgeTable");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -193,21 +193,21 @@ int vtkSVBoundaryMapper::RunFilter()
   if (this->FindBoundaries() != 1)
   {
     vtkErrorMacro("Could not find boundaries");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->GetBoundaryLoop() != 1)
   {
     vtkErrorMacro("Error orienting boundary loop");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->SetBoundaries() != 1)
   {
     vtkErrorMacro("Error in mapping");
-    return 0;
+    return SV_ERROR;
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -277,7 +277,7 @@ int vtkSVBoundaryMapper::GetBoundaryLoop()
 
   vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -313,10 +313,10 @@ int vtkSVBoundaryMapper::FindBoundaries()
   if (this->Boundaries->GetNumberOfCells() == 0)
   {
     vtkErrorMacro("No boundaries on polydata");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 

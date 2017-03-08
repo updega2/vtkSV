@@ -115,18 +115,18 @@ int vtkSVFindSeparateRegions::RequestData(
     if (numPolys < 1)
     {
         vtkDebugMacro("No input!");
-	return 1;
+	return SV_OK;
     }
 
     if (this->GetCellArray(input) != 1)
     {
       std::cout<<"No Cell Array Named "<<this->ArrayName<<" on surface"<<endl;
-      return 0;
+      return SV_ERROR;
     }
     if (this->OutPointArrayName == 0)
     {
       std::cout<<"Need name for output point data information"<<endl;
-      return 0;
+      return SV_ERROR;
     }
 
     input->BuildLinks();
@@ -164,7 +164,7 @@ int vtkSVFindSeparateRegions::RequestData(
     output->GetPointData()->AddArray(newPointArray);
     output->GetPointData()->SetActiveScalars(this->OutPointArrayName);
 
-    return 1;
+    return SV_OK;
 }
 
 int vtkSVFindSeparateRegions::GetCellArray(vtkPolyData *object)
@@ -196,7 +196,7 @@ int vtkSVFindSeparateRegions::SetCellIds(vtkIdList *cellIds)
 {
   this->targetCellIds = vtkIdList::New();
   this->targetCellIds->DeepCopy(cellIds);
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVFindSeparateRegions::SetAllCellIds()
@@ -209,5 +209,5 @@ int vtkSVFindSeparateRegions::SetAllCellIds()
   for (int i=0;i <= max;i++)
     this->targetCellIds->InsertNextId(i);
 
-  return 1;
+  return SV_OK;
 }

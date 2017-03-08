@@ -89,13 +89,13 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
   if (!this->Input)
     {
     vtkErrorMacro(<<"No Input specified!");
-    return 0.0;
+    return SV_ERROR.0;
     }
 
   if (this->Input->GetNumberOfPoints()==0)
     {
     vtkWarningMacro(<<"Empty Input specified!");
-    return 0.0;
+    return SV_ERROR.0;
     }
 
   if (this->UseRadiusInformation)
@@ -103,7 +103,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     if (!this->PolyBallRadiusArrayName)
       {
       vtkErrorMacro(<<"No PolyBallRadiusArrayName specified!");
-      return 0.0;
+      return SV_ERROR.0;
       }
 
     polyballRadiusArray = this->Input->GetPointData()->GetArray(this->PolyBallRadiusArrayName);
@@ -111,14 +111,14 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     if (polyballRadiusArray==NULL)
       {
       vtkErrorMacro(<<"PolyBallRadiusArray with name specified does not exist!");
-      return 0.0;
+      return SV_ERROR.0;
       }
     }
 
   if (this->Input->GetLines()==NULL)
     {
     vtkWarningMacro(<<"No lines in Input dataset.");
-    return 0.0;
+    return SV_ERROR.0;
     }
 
   this->Input->BuildCells();

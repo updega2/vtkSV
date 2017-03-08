@@ -178,7 +178,7 @@ int vtkSVNURBSSurface::SetControlPoints(vtkIntArray *indices, const int dim,
   }
 
   //SetControlPoint is still returning 0
-  return 0;
+  return SV_ERROR;
 }
 
 //---------------------------------------------------------------------------
@@ -218,12 +218,12 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   if (nUCon == 0 || nVCon == 0)
   {
     vtkErrorMacro("No control points");
-    return 0;
+    return SV_ERROR;
   }
   if (nUKnot == 0 || nVKnot == 0)
   {
     vtkErrorMacro("No knot points");
-    return 0;
+    return SV_ERROR;
   }
 
   int p = nUKnot - nUCon - 1;
@@ -252,7 +252,7 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
     if (vtkSVNURBSUtils::BasisEvaluationVec(this->UKnotVector, p,
                                        i, uEvals, Nus) != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
     for (int j=0; j<numUDiv; j++)
     {
@@ -303,7 +303,7 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
     if (vtkSVNURBSUtils::BasisEvaluationVec(this->VKnotVector, q,
                                        i, vEvals, Nvs) != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
     double ratVal = 0.0;
     for (int j=0; j<numVDiv; j++)
@@ -347,13 +347,13 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, tmpControlGrid, 1, tmpUGrid) != 1)
   {
     fprintf(stderr, "Error in matrix multiply\n");
-    return 0;
+    return SV_ERROR;
   }
   vtkNew(vtkDenseArray<double>, tmpVGrid);
   if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, NVfinalT, 0, tmpVGrid) != 1)
   {
     fprintf(stderr, "Error in matrix multiply\n");
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkStructuredGrid, finalGrid);
@@ -368,7 +368,7 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   this->SurfaceRepresentation->SetPolys(surfaceCells);
   this->SurfaceRepresentation->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -395,5 +395,5 @@ int vtkSVNURBSSurface::GetStructuredGridConnectivity(const int numXPoints, const
     }
   }
 
-  return 1;
+  return SV_OK;
 }

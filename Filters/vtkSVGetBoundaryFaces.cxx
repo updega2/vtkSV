@@ -213,7 +213,7 @@ int vtkSVGetBoundaryFaces::RequestData(
     if (numPolys < 1)
     {
         vtkDebugMacro("No input!");
-	return 1;
+	return SV_OK;
     }
 
     //Set up Region scalar for each surface
@@ -321,7 +321,7 @@ int vtkSVGetBoundaryFaces::RequestData(
 
     this->NumberOfRegions = reg;
 
-    return 1;
+    return SV_OK;
 }
 
 void vtkSVGetBoundaryFaces::FindBoundaryRegion(int reg, int start, double &area)
@@ -618,5 +618,5 @@ int vtkSVGetBoundaryFaces::AddCellArea(const int cellId, double &area)
   this->mesh->GetPoint(pts[2], pt2);
 
   area += std::abs(vtkTriangle::TriangleArea(pt0, pt1, pt2));
-  return 1;
+  return SV_OK;
 }

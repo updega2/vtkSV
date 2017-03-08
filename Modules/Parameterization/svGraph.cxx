@@ -103,13 +103,13 @@ int svGraph::Recurse(svGCell *rootGCell, int(*function)(svGCell *currentGCell,
   {
     svGraph::Recurse(rootGCell->Children[1], function, rec_arg0, rec_arg1, rec_arg2);
   }
-  return 1;
+  return SV_OK;
 }
 
 int svGraph::PrintGraph()
 {
   svGraph::Recurse(this->Root, svGraph::PrintGCell, NULL, NULL, NULL);
-  return 1;
+  return SV_OK;
 }
 
 int svGraph::PrintGCell(svGCell *gCell, void *arg0, void *arg1, void *arg2)
@@ -131,7 +131,7 @@ int svGraph::PrintGCell(svGCell *gCell, void *arg0, void *arg1, void *arg2)
     fprintf(stdout, "Child 1: NULL\n");
   fprintf(stdout, "Start Point: %.4f %.4f %.4f\n", gCell->StartPt[0], gCell->StartPt[1], gCell->StartPt[2]);
   fprintf(stdout, "End Point: %.4f %.4f %.4f\n", gCell->EndPt[0], gCell->EndPt[1], gCell->EndPt[2]);
-  return 1;
+  return SV_OK;
 }
 
 int svGraph::GetGraphPolyData(vtkPolyData *pd)
@@ -152,7 +152,7 @@ int svGraph::GetGraphPolyData(vtkPolyData *pd)
 
   pd->DeepCopy(cleaner->GetOutput());
   pd->BuildLinks();
-  return 1;
+  return SV_OK;
 }
 
 int svGraph::InsertGCellPoints(svGCell *gCell, void *arg0, void *arg1, void *arg2)
@@ -173,7 +173,7 @@ int svGraph::InsertGCellPoints(svGCell *gCell, void *arg0, void *arg1, void *arg
     reinterpret_cast<vtkIntArray*>(arg2);
   groupIds->InsertNextValue(gCell->GroupId);
 
-  return 1;
+  return SV_OK;
 }
 
 int svGraph::BuildGraph()
@@ -203,7 +203,7 @@ int svGraph::BuildGraph()
   svGraph::Recurse(this->Root, svGraph::UpdateCellDirection,
                    NULL, NULL, NULL);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ int svGraph::GrowGraph(svGCell *parent)
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -322,7 +322,7 @@ int svGraph::ComputeReferenceVectors(svGCell *parent)
 
   vtkMath::Cross(this->ReferenceVecs[1], this->ReferenceVecs[0], parent->FrontDir);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -357,7 +357,7 @@ int svGraph::GetDirectionVector(const int dir, double dirVector[3])
   {
     dirVector[0] = 0.0; dirVector[1] = 0.0; dirVector[2] = -1.0;
   }
-  return 1;
+  return SV_OK;
 }
 
 
@@ -477,7 +477,7 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   fprintf(stdout,"Angle is: %.4f\n", 180*ang2/M_PI);
   fprintf(stdout,"Dot is: %.4f\n", vtkMath::Dot(vec3, dotVec));
 
-  return 1;
+  return SV_OK;
 }
 
 int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
@@ -529,7 +529,7 @@ int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
       }
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 svGCell* svGraph::NewCell(int a_GroupId, svGCell *a_Parent)

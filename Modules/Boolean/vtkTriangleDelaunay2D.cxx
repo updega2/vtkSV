@@ -86,14 +86,14 @@ int vtkTriangleDelaunay2D::RequestData(vtkInformation* vtkNotUsed(request),
   if (inPoints == NULL)
     {
     vtkDebugMacro("Cannot triangulate; no input points");
-    return 1;
+    return SV_OK;
     }
 
   vtkIdType numPoints = inPoints->GetNumberOfPoints();
   if (numPoints < 3)
     {
     vtkDebugMacro("Cannot triangulate; need at least 3 input points");
-    return 1;
+    return SV_OK;
     }
 
   vtkPoints *points = inPoints;
@@ -289,7 +289,7 @@ int vtkTriangleDelaunay2D::RequestData(vtkInformation* vtkNotUsed(request),
     tPoints->Delete();
     }
 
-  return 1;
+  return SV_OK;
 }
 
 //-----------------------------------------------------------------------------

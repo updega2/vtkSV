@@ -67,7 +67,7 @@ int vtkSVNURBSUtils::LinSpace(double min, double max, int num, vtkDoubleArray *r
     result->SetTuple1(i, min + div*i);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ int vtkSVNURBSUtils::LinSpaceClamp(double min, double max, int num, int p, vtkDo
     count++;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ int vtkSVNURBSUtils::GetAvgKnots(double min, double max, int num, int p, vtkDoub
     knots->SetTuple1(i+p, val1);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -179,7 +179,7 @@ int vtkSVNURBSUtils::GetEndDerivKnots(double min, double max, int num, int p, vt
       knots->SetTuple1(i, 1.0);
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -217,7 +217,7 @@ int vtkSVNURBSUtils::GetChordSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U
   }
   U->SetTuple1(num-1, 1.0);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -255,7 +255,7 @@ int vtkSVNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleAr
   }
   U->SetTuple1(num-1, 1.0);
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -282,10 +282,10 @@ int vtkSVNURBSUtils::GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U)
   else
   {
     fprintf(stderr,"Type specified is not recognized\n");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -315,11 +315,11 @@ int vtkSVNURBSUtils::GetKnots(vtkDoubleArray *U, int p, std::string type, vtkDou
   else
   {
     fprintf(stderr,"Type specified is not recognized\n");
-    return 0;
+    return SV_ERROR;
   }
   fprintf(stdout,"Length of Knots: %lld\n", knots->GetNumberOfTuples());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -355,7 +355,7 @@ int vtkSVNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *kn
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -376,7 +376,7 @@ int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots
   N0->Resize(nCon, nKnot-1);
   if (vtkSVNURBSUtils::GetZeroBasisFunctions(U, knots, N0) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   //Set original size to the size of the zero basis function set
@@ -447,7 +447,7 @@ int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots
   for (int i=0; i<nCon; i++)
     delete [] tmpN[i];
   delete [] tmpN;
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -467,7 +467,7 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   vtkNew(vtkSparseArray<double>, NPFinal);
   if( vtkSVNURBSUtils::GetPBasisFunctions(U, knots, p, NPTmp) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   NPTmp->SetValue(NPTmp->GetExtents()[0].GetSize()-1, NPTmp->GetExtents()[1].GetSize()-1, 1.0);
 
@@ -476,7 +476,7 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   vtkNew(vtkDenseArray<double>, cPointArray);
   if (vtkSVNURBSUtils::PointsToTypedArray(points, pointArrayTmp) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   if (!strncmp(ktype.c_str(), "derivative", 10))
@@ -494,19 +494,19 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   if (vtkSVNURBSUtils::InvertSystem(NPFinal, NPinv) != 1)
   {
     fprintf(stderr,"System could not be inverted\n");
-    return 0;
+    return SV_ERROR;
   }
   if (vtkSVNURBSUtils::MatrixVecMultiply(NPinv, 0, pointArrayFinal, 1, cPointArray) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   if (vtkSVNURBSUtils::TypedArrayToPoints(cPointArray, cPoints) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -534,7 +534,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   vtkNew(vtkSparseArray<double>, NPUFinal);
   if( vtkSVNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   NPUTmp->SetValue(NPUTmp->GetExtents()[0].GetSize()-1, NPUTmp->GetExtents()[1].GetSize()-1, 1.0);
 
@@ -542,7 +542,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   vtkNew(vtkSparseArray<double>, NPVFinal);
   if( vtkSVNURBSUtils::GetPBasisFunctions(V, vKnots, q, NPVTmp) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   NPVTmp->SetValue(NPVTmp->GetExtents()[0].GetSize()-1, NPVTmp->GetExtents()[1].GetSize()-1, 1.0);
 
@@ -580,7 +580,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   if (vtkSVNURBSUtils::InvertSystem(NPUFinal, NPUinv) != 1)
   {
     fprintf(stderr,"System could not be inverted\n");
-    return 0;
+    return SV_ERROR;
   }
 
   //fprintf(stdout,"Basis functions V:\n");
@@ -589,7 +589,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   if (vtkSVNURBSUtils::InvertSystem(NPVFinal, NPVinv) != 1)
   {
     fprintf(stderr,"System could not be inverted\n");
-    return 0;
+    return SV_ERROR;
   }
 
 
@@ -601,7 +601,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != 1)
   {
     fprintf(stderr, "Error in matrix multiply\n");
-    return 0;
+    return SV_ERROR;
   }
   vtkNew(vtkDenseArray<double>, tmpUGridT);
   vtkSVNURBSUtils::MatrixTranspose(tmpUGrid, 1, tmpUGridT);
@@ -609,7 +609,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, tmpUGridT, 1, tmpVGrid) != 1)
   {
     fprintf(stderr, "Error in matrix multiply\n");
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkPoints, finalPoints);
@@ -620,7 +620,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   //fprintf(stdout,"Final structured grid of control points\n");
   //vtkSVNURBSUtils::PrintStructuredGrid(cPoints);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -638,7 +638,7 @@ int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedA
 
   vtkSVNURBSUtils::AddDerivativePoints(points, p, D0, DN, U, knots, newPoints);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -698,7 +698,7 @@ int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
     newPoints->SetValue(n - 1, i, val);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -803,7 +803,7 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
     vtkSVNURBSUtils::DeepCopy(tmp2Points, newPoints);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -851,7 +851,7 @@ int vtkSVNURBSUtils::AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<
     newNP->SetValue(n-1, i, val);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -909,7 +909,7 @@ int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -925,7 +925,7 @@ int vtkSVNURBSUtils::InvertSystem(vtkTypedArray<double> *NP, vtkTypedArray<doubl
   if (nr != nc)
   {
     fprintf(stderr,"Matrix is not square, can't invert\n");
-    return 0;
+    return SV_ERROR;
   }
 
   double **inMat = new double*[nr];
@@ -953,7 +953,7 @@ int vtkSVNURBSUtils::InvertSystem(vtkTypedArray<double> *NP, vtkTypedArray<doubl
     }
     delete [] inMat;
     delete [] outMat;
-    return 0;
+    return SV_ERROR;
   }
 
   NPinv->Resize(nr, nc);
@@ -973,7 +973,7 @@ int vtkSVNURBSUtils::InvertSystem(vtkTypedArray<double> *NP, vtkTypedArray<doubl
   delete [] inMat;
   delete [] outMat;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1012,7 +1012,7 @@ int vtkSVNURBSUtils::BasisEvaluation(vtkDoubleArray *knots, int p, int kEval, do
   delete [] uLeft;
   delete [] uRight;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1100,7 +1100,7 @@ int vtkSVNURBSUtils::BasisEvaluationVec(vtkDoubleArray *knots, int p, int kEval,
   }
 
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1117,7 +1117,7 @@ int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
   if (u == knots->GetTuple1(nCon))
   {
     span = nCon - 1;
-    return 1;
+    return SV_OK;
   }
   int low = p;
   int high = nCon;
@@ -1136,7 +1136,7 @@ int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
     mid = (low+high)/2;
   }
   span = mid;
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1154,7 +1154,7 @@ int vtkSVNURBSUtils::MatrixPointsMultiply(vtkTypedArray<double>* mat, vtkPoints 
   {
     fprintf(stderr,"Matrix vector dimensions do not match\n");
     fprintf(stderr,"Matrix: %d by %d, Vec: %lld\n", nr, nc, pointVec->GetNumberOfPoints());
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkPoints, tmpPoints);
@@ -1180,7 +1180,7 @@ int vtkSVNURBSUtils::MatrixPointsMultiply(vtkTypedArray<double>* mat, vtkPoints 
   }
   output->DeepCopy(tmpPoints);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1199,21 +1199,21 @@ int vtkSVNURBSUtils::MatrixVecMultiply(vtkTypedArray<double>* mat, const int mat
   if (matIsPoints && mat->GetExtents()[2].GetSize() != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   int nrV = vec->GetExtents()[0].GetSize();
   if (vecIsPoints && vec->GetExtents()[1].GetSize() != 3)
   {
     fprintf(stderr,"Second dimension of vector should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (ncM != nrV)
   {
     fprintf(stderr,"Matrix vector dimensions do not match\n");
     fprintf(stderr,"Matrix: %d by %d, Vec: %d\n", nrM, ncM, nrV);
-    return 0;
+    return SV_ERROR;
   }
 
   int either = 0;
@@ -1277,7 +1277,7 @@ int vtkSVNURBSUtils::MatrixVecMultiply(vtkTypedArray<double>* mat, const int mat
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1295,7 +1295,7 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   if (mat0IsPoints && mat0->GetExtents()[2].GetSize() != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   int nrM1 = mat1->GetExtents()[0].GetSize();
@@ -1303,14 +1303,14 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   if (mat1IsPoints && mat1->GetExtents()[2].GetSize() != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (ncM0 != nrM1)
   {
     fprintf(stderr,"Matrix matrix dimensions do not match\n");
     fprintf(stderr,"Matrix 0: %d by %d, Matrix 1: %d by %d\n", nrM0, ncM0, nrM1, ncM1);
-    return 0;
+    return SV_ERROR;
   }
 
   int either = 0;
@@ -1341,7 +1341,7 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
     vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(mat0, mat1, output);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1363,7 +1363,7 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   {
     fprintf(stderr,"Matrix matrix dimensions do not match\n");
     fprintf(stderr,"Matrix 0: %d by %d, Matrix 1: %d by %d\n", nrM0, ncM0, nrM1, ncM1);
-    return 0;
+    return SV_ERROR;
   }
 
   double *mat0Vec = new double[nrM0*ncM0];
@@ -1378,7 +1378,7 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
     delete [] mat0Vec;
     delete [] mat1Vec;
     delete [] outVec;
-    return 0;
+    return SV_ERROR;
   }
   vtkSVNURBSUtils::VectorToMatrix(outVec, nrM0, ncM1, output);
 
@@ -1386,7 +1386,7 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   delete [] mat1Vec;
   delete [] outVec;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1406,14 +1406,14 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   if (mat0->GetExtents()[2].GetSize() != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (ncM0 != nrM1)
   {
     fprintf(stderr,"Matrix matrix dimensions do not match\n");
     fprintf(stderr,"Matrix 0: %d by %d, Matrix 1: %d by %d\n", nrM0, ncM0, nrM1, ncM1);
-    return 0;
+    return SV_ERROR;
   }
 
   double *mat0Vecs[3], *mat1Vecs[3], *outVecs[3];
@@ -1436,7 +1436,7 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
         delete [] mat1Vecs[i];
         delete [] outVecs[i];
       }
-      return 0;
+      return SV_ERROR;
     }
   }
   vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
@@ -1448,7 +1448,7 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
     delete [] outVecs[i];
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1468,14 +1468,14 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   if (mat0->GetExtents()[2].GetSize() != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (ncM0 != nrM1)
   {
     fprintf(stderr,"Matrix matrix dimensions do not match\n");
     fprintf(stderr,"Matrix 0: %d by %d, Matrix 1: %d by %d\n", nrM0, ncM0, nrM1, ncM1);
-    return 0;
+    return SV_ERROR;
   }
 
   double *mat1Vec = new double[nrM1*ncM1];
@@ -1498,7 +1498,7 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
         delete [] mat0Vecs[i];
         delete [] outVecs[i];
       }
-      return 0;
+      return SV_ERROR;
     }
   }
   vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
@@ -1510,7 +1510,7 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
     delete [] outVecs[i];
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1530,14 +1530,14 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   if (mat1->GetExtents()[2].GetSize() != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (ncM0 != nrM1)
   {
     fprintf(stderr,"Matrix matrix dimensions do not match\n");
     fprintf(stderr,"Matrix 0: %d by %d, Matrix 1: %d by %d\n", nrM0, ncM0, nrM1, ncM1);
-    return 0;
+    return SV_ERROR;
   }
 
   double *mat0Vec = new double[nrM0*ncM0];
@@ -1560,7 +1560,7 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
         delete [] mat1Vecs[i];
         delete [] outVecs[i];
       }
-      return 0;
+      return SV_ERROR;
     }
   }
   vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
@@ -1572,7 +1572,7 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
     delete [] outVecs[i];
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1588,7 +1588,7 @@ int vtkSVNURBSUtils::GetMatrixComp(vtkTypedArray<double> *mat,  const int loc, c
   if (matIsPoints && check != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (matIsPoints)
@@ -1643,7 +1643,7 @@ int vtkSVNURBSUtils::GetMatrixComp(vtkTypedArray<double> *mat,  const int loc, c
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1663,12 +1663,12 @@ int vtkSVNURBSUtils::SetMatrixComp(vtkTypedArray<double> *vec,  const int loc, c
     fprintf(stderr,"Number of values in array and component of matrix are not equal\n");
     fprintf(stderr,"Size of Matrix in comp direction: %d\n", cSize);
     fprintf(stderr,"Size of Vector: %d\n", numVals);
-    return 0;
+    return SV_ERROR;
   }
   if (matIsPoints && check != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates\n");
-    return 0;
+    return SV_ERROR;
   }
 
   for (int i=0; i<numVals; i++)
@@ -1715,7 +1715,7 @@ int vtkSVNURBSUtils::SetMatrixComp(vtkTypedArray<double> *vec,  const int loc, c
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1732,7 +1732,7 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   if (dim[2] != 1)
   {
     fprintf(stderr,"3 Dimensions are not yet supported\n");
-    return 0;
+    return SV_ERROR;
   }
 
   //2D array with third dimensions the coordinates
@@ -1756,7 +1756,7 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1782,7 +1782,7 @@ int vtkSVNURBSUtils::PointsToTypedArray(vtkPoints *points, vtkTypedArray<double>
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1806,7 +1806,7 @@ int vtkSVNURBSUtils::DoubleArrayToTypedArray(vtkDoubleArray *input, vtkTypedArra
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -1831,7 +1831,7 @@ int vtkSVNURBSUtils::TypedArrayToPoints(vtkTypedArray<double> *array, vtkPoints 
     output->SetPoint(i, pt);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1853,12 +1853,12 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
   if (dims > 3)
   {
     fprintf(stderr,"3 Dimensions are not yet supported\n");
-    return 0;
+    return SV_ERROR;
   }
   if (dim[2] != 3)
   {
     fprintf(stderr,"Third dimension should have xyz coordinates\n");
-    return 0;
+    return SV_ERROR;
   }
 
   output->SetDimensions(dim[0], dim[1], 1);
@@ -1881,7 +1881,7 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
     }
   }
 
-    return 1;
+    return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1898,7 +1898,7 @@ int vtkSVNURBSUtils::PolyDatasToStructuredGrid(vtkPolyData **inputs, const int n
     if (numPoints != inputs[i]->GetNumberOfPoints())
     {
       fprintf(stderr,"Input segments do not have the same number of points, cannot loft\n");
-      return 0;
+      return SV_ERROR;
     }
   }
 
@@ -1923,7 +1923,7 @@ int vtkSVNURBSUtils::PolyDatasToStructuredGrid(vtkPolyData **inputs, const int n
   points->SetPoints(tmpPoints);
   points->SetDimensions(dim);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1939,7 +1939,7 @@ int vtkSVNURBSUtils::Intersect1D(vtkIntArray *v0, vtkIntArray *v1, vtkIntArray *
   if (numVals0 != numVals1)
   {
     fprintf(stderr,"Cannot do accurate comparison! Vectors are different lengths\n");
-    return 0;
+    return SV_ERROR;
   }
   result->SetNumberOfValues(numVals1);
   for (int i=0; i< numVals1; i++)
@@ -1956,7 +1956,7 @@ int vtkSVNURBSUtils::Intersect1D(vtkIntArray *v0, vtkIntArray *v1, vtkIntArray *
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1972,7 +1972,7 @@ int vtkSVNURBSUtils::Add1D(vtkDoubleArray *v0, vtkDoubleArray *v1, double scalar
   if (numVals0 != numVals1)
   {
     fprintf(stderr,"Cannot do accurate comparison! Vectors are different lengths\n");
-    return 0;
+    return SV_ERROR;
   }
   result->SetNumberOfValues(numVals1);
   for (int i=0; i< numVals1; i++)
@@ -1982,7 +1982,7 @@ int vtkSVNURBSUtils::Add1D(vtkDoubleArray *v0, vtkDoubleArray *v1, double scalar
     result->SetTuple1(i, val0 + scalar*val1);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2001,7 +2001,7 @@ int vtkSVNURBSUtils::AddVal1D(vtkDoubleArray *v0, double val, double scalar, vtk
     result->SetTuple1(i, val0 + scalar*val);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2020,7 +2020,7 @@ int vtkSVNURBSUtils::AddVal1D(double val, vtkDoubleArray *v0, double scalar, vtk
     result->SetTuple1(i, val + scalar*val0);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2039,7 +2039,7 @@ int vtkSVNURBSUtils::MultiplyVal1D(vtkDoubleArray *v0, double val, vtkDoubleArra
     result->SetTuple1(i, val0 * val);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2066,7 +2066,7 @@ int vtkSVNURBSUtils::WhereGreaterEqual(double val, vtkDoubleArray *in, vtkIntArr
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2093,7 +2093,7 @@ int vtkSVNURBSUtils::WhereGreater(double val, vtkDoubleArray *in, vtkIntArray *o
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2120,7 +2120,7 @@ int vtkSVNURBSUtils::WhereLessEqual(double val, vtkDoubleArray *in, vtkIntArray 
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2147,7 +2147,7 @@ int vtkSVNURBSUtils::WhereLess(double val, vtkDoubleArray *in, vtkIntArray *out)
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2174,7 +2174,7 @@ int vtkSVNURBSUtils::WhereEqual(double val, vtkDoubleArray *in, vtkIntArray *out
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2201,7 +2201,7 @@ int vtkSVNURBSUtils::WhereNotEqual(double val, vtkDoubleArray *in, vtkIntArray *
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2222,7 +2222,7 @@ int vtkSVNURBSUtils::PrintArray(vtkIntArray *arr)
   fprintf(stdout,"\n");
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2243,7 +2243,7 @@ int vtkSVNURBSUtils::PrintArray(vtkDoubleArray *arr)
   fprintf(stdout,"\n");
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2277,7 +2277,7 @@ int vtkSVNURBSUtils::PrintVector(vtkTypedArray<double> *vec)
   fprintf(stdout,"\n");
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2315,7 +2315,7 @@ int vtkSVNURBSUtils::PrintMatrix(vtkTypedArray<double> *mat)
   }
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2344,7 +2344,7 @@ int vtkSVNURBSUtils::PrintStructuredGrid(vtkStructuredGrid *mat)
   }
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2371,7 +2371,7 @@ int vtkSVNURBSUtils::PrintPoints(vtkPoints *points)
   }
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2409,7 +2409,7 @@ int vtkSVNURBSUtils::StructuredGridTranspose(vtkStructuredGrid *sg, vtkStructure
   newSg->SetPoints(tmpPoints);
 
   int newDims[3];
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2426,7 +2426,7 @@ int vtkSVNURBSUtils::MatrixTranspose(vtkTypedArray<double> *mat, const int matIs
   if (matIsPoints && np != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   if (matIsPoints)
@@ -2458,7 +2458,7 @@ int vtkSVNURBSUtils::MatrixTranspose(vtkTypedArray<double> *mat, const int matIs
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2480,7 +2480,7 @@ int vtkSVNURBSUtils::MatrixToVector(vtkTypedArray<double> *mat, double *matVec)
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2502,7 +2502,7 @@ int vtkSVNURBSUtils::VectorToMatrix(double *matVec, const int nr, const int nc, 
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2519,7 +2519,7 @@ int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *ma
   if (np != 3)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return 0;
+    return SV_ERROR;
   }
 
   for (int i=0; i<nc; i++)
@@ -2533,7 +2533,7 @@ int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *ma
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2556,7 +2556,7 @@ int vtkSVNURBSUtils::VectorsToPointMatrix(double *matVecs[3], const int nr, cons
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2572,7 +2572,7 @@ int vtkSVNURBSUtils::DGEMM(const double *A, const int nrA, const int ncA,
   if (ncA != nrB)
   {
     fprintf(stderr,"Matrix dims do not match, cannot perform operation\n");
-    return 0;
+    return SV_ERROR;
   }
   for (int i=0; i<ncB; i++)
   {
@@ -2603,7 +2603,7 @@ int vtkSVNURBSUtils::DGEMM(const double *A, const int nrA, const int ncA,
   }
   //fprintf(stdout,"End\n");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2622,5 +2622,5 @@ int vtkSVNURBSUtils::Print2DArray(const double *arr, const int nr, const int nc)
   }
   fprintf(stdout,"----------------------------------------------------------\n");
 
-  return 1;
+  return SV_OK;
 }

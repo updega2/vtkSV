@@ -150,25 +150,25 @@ int vtkSVMapInterpolator::RequestData(
   if (numSourcePolys < 1)
   {
     vtkDebugMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
   vtkIdType numTargetPolys = this->TargetPd->GetNumberOfPolys();
   //Check the input to make sure it is there
   if (numTargetPolys < 1)
   {
     vtkDebugMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->MatchBoundaries() != 1)
   {
     vtkErrorMacro("Error matching the boundaries of the surfaces");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->SubdivideAndInterpolate() != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   output->DeepCopy(this->MappedPd);
@@ -182,7 +182,7 @@ int vtkSVMapInterpolator::RequestData(
   {
     output->GetCellData()->RemoveArray("cellNormals");
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -212,10 +212,10 @@ int vtkSVMapInterpolator::SubdivideAndInterpolate()
                                      this->MappedPd) != 1)
   {
     vtkErrorMacro("Error interpolating onto original target surface");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -270,7 +270,7 @@ int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
     sourceToTargetPd->GetPoints()->InsertPoint(i, newPoint);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 int Sign(double testVal)
@@ -299,22 +299,22 @@ int vtkSVMapInterpolator::MatchBoundaries()
 {
   if (this->FindBoundary(this->TargetS2Pd, this->TargetBoundary) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   if (this->FindBoundary(this->SourceS2Pd, this->SourceBoundary) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->HasBoundary == 1)
   {
     if (this->MoveBoundaryPoints() != 1)
     {
-      return 0;
+      return SV_ERROR;
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -339,7 +339,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
     pd->GetCellPoints(i, npts, pts);
     //if (npts != 3)
     //{
-    //  return 0;
+    //  return SV_ERROR;
     //}
     for (int j=0; j<npts; j++)
     {
@@ -358,7 +358,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
       }
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -391,12 +391,12 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
       double newPt[3];
       if (this->GetPointOnTargetBoundary(i, closestCell, newPt) != 1)
       {
-	return 0;
+	return SV_ERROR;
       }
       this->SourceS2Pd->GetPoints()->SetPoint(i, newPt);
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -439,9 +439,9 @@ int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, 
   else
   {
     vtkErrorMacro("Boundaries do not match well enough");
-    return 0;
+    return SV_ERROR;
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -504,7 +504,7 @@ int vtkSVMapInterpolator::GetProjectedPoint(double pt0[], double pt1[], double p
   {
     returnPt[i] = pt0[i] + proj/norm * vec0[i];
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -551,5 +551,5 @@ int vtkSVMapInterpolator::GetClosestTwoPoints(vtkPolyData *pd, double projPt[], 
       ptId1 = boundaryPts->GetId(1);
     }
   }
-  return 1;
+  return SV_OK;
 }

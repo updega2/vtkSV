@@ -95,11 +95,11 @@ int vtkDelaunay2D_60::InCircle (double x[3], double x1[3], double x2[3],
 
   if ( dist2 < (0.999999999999*radius2) )
     {
-    return 1;
+    return SV_OK;
     }
   else
     {
-    return 0;
+    return SV_ERROR;
     }
 }
 
@@ -336,13 +336,13 @@ int vtkDelaunay2D_60::RequestData(
   if ( (inPoints=input->GetPoints()) == NULL )
     {
     vtkDebugMacro("Cannot triangulate; no input points");
-    return 1;
+    return SV_OK;
     }
 
   if ( (numPoints=inPoints->GetNumberOfPoints()) <= 2 )
     {
     vtkDebugMacro("Cannot triangulate; need at least 3 input points");
-    return 1;
+    return SV_OK;
     }
 
   neighbors = vtkIdList::New(); neighbors->Allocate(2);
@@ -814,7 +814,7 @@ int vtkDelaunay2D_60::RequestData(
           {
           vtkErrorMacro("ERROR: Edge [" << p1 << " " << p2
               << "] is non-manifold!!!");
-          return 0;
+          return SV_ERROR;
           }
 
         tri2 = neighbors->GetId(0);
@@ -953,7 +953,7 @@ int vtkDelaunay2D_60::RequestData(
 
   output->Squeeze();
 
-  return 1;
+  return SV_OK;
 }
 
 // Methods used to recover edges. Uses lines and polygons to determine boundary
@@ -1349,7 +1349,7 @@ int vtkDelaunay2D_60::FillInputPortInformation(int port, vtkInformation* info)
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
     info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
     }
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------

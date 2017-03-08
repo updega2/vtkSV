@@ -176,14 +176,14 @@ int vtkSVPlanarMapper::RequestData(
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->RunFilter() != 1)
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->RemoveInternalIds)
@@ -192,7 +192,7 @@ int vtkSVPlanarMapper::RequestData(
     this->WorkPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   }
   output->DeepCopy(this->PlanarPd);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -209,14 +209,14 @@ int vtkSVPlanarMapper::PrepFilter()
   if (numPolys < 1)
   {
     vtkDebugMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
   if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
   {
     vtkErrorMacro("Error when checking input surface");
-    return 0;
+    return SV_ERROR;
   }
 
   // Check if internal id array name is given
@@ -246,7 +246,7 @@ int vtkSVPlanarMapper::PrepFilter()
                              this->EdgeNeighbors, this->IsBoundary))
   {
     vtkErrorMacro("Could not create edge table");
-    return 0;
+    return SV_ERROR;
   }
 
   // Set the size of the matrices
@@ -257,7 +257,7 @@ int vtkSVPlanarMapper::PrepFilter()
   this->Bu.resize(numPoints, 0.0);
   this->Bv.resize(numPoints, 0.0);
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -270,22 +270,22 @@ int vtkSVPlanarMapper::RunFilter()
   if (this->SetBoundaries() != 1)
   {
     vtkErrorMacro("Error in mapping");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->SetInternalNodes() != 1)
   {
     vtkErrorMacro("Error setting internal nodes");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->SolveSystem() != 1)
   {
     vtkErrorMacro("Error solving system");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -307,7 +307,7 @@ int vtkSVPlanarMapper::SetBoundaries()
   if (vtkSVGeneralUtils::CheckArrayExists(boundaryPd, 0, this->InternalIdsArrayName) == 0)
   {
     vtkErrorMacro("No internal ids array name on boundary pd");
-    return 0;
+    return SV_ERROR;
   }
   vtkDataArray *originalIds = boundaryPd->GetPointData()->GetArray(this->InternalIdsArrayName);
   int numBoundPts = boundaryPd->GetNumberOfPoints();
@@ -324,7 +324,7 @@ int vtkSVPlanarMapper::SetBoundaries()
     this->Bv[id] = pt[1];
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -382,7 +382,7 @@ int vtkSVPlanarMapper::SetCircleBoundary()
 //    }
 //  }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -432,7 +432,7 @@ int vtkSVPlanarMapper::SetInternalNodes()
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -467,7 +467,7 @@ int vtkSVPlanarMapper::SolveSystem()
   normaler->Update();
 
   this->PlanarPd->DeepCopy(normaler->GetOutput());
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -484,7 +484,7 @@ int vtkSVPlanarMapper::InvertSystem(std::vector<std::vector<double> > &mat,
   if (nr != nc)
   {
     //vtkErrorMacro("Matrix is not square");
-    return 0;
+    return SV_ERROR;
   }
 
   double **inMat  = new double*[nr];
@@ -514,7 +514,7 @@ int vtkSVPlanarMapper::InvertSystem(std::vector<std::vector<double> > &mat,
     delete [] inMat;
     delete [] outMat;
     //vtkErrorMacro("vtkMath could not invert matrix");
-    return 0;
+    return SV_ERROR;
   }
 
   for (int i=0; i<nr; i++)
@@ -532,5 +532,5 @@ int vtkSVPlanarMapper::InvertSystem(std::vector<std::vector<double> > &mat,
   }
   delete [] inMat;
   delete [] outMat;
-  return 1;
+  return SV_OK;
 }

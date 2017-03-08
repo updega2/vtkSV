@@ -48,7 +48,7 @@ int vtkSVSquareBoundaryMapper::SetBoundaries()
   if (this->CalculateSquareEdgeLengths() != 1)
   {
     vtkErrorMacro("Didn't work");
-    return 0;
+    return SV_ERROR;
   }
   fprintf(stdout,"Square edge lengths: %.4f %.4f %.4f %.4f\n", this->BoundaryLengths[0],
                                                                this->BoundaryLengths[1],
@@ -58,10 +58,10 @@ int vtkSVSquareBoundaryMapper::SetBoundaries()
   if (!this->SetSquareBoundary())
   {
     vtkErrorMacro("Was not able to set boundary");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -115,7 +115,7 @@ int vtkSVSquareBoundaryMapper::CalculateSquareEdgeLengths()
   //fprintf(stdout,"Curr!: %d\n", currCell);
   //fprintf(stdout,"NumLines!: %d\n", numLines);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ int vtkSVSquareBoundaryMapper::SetSquareBoundary()
   newDataArray->SetName(this->InternalIdsArrayName);
   this->BoundaryPd->GetPointData()->AddArray(newDataArray);
 
-  return 1;
+  return SV_OK;
 }
 
 void vtkSVSquareBoundaryMapper::PrintSelf(ostream& os, vtkIndent indent)

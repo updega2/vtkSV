@@ -170,7 +170,7 @@ int vtkSVGeneralizedPolycube::InsertGridWithCenter(const int cellId, const doubl
   }
   this->SetGridWithCenter(cellId, center, dims, cubetype, parentdirection, childdirection);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ int vtkSVGeneralizedPolycube::SetGridWithCenter(const int cellId, const double c
   }
 
   this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ int vtkSVGeneralizedPolycube::InsertGridWithOrigin(const int cellId, const doubl
   }
   this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -224,7 +224,7 @@ int vtkSVGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double o
   }
   this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
 
-  return 1;
+  return SV_OK;
 }
 
 /**
@@ -287,7 +287,7 @@ int vtkSVGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double o
 
   this->SetGrid(cellId, points, cubetype, parentdirection, childdirection);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -304,7 +304,7 @@ int vtkSVGeneralizedPolycube::InsertGrid(const int cellId, vtkPoints *points, co
   }
   this->SetGrid(cellId, points, cubetype, parentdirection, childdirection);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -319,7 +319,7 @@ int vtkSVGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const
   if (numPts != 8)
   {
     vtkErrorMacro("Can only add grid with the 8 corner points");
-    return 0;
+    return SV_ERROR;
   }
 
   vtkIdType pointIds[8];
@@ -339,12 +339,12 @@ int vtkSVGeneralizedPolycube::SetGrid(const int cellId, vtkPoints *points, const
   else
   {
     vtkErrorMacro("CellId is greater than number of cells, must set number of grids to correct size first");
-    return 0;
+    return SV_ERROR;
   }
   this->GetCellData()->GetArray("CubeType")->SetTuple1(cellId, cubetype);
   this->GetCellData()->GetArray("ParentDirection")->SetTuple1(cellId, parentdirection);
   this->GetCellData()->GetArray("ChildDirection")->SetTuple1(cellId, childdirection);
   this->Modified();
 
-  return 1;
+  return SV_OK;
 }

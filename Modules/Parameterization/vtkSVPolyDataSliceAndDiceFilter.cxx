@@ -209,7 +209,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   if (this->PrepFilter() != 1)
   {
     vtkErrorMacro("Error in preprocessing the polydata\n");
-    return 0;
+    return SV_ERROR;
   }
   fprintf(stdout,"Graph built...\n");
   vtkNew(vtkXMLPolyDataWriter, pdwriter);
@@ -220,7 +220,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   if (this->SliceBifurcations() != 1)
   {
     vtkErrorMacro("Error in slicing the polydata\n");
-    return 0;
+    return SV_ERROR;
   }
   fprintf(stdout,"Bifurcations segmented...\n");
     vtkNew(vtkXMLPolyDataWriter, ddwriter);
@@ -231,7 +231,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   if (this->SliceBranches() != 1)
   {
     vtkErrorMacro("Error in slicing the polydata\n");
-    return 0;
+    return SV_ERROR;
   }
   fprintf(stdout,"Branches segmented...\n");
   vtkNew(vtkXMLPolyDataWriter, lwriter);
@@ -242,7 +242,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   if (this->BuildPolycube() != 1)
   {
     vtkErrorMacro("Error in constructing polycube\n");
-    return 0;
+    return SV_ERROR;
   }
   fprintf(stdout,"Polycube built...\n");
 
@@ -252,7 +252,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   writer->Write();
 
   output->DeepCopy(this->WorkPd);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -266,13 +266,13 @@ int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
   if (this->FindGroupBoundaries() != 1)
   {
     vtkErrorMacro("Unable to find boundaries of input group ids data array");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->GetCriticalPoints() != 1)
   {
     vtkErrorMacro("Unable to retrieve critical points");
-    return 0;
+    return SV_ERROR;
   }
 
   this->FormDirectionTable(this->DirectionTable);
@@ -287,11 +287,11 @@ int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
   if (this->CenterlineGraph->BuildGraph() != 1)
   {
     vtkErrorMacro("Unable to form skeleton of polydata");
-    return 0;
+    return SV_ERROR;
   }
   this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -318,7 +318,7 @@ int vtkSVPolyDataSliceAndDiceFilter::FormDirectionTable(int dirTable[6][4])
   dirTable[UP][0]    = LEFT;  dirTable[UP][1]    = BACK;  dirTable[UP][2]    = RIGHT; dirTable[UP][3]    = FRONT;
   dirTable[DOWN][0]  = RIGHT; dirTable[DOWN][1]  = FRONT; dirTable[DOWN][2]  = LEFT;  dirTable[DOWN][3]  = BACK;
 
-  return 1;
+  return SV_OK;
 }
 
 int vtkSVPolyDataSliceAndDiceFilter::LookupDirection(const int dir, const int ang)
@@ -537,7 +537,7 @@ int vtkSVPolyDataSliceAndDiceFilter::FindGroupBoundaries()
 
   this->WorkPd->DeepCopy(separator->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -575,7 +575,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCriticalPoints()
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -596,7 +596,7 @@ int vtkSVPolyDataSliceAndDiceFilter::InsertCriticalPoints(const int pointId, vtk
     //fprintf(stdout,"Added critical point pair: %d %d\n", groupId, pointId);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -632,7 +632,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *
     branchCenterlines->GetPointData()->RemoveArray(this->InternalIdsArrayName);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -689,7 +689,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranches()
   this->WorkPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   this->WorkPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -705,7 +705,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetSectionZAxis(const double endPt[3], cons
   vtkMath::Subtract(startPt, endPt, zvec);
   vtkMath::Normalize(zvec);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -728,7 +728,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetSectionXAxis(const double endPt[3], cons
   vtkMath::MultiplyScalar(vec1, vecmag);
   vtkMath::Subtract(vec0, vec1, xvec);
 
-  return 1;
+  return SV_OK;
 }
 
 
@@ -850,10 +850,10 @@ int vtkSVPolyDataSliceAndDiceFilter::DetermineSliceStrategy(vtkPolyData *branchP
   else
   {
     vtkErrorMacro("This shouldnt be possible. Something went wrong");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -948,7 +948,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetSurgeryPoints(vtkPolyData *pd,
   surgeryPoints->InsertNextId(halfPoints->GetId(3));
   surgeryPoints->InsertNextId(halfPoints->GetId(2));
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1006,7 +1006,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1247,7 +1247,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
                                         this->TotalSliceId, -1, this->InternalIdsArrayName);
   this->TotalSliceId++;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1273,10 +1273,10 @@ int vtkSVPolyDataSliceAndDiceFilter::CheckSlice(vtkPolyData *pd)
 
   if (connector->GetNumberOfExtractedRegions() != 2)
   {
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1343,7 +1343,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcations()
   }
   this->WorkPd->GetPointData()->RemoveArray("SurgeryPoints");
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1429,7 +1429,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   if (criticalPoints.size() != 2)
   {
     fprintf(stderr,"There should be two critical points between groups and there are %lu\n", criticalPoints.size());
-    return 0;
+    return SV_ERROR;
   }
 
 
@@ -1771,7 +1771,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
     fprintf(stdout,"%d ",parIndices[i]);
   fprintf(stdout,"\n");
 
-  return 1;
+  return SV_OK;
 }
 //---------------------------------------------------------------------------
 /**
@@ -1800,7 +1800,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCorrectFrontPoint(vtkPolyData *pd,
     backId  = tmp;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1868,7 +1868,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFourPolyDataRegions(vtkPolyData *startPd
   }
   appender2->Update();
   leftovers->DeepCopy(appender2->GetOutput());
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1897,7 +1897,7 @@ int vtkSVPolyDataSliceAndDiceFilter::CheckStartSurgeryPoints(vtkPolyData *pd, vt
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1942,7 +1942,7 @@ int vtkSVPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
   int fixBack = thresholdIds->LookupValue(backId);
   this->GetSurgeryPoints(thresholdLoop, pd, thresholdIds, startPt, secondPt, fixFront, fixBack, checkId, this->SegmentIdsArrayName, fixedSurgeryPoints, startDir);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1993,7 +1993,7 @@ int vtkSVPolyDataSliceAndDiceFilter::BuildPolycube()
   this->Polycube->DeepCopy(merger->GetOutput());
   this->Polycube->BuildLinks();
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2062,7 +2062,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
 
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2090,7 +2090,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCloseGeodesicPoint(vtkPolyData *pd, doub
   returnStartId = boundary->GetPointData()->GetArray(this->InternalIdsArrayName)->
     GetTuple1(endPtId);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2267,7 +2267,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCe
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2326,7 +2326,7 @@ int vtkSVPolyDataSliceAndDiceFilter::FixGraphDirections(svGCell *gCell, const in
                      rotIndices, NULL, NULL);
   }
   fprintf(stdout,"NewANGe: %.4f\n", gCell->Children[gCell->DivergingChild]->RefAngle);
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2415,7 +2415,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
     iter++;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2484,7 +2484,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetClose3DPoint(vtkPolyData *pd, double cen
   //fprintf(stdout,"MinDist ID: %d\n", minId);
 
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -2510,5 +2510,5 @@ int vtkSVPolyDataSliceAndDiceFilter::AddSurgeryPoints(vtkIdList *surgeryLineIds,
     newPointIds->SetId(i, newPtId);
   }
   surgeryLines->InsertNextCell(newPointIds);
-  return 1;
+  return SV_OK;
 }

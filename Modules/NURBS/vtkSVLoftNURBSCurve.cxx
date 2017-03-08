@@ -109,10 +109,10 @@ int vtkSVLoftNURBSCurve::RequestData(
   if (this->LoftNURBS(input, output) != 1)
   {
     vtkErrorMacro("Lofting failed!");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -128,10 +128,10 @@ int vtkSVLoftNURBSCurve::FillInputPortInformation(
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
     {
-    return 0;
+    return SV_ERROR;
     }
   info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -145,14 +145,14 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   vtkNew(vtkDoubleArray, U);
   if (vtkSVNURBSUtils::GetUs(input->GetPoints(), ptype, U) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkDoubleArray, knots);
   if (vtkSVNURBSUtils::GetKnots(U, p, ktype, knots) != 1)
   {
     fprintf(stderr,"Error getting knots\n");
-    return 0;
+    return SV_ERROR;
   }
   vtkNew(vtkDoubleArray, weights);
   weights->SetNumberOfTuples(nCon);
@@ -181,7 +181,7 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   if (vtkSVNURBSUtils::GetControlPointsOfCurve(input->GetPoints(), U, weights,
                                              knots, p, ktype, D0, DN, cpoints) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   Curve->SetKnotVector(knots);
@@ -189,7 +189,7 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   Curve->GeneratePolyDataRepresentation(this->PolyDataSpacing);
   outputPD->DeepCopy(Curve->GetCurveRepresentation());
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -214,5 +214,5 @@ int vtkSVLoftNURBSCurve::GetDefaultDerivatives(vtkPoints *points, double D0[3], 
   vtkMath::Normalize(D0);
   vtkMath::Normalize(DN);
 
-  return 1;
+  return SV_OK;
 }

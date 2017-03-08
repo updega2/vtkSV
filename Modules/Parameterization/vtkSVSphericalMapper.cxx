@@ -191,14 +191,14 @@ int vtkSVSphericalMapper::RequestData(
   if (numPolys < 1)
   {
     vtkDebugMacro("No input!");
-    return 0;
+    return SV_ERROR;
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
   if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
   {
     vtkErrorMacro("Error when checking input surface");
-    return 0;
+    return SV_ERROR;
   }
   //Get the number of Polys for scalar  allocation
   numPolys = this->InitialPd->GetNumberOfPolys();
@@ -211,7 +211,7 @@ int vtkSVSphericalMapper::RequestData(
   if (this->PerformMapping() != 1)
   {
     vtkErrorMacro("Error while doing CG Solve");
-    return 0;
+    return SV_ERROR;
   }
 
   output->DeepCopy(this->HarmonicMap[HARMONIC]);
@@ -225,7 +225,7 @@ int vtkSVSphericalMapper::RequestData(
   {
     output->GetCellData()->RemoveArray("cellNormals");
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -252,7 +252,7 @@ int vtkSVSphericalMapper::PerformMapping()
   if(this->SetBoundaries() != 1)
   {
     vtkErrorMacro("Error when setting boundaries");
-    return 0;
+    return SV_ERROR;
   }
   //std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Placed.vtp";
   //vtkNew(vtkXMLPolyDataWriter, writer);
@@ -263,14 +263,14 @@ int vtkSVSphericalMapper::PerformMapping()
   if (this->InitiateCGArrays() != 1)
   {
     vtkErrorMacro("Error when initiating arrays");
-    return 0;
+    return SV_ERROR;
   }
 
   //Run the Tutte Energy Step
   if (this->SphericalTutteMapping() != 1)
   {
     vtkErrorMacro("Error when computing the tutte map");
-    return 0;
+    return SV_ERROR;
   }
   //Compute Initial Tutte energy
   this->HarmonicMap[1]->DeepCopy(this->HarmonicMap[0]);
@@ -279,10 +279,10 @@ int vtkSVSphericalMapper::PerformMapping()
   if (this->SphericalConformalMapper() != 1)
   {
     vtkErrorMacro("Error when computing the conformal map");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -307,7 +307,7 @@ int vtkSVSphericalMapper::InitiateCGArrays()
   this->ConjugateDir->Allocate(numPts, 10000);
   this->ConjugateDir->SetNumberOfTuples(numPts);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -321,7 +321,7 @@ int vtkSVSphericalMapper::SetBoundaries()
   if (this->FindBoundaries() != 1)
   {
     vtkErrorMacro("Could not find boundaries");
-    return 0;
+    return SV_ERROR;
   }
 
   if (this->NumBoundaries != 0)
@@ -355,7 +355,7 @@ int vtkSVSphericalMapper::SetBoundaries()
         boundaryLoops[j]->Delete();
       }
       delete [] boundaryLoops;
-      return 0;
+      return SV_ERROR;
     }
     if (vtkSVGeneralUtils::SeparateLoops(this->Boundaries, boundaryLoops, numBoundStarts,
                                          this->ObjectXAxis, this->ObjectZAxis, boundaryStart) != 1)
@@ -366,7 +366,7 @@ int vtkSVSphericalMapper::SetBoundaries()
         boundaryLoops[j]->Delete();
       }
       delete [] boundaryLoops;
-      return 0;
+      return SV_ERROR;
     }
     vtkIntArray *boundaryLoopPts[2];
     vtkIntArray *boundaryLoopHelper[2];
@@ -390,7 +390,7 @@ int vtkSVSphericalMapper::SetBoundaries()
           boundaryLoops[j]->Delete();
         }
         delete [] boundaryLoops;
-        return 0;
+        return SV_ERROR;
       }
       double cubeStart[3];
       this->GetCubeStartPoint(this->CubeStart[i], cubeStart);
@@ -411,7 +411,7 @@ int vtkSVSphericalMapper::SetBoundaries()
           boundaryLoops[j]->Delete();
         }
         delete [] boundaryLoops;
-        return 0;
+        return SV_ERROR;
       }
 
       //double length = 0.0;
@@ -423,7 +423,7 @@ int vtkSVSphericalMapper::SetBoundaries()
       //    boundaryLoops[j]->Delete();
       //  }
       //  delete [] boundaryLoops;
-      //  return 0;
+      //  return SV_ERROR;
       //}
       //if (this->SetLoopOnUnitCircle(boundaryLoops[i], length, radius) != 1)
       //{
@@ -433,7 +433,7 @@ int vtkSVSphericalMapper::SetBoundaries()
       //    boundaryLoops[j]->Delete();
       //  }
       //  delete [] boundaryLoops;
-      //  return 0;
+      //  return SV_ERROR;
       //}
       //delete [] lengths;
 
@@ -447,7 +447,7 @@ int vtkSVSphericalMapper::SetBoundaries()
     delete [] boundaryLoops;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -488,7 +488,7 @@ int vtkSVSphericalMapper::FindBoundaries()
   this->NumBoundaries = connector->GetNumberOfExtractedRegions();
   this->Boundaries->DeepCopy(surfacer->GetOutput());
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -510,15 +510,15 @@ int vtkSVSphericalMapper::FirstStep(int map)
                                               laplacian, map) != 1)
   {
     vtkErrorMacro("Error when computing laplacian");
-    return 0;
+    return SV_ERROR;
   }
   if (this->UpdateMap(laplacian, map, CG_NONE) != 1)
   {
     vtkErrorMacro("Error when updating tutte map");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -596,7 +596,7 @@ int vtkSVSphericalMapper::WolfeLineSearch(int map)
   //}
   this->TimeStep = maxstep;
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -624,7 +624,7 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
   if (this->FirstStep(TUTTE) != 1)
   {
     vtkErrorMacro("Error during initial step");
-    return 0;
+    return SV_ERROR;
   }
   double EStep = 0.0;
   this->ComputeEnergy(this->HarmonicMap[TUTTE], this->EdgeTable,
@@ -649,13 +649,13 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
                                                 laplacian, TUTTE) != 1)
     {
       vtkErrorMacro("Error when computing laplacian");
-      return 0;
+      return SV_ERROR;
     }
 
     if (this->UpdateMap(laplacian, TUTTE, this->CGUpdateMethod) != 1)
     {
       vtkErrorMacro("Error when updating tutte map");
-      return 0;
+      return SV_ERROR;
     }
 
     this->ComputeEnergy(this->HarmonicMap[TUTTE], this->EdgeTable,
@@ -698,7 +698,7 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
   }
 
   fprintf(stdout,"Done with SphericalTutteMapping...\n");
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -726,7 +726,7 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
   if (this->FirstStep(HARMONIC) != 1)
   {
     vtkErrorMacro("Error during initial step");
-    return 0;
+    return SV_ERROR;
   }
   double EStep = 0.0;
   this->ComputeEnergy(this->HarmonicMap[HARMONIC], this->EdgeTable,
@@ -751,13 +751,13 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
                                                 laplacian, HARMONIC) != 1)
     {
       vtkErrorMacro("Error when computing laplacian");
-      return 0;
+      return SV_ERROR;
     }
 
     if (this->UpdateMap(laplacian, HARMONIC, this->CGUpdateMethod) != 1)
     {
       vtkErrorMacro("Error when updating tutte map");
-      return 0;
+      return SV_ERROR;
     }
 
     //Compute Mobius transformation
@@ -766,7 +766,7 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
       if (this->ComputeMobiusTransformation() != 1)
       {
         vtkErrorMacro("Error when computing the mobius transformation");
-        return 0;
+        return SV_ERROR;
       }
     }
 
@@ -810,7 +810,7 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
   }
 
   fprintf(stdout,"Done with SphericalConformalMapper...\n");
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -852,7 +852,7 @@ int vtkSVSphericalMapper::ComputeMobiusTransformation()
     this->MassCenter[2] = massCenter[2];
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -901,7 +901,7 @@ int vtkSVSphericalMapper::ComputeEnergy(vtkPolyData *pd,
     harmonicEnergy += compEnergy[i];
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -925,7 +925,7 @@ int vtkSVSphericalMapper::ComputeStringEnergy(double e0[],
     stringEnergy[i] = weight * pow(edge[i], 2);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -947,7 +947,7 @@ int vtkSVSphericalMapper::ComputeResidual(double &residual)
     newRes[i] = sqrt(newRes[i]);
     residual += newRes[i];
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -989,9 +989,9 @@ int vtkSVSphericalMapper::UpdateMap(vtkFloatArray *laplacian,
   if (this->StepForward(map, cg_update) != 1)
   {
     vtkErrorMacro("Error when updating tutte map in CG step");
-    return 0;
+    return SV_ERROR;
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1022,7 +1022,7 @@ int vtkSVSphericalMapper::StepForward(int map, int cg_update)
       }
       this->HarmonicMap[map]->GetPoints()->SetPoint(i, ptVal);
     }
-    return 1;
+    return SV_OK;
   }
   else if (cg_update == CG_FLETCHER_REEVES)
   {
@@ -1043,10 +1043,10 @@ int vtkSVSphericalMapper::StepForward(int map, int cg_update)
   else
   {
     fprintf(stderr,"No correct option give\n");
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1072,7 +1072,7 @@ int vtkSVSphericalMapper::FRUpdateMap(int map)
 
   this->CGUpdateMap(map, beta);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1104,7 +1104,7 @@ int vtkSVSphericalMapper::PRUpdateMap(int map)
 
   this->CGUpdateMap(map, beta);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1136,7 +1136,7 @@ int vtkSVSphericalMapper::HSUpdateMap(int map)
 
   this->CGUpdateMap(map, beta);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1168,7 +1168,7 @@ int vtkSVSphericalMapper::DYUpdateMap(int map)
 
   this->CGUpdateMap(map, beta);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1227,7 +1227,7 @@ int vtkSVSphericalMapper::CGUpdateMap(int map, double beta[])
     this->HarmonicMap[map]->GetPoints()->SetPoint(i, ptVal);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1257,7 +1257,7 @@ int vtkSVSphericalMapper::CalculateCircleLength(vtkPolyData *lines,
     length += dist;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1303,7 +1303,7 @@ int vtkSVSphericalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
   //fprintf(stdout,"Curr!: %d\n", currCell);
   //fprintf(stdout,"NumLines!: %d\n", numLines);
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1344,7 +1344,7 @@ int vtkSVSphericalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
     this->HarmonicMap[0]->GetPoints()->SetPoint(id, x_val, y_val, z_val);
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1454,7 +1454,7 @@ int vtkSVSphericalMapper::SetCircleBoundary(vtkPolyData *lines,
     }
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1471,7 +1471,7 @@ int vtkSVSphericalMapper::RotateByAngle(const double pt[3], const double angle,
   transformer->RotateY(angle);
   transformer->TransformPoint(pt, returnPt);
 
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -1595,7 +1595,7 @@ int vtkSVSphericalMapper::SetCubeBoundary(vtkPolyData *lines,
       currCell++;
     }
   }
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1614,7 +1614,7 @@ int vtkSVSphericalMapper::CubeBoundaryToSphere(double inCoords[], double outCoor
   outCoords[1] = inCoords[1] * std::sqrt(1 - (x2/2.0) - (z2/2.0) + (x2*z2/3.0));
   outCoords[2] = inCoords[2] * std::sqrt(1 - (y2/2.0) - (x2/2.0) + (y2*x2/3.0));
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1632,7 +1632,7 @@ int vtkSVSphericalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[])
   int bounds = 0;
   if (t == 0)
   {
-    return 1;
+    return SV_OK;
   }
 
   //Determine number of boundaries and opposite boundaries
@@ -1709,10 +1709,10 @@ int vtkSVSphericalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[])
   }
   else
   {
-    return 0;
+    return SV_ERROR;
   }
 
-  return 1;
+  return SV_OK;
 }
 
 //---------------------------------------------------------------------------
@@ -1756,5 +1756,5 @@ int vtkSVSphericalMapper::GetCubeStartPoint(int id, double startCoords[])
     startCoords[0] = 1.0; startCoords[1] = -1.0; startCoords[2] = -1.0;
   }
 
-  return 1;
+  return SV_OK;
 }

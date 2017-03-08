@@ -251,7 +251,7 @@ int vtkSVLoftNURBSSurface::RequestData(
   this->LoftNURBS(inputs,numInputs,output);
 
   delete [] inputs;
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -276,7 +276,7 @@ int vtkSVLoftNURBSSurface::RequestUpdateExtent(
   // make sure piece is valid
   if (piece < 0 || piece >= numPieces)
     {
-    return 0;
+    return SV_ERROR;
     }
 
   int numInputs = this->GetNumberOfInputConnections(0);
@@ -320,7 +320,7 @@ int vtkSVLoftNURBSSurface::RequestUpdateExtent(
       }
     }
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -346,10 +346,10 @@ int vtkSVLoftNURBSSurface::FillInputPortInformation(
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
     {
-    return 0;
+    return SV_ERROR;
     }
   info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -370,7 +370,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
     if (nVCon != inputs[i]->GetNumberOfPoints())
     {
       vtkErrorMacro("Input segments do not have the same number of points, cannot loft");
-      return 0;
+      return SV_ERROR;
     }
   }
 
@@ -383,7 +383,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   vtkNew(vtkDoubleArray, U);
   if (vtkSVNURBSUtils::GetUs(tmpPoints, putype, U) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   //fprintf(stdout,"U:\n");
   //vtkSVNURBSUtils::PrintArray(U);
@@ -391,14 +391,14 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != 1)
   {
     fprintf(stderr,"Error getting knots\n");
-    return 0;
+    return SV_ERROR;
   }
   //fprintf(stdout,"X knots\n");
   //vtkSVNURBSUtils::PrintArray(uKnots);
   vtkNew(vtkDoubleArray, V);
   if (vtkSVNURBSUtils::GetUs(inputs[0]->GetPoints(), pvtype, V) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
   //fprintf(stdout,"V:\n");
   //vtkSVNURBSUtils::PrintArray(V);
@@ -407,7 +407,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != 1)
   {
     fprintf(stderr,"Error getting knots\n");
-    return 0;
+    return SV_ERROR;
   }
   //fprintf(stdout,"Y knots\n");
   //vtkSVNURBSUtils::PrintArray(vKnots);
@@ -415,7 +415,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   vtkNew(vtkStructuredGrid, inputPoints);
   if (vtkSVNURBSUtils::PolyDatasToStructuredGrid(inputs, numInputs, inputPoints) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   vtkNew(vtkDoubleArray, DU0); DU0->DeepCopy(this->StartUDerivatives);
@@ -446,7 +446,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
                                                uKnots, vKnots, p, q, kutype, kvtype,
                                                DU0, DUN, DV0, DVN, cPoints) != 1)
   {
-    return 0;
+    return SV_ERROR;
   }
 
   this->Surface->SetKnotVector(uKnots, 0);
@@ -455,7 +455,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   this->Surface->GeneratePolyDataRepresentation(this->PolyDataUSpacing, this->PolyDataVSpacing);
   outputPD->DeepCopy(this->Surface->GetSurfaceRepresentation());
 
-  return 1;
+  return SV_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -502,5 +502,5 @@ int vtkSVLoftNURBSSurface::GetDefaultDerivatives(vtkStructuredGrid *input, const
     DNout->SetTuple(i, DN);
   }
 
-  return 1;
+  return SV_OK;
 }
