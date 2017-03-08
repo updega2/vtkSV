@@ -119,3 +119,15 @@ if(NOT VTK_EXPORTS_FILE)
 endif()
 file(REMOVE "${VTK_EXPORTS_FILE}")
 #------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Setup test directories
+set(ExternalData_LINK_CONTENT MD5)
+set(ExternalData_BINARY_ROOT       "${CMAKE_BINARY_DIR}/ExternalData")
+set(VTKSV_TEST_DATA_DIR            "${CMAKE_CURRENT_SOURCE_DIR}/Testing/Data")
+set(VTKSV_TEST_BASELINE_DIR        "${VTKSV_TEST_DATA_DIR}/Baseline")
+set(VTKSV_TEST_OUTPUT_DATA_DIR     "${ExternalData_BINARY_ROOT}/Testing/Data")
+set(VTKSV_TEST_OUTPUT_BASELINE_DIR "${PARAVIEW_TEST_OUTPUT_DATA_DIR}/Baseline")
+set(VTKSV_TEST_OUTPUT_DIR          "${CMAKE_BINARY_DIR}/Testing/Temporary")
+set(VTKSV_DATA_ROOT                "${VTKSV_TEST_OUTPUT_DATA_DIR}")
+#------------------------------------------------------------------------------

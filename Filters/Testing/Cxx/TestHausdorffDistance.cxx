@@ -1,6 +1,6 @@
 /*=========================================================================
  *
- * Copyright (c) 2014-2015 The Regents of the University of California.
+ * Copyright (c) 2014 The Regents of the University of California.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,57 +28,57 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVIOUtils.h
- *  @brief
- *  @brief
+/** @file TestHausdorffDistance.cxx
+ *  @brief This implements the vtkSVHausdorffDistance filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
  *  @author UC Berkeley
  *  @author shaddenlab.berkeley.edu
  */
+#include <vtkSVHausdorffDistance.h>
 
-#ifndef vtkSVIOUtils_h
-#define vtkSVIOUtils_h
+#include <vtkPlaneSource.h>
+#include <vtkSmartPointer.h>
+#include <vtkSVGlobals.h>
+#include <vtkSVHausdorffDistance.h>
 
-#include "vtkObject.h"
-
-#include "vtkObjectFactory.h"
-#include "vtkPolyData.h"
-#include "vtkStructuredGrid.h"
-
-#include <string>
-#include <sstream>
-#include <iostream>
-
-class vtkSVIOUtils : public vtkObject
+int TestHausdorffDistance(int, char *[])
 {
-public:
-  static vtkSVIOUtils *New();
-  vtkTypeMacro(vtkSVIOUtils,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  vtkNew(vtkPlaneSource, plane0);
+  plane0->SetOrigin(0.0, 0.0, 0.0);
+  plane0->SetPoint1(1.0, 0.0, 0.0);
+  plane0->SetPoint2(0.0, 1.0, 0.0);
+  plane0->SetXResolution(4);
+  plane0->SetYResolution(4);
+  plane0->Update();
+  vtkNew(vtkPolyData, pd0);
+  pd0->ShallowCopy(plane0->GetOutput());
 
-  //String processing functions
-  static std::string IntToString(int i);
-  static std::string GetPath(std::string fullName);
-  static std::string GetRawName(std::string fullName);
-  static std::string GetExt(std::string fullName);
+  vtkNew(vtkPlaneSource, plane1);
+  plane1->SetOrigin(0.0, 0.0, 1.0);
+  plane1->SetPoint1(1.0, 0.0, 1.0);
+  plane1->SetPoint2(0.0, 1.0, 1.0);
+  plane1->SetXResolution(4);
+  plane1->SetYResolution(4);
+  plane1->Update();
+  vtkNew(vtkPolyData, pd1);
+  pd1->ShallowCopy(plane1->GetOutput());
 
-  //Read Write functions for stl, vtp
-  static int ReadSTLFile(std::string inputFilename, vtkPolyData *polydata);
-  static int ReadVTPFile(std::string inputFilename, vtkPolyData *polydata);
-  static int ReadInputFile(std::string inputFilename, vtkPolyData *polydata);
-  static int WriteVTPFile(std::string outputFilename, vtkPolyData *writePolyData);
-  static int WriteVTPFile(std::string inputFilename, vtkPolyData *writePolyData,std::string attachName);
-  static int WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName);
+  vtkNew(vtkSVHausdorffDistance, Distancer);
+  Distancer->SetInputData(0, pd0);
+  Distancer->SetInputData(1, pd1);
+  Distancer->SetDistanceArrayName("Distance");
+  Distancer->Update();
 
-protected:
-  vtkSVIOUtils();
-  ~vtkSVIOUtils();
+  std::cout<<"Hausdorff Distance: "<<Distancer->GetHausdorffDistance()<<endl;
+  std::cout<<"Average Distance:   "<<Distancer->GetAverageDistance()<<endl;
+  if (0.9999 > Distancer->GetHausdorffDistance() ||
+      1.0001 < Distancer->GetHausdorffDistance())
+  {
+    std::cout<<"Incorrect distance calculation"<<endl;
+    return EXIT_FAILURE;
+  }
 
-private:
-  vtkSVIOUtils(const vtkSVIOUtils&);  // Not implemented.
-  void operator=(const vtkSVIOUtils&);  // Not implemented.
-};
-
-#endif
+  return EXIT_SUCCESS;
+}

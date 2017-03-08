@@ -143,6 +143,22 @@ int vtkSVIOUtils::ReadInputFile(std::string inputFilename, vtkPolyData *polydata
 }
 
 //Function to write the polydata to a vtp
+int vtkSVIOUtils::WriteVTPFile(std::string outputFilename,vtkPolyData *writePolyData)
+{
+  vtkNew(vtkXMLPolyDataWriter, writer);
+  writer->SetFileName(outputFilename.c_str());
+#if VTK_MAJOR_VERSION <= 5
+  writer->SetInput(writePolyData);
+#else
+  writer->SetInputData(writePolyData);
+#endif
+  //writer->SetDataModeToAscii();
+
+  writer->Write();
+  return SV_OK;
+}
+
+//Function to write the polydata to a vtp
 int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyData,std::string attachName)
 {
   std::string rawName, pathName, outputFilename;

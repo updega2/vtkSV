@@ -61,5 +61,3 @@ option(VTKSV_BUILD_MODULE_BOOLEAN "Option to build the Boolean code" ON)
 option(VTKSV_BUILD_MODULE_PARAMETERIZATION "Option to build the Parameterization code" ON)
 option(VTKSV_BUILD_MODULE_DECOMPOSITION "Option to build the Decomposition code" ON)
 #-----------------------------------------------------------------------------
-
-

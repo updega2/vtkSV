@@ -47,6 +47,16 @@ include(vtkSVMacros)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
+# Setup testing
+if(BUILD_TESTING)
+  set(VTKSV_TEST_DIR "${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary")
+  make_directory(${VTKSV_TEST_DIR})
+  enable_testing()
+  include(CTest)
+endif()
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
 # Find VTK, only major dependency
 if(NOT VTK_LIBRARIES)
   find_package(VTK REQUIRED)
@@ -54,6 +64,13 @@ if(NOT VTK_LIBRARIES)
 endif()
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${VTK_CMAKE_DIR}")
 include(vtkExternalModuleMacros)
+if(BUILD_TESTING)
+  set(_test_languages "Cxx")
+  include(ExternalData)
+  include(vtkTestingMacros)
+else()
+  set(_test_languages "")
+endif()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
@@ -75,20 +92,23 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Include for headers
-foreach(dir ${VTKSV_BUILD_DIRS})
-  vtk_add_to_module_search_path("${CMAKE_CURRENT_SOURCE_DIR}/${dir}" "${CMAKE_CURRENT_BINARY_DIR}/${dir}")
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${dir})
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/${dir})
+foreach(vtk-module ${VTKSV_BUILD_DIRS})
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${vtk-module})
+  include_directories(${CMAKE_CURRENT_BINARY_DIR}/${vtk-module})
+  vtk_add_module(
+    "${CMAKE_CURRENT_SOURCE_DIR}/${vtk-module}"
+    module.cmake
+    "${CMAKE_CURRENT_BINARY_DIR}/${vtk-module}"
+    ${_test_languages})
 endforeach()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Add each subdirectory
-message(STATUS "Build Dirs:")
-foreach(dir ${VTKSV_BUILD_DIRS})
-  message(STATUS "  ${dir}")
-  add_subdirectory(${CMAKE_SOURCE_DIR}/${dir})
-  get_filename_component(MODULE_DIR ${dir} NAME)
-  set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} vtkSV${MODULE_DIR})
+message(STATUS "Modules:")
+foreach(vtk-module ${VTK_MODULES_ALL})
+  message(STATUS "  ${vtk-module}")
+  add_subdirectory(${${vtk-module}_SOURCE_DIR} ${${vtk-module}_BINARY_DIR})
+  set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} ${vtk-module})
 endforeach()
 #-----------------------------------------------------------------------------
