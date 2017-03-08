@@ -41,6 +41,7 @@
 #include "vtkSVGeneralUtils.h"
 
 #include "vtkCellData.h"
+#include "vtkCenterOfMass.h"
 #include "vtkClipPolyData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
@@ -98,6 +99,48 @@ int vtkSVGeneralUtils::CheckArrayExists(vtkDataSet *ds,
 
   return exists;
 }
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
+{
+  pd->BuildLinks();
+
+  int numPts = pd->GetNumberOfPoints();
+  int numPolys = pd->GetNumberOfCells();
+
+  for (int i=0; i<numPolys; i++)
+  {
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(i, npts, pts);
+    if (npts != 3)
+    {
+      //vtkErrorMacro("Surface contains elements that aren't triangles");
+      return 0;
+    }
+    for (int j=0; j<npts; j++)
+    {
+      vtkIdType p0, p1;
+      p0 = pts[j];
+      p1 = pts[(j+1)%npts];
+
+      vtkNew(vtkIdList, edgeNeighbor);
+      pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
+
+      if (edgeNeighbor->GetNumberOfIds() > 1)
+      {
+        //vtkErrorMacro("Surface contains triangles with multiple neighbors, not manifold");
+        return 0;
+      }
+    }
+  }
+  return 1;
+}
+
 
 //---------------------------------------------------------------------------
 /**
@@ -400,6 +443,258 @@ int vtkSVGeneralUtils::GetCutPlane(const double endPt[3], const double startPt[3
 
   return 1;
 }
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeArea(double pt0[], double pt1[],
+                                   double pt2[], double &area)
+{
+  area = 0.0;
+  area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
+  area += (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
+  area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
+  area *= 0.5;
+
+  return 1;
+}
+
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
+{
+  massCenter[0] = 0.0;
+  massCenter[1] = 0.0;
+  massCenter[2] = 0.0;
+  vtkNew(vtkCenterOfMass, centerFinder);
+  centerFinder->SetInputData(pd);
+  centerFinder->Update();
+  centerFinder->GetCenter(massCenter);
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GetBarycentricCoordinates(double f[3], double pt0[3],
+                                                 double pt1[3], double pt2[3],
+					                                       double &a0, double &a1, double &a2)
+{
+  double f0[3], f1[3], f2[3], v0[3], v1[3];
+  for (int i=0; i<3; i++)
+  {
+    v0[i] = pt0[i] - pt1[i];
+    v1[i] = pt0[i] - pt2[i];
+    f0[i] = pt0[i] - f[i];
+    f1[i] = pt1[i] - f[i];
+    f2[i] = pt2[i] - f[i];
+  }
+
+  double vArea[3], vA0[3], vA1[3], vA2[3];
+  vtkMath::Cross(v0, v1, vArea);
+  vtkMath::Cross(f1, f2, vA0);
+  vtkMath::Cross(f2, f0, vA1);
+  vtkMath::Cross(f0, f1, vA2);
+
+  double area = vtkMath::Norm(vArea);
+  a0 = vtkMath::Norm(vA0)/area;// * Sign(vtkMath::Dot(vArea, vA0));
+  a1 = vtkMath::Norm(vA1)/area;// * Sign(vtkMath::Dot(vArea, vA1));
+  a2 = vtkMath::Norm(vA2)/area;// * Sign(vtkMath::Dot(vArea, vA2));
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GetPointNeighbors(vtkIdType p0,
+                                       vtkPolyData *pd,
+						                           vtkIdList *pointNeighbors)
+{
+  //Assuming that pointNeighbors is set with no neighbors already
+  vtkNew(vtkIdList, cellIdList);
+  pd->GetPointCells(p0, cellIdList);
+
+  for (int i=0; i<cellIdList->GetNumberOfIds(); i++)
+  {
+    vtkIdType cellId = cellIdList->GetId(i);
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(cellId, npts, pts);
+
+    for (int j=0; j<npts; j++)
+    {
+      vtkIdType neighborPoint = pts[j];
+      if (neighborPoint != p0)
+      {
+        pointNeighbors->InsertUniqueId(neighborPoint);
+      }
+    }
+  }
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GetEdgeCotangentAngle(double pt0[3], double pt1[3],
+                                           double pt2[3], double &angle)
+{
+  double area = 0.0;
+  vtkSVGeneralUtils::ComputeArea(pt0, pt1, pt2, area);
+  if (area < 0)
+  {
+    double tmpPoint[3];
+    for (int i=0; i<3; i++)
+    {
+      tmpPoint[i] = pt0[i];
+      pt0[i] = pt1[i];
+      pt1[i] = tmpPoint[i];
+    }
+  }
+  double vec0[3];
+  double vec1[3];
+  for (int i=0; i<3; i++)
+  {
+    vec0[i] = pt0[i] - pt2[i];
+    vec1[i] = pt1[i] - pt2[i];
+  }
+  double numerator = vtkMath::Dot(vec0, vec1);
+  double cross[3];
+  vtkMath::Cross(vec0, vec1, cross);
+  double denominator = vtkMath::Norm(cross);
+  angle = numerator/denominator;
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::CreateEdgeTable(vtkPolyData *pd,
+                                     vtkEdgeTable *edgeTable,
+                                     vtkFloatArray *edgeWeights,
+                                     vtkIntArray *edgeNeighbors,
+                                     vtkIntArray *isBoundary)
+{
+  int numPts = pd->GetNumberOfPoints();
+  int numTris = pd->GetNumberOfCells();
+
+  edgeTable->InitEdgeInsertion(numPts, 1);
+  isBoundary->SetNumberOfValues(numPts);
+  for (int i=0; i<numPts; i++)
+  {
+    isBoundary->InsertValue(i, 0);
+  }
+  for (int i=0; i<numTris; i++)
+  {
+    //Insert edge into table
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(i, npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      vtkIdType p0 = pts[j];
+      vtkIdType p1 = pts[(j+1)%npts];
+      vtkNew(vtkIdList, neighborCellIds);
+      pd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
+      vtkIdType neighborCellId = 0;
+      if (neighborCellIds->GetNumberOfIds() > 0)
+      {
+        neighborCellId = neighborCellIds->GetId(0);
+      }
+      else
+      {
+        neighborCellId = -1;
+        isBoundary->InsertValue(p0, 1);
+        isBoundary->InsertValue(p1, 1);
+      }
+      vtkIdType checkEdge = edgeTable->IsEdge(p0, p1);
+      if (checkEdge == -1)
+      {
+        //Compute Edge Weight
+        double weight = 0.0;
+        vtkSVGeneralUtils::ComputeEdgeWeight(pd, i, neighborCellId,
+                                             p0, p1, weight);
+        vtkIdType edgeId = edgeTable->InsertEdge(p0, p1);
+        edgeWeights->InsertValue(edgeId, weight);
+        edgeNeighbors->InsertValue(edgeId, neighborCellId);
+        if (weight < 0)
+        {
+          //vtkWarningMacro("Negative weight on edge between cells " << i <<
+          //  " and "<< neighborCellId << ": " << weight);
+        }
+      }
+    }
+  }
+
+  return 1;
+}
+
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeEdgeWeight(vtkPolyData *pd,
+                                         vtkIdType cellId,
+                                         vtkIdType neighborCellId,
+                                         vtkIdType p0,
+                                         vtkIdType p1,
+                                         double &weight)
+{
+  //Add the edge weights based on the angle of the edge
+  vtkIdType cellIds[2];
+  cellIds[0] = cellId;
+  cellIds[1] = neighborCellId;
+  weight = 0.0;
+  double v0[3]; double v1[3]; double v2[3];
+  pd->GetPoint(p0, v0);
+  pd->GetPoint(p1, v1);
+  for (int i=0; i<2; i++)
+  {
+    vtkIdType npts, *pts;
+    if (cellIds[i] != -1)
+    {
+      pd->GetCellPoints(cellIds[i], npts, pts);
+      for (int k=0; k<npts; k++)
+      {
+        if (pts[k] != p0 && pts[k] != p1)
+        {
+          pd->GetPoint(pts[k], v2);
+          double angle = 0.0;
+          vtkSVGeneralUtils::GetEdgeCotangentAngle(v0, v1, v2, angle);
+
+          weight += 0.5*angle;
+        }
+      }
+    }
+  }
+
+  return 1;
+}
+
+
 
 //---------------------------------------------------------------------------
 /**

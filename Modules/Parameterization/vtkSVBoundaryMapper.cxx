@@ -33,6 +33,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
@@ -156,7 +157,7 @@ int vtkSVBoundaryMapper::PrepFilter()
     strcpy(this->InternalIdsArrayName, "InternalIds");
   }
   // Check if array internal ids is already on pd
-  if (this->CheckArrayExists(this->InitialPd, 0, this->InternalIdsArrayName))
+  if (vtkSVGeneralUtils::CheckArrayExists(this->InitialPd, 0, this->InternalIdsArrayName))
   {
     this->RemoveInternalIds = 0;
   }
@@ -414,50 +415,6 @@ int vtkSVBoundaryMapper::CheckSurface(vtkPolyData *pd)
     }
   }
   return 1;
-}
-
-// ----------------------
-// CheckArrayExists
-// ----------------------
-/**
- * @brief Function to check is array with name exists in cell or point data
- * @param object this is the object to check if the array exists
- * @param datatype this is point or cell. point =0,cell=1
- * @param arrayname this is the name of the array to check
- * @reutrn this returns 1 if the array exists and zero if it doesn't
- * or the function does not return properly.
- */
-
-int vtkSVBoundaryMapper::CheckArrayExists(vtkPolyData *object,int datatype,std::string arrayname )
-{
-  vtkIdType i;
-  int numArrays;
-  int exists =0;
-
-  if (datatype == 0)
-  {
-    numArrays = object->GetPointData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetPointData()->GetArrayName(i),arrayname.c_str()))
-      {
-        exists =1;
-      }
-    }
-  }
-  else
-  {
-    numArrays = object->GetCellData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetCellData()->GetArrayName(i),arrayname.c_str()))
-      {
-        exists =1;
-      }
-    }
-  }
-
-  return exists;
 }
 
 void vtkSVBoundaryMapper::PrintSelf(ostream& os, vtkIndent indent)

@@ -56,6 +56,7 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkTriangle.h"
 #include "vtkWarpVector.h"
@@ -173,11 +174,11 @@ int vtkSVMapInterpolator::RequestData(
   output->DeepCopy(this->MappedPd);
   output->GetPointData()->PassData(input1->GetPointData());
   output->GetCellData()->PassData(input1->GetCellData());
-  if (this->PDCheckArrayName(output, 0 ,"Normals") == 1)
+  if (vtkSVGeneralUtils::CheckArrayExists(output, 0 , "Normals") == 1)
   {
     output->GetPointData()->RemoveArray("Normals");
   }
-  if (this->PDCheckArrayName(output, 1,"cellNormals") == 1)
+  if (vtkSVGeneralUtils::CheckArrayExists(output, 1, "cellNormals") == 1)
   {
     output->GetCellData()->RemoveArray("cellNormals");
   }
@@ -255,7 +256,7 @@ int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
     mappedTargetPd->GetPoint(pts[1], pt1);
     mappedTargetPd->GetPoint(pts[2], pt2);
     double area = 0.0;
-    vtkSVMapInterpolator::GetTriangleUV(closestPt, pt0, pt1, pt2, a0, a1, a2);
+    vtkSVGeneralUtils::GetBarycentricCoordinates(closestPt, pt0, pt1, pt2, a0, a1, a2);
 
     double realPt0[3], realPt1[3], realPt2[3];
     originalTargetPd->GetPoint(pts[0], realPt0);
@@ -287,51 +288,6 @@ int Sign(double testVal)
   return asign;
 }
 
-
-int vtkSVMapInterpolator::GetTriangleUV(double f[3], double pt0[3],
-                                      double pt1[3], double pt2[3],
-					                            double &a0, double &a1, double &a2)
-{
-  double f0[3], f1[3], f2[3], v0[3], v1[3];
-  for (int i=0; i<3; i++)
-  {
-    v0[i] = pt0[i] - pt1[i];
-    v1[i] = pt0[i] - pt2[i];
-    f0[i] = pt0[i] - f[i];
-    f1[i] = pt1[i] - f[i];
-    f2[i] = pt2[i] - f[i];
-  }
-
-  double vArea[3], vA0[3], vA1[3], vA2[3];
-  vtkMath::Cross(v0, v1, vArea);
-  vtkMath::Cross(f1, f2, vA0);
-  vtkMath::Cross(f2, f0, vA1);
-  vtkMath::Cross(f0, f1, vA2);
-
-  double area = vtkMath::Norm(vArea);
-  a0 = vtkMath::Norm(vA0)/area;// * Sign(vtkMath::Dot(vArea, vA0));
-  a1 = vtkMath::Norm(vA1)/area;// * Sign(vtkMath::Dot(vArea, vA1));
-  a2 = vtkMath::Norm(vA2)/area;// * Sign(vtkMath::Dot(vArea, vA2));
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVMapInterpolator::ComputeArea(double pt0[], double pt1[],
-                                    double pt2[], double &area)
-{
-  area = 0.0;
-  area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
-  area += (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
-  area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
-  area *= 0.5;
-
-  return 1;
-}
 
 //---------------------------------------------------------------------------
 /**
@@ -596,48 +552,4 @@ int vtkSVMapInterpolator::GetClosestTwoPoints(vtkPolyData *pd, double projPt[], 
     }
   }
   return 1;
-}
-
-// ----------------------
-// PDCheckArrayName
-// ----------------------
-/**
- * @brief Function to check is array with name exists in cell or point data
- * @param object this is the object to check if the array exists
- * @param datatype this is point or cell. point =0,cell=1
- * @param arrayname this is the name of the array to check
- * @reutrn this returns 1 if the array exists and zero if it doesn't
- * or the function does not return properly.
- */
-
-int vtkSVMapInterpolator::PDCheckArrayName(vtkPolyData *object,int datatype,std::string arrayname )
-{
-  vtkIdType i;
-  int numArrays;
-  int exists =0;
-
-  if (datatype == 0)
-  {
-    numArrays = object->GetPointData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetPointData()->GetArrayName(i),arrayname.c_str()))
-      {
-	exists =1;
-      }
-    }
-  }
-  else
-  {
-    numArrays = object->GetCellData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetCellData()->GetArrayName(i),arrayname.c_str()))
-      {
-	exists =1;
-      }
-    }
-  }
-
-  return exists;
 }

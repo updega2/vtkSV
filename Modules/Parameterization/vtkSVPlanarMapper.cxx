@@ -52,6 +52,7 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkTransform.h"
 #include "vtkUnstructuredGrid.h"
@@ -200,47 +201,6 @@ int vtkSVPlanarMapper::RequestData(
  * @param *pd
  * @return
  */
-int vtkSVPlanarMapper::CheckSurface(vtkPolyData *pd)
-{
-  pd->BuildLinks();
-
-  int numPts = pd->GetNumberOfPoints();
-  int numPolys = pd->GetNumberOfCells();
-
-  for (int i=0; i<numPolys; i++)
-  {
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(i, npts, pts);
-    if (npts != 3)
-    {
-      //vtkErrorMacro("Surface contains elements that aren't triangles");
-      return 0;
-    }
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType p0, p1;
-      p0 = pts[j];
-      p1 = pts[(j+1)%npts];
-
-      vtkNew(vtkIdList, edgeNeighbor);
-      pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
-
-      if (edgeNeighbor->GetNumberOfIds() > 1)
-      {
-        //vtkErrorMacro("Surface contains triangles with multiple neighbors, not manifold");
-        return 0;
-      }
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkSVPlanarMapper::PrepFilter()
 {
   vtkIdType numPolys = this->InitialPd->GetNumberOfPolys();
@@ -253,7 +213,7 @@ int vtkSVPlanarMapper::PrepFilter()
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
-  if (this->CheckSurface(this->InitialPd) != 1)
+  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
   {
     vtkErrorMacro("Error when checking input surface");
     return 0;
@@ -267,7 +227,7 @@ int vtkSVPlanarMapper::PrepFilter()
     strcpy(this->InternalIdsArrayName, "InternalIds");
   }
   // Check if array internal ids is already on pd
-  if (this->CheckArrayExists(this->WorkPd, 0, this->InternalIdsArrayName))
+  if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->InternalIdsArrayName))
   {
     this->RemoveInternalIds = 0;
   }
@@ -282,7 +242,7 @@ int vtkSVPlanarMapper::PrepFilter()
 
   //Create the edge table for the input surface
   this->WorkPd->BuildLinks();
-  if (!this->CreateEdgeTable(this->WorkPd, this->EdgeTable, this->EdgeWeights,
+  if (!vtkSVGeneralUtils::CreateEdgeTable(this->WorkPd, this->EdgeTable, this->EdgeWeights,
                              this->EdgeNeighbors, this->IsBoundary))
   {
     vtkErrorMacro("Could not create edge table");
@@ -299,171 +259,6 @@ int vtkSVPlanarMapper::PrepFilter()
 
   return 1;
 }
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::CreateEdgeTable(vtkPolyData *pd,
-                                     vtkEdgeTable *edgeTable,
-                                     vtkFloatArray *edgeWeights,
-                                     vtkIntArray *edgeNeighbors,
-                                     vtkIntArray *isBoundary)
-{
-  int numPts = pd->GetNumberOfPoints();
-  int numTris = pd->GetNumberOfCells();
-
-  edgeTable->InitEdgeInsertion(numPts, 1);
-  isBoundary->SetNumberOfValues(numPts);
-  for (int i=0; i<numPts; i++)
-  {
-    isBoundary->InsertValue(i, 0);
-  }
-  for (int i=0; i<numTris; i++)
-  {
-    //Insert edge into table
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(i, npts, pts);
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType p0 = pts[j];
-      vtkIdType p1 = pts[(j+1)%npts];
-      vtkNew(vtkIdList, neighborCellIds);
-      pd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
-      vtkIdType neighborCellId = 0;
-      if (neighborCellIds->GetNumberOfIds() > 0)
-      {
-        neighborCellId = neighborCellIds->GetId(0);
-      }
-      else
-      {
-        neighborCellId = -1;
-        isBoundary->InsertValue(p0, 1);
-        isBoundary->InsertValue(p1, 1);
-      }
-      vtkIdType checkEdge = edgeTable->IsEdge(p0, p1);
-      if (checkEdge == -1)
-      {
-        //Compute Edge Weight
-        double weight = 0.0;
-        vtkSVPlanarMapper::ComputeEdgeWeight(pd, i, neighborCellId,
-                                           p0, p1, weight);
-        vtkIdType edgeId = edgeTable->InsertEdge(p0, p1);
-        edgeWeights->InsertValue(edgeId, weight);
-        edgeNeighbors->InsertValue(edgeId, neighborCellId);
-        if (weight < 0)
-        {
-          //vtkWarningMacro("Negative weight on edge between cells " << i <<
-          //  " and "<< neighborCellId << ": " << weight);
-        }
-      }
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::ComputeEdgeWeight(vtkPolyData *pd,
-                     vtkIdType cellId,
-                     vtkIdType neighborCellId,
-                     vtkIdType p0,
-                     vtkIdType p1,
-                     double &weight)
-{
-  //Add the edge weights based on the angle of the edge
-  vtkIdType cellIds[2];
-  cellIds[0] = cellId;
-  cellIds[1] = neighborCellId;
-  weight = 0.0;
-  double v0[3]; double v1[3]; double v2[3];
-  pd->GetPoint(p0, v0);
-  pd->GetPoint(p1, v1);
-  for (int i=0; i<2; i++)
-  {
-    vtkIdType npts, *pts;
-    if (cellIds[i] != -1)
-    {
-      pd->GetCellPoints(cellIds[i], npts, pts);
-      for (int k=0; k<npts; k++)
-      {
-        if (pts[k] != p0 && pts[k] != p1)
-        {
-          pd->GetPoint(pts[k], v2);
-          double angle = 0.0;
-          vtkSVPlanarMapper::GetEdgeCotangentAngle(v0, v1, v2, angle);
-
-          weight += 0.5*angle;
-        }
-      }
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::GetEdgeCotangentAngle(double pt0[3], double pt1[3],
-                                           double pt2[3], double &angle)
-{
-  double area = 0.0;
-  vtkSVPlanarMapper::ComputeArea(pt0, pt1, pt2, area);
-  if (area < 0)
-  {
-    double tmpPoint[3];
-    for (int i=0; i<3; i++)
-    {
-      tmpPoint[i] = pt0[i];
-      pt0[i] = pt1[i];
-      pt1[i] = tmpPoint[i];
-    }
-  }
-  double vec0[3];
-  double vec1[3];
-  for (int i=0; i<3; i++)
-  {
-    vec0[i] = pt0[i] - pt2[i];
-    vec1[i] = pt1[i] - pt2[i];
-  }
-  double numerator = vtkMath::Dot(vec0, vec1);
-  double cross[3];
-  vtkMath::Cross(vec0, vec1, cross);
-  double denominator = vtkMath::Norm(cross);
-  angle = numerator/denominator;
-
-  return 1;
-}
-
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::ComputeArea(double pt0[3], double pt1[3],
-                                 double pt2[3], double &area)
-{
-  area = 0.0;
-  area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
-  area += (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
-  area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
-  area *= 0.5;
-
-  return 1;
-}
-
 //---------------------------------------------------------------------------
 /**
  * @brief
@@ -509,7 +304,7 @@ int vtkSVPlanarMapper::SetBoundaries()
   vtkNew(vtkPolyData, boundaryPd);
   boundaryPd->DeepCopy(this->BoundaryMapper->GetOutput());
   // Check if array internal ids is already on pd
-  if (this->CheckArrayExists(boundaryPd, 0, this->InternalIdsArrayName) == 0)
+  if (vtkSVGeneralUtils::CheckArrayExists(boundaryPd, 0, this->InternalIdsArrayName) == 0)
   {
     vtkErrorMacro("No internal ids array name on boundary pd");
     return 0;
@@ -590,50 +385,6 @@ int vtkSVPlanarMapper::SetCircleBoundary()
   return 1;
 }
 
-// ----------------------
-// CheckArrayExists
-// ----------------------
-/**
- * @brief Function to check is array with name exists in cell or point data
- * @param object this is the object to check if the array exists
- * @param datatype this is point or cell. point =0,cell=1
- * @param arrayname this is the name of the array to check
- * @reutrn this returns 1 if the array exists and zero if it doesn't
- * or the function does not return properly.
- */
-
-int vtkSVPlanarMapper::CheckArrayExists(vtkPolyData *object,int datatype,std::string arrayname )
-{
-  vtkIdType i;
-  int numArrays;
-  int exists =0;
-
-  if (datatype == 0)
-  {
-    numArrays = object->GetPointData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetPointData()->GetArrayName(i),arrayname.c_str()))
-      {
-        exists =1;
-      }
-    }
-  }
-  else
-  {
-    numArrays = object->GetCellData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetCellData()->GetArrayName(i),arrayname.c_str()))
-      {
-        exists =1;
-      }
-    }
-  }
-
-  return exists;
-}
-
 //---------------------------------------------------------------------------
 /**
  * @brief
@@ -651,7 +402,7 @@ int vtkSVPlanarMapper::SetInternalNodes()
       double tot_weight = 0.0;
       double tot_tutte_weight = 0.0;
       vtkNew(vtkIdList, pointNeighbors);
-      vtkSVPlanarMapper::GetPointNeighbors(i, this->WorkPd, pointNeighbors);
+      vtkSVGeneralUtils::GetPointNeighbors(i, this->WorkPd, pointNeighbors);
       double weight_tot;
       for (int j=0; j<pointNeighbors->GetNumberOfIds(); j++)
       {
@@ -690,59 +441,8 @@ int vtkSVPlanarMapper::SetInternalNodes()
  * @param *pd
  * @return
  */
-int vtkSVPlanarMapper::GetPointNeighbors(vtkIdType p0,
-                                       vtkPolyData *pd,
-						                           vtkIdList *pointNeighbors)
-{
-  //Assuming that pointNeighbors is set with no neighbors already
-  vtkNew(vtkIdList, cellIdList);
-  pd->GetPointCells(p0, cellIdList);
-
-  for (int i=0; i<cellIdList->GetNumberOfIds(); i++)
-  {
-    vtkIdType cellId = cellIdList->GetId(i);
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(cellId, npts, pts);
-
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType neighborPoint = pts[j];
-      if (neighborPoint != p0)
-      {
-        pointNeighbors->InsertUniqueId(neighborPoint);
-      }
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkSVPlanarMapper::SolveSystem()
 {
-  //this->PrintMatrix(this->A);
-  //std::vector<std::vector<double> > Ainv;
-  //if(!vtkSVPlanarMapper::InvertSystem(this->A, Ainv))
-  //{
-  //  vtkErrorMacro("Could not invert system");
-  //  return 0;
-  //}
-
-  //if (!vtkSVPlanarMapper::MatrixVectorMultiply(Ainv, this->Bu, this->Xu))
-  //{
-  //  vtkErrorMacro("Error computing matrix vector multiply");
-  //  return 0;
-  //}
-
-  //if (!vtkSVPlanarMapper::MatrixVectorMultiply(Ainv, this->Bv, this->Xv))
-  //{
-  //  vtkErrorMacro("Error computing matrix vector multiply");
-  //  return 0;
-  //}
   int numPoints = this->WorkPd->GetNumberOfPoints();
 
   svMath::conjugate_gradient(*this->ATutte, &this->Bu[0], numPoints, &this->Xu[0]);
@@ -834,67 +534,3 @@ int vtkSVPlanarMapper::InvertSystem(std::vector<std::vector<double> > &mat,
   delete [] outMat;
   return 1;
 }
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::MatrixVectorMultiply(std::vector<std::vector<double> > &mat,
-                                          std::vector<double> &inVec,
-                                          std::vector<double> &outVec)
-{
-  int nrM = mat.size();;
-  int ncM = mat[0].size();
-  int nrV = inVec.size();
-  if (ncM != nrV)
-  {
-    //vtkErrorMacro("Matrix and vector do not have consistent dimension");
-    return 0;
-  }
-
-  outVec.resize(nrM, 0.0);
-  for (int i=0; i<nrM; i++)
-  {
-    double updateVal = 0.0;
-    for (int j=0; j<ncM; j++)
-    {
-      updateVal = mat[i][j]*inVec[j];
-    }
-    outVec[i] = updateVal;
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::PrintMatrix(std::vector<std::vector<double> > &mat)
-{
-  int nr = mat.size();
-  int nc = mat[0].size();
-  fprintf(stdout,"Matrix: %d by %d\n", nr, nc);
-  fprintf(stdout,"----------------------------------------------------------\n");
-  for (int i=0; i<nr; i++)
-  {
-    for (int j=0; j<nc; j++)
-    {
-      if (mat[i][j] != 0.0)
-      {
-        fprintf(stdout,"| Row: %d Col: %d ", i, j);
-        fprintf(stdout,"%.4f ", mat[i][j]);
-        fprintf(stdout,"|");
-      }
-    }
-    fprintf(stdout,"\n");
-  }
-  fprintf(stdout,"----------------------------------------------------------\n");
-
-  return 1;
-}
-

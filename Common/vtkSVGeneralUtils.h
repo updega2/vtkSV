@@ -44,6 +44,8 @@
 #include "vtkObject.h"
 
 #include "vtkDataSet.h"
+#include "vtkEdgeTable.h"
+#include "vtkFloatArray.h"
 #include "vtkImplicitFunction.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
@@ -64,6 +66,7 @@ public:
 
   //Checking functions
   static int CheckArrayExists(vtkDataSet *ds, int datatype, std::string arrayname);
+  static int CheckSurface(vtkPolyData *pd);
 
   //General operations
   static int GetClosestPointConnectedRegion(vtkPolyData *pd,
@@ -92,6 +95,12 @@ public:
                                 const std::string &arrName);
   static int GetCutPlane(const double endPt[3], const double startPt[3],
                          const double length, double origin[3], vtkPlane *cutPlane);
+  static int ComputeArea(double pt0[], double pt1[], double pt2[], double &area);
+  static int ComputeMassCenter(vtkPolyData *pd, double massCenter[3]);
+  static int GetBarycentricCoordinates(double f[3], double pt0[3], double pt1[3],
+                                       double pt2[3], double &a0, double &a1, double &a2);
+  static int GetPointNeighbors(vtkIdType p0, vtkPolyData *pd, vtkIdList *pointNeighbors);
+  static int GetEdgeCotangentAngle(double pt0[3], double pt1[3], double pt2[3], double &angle);
 
   //std::map functions
   static int GetAllMapKeys(std::multimap<int, int> &map, std::list<int> &list);
@@ -105,6 +114,13 @@ public:
   static int ListIntersection(std::list<int> &listA,
                               std::list<int> &listB,
                               std::list<int> &returnList);
+  static int CreateEdgeTable(vtkPolyData *pd, vtkEdgeTable *edgeTable,
+                             vtkFloatArray *edgeWeights,
+                             vtkIntArray *edgeNeighbors,
+                             vtkIntArray *isBoundary);
+  static int ComputeEdgeWeight(vtkPolyData *pd, vtkIdType cellId,
+                               vtkIdType neighborCellId,
+                               vtkIdType p0, vtkIdType p1, double &weight);
 
 protected:
   vtkSVGeneralUtils();

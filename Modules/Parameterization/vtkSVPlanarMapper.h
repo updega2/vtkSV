@@ -87,32 +87,9 @@ public:
     TUTTE
   };
 
-  static int CheckSurface(vtkPolyData *pd);
-
-  // Edge functions
-  static int CreateEdgeTable(vtkPolyData *pd, vtkEdgeTable *edgeTable,
-                             vtkFloatArray *edgeWeights,
-                             vtkIntArray *edgeNeighbors,
-                             vtkIntArray *isBoundary);
-  static int ComputeEdgeWeight(vtkPolyData *pd, vtkIdType cellId,
-                               vtkIdType neighborCellId,
-                               vtkIdType p0, vtkIdType p1, double &weight);
-  static int GetEdgeCotangentAngle(double pt0[3], double pt1[3], double pt2[3], double &angle);
-  static int ComputeArea(double pt0[3], double pt1[3], double pt2[3], double &area);
-
-  // Helper functions
-  static int GetPointNeighbors(vtkIdType p0, vtkPolyData *pd, vtkIdList *pointNeighbors);
-  static int RunLoopFind(vtkPolyData *pd, vtkIdType startPt, vtkIdType nextCell,
-                         vtkPolyData *loop);
-  static int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
-
   // Matrix functions
   static int InvertSystem(std::vector<std::vector<double> > &mat,
                           std::vector<std::vector<double> > &invMat);
-  static int MatrixVectorMultiply(std::vector<std::vector<double> > &mat,
-                                  std::vector<double> &inVec,
-                                  std::vector<double> &outVec);
-  static int PrintMatrix(std::vector<std::vector<double> > &mat);
 
 protected:
   vtkSVPlanarMapper();

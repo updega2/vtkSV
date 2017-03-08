@@ -91,12 +91,7 @@ class vtkSVGroupsClipper : public vtkPolyDataAlgorithm
   int SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints);
   int FillGroups(vtkPolyData *pd, vtkPoints *newPoints);
   int FillRegionGroups(vtkPolyData *pd, vtkPolyData *boundary, double center[3]);
-  int ThresholdPd(vtkPolyData *pd, int minVal, int maxVal, int dataType,
-                  std::string arrayName, vtkPolyData *returnPd);
-  int ComputeMassCenter(vtkPolyData *pd, double massCenter[3]);
-  int GetClosestPointConnectedRegion(vtkPolyData *inPd,
-                                     double origin[3],
-                                     vtkPolyData *outPd);
+
   vtkPolyData* Centerlines;
 
   vtkIdList* CenterlineGroupIds;

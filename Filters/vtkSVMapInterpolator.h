@@ -77,11 +77,6 @@ public:
                                       vtkPolyData *mappedTargetPd,
                                       vtkPolyData *originalTargetPd,
                                       vtkPolyData *sourceToTargetPd);
-  static int GetTriangleUV(double f[3], double pt0[3], double pt1[3],
-                           double pt2[3], double &a0, double &a1, double &a2);
-
-  static int ComputeArea(double pt0[], double pt1[], double pt2[], double &area);
-  static int PDCheckArrayName(vtkPolyData *pd, int datatype, std::string arrayname);
 
   // Setup and Check Functions
 protected:
