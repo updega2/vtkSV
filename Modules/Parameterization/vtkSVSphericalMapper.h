@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkSphericalConformalMapper.h
+/** @file vtkSVSphericalMapper.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,8 +43,8 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSphericalConformalMapper_h
-#define vtkSphericalConformalMapper_h
+#ifndef vtkSVSphericalMapper_h
+#define vtkSVSphericalMapper_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -52,11 +52,11 @@
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 
-class vtkSphericalConformalMapper : public vtkPolyDataAlgorithm
+class vtkSVSphericalMapper : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkSphericalConformalMapper* New();
-  //vtkTypeRevisionMacro(vtkSphericalConformalMapper, vtkPolyDataAlgorithm);
+  static vtkSVSphericalMapper* New();
+  //vtkTypeRevisionMacro(vtkSVSphericalMapper, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -144,53 +144,12 @@ public:
     LEFT   = 32,
     RIGHT  = 64,
   };
-  //Output if no intersection
 
-  // Setup and Check Functions
-  static int CleanAndCheckSurface(vtkPolyData *pd);
-  static int CreateEdgeTable(vtkPolyData *pd, vtkEdgeTable *edgeTable,
-                             vtkFloatArray *edgeWeights,
-                             vtkIntArray *edgeNeighbors,
-                             vtkIntArray *isBoundary);
-  static int ComputeEdgeWeight(vtkPolyData *pd, vtkIdType cellId,
-                               vtkIdType neighborCellId,
-                               vtkIdType p0, vtkIdType p1, double &weight);
-  static int GetEdgeCotangentAngle(double pt0[], double pt1[], double pt2[], double &angle);
-  static int ConvertFieldToPolyData(vtkPolyData *inPd, std::string fieldName, vtkPolyData *outPd);
-  static int ProjectOntoUnitSphere(vtkPolyData *inPd, vtkPolyData *outPd);
-  static int ComputeNormals(vtkPolyData *pd);
-  static int ComputeArea(double pt0[], double pt1[], double pt2[], double &area);
-  static int ComputeMassCenter(vtkPolyData *pd, double massCenter[]);
-  static int GetPointWeights(double f[], double pt0[],
-                             double pt1[], double pt2[],
-			     double &a0, double &a1, double &a2);
-
-  //Helper function
-  static int ComputeMeshLaplacian(vtkPolyData *pd, vtkEdgeTable *edgeTable,
-                                  vtkFloatArray *edgeWeights, vtkIntArray *edgeNeighbors,
-                                  vtkFloatArray *laplacian, int map);
-  static int ComputeDataArrayLaplacian(vtkFloatArray *data, vtkPolyData *pd,
-                                       vtkEdgeTable *edgeTable,
-                                       vtkFloatArray *edgeWeights, vtkIntArray *edgeNeighbors,
-                                       vtkFloatArray *laplacian, int map);
-  static int ComputePointLaplacian(vtkIdType p0, vtkPolyData *pd,
-                            vtkEdgeTable *edgeTable, vtkFloatArray *edgeWeights,
-                            vtkIntArray *edgeNeighbors, double laplacian[], int map);
-  static int ComputeDataLaplacian(vtkIdType p0, vtkFloatArray *data, vtkPolyData *pd,
-                                  vtkEdgeTable *edgeTable, vtkFloatArray *edgeWeights,
-                                  vtkIntArray *edgeNeighbors,
-                                  double laplacian[], int map);
-  static int GetPointNeighbors(vtkIdType p0, vtkPolyData *pd, vtkIdList *pointNeighbors,
-                        vtkIdList *cellIdList);
+  //Helper functions
   static int ComputeEnergy(vtkPolyData *pd, vtkEdgeTable *edgeTable,
                            vtkFloatArray *edgeWeights, double &energy, int map);
   static int ComputeStringEnergy(double e0[], double e1[], double weight,
                           double stringEnergy[]);
-  static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[], int numVals, int numComps);
-  static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);
-  static int SeparateLoops(vtkPolyData *pd, vtkPolyData **loops, int numBoundaries, const double xvec[3], const double zvec[3], const int boundaryStart[2]);
-  static int RunLoopFind(vtkPolyData *pd, vtkIdType startPt, vtkIdType nextCell,
-                         vtkPolyData *loop);
   static int CalculateCircleLength(vtkPolyData *lines, double &length);
   static int CalculateSquareEdgeLengths(vtkPolyData *lines, vtkIntArray *markerPts, double lengths[]);
   static int PDCheckArrayName(vtkPolyData *pd, int datatype, std::string arrayname);
@@ -198,8 +157,8 @@ public:
   static int RotateByAngle(const double pt[3], const double angle, double returnPt[3]);
 
 protected:
-  vtkSphericalConformalMapper();
-  ~vtkSphericalConformalMapper();
+  vtkSVSphericalMapper();
+  ~vtkSVSphericalMapper();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
@@ -236,8 +195,8 @@ protected:
   // Point and edge wise functions using discrete laplace-beltrami
 
 private:
-  vtkSphericalConformalMapper(const vtkSphericalConformalMapper&);  // Not implemented.
-  void operator=(const vtkSphericalConformalMapper&);  // Not implemented.
+  vtkSVSphericalMapper(const vtkSVSphericalMapper&);  // Not implemented.
+  void operator=(const vtkSVSphericalMapper&);  // Not implemented.
 
   int    Verbose;
   double InitialTimeStep;

@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkCheckRotation.cxx
- *  @brief This implements the vtkCheckRotation filter as a class
+/** @file vtkSVCheckRotation.cxx
+ *  @brief This implements the vtkSVCheckRotation filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkCheckRotation.h"
+#include "vtkSVCheckRotation.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -53,6 +53,8 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkTriangle.h"
@@ -62,12 +64,12 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkCheckRotation, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkCheckRotation);
+//vtkCxxRevisionMacro(vtkSVCheckRotation, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVCheckRotation);
 
 
 //---------------------------------------------------------------------------
-vtkCheckRotation::vtkCheckRotation()
+vtkSVCheckRotation::vtkSVCheckRotation()
 {
   this->SetNumberOfInputPorts(2);
 
@@ -82,7 +84,7 @@ vtkCheckRotation::vtkCheckRotation()
 }
 
 //---------------------------------------------------------------------------
-vtkCheckRotation::~vtkCheckRotation()
+vtkSVCheckRotation::~vtkSVCheckRotation()
 {
   if (this->SourcePd != NULL)
   {
@@ -99,13 +101,13 @@ vtkCheckRotation::~vtkCheckRotation()
 }
 
 //---------------------------------------------------------------------------
-void vtkCheckRotation::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVCheckRotation::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
 //---------------------------------------------------------------------------
-int vtkCheckRotation::RequestData(
+int vtkSVCheckRotation::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -155,28 +157,11 @@ int vtkCheckRotation::RequestData(
  * @param *pd
  * @return
  */
-int vtkCheckRotation::ComputeMassCenter(vtkPolyData *pd, double massCenter[])
-{
-  vtkSmartPointer<vtkCenterOfMass> centerFinder =
-    vtkSmartPointer<vtkCenterOfMass>::New();
-  centerFinder->SetInputData(pd);
-  centerFinder->Update();
-  centerFinder->GetCenter(massCenter);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkCheckRotation::MoveCenters()
+int vtkSVCheckRotation::MoveCenters()
 {
   double sourceCenter[3], targetCenter[3];
-  this->ComputeMassCenter(this->SourcePd, sourceCenter);
-  this->ComputeMassCenter(this->TargetPd, targetCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->SourcePd, sourceCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->TargetPd, targetCenter);
 
   int numPts = this->SourcePd->GetNumberOfPoints();
   for (int i=0; i<numPts; i++)
@@ -200,7 +185,7 @@ int vtkCheckRotation::MoveCenters()
  * @param *pd
  * @return
  */
-int vtkCheckRotation::FindAndCheckRotation()
+int vtkSVCheckRotation::FindAndCheckRotation()
 {
   vtkIdType npts, *pts;
   vtkIdType targNpts, *targPts;
@@ -212,8 +197,8 @@ int vtkCheckRotation::FindAndCheckRotation()
   this->TargetPd->GetPoint(targPts[1], allTargPts[1]);
   this->TargetPd->GetPoint(targPts[2], allTargPts[2]);
   double sourceCenter[3], targetCenter[3];
-  this->ComputeMassCenter(this->SourcePd, sourceCenter);
-  this->ComputeMassCenter(this->TargetPd, targetCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->SourcePd, sourceCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->TargetPd, targetCenter);
 
   double vec0[3], vec1[3], tmp0[3], tmp1[3], vec2[3], vec3[3], vec4[3], vec5[3];
   vtkMath::Subtract(allSrcPts[0], sourceCenter, vec0);
@@ -223,30 +208,19 @@ int vtkCheckRotation::FindAndCheckRotation()
   vtkMath::Cross(vec1, vec3, vec5);
 
   double rotMatrix0[16], rotMatrix1[16], rotMatrix2[16];
-  this->GetRotationMatrix(vec0, vec1, rotMatrix0);
+  vtkSVGeneralUtils::GetRotationMatrix(vec0, vec1, rotMatrix0);
 
   this->MappedPd->DeepCopy(this->SourcePd);
-  this->ApplyRotationMatrix(rotMatrix0);
+  vtkSVGeneralUtils::ApplyRotationMatrix(this->MappedPd, rotMatrix0);
 
   this->MappedPd->GetPoint(pts[0], allSrcPts[0]);
   this->MappedPd->GetPoint(pts[1], allSrcPts[1]);
-  this->ComputeMassCenter(this->MappedPd, sourceCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->MappedPd, sourceCenter);
   vtkMath::Subtract(allSrcPts[0], sourceCenter, vec0);
   vtkMath::Subtract(allSrcPts[1], sourceCenter, tmp0);
   vtkMath::Cross(vec0, tmp0, vec2);
-  this->GetRotationMatrix(vec2, vec3, rotMatrix1);
-  this->ApplyRotationMatrix(rotMatrix1);
-
-  //this->MappedPd->GetPoint(pts[0], allSrcPts[0]);
-  //this->MappedPd->GetPoint(pts[1], allSrcPts[1]);
-  //this->MappedPd->GetPoint(pts[2], allSrcPts[2]);
-  //this->ComputeMassCenter(this->MappedPd, sourceCenter);
-  //vtkMath::Subtract(allSrcPts[0], sourceCenter, vec0);
-  //vtkMath::Subtract(allSrcPts[1], sourceCenter, tmp0);
-  //vtkMath::Cross(vec0, tmp0, vec2);
-  //vtkMath::Cross(vec0, vec2, vec4);
-  //this->GetRotationMatrix(vec4, vec5, rotMatrix2);
-  //this->ApplyRotationMatrix(rotMatrix2);
+  vtkSVGeneralUtils::GetRotationMatrix(vec2, vec3, rotMatrix1);
+  vtkSVGeneralUtils::ApplyRotationMatrix(this->MappedPd, rotMatrix1);
 
   int numPts = this->SourcePd->GetNumberOfPoints();
   double avgDist = 0.0;
@@ -282,116 +256,26 @@ int vtkCheckRotation::FindAndCheckRotation()
  * @param *pd
  * @return
  */
-int vtkCheckRotation::GetRotationMatrix(double vec0[3], double vec1[3], double rotMatrix[16])
-{
-  double perpVec[3];
-  vtkMath::Normalize(vec0);
-  vtkMath::Normalize(vec1);
-  vtkMath::Cross(vec0, vec1, perpVec);
-  double costheta = vtkMath::Dot(vec0, vec1);
-  double sintheta = vtkMath::Norm(perpVec);
-  double theta = atan2(sintheta, costheta);
-  if (sintheta != 0)
-  {
-    perpVec[0] /= sintheta;
-    perpVec[1] /= sintheta;
-    perpVec[2] /= sintheta;
-  }
-  costheta = cos(0.5*theta);
-  sintheta = sin(0.5*theta);
-  double quat[4];
-  quat[0] = costheta;
-  quat[1] = perpVec[0]*sintheta;
-  quat[2] = perpVec[1]*sintheta;
-  quat[3] = perpVec[2]*sintheta;
-
-  double mat[3][3];
-  vtkMath::QuaternionToMatrix3x3(quat, mat);
-
-  // | R_0 R_1 R_2 0 |
-  // | R_3 R_4 R_2 0 |
-  // | R_6 R_7 R_8 0 |
-  // |  0   0   0  1 |
-  for (int i=0; i<3; i++)
-  {
-    for (int j=0; j<3; j++)
-    {
-      rotMatrix[i*4+j] = mat[i][j];
-    }
-    rotMatrix[4*i+3] = 0.0;
-    rotMatrix[i+12] = 0.0;
-  }
-
-  rotMatrix[15] = 1.0;
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkCheckRotation::ApplyRotationMatrix(double RotMatrix[])
-{
-  vtkSmartPointer<vtkTransform> transformer =
-    vtkSmartPointer<vtkTransform>::New();
-  transformer->SetMatrix(RotMatrix);
-  //transformer->RotateX(10);
-  //transformer->RotateY(50);
-  //transformer->RotateZ(2.4);
-  vtkMatrix4x4 *test;
-  test = transformer->GetMatrix();
-  for (int i=0; i<4; i++)
-  {
-    for (int j=0; j<4; j++)
-    {
-      fprintf(stdout," %.4f ", test->GetElement(i, j));
-    }
-    fprintf(stdout,"\n");
-  }
-
-  vtkSmartPointer<vtkTransformPolyDataFilter> pdTransformer =
-    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  pdTransformer->SetInputData(this->MappedPd);
-  pdTransformer->SetTransform(transformer);
-  pdTransformer->Update();
-
-  this->MappedPd->DeepCopy(pdTransformer->GetOutput());
-  this->MappedPd->BuildLinks();
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkCheckRotation::CheckAnglesWithOriginal()
+int vtkSVCheckRotation::CheckAnglesWithOriginal()
 {
   if (this->MatchPointOrder() != 1)
   {
     return 0;
   }
-  vtkSmartPointer<vtkFloatArray> mappedS2Angles =
-    vtkSmartPointer<vtkFloatArray>::New();
-  if (this->GetPolyDataAngles(this->MappedPd, mappedS2Angles) != 1)
+  vtkNew(vtkFloatArray, mappedS2Angles);
+  if (vtkSVGeneralUtils::GetPolyDataAngles(this->MappedPd, mappedS2Angles) != 1)
   {
     return 0;
   }
 
-  vtkSmartPointer<vtkFloatArray> targetS2Angles =
-    vtkSmartPointer<vtkFloatArray>::New();
-  if (this->GetPolyDataAngles(this->TargetPd, targetS2Angles) != 1)
+  vtkNew(vtkFloatArray, targetS2Angles);
+  if (vtkSVGeneralUtils::GetPolyDataAngles(this->TargetPd, targetS2Angles) != 1)
   {
     return 0;
   }
 
-  vtkSmartPointer<vtkFloatArray> originalPdAngles =
-    vtkSmartPointer<vtkFloatArray>::New();
-  if (this->GetPolyDataAngles(this->OriginalPd, originalPdAngles) != 1)
+  vtkNew(vtkFloatArray, originalPdAngles);
+  if (vtkSVGeneralUtils::GetPolyDataAngles(this->OriginalPd, originalPdAngles) != 1)
   {
     return 0;
   }
@@ -449,55 +333,7 @@ int vtkCheckRotation::CheckAnglesWithOriginal()
  * @param *pd
  * @return
  */
-int vtkCheckRotation::GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles)
-{
-  int numCells = pd->GetNumberOfCells();
-  pd->BuildLinks();
-
-  cellAngles->SetNumberOfComponents(3);
-  cellAngles->Allocate(numCells, 10000);
-  cellAngles->SetNumberOfTuples(numCells);
-
-  for (int i=0; i<numCells; i++)
-  {
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(i, npts, pts);
-    for (int j=0; j<3; j++)
-    {
-      vtkIdType p0 = pts[j];
-      vtkIdType p1 = pts[(j+1)%npts];
-      vtkIdType p2 = pts[(j+2)%npts];
-
-      double pt0[3], pt1[3], pt2[3];
-      pd->GetPoint(p0, pt0);
-      pd->GetPoint(p1, pt1);
-      pd->GetPoint(p2, pt2);
-
-      double vec0[3], vec1[3];
-      for (int k=0; k<3; k++)
-      {
-        vec0[k] = pt0[k] - pt1[k];
-        vec1[k] = pt2[k] - pt1[k];
-      }
-
-      double angleVec[3];
-      vtkMath::Cross(vec0, vec1, angleVec);
-      double radAngle = atan2(vtkMath::Norm(angleVec), vtkMath::Dot(vec0, vec1));
-
-      cellAngles->SetComponent(i, j, radAngle);
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkCheckRotation::MatchPointOrder()
+int vtkSVCheckRotation::MatchPointOrder()
 {
   int numCells = this->OriginalPd->GetNumberOfCells();
 

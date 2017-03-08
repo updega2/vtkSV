@@ -28,10 +28,12 @@
 # Core SRCS and HDRS
 set(SRCS vtkSVFindGeodesicPath.cxx vtkSVFindSeparateRegions.cxx vtkSVGetBoundaryFaces.cxx
   vtkSVGroupsClipper.cxx vtkSVPolyBallLine.cxx vtkSVHausdorffDistance.cxx
-  vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx)
+  vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx
+  vtkSVPlacePointsOnS2.cxx vtkSVCheckRotation.cxx)
 set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundaryFaces.h
   vtkSVGroupsClipper.h   vtkSVPolyBallLine.h   vtkSVHausdorffDistance.h
-  vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h)
+  vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h
+  vtkSVPlacePointsOnS2.h vtkSVCheckRotation.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -46,7 +48,7 @@ vtksv_add_module(vtkSVFilters
 # Executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXE_LIST FindGeodesicPath GroupsClipper HausdorffDistance
-    PassDataArray PullApartPolyData)
+    PassDataArray PullApartPolyData PlacePointsOnS2 CheckRotation)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
     target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters vtkSVCommon)

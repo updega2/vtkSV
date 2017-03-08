@@ -47,6 +47,7 @@
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkImplicitFunction.h"
+#include "vtkMatrix4x4.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
 #include "vtkPolyData.h"
@@ -95,12 +96,47 @@ public:
                                 const std::string &arrName);
   static int GetCutPlane(const double endPt[3], const double startPt[3],
                          const double length, double origin[3], vtkPlane *cutPlane);
-  static int ComputeArea(double pt0[], double pt1[], double pt2[], double &area);
+  static int ComputeTriangleArea(double pt0[], double pt1[], double pt2[], double &area);
   static int ComputeMassCenter(vtkPolyData *pd, double massCenter[3]);
   static int GetBarycentricCoordinates(double f[3], double pt0[3], double pt1[3],
                                        double pt2[3], double &a0, double &a1, double &a2);
   static int GetPointNeighbors(vtkIdType p0, vtkPolyData *pd, vtkIdList *pointNeighbors);
   static int GetEdgeCotangentAngle(double pt0[3], double pt1[3], double pt2[3], double &angle);
+  static int CreateEdgeTable(vtkPolyData *pd, vtkEdgeTable *edgeTable,
+                             vtkFloatArray *edgeWeights,
+                             vtkIntArray *edgeNeighbors,
+                             vtkIntArray *isBoundary);
+  static int ComputeHarmonicEdgeWeight(vtkPolyData *pd, vtkIdType cellId,
+                                       vtkIdType neighborCellId,
+                                       vtkIdType p0, vtkIdType p1, double &weight);
+  static int ConvertFieldToPolyData(vtkPolyData *inPd, std::string fieldName, vtkPolyData *outPd);
+  static int ProjectOntoUnitSphere(vtkPolyData *inPd, vtkPolyData *outPd);
+  static int ComputeNormals(vtkPolyData *pd);
+  static int ComputeMeshLaplacian(vtkPolyData *pd, vtkEdgeTable *edgeTable,
+                                  vtkFloatArray *edgeWeights, vtkIntArray *edgeNeighbors,
+                                  vtkFloatArray *laplacian, int map);
+  static int ComputeDataArrayLaplacian(vtkFloatArray *data, vtkPolyData *pd,
+                                       vtkEdgeTable *edgeTable,
+                                       vtkFloatArray *edgeWeights, vtkIntArray *edgeNeighbors,
+                                       vtkFloatArray *laplacian, int map);
+  static int ComputePointLaplacian(vtkIdType p0, vtkPolyData *pd,
+                            vtkEdgeTable *edgeTable, vtkFloatArray *edgeWeights,
+                            vtkIntArray *edgeNeighbors, double laplacian[], int map);
+  static int ComputeDataLaplacian(vtkIdType p0, vtkFloatArray *data, vtkPolyData *pd,
+                                  vtkEdgeTable *edgeTable, vtkFloatArray *edgeWeights,
+                                  vtkIntArray *edgeNeighbors,
+                                  double laplacian[], int map);
+  static int RunLoopFind(vtkPolyData *pd, vtkIdType startPt, vtkIdType nextCell,
+                         vtkPolyData *loop);
+  static int SeparateLoops(vtkPolyData *pd, vtkPolyData **loops, int numBoundaries, const double xvec[3], const double zvec[3], const int boundaryStart[2]);
+  static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[], int numVals, int numComps);
+  static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);
+  static int GetRotationMatrix(double vec0[3], double vec1[3], vtkMatrix4x4 *rotMatrix);
+  static int GetRotationMatrix(double vec0[3], double vec1[3], double rotMatrix[16]);
+  static int ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMatrix);
+  static int ApplyRotationMatrix(vtkPolyData *pd, double rotMatrix[16]);
+  static int GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles);
+
 
   //std::map functions
   static int GetAllMapKeys(std::multimap<int, int> &map, std::list<int> &list);
@@ -114,13 +150,6 @@ public:
   static int ListIntersection(std::list<int> &listA,
                               std::list<int> &listB,
                               std::list<int> &returnList);
-  static int CreateEdgeTable(vtkPolyData *pd, vtkEdgeTable *edgeTable,
-                             vtkFloatArray *edgeWeights,
-                             vtkIntArray *edgeNeighbors,
-                             vtkIntArray *isBoundary);
-  static int ComputeEdgeWeight(vtkPolyData *pd, vtkIdType cellId,
-                               vtkIdType neighborCellId,
-                               vtkIdType p0, vtkIdType p1, double &weight);
 
 protected:
   vtkSVGeneralUtils();

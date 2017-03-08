@@ -32,6 +32,7 @@ set(SRCS
   vtkSVBoundaryMapper.cxx
   vtkSVSquareBoundaryMapper.cxx
   vtkSVSuperSquareBoundaryMapper.cxx
+  vtkSVSphericalMapper.cxx
   sparse_matrix.cxx
   svMath.cxx)
 
@@ -41,6 +42,7 @@ set(HDRS
   vtkSVBoundaryMapper.h
   vtkSVSquareBoundaryMapper.h
   vtkSVSuperSquareBoundaryMapper.h
+  vtkSVSphericalMapper.h
   sparse_matrix.h
   svMath.h)
 #------------------------------------------------------------------------------
@@ -72,7 +74,7 @@ vtksv_add_module(vtkSVParameterization
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXTRA_LIBRARIES "")
-  set(EXE_LIST PlanarMapper SuperSquarePlanarMapper)
+  set(EXE_LIST PlanarMapper SuperSquarePlanarMapper SphericalMapper)
   if(VTKSV_BUILD_FILTERS)
     set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} vtkSVFilters)
     set(EXE_LIST ${EXE_LIST} SliceAndDice)

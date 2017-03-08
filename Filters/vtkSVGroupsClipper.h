@@ -85,8 +85,6 @@ class vtkSVGroupsClipper : public vtkPolyDataAlgorithm
                          const std::string &arrName);
   int FindGroupSeparatingPoints(vtkPolyData *pd,
                                 vtkIdList *separateIds);
-  int GetPointGroups(vtkPolyData *pd, std::string arrayName,
-                     const int pointId, vtkIdList *groupIds);
 
   int SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints);
   int FillGroups(vtkPolyData *pd, vtkPoints *newPoints);

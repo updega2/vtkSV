@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkMapInterpolator.h
+/** @file vtkSVCheckRotation.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,8 +43,8 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkMapInterpolator_h
-#define __vtkMapInterpolator_h
+#ifndef vtkSVCheckRotation_h
+#define vtkSVCheckRotation_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -52,14 +52,11 @@
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 
-#include <complex>
-#include <vector>
-
-class vtkMapInterpolator : public vtkPolyDataAlgorithm
+class vtkSVCheckRotation : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkMapInterpolator* New();
-  //vtkTypeRevisionMacro(vtkMapInterpolator, vtkPolyDataAlgorithm);
+  static vtkSVCheckRotation* New();
+  //vtkTypeRevisionMacro(vtkSVCheckRotation, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -67,62 +64,34 @@ public:
   vtkGetMacro(Verbose, int);
   vtkSetMacro(Verbose, int);
 
-  // Description:
-  // Print statements used for dnumber of subdivisions
-  vtkGetMacro(NumSourceSubdivisions, int);
-  vtkSetMacro(NumSourceSubdivisions, int);
+  vtkSetObjectMacro(OriginalPd, vtkPolyData);
 
-  // Functions to set up complex linear system for landmark constraint
-  static int InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
-                                      vtkPolyData *mappedTargetPd,
-                                      vtkPolyData *originalTargetPd,
-                                      vtkPolyData *sourceToTargetPd);
-  static int GetTriangleUV(double f[3], double pt0[3], double pt1[3],
-                           double pt2[3], double &a0, double &a1, double &a2);
-
-  static int ComputeArea(double pt0[], double pt1[], double pt2[], double &area);
-  static int PDCheckArrayName(vtkPolyData *pd, int datatype, std::string arrayname);
-
-  // Setup and Check Functions
 protected:
-  vtkMapInterpolator();
-  ~vtkMapInterpolator();
+  vtkSVCheckRotation();
+  ~vtkSVCheckRotation();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  // Main functions in filter
-  int SubdivideAndInterpolate();
-
-  int MatchBoundaries();
-  int FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary);
-  int MoveBoundaryPoints();
-  int GetPointOnTargetBoundary(int targPtId, int srcCellId, double returnPt[]);
-  int BoundaryPointsOnCell(vtkPolyData *pd, int srcCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary);
-  int GetProjectedPoint(double pt0[], double pt1[], double projPt[], double returnPt[]);
-  int GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1);
-
+  int MoveCenters();
+  int FindAndCheckRotation();
+  int CheckAnglesWithOriginal();
+  int MatchPointOrder();
 
 private:
-  vtkMapInterpolator(const vtkMapInterpolator&);  // Not implemented.
-  void operator=(const vtkMapInterpolator&);  // Not implemented.
+  vtkSVCheckRotation(const vtkSVCheckRotation&);  // Not implemented.
+  void operator=(const vtkSVCheckRotation&);  // Not implemented.
 
   int Verbose;
-  int NumSourceSubdivisions;
-  int HasBoundary;
+  int CellId;
 
-  vtkPolyData *SourceS2Pd;
+  vtkPolyData *SourcePd;
   vtkPolyData *TargetPd;
-  vtkPolyData *TargetS2Pd;
   vtkPolyData *MappedPd;
-  vtkPolyData *MappedS2Pd;
 
-  vtkIntArray *SourceBoundary;
-  vtkIntArray *TargetBoundary;
+  vtkPolyData *OriginalPd;
 };
 
 #endif
-
-

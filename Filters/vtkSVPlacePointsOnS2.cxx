@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkPlacePointsOnS2.cxx
- *  @brief This implements the vtkPlacePointsOnS2 filter as a class
+/** @file vtkSVPlacePointsOnS2.cxx
+ *  @brief This implements the vtkSVPlacePointsOnS2 filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkPlacePointsOnS2.h"
+#include "vtkSVPlacePointsOnS2.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -46,6 +46,7 @@
 #include "vtkFloatArray.h"
 #include "vtkGradientFilter.h"
 #include "vtkMath.h"
+#include "vtkMatrix4x4.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointDataToCellData.h"
@@ -53,6 +54,8 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 #include "vtkTextureMapToSphere.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
@@ -63,12 +66,12 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkPlacePointsOnS2, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkPlacePointsOnS2);
+//vtkCxxRevisionMacro(vtkSVPlacePointsOnS2, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVPlacePointsOnS2);
 
 
 //---------------------------------------------------------------------------
-vtkPlacePointsOnS2::vtkPlacePointsOnS2()
+vtkSVPlacePointsOnS2::vtkSVPlacePointsOnS2()
 {
   this->Verbose = 1;
 
@@ -81,7 +84,7 @@ vtkPlacePointsOnS2::vtkPlacePointsOnS2()
 }
 
 //---------------------------------------------------------------------------
-vtkPlacePointsOnS2::~vtkPlacePointsOnS2()
+vtkSVPlacePointsOnS2::~vtkSVPlacePointsOnS2()
 {
   if (this->InitialPd != NULL)
   {
@@ -94,13 +97,13 @@ vtkPlacePointsOnS2::~vtkPlacePointsOnS2()
 }
 
 //---------------------------------------------------------------------------
-void vtkPlacePointsOnS2::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVPlacePointsOnS2::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
 //---------------------------------------------------------------------------
-int vtkPlacePointsOnS2::RequestData(
+int vtkSVPlacePointsOnS2::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -151,7 +154,7 @@ int vtkPlacePointsOnS2::RequestData(
  * @param *pd
  * @return
  */
-int vtkPlacePointsOnS2::DumbMapToSphere()
+int vtkSVPlacePointsOnS2::DumbMapToSphere()
 {
   if (this->TextureMap() != 1)
   {
@@ -170,10 +173,9 @@ int vtkPlacePointsOnS2::DumbMapToSphere()
  * @param *pd
  * @return
  */
-int vtkPlacePointsOnS2::TextureMap()
+int vtkSVPlacePointsOnS2::TextureMap()
 {
-  vtkSmartPointer<vtkTextureMapToSphere> texturer =
-    vtkSmartPointer<vtkTextureMapToSphere>::New();
+  vtkNew(vtkTextureMapToSphere, texturer);
   texturer->SetInputData(this->FinalPd);
   texturer->PreventSeamOff();
   texturer->Update();
@@ -188,10 +190,9 @@ int vtkPlacePointsOnS2::TextureMap()
  * @param *pd
  * @return
  */
-int vtkPlacePointsOnS2::ConvertTextureFieldToPolyData()
+int vtkSVPlacePointsOnS2::ConvertTextureFieldToPolyData()
 {
-  vtkSmartPointer<vtkFloatArray> textureCoords =
-    vtkSmartPointer<vtkFloatArray>::New();
+  vtkNew(vtkFloatArray, textureCoords);
   textureCoords = vtkFloatArray::SafeDownCast(this->FinalPd->GetPointData()->GetArray("Texture Coordinates"));
 
   int numPts = this->FinalPd->GetNumberOfPoints();
@@ -220,7 +221,7 @@ int vtkPlacePointsOnS2::ConvertTextureFieldToPolyData()
  * @param *pd
  * @return
  */
-int vtkPlacePointsOnS2::RotateToCubeCenterAxis()
+int vtkSVPlacePointsOnS2::RotateToCubeCenterAxis()
 {
   double realY[3], realZ[3];
   realY[0] = 0.0; realY[1] = 1.0; realY[2] = 0.0;
@@ -238,20 +239,18 @@ int vtkPlacePointsOnS2::RotateToCubeCenterAxis()
   }
   inZ[3] = 1.0;
 
-  vtkSmartPointer<vtkMatrix4x4> rotMatrix0 =
-    vtkSmartPointer<vtkMatrix4x4>::New();
-  vtkSmartPointer<vtkMatrix4x4> rotMatrix1 =
-    vtkSmartPointer<vtkMatrix4x4>::New();
-  this->GetRotationMatrix(YAxis, realY, rotMatrix0);
-  this->ApplyRotationMatrix(this->FinalPd, rotMatrix0);
+  vtkNew(vtkMatrix4x4, rotMatrix0);
+  vtkNew(vtkMatrix4x4, rotMatrix1);
+  vtkSVGeneralUtils::GetRotationMatrix(YAxis, realY, rotMatrix0);
+  vtkSVGeneralUtils::ApplyRotationMatrix(this->FinalPd, rotMatrix0);
   rotMatrix0->MultiplyPoint(inZ, outZ);
   for (int i=0; i<3; i++)
   {
     rotZ[i] = outZ[i];
   }
 
-  this->GetRotationMatrix(rotZ, realZ, rotMatrix1);
-  this->ApplyRotationMatrix(this->FinalPd, rotMatrix1);
+  vtkSVGeneralUtils::GetRotationMatrix(rotZ, realZ, rotMatrix1);
+  vtkSVGeneralUtils::ApplyRotationMatrix(this->FinalPd, rotMatrix1);
 
   return 1;
 }
@@ -262,10 +261,10 @@ int vtkPlacePointsOnS2::RotateToCubeCenterAxis()
  * @param *pd
  * @return
  */
-int vtkPlacePointsOnS2::MoveToOrigin()
+int vtkSVPlacePointsOnS2::MoveToOrigin()
 {
   double massCenter[3];
-  this->ComputeMassCenter(this->FinalPd, massCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->FinalPd, massCenter);
 
   int numPts = this->FinalPd->GetNumberOfPoints();
   for (int i=0; i<numPts; i++)
@@ -290,7 +289,7 @@ int vtkPlacePointsOnS2::MoveToOrigin()
  * @param *pd
  * @return
  */
-int vtkPlacePointsOnS2::ScaleToUnitCube()
+int vtkSVPlacePointsOnS2::ScaleToUnitCube()
 {
   double bounds[6];
   this->FinalPd->GetBounds(bounds);
@@ -298,113 +297,17 @@ int vtkPlacePointsOnS2::ScaleToUnitCube()
   double yScaleFactor = 1.0/(bounds[3]-bounds[2]);
   double zScaleFactor = 1.0/4*(bounds[5]-bounds[4]);
 
-  vtkSmartPointer<vtkTransform> transformer =
-    vtkSmartPointer<vtkTransform>::New();
+  vtkNew(vtkTransform, transformer);
   transformer->Scale(xScaleFactor, yScaleFactor, zScaleFactor);
   transformer->Update();
 
-  vtkSmartPointer<vtkTransformPolyDataFilter> pdTransformer =
-    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  vtkNew(vtkTransformPolyDataFilter, pdTransformer);
   pdTransformer->SetInputData(this->FinalPd);
   pdTransformer->SetTransform(transformer);
   pdTransformer->Update();
 
   this->FinalPd->DeepCopy(pdTransformer->GetOutput());
   this->FinalPd->BuildLinks();
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlacePointsOnS2::ComputeMassCenter(vtkPolyData *pd, double massCenter[3])
-{
-  massCenter[0] = 0.0;
-  massCenter[1] = 0.0;
-  massCenter[2] = 0.0;
-  vtkSmartPointer<vtkCenterOfMass> centerFinder =
-    vtkSmartPointer<vtkCenterOfMass>::New();
-  centerFinder->SetInputData(pd);
-  centerFinder->Update();
-  centerFinder->GetCenter(massCenter);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlacePointsOnS2::GetRotationMatrix(double vec0[3], double vec1[3], vtkMatrix4x4 *rotMatrix)
-{
-  double perpVec[3];
-  vtkMath::Normalize(vec0);
-  vtkMath::Normalize(vec1);
-  vtkMath::Cross(vec0, vec1, perpVec);
-  double costheta = vtkMath::Dot(vec0, vec1);
-  double sintheta = vtkMath::Norm(perpVec);
-  double theta = atan2(sintheta, costheta);
-  if (sintheta != 0)
-  {
-    perpVec[0] /= sintheta;
-    perpVec[1] /= sintheta;
-    perpVec[2] /= sintheta;
-  }
-  costheta = cos(0.5*theta);
-  sintheta = sin(0.5*theta);
-  double quat[4];
-  quat[0] = costheta;
-  quat[1] = perpVec[0]*sintheta;
-  quat[2] = perpVec[1]*sintheta;
-  quat[3] = perpVec[2]*sintheta;
-
-  double mat[3][3];
-  vtkMath::QuaternionToMatrix3x3(quat, mat);
-
-  // | R_0 R_1 R_2 0 |
-  // | R_3 R_4 R_2 0 |
-  // | R_6 R_7 R_8 0 |
-  // |  0   0   0  1 |
-  for (int i=0; i<3; i++)
-  {
-    for (int j=0; j<3; j++)
-    {
-      rotMatrix->SetElement(i, j, mat[i][j]);
-    }
-    rotMatrix->SetElement(i, 3, 0.0);
-    rotMatrix->SetElement(3, i, 0.0);
-  }
-  rotMatrix->SetElement(3, 3, 1.0);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkPlacePointsOnS2::ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMatrix)
-{
-  vtkSmartPointer<vtkTransform> transformer =
-    vtkSmartPointer<vtkTransform>::New();
-  transformer->SetMatrix(rotMatrix);
-
-  vtkSmartPointer<vtkTransformPolyDataFilter> pdTransformer =
-    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-  pdTransformer->SetInputData(pd);
-  pdTransformer->SetTransform(transformer);
-  pdTransformer->Update();
-
-  pd->DeepCopy(pdTransformer->GetOutput());
-  pd->BuildLinks();
 
   return 1;
 }

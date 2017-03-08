@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 
-/** @file vtkCheckRotation.h
+/** @file vtkSVPlacePointsOnS2.h
  *  @brief This is a vtk filter to map a triangulated surface to a sphere.
  *  @details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
@@ -43,20 +43,21 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkCheckRotation_h
-#define vtkCheckRotation_h
+#ifndef vtkSVPlacePointsOnS2_h
+#define vtkSVPlacePointsOnS2_h
 
 #include "vtkPolyDataAlgorithm.h"
 
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
+#include "vtkMatrix4x4.h"
 #include "vtkPolyData.h"
 
-class vtkCheckRotation : public vtkPolyDataAlgorithm
+class vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkCheckRotation* New();
-  //vtkTypeRevisionMacro(vtkCheckRotation, vtkPolyDataAlgorithm);
+  static vtkSVPlacePointsOnS2* New();
+  //vtkTypeRevisionMacro(vtkSVPlacePointsOnS2, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -64,40 +65,44 @@ public:
   vtkGetMacro(Verbose, int);
   vtkSetMacro(Verbose, int);
 
-  vtkSetObjectMacro(OriginalPd, vtkPolyData);
-
-  // Setup and Check Functions
-  static int GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles);
-  static int ComputeMassCenter(vtkPolyData *pd, double massCenter[]);
+  // Description:
+  // Macro to set/get the axis that the object aligns with in order to orient
+  // the object with a unit cube
+  vtkSetVector3Macro(ZAxis, double);
+  vtkGetVector3Macro(ZAxis, double);
+  vtkSetVector3Macro(XAxis, double);
+  vtkGetVector3Macro(XAxis, double);
+  vtkSetMacro(UseCustomAxisAlign, int);
+  vtkGetMacro(UseCustomAxisAlign, int);
 
 protected:
-  vtkCheckRotation();
-  ~vtkCheckRotation();
+  vtkSVPlacePointsOnS2();
+  ~vtkSVPlacePointsOnS2();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int MoveCenters();
-  int FindAndCheckRotation();
-  int GetRotationMatrix(double vec0[3], double vec1[3], double rotMatrix[16]);
-  int ApplyRotationMatrix(double rotMatrix[16]);
-  int CheckAnglesWithOriginal();
-  int MatchPointOrder();
+  int MoveToOrigin();
+  int RotateToCubeCenterAxis();
+  int ScaleToUnitCube();
+  int DumbMapToSphere();
+  int TextureMap();
+  int ConvertTextureFieldToPolyData();
 
 private:
-  vtkCheckRotation(const vtkCheckRotation&);  // Not implemented.
-  void operator=(const vtkCheckRotation&);  // Not implemented.
+  vtkSVPlacePointsOnS2(const vtkSVPlacePointsOnS2&);  // Not implemented.
+  void operator=(const vtkSVPlacePointsOnS2&);  // Not implemented.
 
   int Verbose;
-  int CellId;
 
-  vtkPolyData *SourcePd;
-  vtkPolyData *TargetPd;
-  vtkPolyData *MappedPd;
+  vtkPolyData *InitialPd;
+  vtkPolyData *FinalPd;
 
-  vtkPolyData *OriginalPd;
+  int UseCustomAxisAlign;
+  double ZAxis[3];
+  double XAxis[3];
 };
 
 #endif

@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-/** @file vtkSphericalConformalMapper.cxx
- *  @brief This implements the vtkSphericalConformalMapper filter as a class
+/** @file vtkSVSphericalMapper.cxx
+ *  @brief This implements the vtkSVSphericalMapper filter as a class
  *
  *  @author Adam Updegrove
  *  @author updega2@gmail.com
@@ -37,7 +37,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkSphericalConformalMapper.h"
+#include "vtkSVSphericalMapper.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -50,13 +50,15 @@
 #include "vtkGradientFilter.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkPlacePointsOnS2.h"
+#include "vtkSVPlacePointsOnS2.h"
 #include "vtkPointData.h"
 #include "vtkPointDataToCellData.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 #include "vtkTransform.h"
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
@@ -67,12 +69,12 @@
 #include <cmath>
 
 //---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkSphericalConformalMapper, "$Revision: 0.0 $");
-vtkStandardNewMacro(vtkSphericalConformalMapper);
+//vtkCxxRevisionMacro(vtkSVSphericalMapper, "$Revision: 0.0 $");
+vtkStandardNewMacro(vtkSVSphericalMapper);
 
 
 //---------------------------------------------------------------------------
-vtkSphericalConformalMapper::vtkSphericalConformalMapper()
+vtkSVSphericalMapper::vtkSVSphericalMapper()
 {
   this->Verbose                 = 1;
   this->InitialTimeStep         = 0.01;
@@ -118,7 +120,7 @@ vtkSphericalConformalMapper::vtkSphericalConformalMapper()
 }
 
 //---------------------------------------------------------------------------
-vtkSphericalConformalMapper::~vtkSphericalConformalMapper()
+vtkSVSphericalMapper::~vtkSVSphericalMapper()
 {
   if (this->InitialPd != NULL)
   {
@@ -166,13 +168,13 @@ vtkSphericalConformalMapper::~vtkSphericalConformalMapper()
 }
 
 //---------------------------------------------------------------------------
-void vtkSphericalConformalMapper::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVSphericalMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
 // Generate Separated Surfaces with Region ID Numbers
 //---------------------------------------------------------------------------
-int vtkSphericalConformalMapper::RequestData(
+int vtkSVSphericalMapper::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
@@ -193,7 +195,7 @@ int vtkSphericalConformalMapper::RequestData(
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
-  if (this->CleanAndCheckSurface(this->InitialPd) != 1)
+  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
   {
     vtkErrorMacro("Error when checking input surface");
     return 0;
@@ -203,8 +205,8 @@ int vtkSphericalConformalMapper::RequestData(
   vtkIdType numPts = this->InitialPd->GetNumberOfPoints();
 
   //Create the edge table for the input surface
-  this->CreateEdgeTable(this->InitialPd, this->EdgeTable, this->EdgeWeights,
-                        this->EdgeNeighbors, this->IsBoundary);
+  vtkSVGeneralUtils::CreateEdgeTable(this->InitialPd, this->EdgeTable, this->EdgeWeights,
+                                     this->EdgeNeighbors, this->IsBoundary);
 
   if (this->PerformMapping() != 1)
   {
@@ -232,346 +234,14 @@ int vtkSphericalConformalMapper::RequestData(
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::CleanAndCheckSurface(vtkPolyData *pd)
-{
-  vtkSmartPointer<vtkPolyDataNormals> normaler =
-    vtkSmartPointer<vtkPolyDataNormals>::New();
-  normaler->SetInputData(pd);
-  normaler->AutoOrientNormalsOn();
-  normaler->ComputeCellNormalsOff();
-  normaler->SplittingOff();
-  normaler->Update();
-
-  pd->DeepCopy(normaler->GetOutput());
-  pd->BuildLinks();
-
-  int numPts = pd->GetNumberOfPoints();
-  int numPolys = pd->GetNumberOfCells();
-
-  for (int i=0; i<numPolys; i++)
-  {
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(i, npts, pts);
-    if (npts != 3)
-    {
-      return 0;
-    }
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType p0, p1;
-      p0 = pts[j];
-      p1 = pts[(j+1)%npts];
-
-      vtkSmartPointer<vtkIdList> edgeNeighbor =
-        vtkSmartPointer<vtkIdList>::New();
-      pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
-
-      if (edgeNeighbor->GetNumberOfIds() > 1)
-      {
-        return 0;
-      }
-      //if (edgeNeighbor->GetNumberOfIds() < 1)
-      //{
-      //  return 0;
-      //}
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::CreateEdgeTable(vtkPolyData *pd,
-                                                  vtkEdgeTable *edgeTable,
-                                                  vtkFloatArray *edgeWeights,
-                                                  vtkIntArray *edgeNeighbors,
-                                                  vtkIntArray *isBoundary)
-{
-  int numPts = pd->GetNumberOfPoints();
-  int numTris = pd->GetNumberOfCells();
-
-  edgeTable->InitEdgeInsertion(numPts, 1);
-  isBoundary->SetNumberOfValues(numPts);
-  for (int i=0; i<numPts; i++)
-  {
-    isBoundary->InsertValue(i, 0);
-  }
-  for (int i=0; i<numTris; i++)
-  {
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(i, npts, pts);
-    double pt0[3], pt1[3], pt2[3];
-    pd->GetPoint(pts[0], pt0);
-    pd->GetPoint(pts[1], pt1);
-    pd->GetPoint(pts[2], pt2);
-
-    //Make sure the points are ordered counter-clockwise!
-    //double area = 0.0;
-    //vtkSphericalConformalMapper::ComputeArea(pt0, pt1, pt2, area);
-    //if (area < 0)
-    //{
-    //  double tmpPoint = pts[0];
-    //  pts[0] = pts[1];
-    //  pts[1] = tmpPoint;
-    //  pd->ReplaceCell(i, npts, pts);
-    //}
-
-    //Insert edge into table
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType p0 = pts[j];
-      vtkIdType p1 = pts[(j+1)%npts];
-      vtkSmartPointer<vtkIdList> neighborCellIds =
-        vtkSmartPointer<vtkIdList>::New();
-      pd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
-      vtkIdType neighborCellId = 0;
-      if (neighborCellIds->GetNumberOfIds() > 0)
-      {
-        neighborCellId = neighborCellIds->GetId(0);
-      }
-      else
-      {
-        neighborCellId = -1;
-        isBoundary->InsertValue(p0, 1);
-        isBoundary->InsertValue(p1, 1);
-      }
-      vtkIdType checkEdge = edgeTable->IsEdge(p0, p1);
-      if (checkEdge == -1)
-      {
-        //Compute Edge Weight
-        double weight = 0.0;
-        vtkSphericalConformalMapper::ComputeEdgeWeight(pd, i, neighborCellId,
-                                                        p0, p1, weight);
-        vtkIdType edgeId = edgeTable->InsertEdge(p0, p1);
-        edgeWeights->InsertValue(edgeId, weight);
-        edgeNeighbors->InsertValue(edgeId, neighborCellId);
-        //if (weight < 0)
-        //{
-        //  fprintf(stdout,"Negative weight!: %.4f\n",weight);
-        //  fprintf(stdout,"Cells: %.d and %.lld\n",i,neighborCellId);
-        //}
-      }
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeEdgeWeight(vtkPolyData *pd,
-                                                    vtkIdType cellId,
-                                                    vtkIdType neighborCellId,
-                                                    vtkIdType p0,
-                                                    vtkIdType p1,
-                                                    double &weight)
-{
-  //Add the edge weights based on the angle of the edge
-  vtkIdType cellIds[2];
-  cellIds[0] = cellId;
-  cellIds[1] = neighborCellId;
-  weight = 0.0;
-  double v0[3]; double v1[3]; double v2[3];
-  pd->GetPoint(p0, v0);
-  pd->GetPoint(p1, v1);
-  for (int i=0; i<2; i++)
-  {
-    vtkIdType npts, *pts;
-    if (cellIds[i] != -1)
-    {
-      pd->GetCellPoints(cellIds[i], npts, pts);
-      for (int k=0; k<npts; k++)
-      {
-        if (pts[k] != p0 && pts[k] != p1)
-        {
-          pd->GetPoint(pts[k], v2);
-          double angle = 0.0;
-          vtkSphericalConformalMapper::GetEdgeCotangentAngle(v0, v1, v2, angle);
-
-          weight += 0.5*angle;
-        }
-      }
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::GetEdgeCotangentAngle(double pt0[], double pt1[],
-                                                        double pt2[], double &angle)
-{
-  double area = 0.0;
-  vtkSphericalConformalMapper::ComputeArea(pt0, pt1, pt2, area);
-  if (area < 0)
-  {
-    double tmpPoint[3];
-    for (int i=0; i<3; i++)
-    {
-      tmpPoint[i] = pt0[i];
-      pt0[i] = pt1[i];
-      pt1[i] = tmpPoint[i];
-    }
-  }
-  double vec0[3];
-  double vec1[3];
-  for (int i=0; i<3; i++)
-  {
-    vec0[i] = pt0[i] - pt2[i];
-    vec1[i] = pt1[i] - pt2[i];
-  }
-  double numerator = vtkMath::Dot(vec0, vec1);
-  double cross[3];
-  vtkMath::Cross(vec0, vec1, cross);
-  double denominator = vtkMath::Norm(cross);
-  angle = numerator/denominator;
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ConvertFieldToPolyData(vtkPolyData *inPd, std::string fieldName, vtkPolyData *outPd)
-{
-  int numCells = inPd->GetNumberOfCells();
-  int numPts   = inPd->GetNumberOfPoints();
-  vtkSmartPointer<vtkPoints> fieldPts = vtkSmartPointer<vtkPoints>::New();
-  fieldPts->SetNumberOfPoints(numPts);
-  vtkSmartPointer<vtkCellArray> fieldCells = vtkSmartPointer<vtkCellArray>::New();
-  fieldCells = inPd->GetPolys();
-
-  vtkFloatArray *fieldArray;
-  fieldArray = vtkFloatArray::SafeDownCast(
-    inPd->GetPointData()->GetArray(fieldName.c_str()));
-  for (int i=0; i<numCells; i++)
-  {
-    vtkIdType npts, *pts;
-    inPd->GetCellPoints(i, npts, pts);
-    for (int j=0; j<npts; j++)
-    {
-      double pt[3];
-      fieldArray->GetTuple(pts[j], pt);
-      fieldPts->SetPoint(pts[j], pt);
-    }
-  }
-
-  outPd->SetPolys(fieldCells);
-  outPd->SetPoints(fieldPts);
-  outPd->BuildLinks();
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ProjectOntoUnitSphere(vtkPolyData *inPd,
-                                                         vtkPolyData *outPd)
-{
-  int numPts = inPd->GetNumberOfPoints();
-  double massCenter[3];
-
-  vtkSphericalConformalMapper::ComputeMassCenter(inPd, massCenter);
-
-  vtkSmartPointer<vtkPoints> newPts = vtkSmartPointer<vtkPoints>::New();
-  newPts->SetNumberOfPoints(numPts);
-  vtkSmartPointer<vtkCellArray> newCells = vtkSmartPointer<vtkCellArray>::New();
-  newCells = inPd->GetPolys();
-
-  for (int i=0; i<numPts; i++)
-  {
-    double pt[3];
-    double newpt[3];
-    inPd->GetPoint(i, pt);
-    for (int j=0; j<3; j++)
-    {
-      newpt[j] = pt[j] - massCenter[j];
-    }
-    vtkMath::Normalize(newpt);
-    newPts->SetPoint(i, newpt);
-  }
-
-  outPd->SetPolys(newCells);
-  outPd->SetPoints(newPts);
-  outPd->BuildLinks();
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeNormals(vtkPolyData *pd)
-{
-  vtkSmartPointer<vtkPolyDataNormals> normaler =
-    vtkSmartPointer<vtkPolyDataNormals>::New();
-  normaler->SetInputData(pd);
-  normaler->AutoOrientNormalsOn();
-  normaler->SplittingOff();
-  normaler->Update();
-
-  pd->DeepCopy(normaler->GetOutput());
-  pd->BuildLinks();
-
-  return 1;
-}
-
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeArea(double pt0[], double pt1[],
-                                              double pt2[], double &area)
-{
-  area = 0.0;
-  area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
-  area += (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
-  area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
-  area *= 0.5;
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::PerformMapping()
+int vtkSVSphericalMapper::PerformMapping()
 {
   fprintf(stdout,"CG Update Method: %d\n",this->CGUpdateMethod);
 
   //Compute Gauss Map (i.e. get normals off of mesh)
   //TODO Check normals exists!
   //this->ConvertFieldToPolyData(this->InitialPd, "Normals", this->HarmonicMap[0]);
-  vtkSmartPointer<vtkPlacePointsOnS2> initialSpot =
-    vtkSmartPointer<vtkPlacePointsOnS2>::New();
+  vtkNew(vtkSVPlacePointsOnS2, initialSpot);
   initialSpot->SetInputData(this->InitialPd);
   initialSpot->SetUseCustomAxisAlign(1);
   initialSpot->SetXAxis(this->ObjectXAxis);
@@ -585,8 +255,7 @@ int vtkSphericalConformalMapper::PerformMapping()
     return 0;
   }
   //std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Placed.vtp";
-  //vtkSmartPointer<vtkXMLPolyDataWriter> writer =
-  //  vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+  //vtkNew(vtkXMLPolyDataWriter, writer);
   //writer->SetInputData(this->HarmonicMap[0]);
   //writer->SetFileName(filename.c_str());
   //writer->Write();
@@ -622,7 +291,7 @@ int vtkSphericalConformalMapper::PerformMapping()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::InitiateCGArrays()
+int vtkSVSphericalMapper::InitiateCGArrays()
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
 
@@ -647,7 +316,7 @@ int vtkSphericalConformalMapper::InitiateCGArrays()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::SetBoundaries()
+int vtkSVSphericalMapper::SetBoundaries()
 {
   if (this->FindBoundaries() != 1)
   {
@@ -688,8 +357,8 @@ int vtkSphericalConformalMapper::SetBoundaries()
       delete [] boundaryLoops;
       return 0;
     }
-    if (this->SeparateLoops(this->Boundaries, boundaryLoops, numBoundStarts,
-                            this->ObjectXAxis, this->ObjectZAxis, boundaryStart) != 1)
+    if (vtkSVGeneralUtils::SeparateLoops(this->Boundaries, boundaryLoops, numBoundStarts,
+                                         this->ObjectXAxis, this->ObjectZAxis, boundaryStart) != 1)
     {
       vtkErrorMacro("No separate");
       for (int j=0; j<this->NumBoundaries; j++)
@@ -787,11 +456,10 @@ int vtkSphericalConformalMapper::SetBoundaries()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::FindBoundaries()
+int vtkSVSphericalMapper::FindBoundaries()
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
-  vtkSmartPointer<vtkIntArray> pointIds =
-    vtkSmartPointer<vtkIntArray>::New();
+  vtkNew(vtkIntArray, pointIds);
   pointIds->SetNumberOfValues(numPts);
   pointIds->Allocate(numPts, 10000);
   pointIds->SetName("PointIds");
@@ -800,23 +468,20 @@ int vtkSphericalConformalMapper::FindBoundaries()
     pointIds->SetValue(i, i);
   }
   this->InitialPd->GetPointData()->AddArray(pointIds);
-  vtkSmartPointer<vtkFeatureEdges> finder =
-    vtkSmartPointer<vtkFeatureEdges>::New();
+  vtkNew(vtkFeatureEdges, finder);
   finder->SetInputData(this->InitialPd);
   finder->FeatureEdgesOff();
   finder->NonManifoldEdgesOff();
   finder->BoundaryEdgesOn();
   finder->Update();
 
-  vtkSmartPointer<vtkConnectivityFilter> connector =
-    vtkSmartPointer<vtkConnectivityFilter>::New();
+  vtkNew(vtkConnectivityFilter, connector);
   connector->SetInputData(finder->GetOutput());
   connector->SetExtractionMode(VTK_EXTRACT_ALL_REGIONS);
   connector->ColorRegionsOn();
   connector->Update();
 
-  vtkSmartPointer<vtkDataSetSurfaceFilter> surfacer =
-    vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
 
@@ -832,18 +497,17 @@ int vtkSphericalConformalMapper::FindBoundaries()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::FirstStep(int map)
+int vtkSVSphericalMapper::FirstStep(int map)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
-  vtkSmartPointer<vtkFloatArray> laplacian =
-    vtkSmartPointer<vtkFloatArray>::New();
+  vtkNew(vtkFloatArray, laplacian);
   laplacian->SetNumberOfComponents(3);
   laplacian->Allocate(numPts, 10000);
   laplacian->SetNumberOfTuples(numPts);
 
-  if (this->ComputeMeshLaplacian(this->HarmonicMap[map], this->EdgeTable,
-                                 this->EdgeWeights, this->EdgeNeighbors,
-                                 laplacian, map) != 1)
+  if (vtkSVGeneralUtils::ComputeMeshLaplacian(this->HarmonicMap[map], this->EdgeTable,
+                                              this->EdgeWeights, this->EdgeNeighbors,
+                                              laplacian, map) != 1)
   {
     vtkErrorMacro("Error when computing laplacian");
     return 0;
@@ -863,24 +527,23 @@ int vtkSphericalConformalMapper::FirstStep(int map)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::WolfeLineSearch(int map)
+int vtkSVSphericalMapper::WolfeLineSearch(int map)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
 
-  vtkSmartPointer<vtkFloatArray> conjLaplacian =
-    vtkSmartPointer<vtkFloatArray>::New();
+  vtkNew(vtkFloatArray, conjLaplacian);
   conjLaplacian->SetNumberOfComponents(3);
   conjLaplacian->Allocate(numPts, 10000);
   conjLaplacian->SetNumberOfTuples(numPts);
-  this->ComputeDataArrayLaplacian(this->ConjugateDir, this->HarmonicMap[map],
-                                  this->EdgeTable,
-                                  this->EdgeWeights, this->EdgeNeighbors,
-                                  conjLaplacian, map);
+  vtkSVGeneralUtils::ComputeDataArrayLaplacian(this->ConjugateDir, this->HarmonicMap[map],
+                                               this->EdgeTable,
+                                               this->EdgeWeights, this->EdgeNeighbors,
+                                               conjLaplacian, map);
 
   double numerator[3];
   double denominator[3];
-  this->VectorDotProduct(this->ConjugateDir, this->CurrDescent, numerator, numPts, 3);
-  this->VectorDotProduct(this->ConjugateDir, conjLaplacian, denominator, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, this->CurrDescent, numerator, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, conjLaplacian, denominator, numPts, 3);
 
   double maxstep = 100.0;
   for (int i=0; i<3; i++)
@@ -899,8 +562,7 @@ int vtkSphericalConformalMapper::WolfeLineSearch(int map)
   //Backtracking
 
 
-  //vtkSmartPointer<vtkPolyData> tmpPoly =
-  //  vtkSmartPointer<vtkPolyData>::New();
+  //vtkNew(vtkPolyData, tmpPoly);
   //tmpPoly->DeepCopy(this->HarmonicMap[map]);
   //double E0 = 0.0;
   //this->ComputeEnergy(tmpPoly, E0, map);
@@ -943,7 +605,7 @@ int vtkSphericalConformalMapper::WolfeLineSearch(int map)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::SphericalTutteMapping()
+int vtkSVSphericalMapper::SphericalTutteMapping()
 {
   fprintf(stdout,"SphericalTutteMapping...\n");
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -978,14 +640,13 @@ int vtkSphericalConformalMapper::SphericalTutteMapping()
   E0 = EStep;
   for (int iter=0; iter<this->MaxNumIterations; iter++)
   {
-    vtkSmartPointer<vtkFloatArray> laplacian =
-      vtkSmartPointer<vtkFloatArray>::New();
+    vtkNew(vtkFloatArray, laplacian);
     laplacian->SetNumberOfComponents(3);
     laplacian->Allocate(numPts, 10000);
     laplacian->SetNumberOfTuples(numPts);
-    if (this->ComputeMeshLaplacian(this->HarmonicMap[TUTTE], this->EdgeTable,
-                                   this->EdgeWeights, this->EdgeNeighbors,
-                                   laplacian, TUTTE) != 1)
+    if (vtkSVGeneralUtils::ComputeMeshLaplacian(this->HarmonicMap[TUTTE], this->EdgeTable,
+                                                this->EdgeWeights, this->EdgeNeighbors,
+                                                laplacian, TUTTE) != 1)
     {
       vtkErrorMacro("Error when computing laplacian");
       return 0;
@@ -1027,8 +688,7 @@ int vtkSphericalConformalMapper::SphericalTutteMapping()
           iterstr << this->SaveIter++;
           std::string iterName = this->IterOutputFilename;
           std::string filename =  iterName+"_"+iterstr.str()+".vtp";
-          vtkSmartPointer<vtkXMLPolyDataWriter> writer =
-            vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+          vtkNew(vtkXMLPolyDataWriter, writer);
           writer->SetInputData(this->HarmonicMap[TUTTE]);
           writer->SetFileName(filename.c_str());
           writer->Write();
@@ -1047,7 +707,7 @@ int vtkSphericalConformalMapper::SphericalTutteMapping()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::SphericalConformalMapper()
+int vtkSVSphericalMapper::SphericalConformalMapper()
 {
   fprintf(stdout,"SphericalConformalMapper...\n");
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -1082,14 +742,13 @@ int vtkSphericalConformalMapper::SphericalConformalMapper()
   E0 = EStep;
   for (int iter=0; iter<this->MaxNumIterations; iter++)
   {
-    vtkSmartPointer<vtkFloatArray> laplacian =
-      vtkSmartPointer<vtkFloatArray>::New();
+    vtkNew(vtkFloatArray, laplacian);
     laplacian->SetNumberOfComponents(3);
     laplacian->Allocate(numPts, 10000);
     laplacian->SetNumberOfTuples(numPts);
-    if (this->ComputeMeshLaplacian(this->HarmonicMap[HARMONIC], this->EdgeTable,
-                                   this->EdgeWeights, this->EdgeNeighbors,
-                                   laplacian, HARMONIC) != 1)
+    if (vtkSVGeneralUtils::ComputeMeshLaplacian(this->HarmonicMap[HARMONIC], this->EdgeTable,
+                                                this->EdgeWeights, this->EdgeNeighbors,
+                                                laplacian, HARMONIC) != 1)
     {
       vtkErrorMacro("Error when computing laplacian");
       return 0;
@@ -1141,8 +800,7 @@ int vtkSphericalConformalMapper::SphericalConformalMapper()
           iterstr << this->SaveIter++;
           std::string iterName = this->IterOutputFilename;
           std::string filename = iterName+"_"+iterstr.str()+".vtp";
-          vtkSmartPointer<vtkXMLPolyDataWriter> writer =
-            vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+          vtkNew(vtkXMLPolyDataWriter, writer);
           writer->SetInputData(this->HarmonicMap[HARMONIC]);
           writer->SetFileName(filename.c_str());
           writer->Write();
@@ -1161,178 +819,12 @@ int vtkSphericalConformalMapper::SphericalConformalMapper()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::ComputeMeshLaplacian(vtkPolyData *pd,
-                                                      vtkEdgeTable *edgeTable,
-                                                      vtkFloatArray *edgeWeights,
-                                                      vtkIntArray *edgeNeighbors,
-                                                      vtkFloatArray *laplacian, int map)
-{
-  int numPts = pd->GetNumberOfPoints();
-
-  for (int i=0; i<numPts; i++)
-  {
-    double pointLaplacian[3];
-    vtkSphericalConformalMapper::ComputePointLaplacian(i, pd,
-                                                       edgeTable,
-                                                       edgeWeights, edgeNeighbors,
-                                                       pointLaplacian, map);
-    laplacian->SetTuple(i, pointLaplacian);
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeDataArrayLaplacian(vtkFloatArray *data,
-                                                           vtkPolyData *pd,
-                                                           vtkEdgeTable *edgeTable,
-                                                           vtkFloatArray *edgeWeights,
-                                                           vtkIntArray *edgeNeighbors,
-                                                           vtkFloatArray *laplacian, int map)
-{
-  int numPts = data->GetNumberOfTuples();
-
-  for (int i=0; i<numPts; i++)
-  {
-    double pointLaplacian[3];
-    vtkSphericalConformalMapper::ComputeDataLaplacian(i, data, pd, edgeTable, edgeWeights,
-                                                        edgeNeighbors, pointLaplacian, map);
-    laplacian->SetTuple(i, pointLaplacian);
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputePointLaplacian(vtkIdType p0,
-                                                         vtkPolyData *pd,
-                                                         vtkEdgeTable *edgeTable,
-                                                         vtkFloatArray *edgeWeights,
-                                                         vtkIntArray *edgeNeighbors,
-                                                         double laplacian[],
-                                                         int map)
-{
-  vtkSmartPointer<vtkIdList> pointNeighbors = vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> dummyList = vtkSmartPointer<vtkIdList>::New();
-  vtkSphericalConformalMapper::GetPointNeighbors(p0, pd, pointNeighbors, dummyList);
-
-  laplacian[0] = 0.0; laplacian[1] = 0.0; laplacian[2] = 0.0;
-  for (int i=0; i<pointNeighbors->GetNumberOfIds(); i++)
-  {
-    vtkIdType p1 = pointNeighbors->GetId(i);
-    vtkIdType edgeId = edgeTable->IsEdge(p0, p1);
-    double weight = edgeWeights->GetValue(edgeId);
-    if (map == TUTTE)
-    {
-      weight = 1.0;
-    }
-    int edgeNeighbor = edgeNeighbors->GetValue(edgeId);
-    if (edgeNeighbor == -1)
-    {
-      continue;
-    }
-    double p0Metric[3], p1Metric[3], data0[3], data1[3];
-    pd->GetPoint(p0, p0Metric);
-    pd->GetPoint(p1, p1Metric);
-
-    for (int j=0; j<3; j++)
-    {
-      laplacian[j] += weight * (p0Metric[j] - p1Metric[j]);
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeDataLaplacian(vtkIdType p0,
-                                                        vtkFloatArray *data,
-                                                        vtkPolyData *pd,
-                                                        vtkEdgeTable *edgeTable,
-                                                        vtkFloatArray *edgeWeights,
-                                                        vtkIntArray *edgeNeighbors,
-                                                        double laplacian[],
-                                                        int map)
-{
-  vtkSmartPointer<vtkIdList> pointNeighbors = vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> dummyList = vtkSmartPointer<vtkIdList>::New();
-  vtkSphericalConformalMapper::GetPointNeighbors(p0, pd, pointNeighbors, dummyList);
-
-  laplacian[0] = 0.0; laplacian[1] = 0.0; laplacian[2] = 0.0;
-  for (int i=0; i<pointNeighbors->GetNumberOfIds(); i++)
-  {
-    vtkIdType p1 = pointNeighbors->GetId(i);
-    vtkIdType edgeId = edgeTable->IsEdge(p0, p1);
-    double weight = edgeWeights->GetValue(edgeId);
-    if (map == TUTTE)
-    {
-      weight = 1.0;
-    }
-    int edgeNeighbor = edgeNeighbors->GetValue(edgeId);
-    if (edgeNeighbor == -1)
-    {
-      continue;
-    }
-    double p0Metric[3], p1Metric[3], data0[3], data1[3];
-    data->GetTuple(p0, p0Metric);
-    data->GetTuple(p1, p1Metric);
-
-    for (int j=0; j<3; j++)
-    {
-      laplacian[j] += weight * (p0Metric[j] - p1Metric[j]);
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeMassCenter(vtkPolyData *pd, double massCenter[])
-{
-  massCenter[0] = 0.0;
-  massCenter[1] = 0.0;
-  massCenter[2] = 0.0;
-  vtkSmartPointer<vtkCenterOfMass> centerFinder =
-    vtkSmartPointer<vtkCenterOfMass>::New();
-  centerFinder->SetInputData(pd);
-  centerFinder->Update();
-  centerFinder->GetCenter(massCenter);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::ComputeMobiusTransformation()
+int vtkSVSphericalMapper::ComputeMobiusTransformation()
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
 
   double massCenter[3];
-  this->ComputeMassCenter(this->HarmonicMap[HARMONIC], massCenter);
+  vtkSVGeneralUtils::ComputeMassCenter(this->HarmonicMap[HARMONIC], massCenter);
   if (this->Verbose == 2)
   {
     fprintf(stdout,"Mass Center: %.16f, %.16f, %.16f\n",massCenter[0], massCenter[1], massCenter[2]);
@@ -1369,7 +861,7 @@ int vtkSphericalConformalMapper::ComputeMobiusTransformation()
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::ComputeEnergy(vtkPolyData *pd,
+int vtkSVSphericalMapper::ComputeEnergy(vtkPolyData *pd,
                                                  vtkEdgeTable *edgeTable,
                                                  vtkFloatArray *edgeWeights,
                                                  double &harmonicEnergy,
@@ -1398,7 +890,7 @@ int vtkSphericalConformalMapper::ComputeEnergy(vtkPolyData *pd,
 
     //Calculate String Energy!
     double edgeEnergy[3];
-    vtkSphericalConformalMapper::ComputeStringEnergy(h0, h1, weight, edgeEnergy);
+    vtkSVSphericalMapper::ComputeStringEnergy(h0, h1, weight, edgeEnergy);
     for (int j=0; j<3; j++)
     {
       compEnergy[j] += edgeEnergy[j];
@@ -1418,7 +910,7 @@ int vtkSphericalConformalMapper::ComputeEnergy(vtkPolyData *pd,
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::ComputeStringEnergy(double e0[],
+int vtkSVSphericalMapper::ComputeStringEnergy(double e0[],
                                                       double e1[],
                                                       double weight,
                                                       double stringEnergy[])
@@ -1442,11 +934,11 @@ int vtkSphericalConformalMapper::ComputeStringEnergy(double e0[],
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::ComputeResidual(double &residual)
+int vtkSVSphericalMapper::ComputeResidual(double &residual)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
   double newRes[3];
-  this->VectorDotProduct(this->ConjugateDir, this->ConjugateDir, newRes,
+  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, this->ConjugateDir, newRes,
                          numPts, 3);
 
   residual = 0.0;
@@ -1464,7 +956,7 @@ int vtkSphericalConformalMapper::ComputeResidual(double &residual)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::UpdateMap(vtkFloatArray *laplacian,
+int vtkSVSphericalMapper::UpdateMap(vtkFloatArray *laplacian,
                                              int map,
                                              int cg_update)
 {
@@ -1501,31 +993,6 @@ int vtkSphericalConformalMapper::UpdateMap(vtkFloatArray *laplacian,
   }
   return 1;
 }
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[], int numVals, int numComps)
-{
-  for (int i=0; i<numComps; i++)
-  {
-    product[i] = 0.0;
-  }
-  for (int i=0; i<numVals; i++)
-  {
-    for (int j=0; j<numComps; j++)
-    {
-      double val0, val1;
-      val0 = v0->GetComponent(i, j);
-      val1 = v1->GetComponent(i, j);
-      product[j] += val0 * val1;
-    }
-  }
-
-  return 1;
-}
 
 //---------------------------------------------------------------------------
 /**
@@ -1533,30 +1000,7 @@ int vtkSphericalConformalMapper::VectorDotProduct(vtkFloatArray *v0, vtkFloatArr
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps)
-{
-  for (int i=0; i<numVals; i++)
-  {
-    for (int j=0; j<numComps; j++)
-    {
-      double val0, val1;
-      val0 = v0->GetComponent(i, j);
-      val1 = v1->GetComponent(i, j);
-      double sum = val0 + scalar * val1;
-      result->SetComponent(i, j, sum);
-    }
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::StepForward(int map, int cg_update)
+int vtkSVSphericalMapper::StepForward(int map, int cg_update)
 {
 
   if (cg_update == CG_NONE)
@@ -1611,13 +1055,13 @@ int vtkSphericalConformalMapper::StepForward(int map, int cg_update)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::FRUpdateMap(int map)
+int vtkSVSphericalMapper::FRUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
   double numerator[3], denominator[3];
-  this->VectorDotProduct(this->CurrDescent, this->CurrDescent,
+  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, this->CurrDescent,
                          numerator, numPts, 3);
-  this->VectorDotProduct(this->PrevDescent, this->PrevDescent,
+  vtkSVGeneralUtils::VectorDotProduct(this->PrevDescent, this->PrevDescent,
                          denominator, numPts, 3);
 
   double beta[3];
@@ -1637,21 +1081,20 @@ int vtkSphericalConformalMapper::FRUpdateMap(int map)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::PRUpdateMap(int map)
+int vtkSVSphericalMapper::PRUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
   double numerator[3], denominator[3];
-  vtkSmartPointer<vtkFloatArray> difference =
-    vtkSmartPointer<vtkFloatArray>::New();
+  vtkNew(vtkFloatArray, difference);
   difference->SetNumberOfComponents(3);
   difference->Allocate(numPts, 10000);
   difference->SetNumberOfTuples(numPts);
-  this->VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
-                  difference, numPts, 3);
-  this->VectorDotProduct(this->CurrDescent, difference,
-                         numerator, numPts, 3);
-  this->VectorDotProduct(this->PrevDescent, this->PrevDescent,
-                         denominator, numPts, 3);
+  vtkSVGeneralUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
+                               difference, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, difference,
+                                      numerator, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->PrevDescent, this->PrevDescent,
+                                      denominator, numPts, 3);
 
   double beta[3];
   for (int i=0; i<3; i++)
@@ -1670,21 +1113,20 @@ int vtkSphericalConformalMapper::PRUpdateMap(int map)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::HSUpdateMap(int map)
+int vtkSVSphericalMapper::HSUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
   double numerator[3], denominator[3];
-  vtkSmartPointer<vtkFloatArray> difference =
-    vtkSmartPointer<vtkFloatArray>::New();
+  vtkNew(vtkFloatArray, difference);
   difference->SetNumberOfComponents(3);
   difference->Allocate(numPts, 10000);
   difference->SetNumberOfTuples(numPts);
-  this->VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
-                  difference, numPts, 3);
-  this->VectorDotProduct(this->CurrDescent, difference,
-                         numerator, numPts, 3);
-  this->VectorDotProduct(this->ConjugateDir, difference,
-                         denominator, numPts, 3);
+  vtkSVGeneralUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
+                               difference, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, difference,
+                                      numerator, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, difference,
+                                      denominator, numPts, 3);
 
   double beta[3];
   for (int i=0; i<3; i++)
@@ -1703,21 +1145,20 @@ int vtkSphericalConformalMapper::HSUpdateMap(int map)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::DYUpdateMap(int map)
+int vtkSVSphericalMapper::DYUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
   double numerator[3], denominator[3];
-  vtkSmartPointer<vtkFloatArray> difference =
-    vtkSmartPointer<vtkFloatArray>::New();
+  vtkNew(vtkFloatArray, difference);
   difference->SetNumberOfComponents(3);
   difference->Allocate(numPts, 10000);
   difference->SetNumberOfTuples(numPts);
-  this->VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
+  vtkSVGeneralUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
                   difference, numPts, 3);
-  this->VectorDotProduct(this->CurrDescent, this->CurrDescent,
-                         numerator, numPts, 3);
-  this->VectorDotProduct(this->ConjugateDir, difference,
-                         denominator, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, this->CurrDescent,
+                                      numerator, numPts, 3);
+  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, difference,
+                                      denominator, numPts, 3);
 
   double beta[3];
   for (int i=0; i<3; i++)
@@ -1736,12 +1177,12 @@ int vtkSphericalConformalMapper::DYUpdateMap(int map)
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::CGUpdateMap(int map, double beta[])
+int vtkSVSphericalMapper::CGUpdateMap(int map, double beta[])
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
 
   double descCond[3];
-  this->VectorDotProduct(this->CurrDescent, this->ConjugateDir, descCond,
+  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, this->ConjugateDir, descCond,
                          numPts, 3);
 
   //If descent condition isn't satisfied, restart from new steepest descent dir
@@ -1795,155 +1236,7 @@ int vtkSphericalConformalMapper::CGUpdateMap(int map, double beta[])
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::GetPointNeighbors(vtkIdType p0,
-                                                     vtkPolyData *pd,
-						     vtkIdList *pointNeighbors,
-						     vtkIdList *cellIdList)
-{
-  //Assuming that pointNeighbors is set with no neighbors already
-  pd->GetPointCells(p0, cellIdList);
-
-  for (int i=0; i<cellIdList->GetNumberOfIds(); i++)
-  {
-    vtkIdType cellId = cellIdList->GetId(i);
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(cellId, npts, pts);
-
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType neighborPoint = pts[j];
-      if (neighborPoint != p0)
-      {
-        pointNeighbors->InsertUniqueId(neighborPoint);
-      }
-    }
-  }
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-//Determine type of intersection
-int vtkSphericalConformalMapper::SeparateLoops(vtkPolyData *pd,
-                                               vtkPolyData **loops,
-                                               int numBoundaries,
-                                               const double xvec[3],
-                                               const double zvec[3],
-                                               const int boundaryStart[2])
-{
-  vtkIdType nextCell;
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-  int numInterPts = pd->GetNumberOfPoints();
-  int numInterLines = pd->GetNumberOfLines();
-  pd->BuildLinks();
-
-  int count = 0;
-  for (int i=0;i<numBoundaries;i++)
-  {
-    vtkIdType startPt = boundaryStart[i];
-    vtkPolyData *newloop = loops[count];
-    newloop->Allocate(pd->GetNumberOfCells(), 1000);
-    pd->GetPointCells(startPt,cellIds);
-
-    nextCell = cellIds->GetId(0);
-    vtkIdType npts, *pts;
-    int testPt = -1;
-    pd->GetCellPoints(nextCell, npts, pts);
-    if (pts[0] == startPt)
-      testPt = pts[1];
-    else
-      testPt = pts[0];
-
-    double pt0[3], pt1[3], vec0[3], vec1[3];
-    pd->GetPoint(startPt, pt0);
-    pd->GetPoint(testPt, pt1);
-    vtkMath::Subtract(pt1, pt0, vec0);
-    vtkMath::Normalize(vec0);
-    vtkMath::Cross(zvec, xvec, vec1);
-    vtkMath::Normalize(vec1);
-    if (vtkMath::Dot(vec0, vec1) < 0)
-    {
-      nextCell = cellIds->GetId(1);
-    }
-    //if (testPt != boundaryStart[i+2])
-    //{
-    //  nextCell = cellIds->GetId(1);
-    //}
-
-    //Run through intersection lines to get loops!
-    vtkSphericalConformalMapper::RunLoopFind(pd, startPt, nextCell, newloop);
-    loops[count++] = newloop;
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::RunLoopFind(vtkPolyData *pd,
-                                               vtkIdType startPt,
-                                               vtkIdType nextCell,
-                                               vtkPolyData *loop)
-{
-  vtkIdType prevPt = startPt;
-  vtkIdType nextPt = startPt;
-  vtkSmartPointer<vtkIdList> pointIds = vtkSmartPointer<vtkIdList>::New();
-  vtkSmartPointer<vtkIdList> cellIds = vtkSmartPointer<vtkIdList>::New();
-
-  pd->GetCellPoints(nextCell,pointIds);
-
-  if (pointIds->GetId(0) == nextPt)
-    nextPt = pointIds->GetId(1);
-  else
-    nextPt = pointIds->GetId(0);
-  vtkSmartPointer<vtkIdList> newline = vtkSmartPointer<vtkIdList>::New();
-  newline->SetNumberOfIds(2);
-  newline->SetId(0, prevPt);
-  newline->SetId(1, nextPt);
-  //newline.id = nextCell;
-  loop->InsertNextCell(VTK_LINE, newline);
-
-  while(nextPt != startPt)
-  {
-    pd->GetPointCells(nextPt,cellIds);
-    if (cellIds->GetId(0) == nextCell)
-      nextCell = cellIds->GetId(1);
-    else
-      nextCell = cellIds->GetId(0);
-
-    pd->GetCellPoints(nextCell,pointIds);
-    prevPt = nextPt;
-    if (pointIds->GetId(0) == nextPt)
-      nextPt = pointIds->GetId(1);
-    else
-      nextPt = pointIds->GetId(0);
-
-    vtkSmartPointer<vtkIdList> newestline = vtkSmartPointer<vtkIdList>::New();
-    newestline->SetNumberOfIds(2);
-    newestline->InsertId(0, prevPt);
-    newestline->InsertId(1, nextPt);
-    //newestline.id = nextCell;
-    loop->InsertNextCell(VTK_LINE, newestline);
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::CalculateCircleLength(vtkPolyData *lines,
+int vtkSVSphericalMapper::CalculateCircleLength(vtkPolyData *lines,
                                                        double &length)
 {
   int numLines = lines->GetNumberOfLines();
@@ -1973,7 +1266,7 @@ int vtkSphericalConformalMapper::CalculateCircleLength(vtkPolyData *lines,
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
+int vtkSVSphericalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
                                                            vtkIntArray *markerPts,
                                                            double lengths[])
 {
@@ -2019,7 +1312,7 @@ int vtkSphericalConformalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
+int vtkSVSphericalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
                                                     double length,
                                                     double radius)
 {
@@ -2060,7 +1353,7 @@ int vtkSphericalConformalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
+int vtkSVSphericalMapper::SetCircleBoundary(vtkPolyData *lines,
                                                    vtkIntArray *markerPts,
                                                    vtkIntArray *markerDirs,
                                                    double cubeStart[],
@@ -2107,7 +1400,7 @@ int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
       //  transPt[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-      //  vtkSphericalConformalMapper::RotateByAngle(transPt, 180.0, boundaryVal);
+      //  vtkSVSphericalMapper::RotateByAngle(transPt, 180.0, boundaryVal);
       //}
       //else if (dir == 2)
       //{
@@ -2116,7 +1409,7 @@ int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
       //  transPt[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-      //  vtkSphericalConformalMapper::RotateByAngle(transPt, 90.0, boundaryVal);
+      //  vtkSVSphericalMapper::RotateByAngle(transPt, 90.0, boundaryVal);
       //}
       //else if (dir == 3 && i != 2)
       //{
@@ -2125,7 +1418,7 @@ int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
       //  transPt[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-      //  vtkSphericalConformalMapper::RotateByAngle(transPt, 180.0, boundaryVal);
+      //  vtkSVSphericalMapper::RotateByAngle(transPt, 180.0, boundaryVal);
       //}
       //else if (dir == 4)
       //{
@@ -2134,7 +1427,7 @@ int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
       //  transPt[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-      //  vtkSphericalConformalMapper::RotateByAngle(transPt, 180.0, boundaryVal);
+      //  vtkSVSphericalMapper::RotateByAngle(transPt, 180.0, boundaryVal);
       //}
       //else if (dir == 5)
       //{
@@ -2143,7 +1436,7 @@ int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
       //  transPt[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
       //  transPt[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-      //  vtkSphericalConformalMapper::RotateByAngle(transPt, 90.0, boundaryVal);
+      //  vtkSVSphericalMapper::RotateByAngle(transPt, 90.0, boundaryVal);
       //}
       //else
       //{
@@ -2170,47 +1463,13 @@ int vtkSphericalConformalMapper::SetCircleBoundary(vtkPolyData *lines,
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::RotateByAngle(const double pt[3], const double angle,
+int vtkSVSphericalMapper::RotateByAngle(const double pt[3], const double angle,
                                                double returnPt[3])
 {
 
-  vtkSmartPointer<vtkTransform> transformer =
-    vtkSmartPointer<vtkTransform>::New();
+  vtkNew(vtkTransform, transformer);
   transformer->RotateY(angle);
   transformer->TransformPoint(pt, returnPt);
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSphericalConformalMapper::GetPointWeights(double f[], double pt0[],
-                                                   double pt1[], double pt2[],
-					           double &a0, double &a1, double &a2)
-{
-  double f0[3], f1[3], f2[3], v0[3], v1[3];
-  for (int i=0; i<3; i++)
-  {
-    v0[i] = pt0[i] - pt1[i];
-    v1[i] = pt0[i] - pt2[i];
-    f0[i] = pt0[i] - f[i];
-    f1[i] = pt1[i] - f[i];
-    f2[i] = pt2[i] - f[i];
-  }
-
-  double vArea[3], vA0[3], vA1[3], vA2[3];
-  vtkMath::Cross(v0, v1, vArea);
-  double area = vtkMath::Norm(vArea);
-  vtkMath::Cross(f1, f2, vA0);
-  a0 = vtkMath::Norm(vA0)/area;
-  vtkMath::Cross(f2, f0, vA1);
-  a1 = vtkMath::Norm(vA1)/area;
-  vtkMath::Cross(f0, f1, vA2);
-  a2 = vtkMath::Norm(vA2)/area;
 
   return 1;
 }
@@ -2227,7 +1486,7 @@ int vtkSphericalConformalMapper::GetPointWeights(double f[], double pt0[],
  * or the function does not return properly.
  */
 
-int vtkSphericalConformalMapper::PDCheckArrayName(vtkPolyData *object,int datatype,std::string arrayname )
+int vtkSVSphericalMapper::PDCheckArrayName(vtkPolyData *object,int datatype,std::string arrayname )
 {
   vtkIdType i;
   int numArrays;
@@ -2265,7 +1524,7 @@ int vtkSphericalConformalMapper::PDCheckArrayName(vtkPolyData *object,int dataty
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::SetCubeBoundary(vtkPolyData *lines,
+int vtkSVSphericalMapper::SetCubeBoundary(vtkPolyData *lines,
                                                  vtkIntArray *markerPts,
                                                  vtkIntArray *markerDirs,
                                                  double cubeStart[],
@@ -2345,7 +1604,7 @@ int vtkSphericalConformalMapper::SetCubeBoundary(vtkPolyData *lines,
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::CubeBoundaryToSphere(double inCoords[], double outCoords[])
+int vtkSVSphericalMapper::CubeBoundaryToSphere(double inCoords[], double outCoords[])
 {
   double x2 = std::pow(inCoords[0], 2.0);
   double y2 = std::pow(inCoords[1], 2.0);
@@ -2364,7 +1623,7 @@ int vtkSphericalConformalMapper::CubeBoundaryToSphere(double inCoords[], double 
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[])
+int vtkSVSphericalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[])
 {
   int t = this->BoundaryType;
 
@@ -2462,7 +1721,7 @@ int vtkSphericalConformalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[
  * @param *pd
  * @return
  */
-int vtkSphericalConformalMapper::GetCubeStartPoint(int id, double startCoords[])
+int vtkSVSphericalMapper::GetCubeStartPoint(int id, double startCoords[])
 {
   if (id ==0)
   {

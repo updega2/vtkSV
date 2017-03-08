@@ -49,9 +49,12 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkThreshold.h"
+#include "vtkTransform.h"
+#include "vtkTransformPolyDataFilter.h"
 #include "vtkTriangleFilter.h"
 #include "vtkDataSet.h"
 #include "vtkUnstructuredGrid.h"
@@ -450,8 +453,8 @@ int vtkSVGeneralUtils::GetCutPlane(const double endPt[3], const double startPt[3
  * @param *pd
  * @return
  */
-int vtkSVGeneralUtils::ComputeArea(double pt0[], double pt1[],
-                                   double pt2[], double &area)
+int vtkSVGeneralUtils::ComputeTriangleArea(double pt0[], double pt1[],
+                                           double pt2[], double &area)
 {
   area = 0.0;
   area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
@@ -557,7 +560,7 @@ int vtkSVGeneralUtils::GetEdgeCotangentAngle(double pt0[3], double pt1[3],
                                            double pt2[3], double &angle)
 {
   double area = 0.0;
-  vtkSVGeneralUtils::ComputeArea(pt0, pt1, pt2, area);
+  vtkSVGeneralUtils::ComputeTriangleArea(pt0, pt1, pt2, area);
   if (area < 0)
   {
     double tmpPoint[3];
@@ -632,8 +635,8 @@ int vtkSVGeneralUtils::CreateEdgeTable(vtkPolyData *pd,
       {
         //Compute Edge Weight
         double weight = 0.0;
-        vtkSVGeneralUtils::ComputeEdgeWeight(pd, i, neighborCellId,
-                                             p0, p1, weight);
+        vtkSVGeneralUtils::ComputeHarmonicEdgeWeight(pd, i, neighborCellId,
+                                                     p0, p1, weight);
         vtkIdType edgeId = edgeTable->InsertEdge(p0, p1);
         edgeWeights->InsertValue(edgeId, weight);
         edgeNeighbors->InsertValue(edgeId, neighborCellId);
@@ -656,12 +659,12 @@ int vtkSVGeneralUtils::CreateEdgeTable(vtkPolyData *pd,
  * @param *pd
  * @return
  */
-int vtkSVGeneralUtils::ComputeEdgeWeight(vtkPolyData *pd,
-                                         vtkIdType cellId,
-                                         vtkIdType neighborCellId,
-                                         vtkIdType p0,
-                                         vtkIdType p1,
-                                         double &weight)
+int vtkSVGeneralUtils::ComputeHarmonicEdgeWeight(vtkPolyData *pd,
+                                                 vtkIdType cellId,
+                                                 vtkIdType neighborCellId,
+                                                 vtkIdType p0,
+                                                 vtkIdType p1,
+                                                 double &weight)
 {
   //Add the edge weights based on the angle of the edge
   vtkIdType cellIds[2];
@@ -688,6 +691,580 @@ int vtkSVGeneralUtils::ComputeEdgeWeight(vtkPolyData *pd,
           weight += 0.5*angle;
         }
       }
+    }
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ConvertFieldToPolyData(vtkPolyData *inPd, std::string fieldName, vtkPolyData *outPd)
+{
+  int numCells = inPd->GetNumberOfCells();
+  int numPts   = inPd->GetNumberOfPoints();
+  vtkNew(vtkPoints, fieldPts);;
+  fieldPts->SetNumberOfPoints(numPts);
+  vtkNew(vtkCellArray, fieldCells);
+  fieldCells = inPd->GetPolys();
+
+  vtkFloatArray *fieldArray;
+  fieldArray = vtkFloatArray::SafeDownCast(
+    inPd->GetPointData()->GetArray(fieldName.c_str()));
+  for (int i=0; i<numCells; i++)
+  {
+    vtkIdType npts, *pts;
+    inPd->GetCellPoints(i, npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      double pt[3];
+      fieldArray->GetTuple(pts[j], pt);
+      fieldPts->SetPoint(pts[j], pt);
+    }
+  }
+
+  outPd->SetPolys(fieldCells);
+  outPd->SetPoints(fieldPts);
+  outPd->BuildLinks();
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ProjectOntoUnitSphere(vtkPolyData *inPd,
+                                                         vtkPolyData *outPd)
+{
+  int numPts = inPd->GetNumberOfPoints();
+  double massCenter[3];
+
+  vtkSVGeneralUtils::ComputeMassCenter(inPd, massCenter);
+
+  vtkNew(vtkPoints, newPts);
+  newPts->SetNumberOfPoints(numPts);
+  vtkNew(vtkCellArray, newCells);
+  newCells = inPd->GetPolys();
+
+  for (int i=0; i<numPts; i++)
+  {
+    double pt[3];
+    double newpt[3];
+    inPd->GetPoint(i, pt);
+    for (int j=0; j<3; j++)
+    {
+      newpt[j] = pt[j] - massCenter[j];
+    }
+    vtkMath::Normalize(newpt);
+    newPts->SetPoint(i, newpt);
+  }
+
+  outPd->SetPolys(newCells);
+  outPd->SetPoints(newPts);
+  outPd->BuildLinks();
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeNormals(vtkPolyData *pd)
+{
+  vtkNew(vtkPolyDataNormals, normaler);
+  normaler->SetInputData(pd);
+  normaler->AutoOrientNormalsOn();
+  normaler->SplittingOff();
+  normaler->Update();
+
+  pd->DeepCopy(normaler->GetOutput());
+  pd->BuildLinks();
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeMeshLaplacian(vtkPolyData *pd,
+                                            vtkEdgeTable *edgeTable,
+                                            vtkFloatArray *edgeWeights,
+                                            vtkIntArray *edgeNeighbors,
+                                            vtkFloatArray *laplacian, int map)
+{
+  int numPts = pd->GetNumberOfPoints();
+
+  for (int i=0; i<numPts; i++)
+  {
+    double pointLaplacian[3];
+    vtkSVGeneralUtils::ComputePointLaplacian(i, pd,
+                                             edgeTable,
+                                             edgeWeights, edgeNeighbors,
+                                             pointLaplacian, map);
+    laplacian->SetTuple(i, pointLaplacian);
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputePointLaplacian(vtkIdType p0,
+                                             vtkPolyData *pd,
+                                             vtkEdgeTable *edgeTable,
+                                             vtkFloatArray *edgeWeights,
+                                             vtkIntArray *edgeNeighbors,
+                                             double laplacian[],
+                                             int map)
+{
+  vtkNew(vtkIdList, pointNeighbors);
+  vtkSVGeneralUtils::GetPointNeighbors(p0, pd, pointNeighbors);
+
+  laplacian[0] = 0.0; laplacian[1] = 0.0; laplacian[2] = 0.0;
+  for (int i=0; i<pointNeighbors->GetNumberOfIds(); i++)
+  {
+    vtkIdType p1 = pointNeighbors->GetId(i);
+    vtkIdType edgeId = edgeTable->IsEdge(p0, p1);
+    double weight = edgeWeights->GetValue(edgeId);
+    //if (map == TUTTE)
+    //{
+    //  weight = 1.0;
+    //}
+    int edgeNeighbor = edgeNeighbors->GetValue(edgeId);
+    if (edgeNeighbor == -1)
+    {
+      continue;
+    }
+    double p0Metric[3], p1Metric[3], data0[3], data1[3];
+    pd->GetPoint(p0, p0Metric);
+    pd->GetPoint(p1, p1Metric);
+
+    for (int j=0; j<3; j++)
+    {
+      laplacian[j] += weight * (p0Metric[j] - p1Metric[j]);
+    }
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeDataLaplacian(vtkIdType p0,
+                                            vtkFloatArray *data,
+                                            vtkPolyData *pd,
+                                            vtkEdgeTable *edgeTable,
+                                            vtkFloatArray *edgeWeights,
+                                            vtkIntArray *edgeNeighbors,
+                                            double laplacian[],
+                                            int map)
+{
+  vtkNew(vtkIdList, pointNeighbors);
+  vtkNew(vtkIdList, dummyList);
+  vtkSVGeneralUtils::GetPointNeighbors(p0, pd, pointNeighbors);
+
+  laplacian[0] = 0.0; laplacian[1] = 0.0; laplacian[2] = 0.0;
+  for (int i=0; i<pointNeighbors->GetNumberOfIds(); i++)
+  {
+    vtkIdType p1 = pointNeighbors->GetId(i);
+    vtkIdType edgeId = edgeTable->IsEdge(p0, p1);
+    double weight = edgeWeights->GetValue(edgeId);
+    //if (map == TUTTE)
+    //{
+    //  weight = 1.0;
+    //}
+    int edgeNeighbor = edgeNeighbors->GetValue(edgeId);
+    if (edgeNeighbor == -1)
+    {
+      continue;
+    }
+    double p0Metric[3], p1Metric[3], data0[3], data1[3];
+    data->GetTuple(p0, p0Metric);
+    data->GetTuple(p1, p1Metric);
+
+    for (int j=0; j<3; j++)
+    {
+      laplacian[j] += weight * (p0Metric[j] - p1Metric[j]);
+    }
+  }
+
+  return 1;
+}
+
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ComputeDataArrayLaplacian(vtkFloatArray *data,
+                                                 vtkPolyData *pd,
+                                                 vtkEdgeTable *edgeTable,
+                                                 vtkFloatArray *edgeWeights,
+                                                 vtkIntArray *edgeNeighbors,
+                                                 vtkFloatArray *laplacian, int map)
+{
+  int numPts = data->GetNumberOfTuples();
+
+  for (int i=0; i<numPts; i++)
+  {
+    double pointLaplacian[3];
+    vtkSVGeneralUtils::ComputeDataLaplacian(i, data, pd, edgeTable, edgeWeights,
+                                                        edgeNeighbors, pointLaplacian, map);
+    laplacian->SetTuple(i, pointLaplacian);
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::RunLoopFind(vtkPolyData *pd,
+                                   vtkIdType startPt,
+                                   vtkIdType nextCell,
+                                   vtkPolyData *loop)
+{
+  vtkIdType prevPt = startPt;
+  vtkIdType nextPt = startPt;
+  vtkNew(vtkIdList, pointIds);
+  vtkNew(vtkIdList, cellIds);
+
+  pd->GetCellPoints(nextCell,pointIds);
+
+  if (pointIds->GetId(0) == nextPt)
+    nextPt = pointIds->GetId(1);
+  else
+    nextPt = pointIds->GetId(0);
+  vtkNew(vtkIdList, newline);
+  newline->SetNumberOfIds(2);
+  newline->SetId(0, prevPt);
+  newline->SetId(1, nextPt);
+  //newline.id = nextCell;
+  loop->InsertNextCell(VTK_LINE, newline);
+
+  while(nextPt != startPt)
+  {
+    pd->GetPointCells(nextPt,cellIds);
+    if (cellIds->GetId(0) == nextCell)
+      nextCell = cellIds->GetId(1);
+    else
+      nextCell = cellIds->GetId(0);
+
+    pd->GetCellPoints(nextCell,pointIds);
+    prevPt = nextPt;
+    if (pointIds->GetId(0) == nextPt)
+      nextPt = pointIds->GetId(1);
+    else
+      nextPt = pointIds->GetId(0);
+
+    vtkNew(vtkIdList, newestline);
+    newestline->SetNumberOfIds(2);
+    newestline->InsertId(0, prevPt);
+    newestline->InsertId(1, nextPt);
+    //newestline.id = nextCell;
+    loop->InsertNextCell(VTK_LINE, newestline);
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+//Determine type of intersection
+int vtkSVGeneralUtils::SeparateLoops(vtkPolyData *pd,
+                                     vtkPolyData **loops,
+                                     int numBoundaries,
+                                     const double xvec[3],
+                                     const double zvec[3],
+                                     const int boundaryStart[2])
+{
+  vtkIdType nextCell;
+  vtkNew(vtkIdList, cellIds);
+  int numInterPts = pd->GetNumberOfPoints();
+  int numInterLines = pd->GetNumberOfLines();
+  pd->BuildLinks();
+
+  int count = 0;
+  for (int i=0;i<numBoundaries;i++)
+  {
+    vtkIdType startPt = boundaryStart[i];
+    vtkPolyData *newloop = loops[count];
+    newloop->Allocate(pd->GetNumberOfCells(), 1000);
+    pd->GetPointCells(startPt,cellIds);
+
+    nextCell = cellIds->GetId(0);
+    vtkIdType npts, *pts;
+    int testPt = -1;
+    pd->GetCellPoints(nextCell, npts, pts);
+    if (pts[0] == startPt)
+      testPt = pts[1];
+    else
+      testPt = pts[0];
+
+    double pt0[3], pt1[3], vec0[3], vec1[3];
+    pd->GetPoint(startPt, pt0);
+    pd->GetPoint(testPt, pt1);
+    vtkMath::Subtract(pt1, pt0, vec0);
+    vtkMath::Normalize(vec0);
+    vtkMath::Cross(zvec, xvec, vec1);
+    vtkMath::Normalize(vec1);
+    if (vtkMath::Dot(vec0, vec1) < 0)
+    {
+      nextCell = cellIds->GetId(1);
+    }
+    //if (testPt != boundaryStart[i+2])
+    //{
+    //  nextCell = cellIds->GetId(1);
+    //}
+
+    //Run through intersection lines to get loops!
+    vtkSVGeneralUtils::RunLoopFind(pd, startPt, nextCell, newloop);
+    loops[count++] = newloop;
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[], int numVals, int numComps)
+{
+  for (int i=0; i<numComps; i++)
+  {
+    product[i] = 0.0;
+  }
+  for (int i=0; i<numVals; i++)
+  {
+    for (int j=0; j<numComps; j++)
+    {
+      double val0, val1;
+      val0 = v0->GetComponent(i, j);
+      val1 = v1->GetComponent(i, j);
+      product[j] += val0 * val1;
+    }
+  }
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GetRotationMatrix(double vec0[3], double vec1[3], vtkMatrix4x4 *rotMatrix)
+{
+  double perpVec[3];
+  vtkMath::Normalize(vec0);
+  vtkMath::Normalize(vec1);
+  vtkMath::Cross(vec0, vec1, perpVec);
+  double costheta = vtkMath::Dot(vec0, vec1);
+  double sintheta = vtkMath::Norm(perpVec);
+  double theta = atan2(sintheta, costheta);
+  if (sintheta != 0)
+  {
+    perpVec[0] /= sintheta;
+    perpVec[1] /= sintheta;
+    perpVec[2] /= sintheta;
+  }
+  costheta = cos(0.5*theta);
+  sintheta = sin(0.5*theta);
+  double quat[4];
+  quat[0] = costheta;
+  quat[1] = perpVec[0]*sintheta;
+  quat[2] = perpVec[1]*sintheta;
+  quat[3] = perpVec[2]*sintheta;
+
+  double mat[3][3];
+  vtkMath::QuaternionToMatrix3x3(quat, mat);
+
+  // | R_0 R_1 R_2 0 |
+  // | R_3 R_4 R_2 0 |
+  // | R_6 R_7 R_8 0 |
+  // |  0   0   0  1 |
+  for (int i=0; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      rotMatrix->SetElement(i, j, mat[i][j]);
+    }
+    rotMatrix->SetElement(i, 3, 0.0);
+    rotMatrix->SetElement(3, i, 0.0);
+  }
+  rotMatrix->SetElement(3, 3, 1.0);
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GetRotationMatrix(double vec0[3], double vec1[3], double rotMatrix[16])
+{
+  vtkNew(vtkMatrix4x4, rotMatrix4x4);
+  vtkSVGeneralUtils::GetRotationMatrix(vec0, vec1, rotMatrix4x4);
+  for (int i=0; i<4; i++)
+  {
+    for (int j=0; j<4; j++)
+      rotMatrix[i*4+j] = rotMatrix4x4->GetElement(i, j);
+  }
+
+  return 1;
+}
+
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMatrix)
+{
+  vtkSmartPointer<vtkTransform> transformer =
+    vtkSmartPointer<vtkTransform>::New();
+  transformer->SetMatrix(rotMatrix);
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> pdTransformer =
+    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  pdTransformer->SetInputData(pd);
+  pdTransformer->SetTransform(transformer);
+  pdTransformer->Update();
+
+  pd->DeepCopy(pdTransformer->GetOutput());
+  pd->BuildLinks();
+
+  return 1;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::ApplyRotationMatrix(vtkPolyData *pd, double rotMatrix[16])
+{
+  vtkSmartPointer<vtkTransform> transformer =
+    vtkSmartPointer<vtkTransform>::New();
+  transformer->SetMatrix(rotMatrix);
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> pdTransformer =
+    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+  pdTransformer->SetInputData(pd);
+  pdTransformer->SetTransform(transformer);
+  pdTransformer->Update();
+
+  pd->DeepCopy(pdTransformer->GetOutput());
+  pd->BuildLinks();
+  return 1;
+}
+
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles)
+{
+  int numCells = pd->GetNumberOfCells();
+  pd->BuildLinks();
+
+  cellAngles->SetNumberOfComponents(3);
+  cellAngles->Allocate(numCells, 10000);
+  cellAngles->SetNumberOfTuples(numCells);
+
+  for (int i=0; i<numCells; i++)
+  {
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(i, npts, pts);
+    for (int j=0; j<3; j++)
+    {
+      vtkIdType p0 = pts[j];
+      vtkIdType p1 = pts[(j+1)%npts];
+      vtkIdType p2 = pts[(j+2)%npts];
+
+      double pt0[3], pt1[3], pt2[3];
+      pd->GetPoint(p0, pt0);
+      pd->GetPoint(p1, pt1);
+      pd->GetPoint(p2, pt2);
+
+      double vec0[3], vec1[3];
+      for (int k=0; k<3; k++)
+      {
+        vec0[k] = pt0[k] - pt1[k];
+        vec1[k] = pt2[k] - pt1[k];
+      }
+
+      double angleVec[3];
+      vtkMath::Cross(vec0, vec1, angleVec);
+      double radAngle = atan2(vtkMath::Norm(angleVec), vtkMath::Dot(vec0, vec1));
+
+      cellAngles->SetComponent(i, j, radAngle);
+    }
+  }
+
+  return 1;
+}
+
+
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps)
+{
+  for (int i=0; i<numVals; i++)
+  {
+    for (int j=0; j<numComps; j++)
+    {
+      double val0, val1;
+      val0 = v0->GetComponent(i, j);
+      val1 = v1->GetComponent(i, j);
+      double sum = val0 + scalar * val1;
+      result->SetComponent(i, j, sum);
     }
   }
 

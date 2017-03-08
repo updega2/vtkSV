@@ -143,7 +143,7 @@ int vtkSVBoundaryMapper::PrepFilter()
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
-  if (this->CheckSurface(this->InitialPd) != 1)
+  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
   {
     vtkErrorMacro("Error when checking input surface");
     return 0;
@@ -275,11 +275,10 @@ int vtkSVBoundaryMapper::GetBoundaryLoop()
     nextCell = cellIds->GetId(1);
   }
 
-  vtkSVBoundaryMapper::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);
+  vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);
 
   return 1;
 }
-
 
 //---------------------------------------------------------------------------
 /**
@@ -320,102 +319,6 @@ int vtkSVBoundaryMapper::FindBoundaries()
   return 1;
 }
 
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVBoundaryMapper::RunLoopFind(vtkPolyData *pd,
-                                   vtkIdType startPt,
-                                   vtkIdType nextCell,
-                                   vtkPolyData *loop)
-{
-  vtkIdType prevPt = startPt;
-  vtkIdType nextPt = startPt;
-  vtkNew(vtkIdList, pointIds);
-  vtkNew(vtkIdList, cellIds);
-
-  pd->GetCellPoints(nextCell,pointIds);
-
-  if (pointIds->GetId(0) == nextPt)
-    nextPt = pointIds->GetId(1);
-  else
-    nextPt = pointIds->GetId(0);
-  vtkNew(vtkIdList, newline);
-  newline->SetNumberOfIds(2);
-  newline->SetId(0, prevPt);
-  newline->SetId(1, nextPt);
-  //newline.id = nextCell;
-  loop->InsertNextCell(VTK_LINE, newline);
-
-  while(nextPt != startPt)
-  {
-    pd->GetPointCells(nextPt,cellIds);
-    if (cellIds->GetId(0) == nextCell)
-      nextCell = cellIds->GetId(1);
-    else
-      nextCell = cellIds->GetId(0);
-
-    pd->GetCellPoints(nextCell,pointIds);
-    prevPt = nextPt;
-    if (pointIds->GetId(0) == nextPt)
-      nextPt = pointIds->GetId(1);
-    else
-      nextPt = pointIds->GetId(0);
-
-    vtkNew(vtkIdList, newestline);
-    newestline->SetNumberOfIds(2);
-    newestline->InsertId(0, prevPt);
-    newestline->InsertId(1, nextPt);
-    //newestline.id = nextCell;
-    loop->InsertNextCell(VTK_LINE, newestline);
-  }
-
-  return 1;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVBoundaryMapper::CheckSurface(vtkPolyData *pd)
-{
-  pd->BuildLinks();
-
-  int numPts = pd->GetNumberOfPoints();
-  int numPolys = pd->GetNumberOfCells();
-
-  for (int i=0; i<numPolys; i++)
-  {
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(i, npts, pts);
-    if (npts != 3)
-    {
-      //vtkErrorMacro("Surface contains elements that aren't triangles");
-      return 0;
-    }
-    for (int j=0; j<npts; j++)
-    {
-      vtkIdType p0, p1;
-      p0 = pts[j];
-      p1 = pts[(j+1)%npts];
-
-      vtkNew(vtkIdList, edgeNeighbor);
-      pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
-
-      if (edgeNeighbor->GetNumberOfIds() > 1)
-      {
-        //vtkErrorMacro("Surface contains triangles with multiple neighbors, not manifold");
-        return 0;
-      }
-    }
-  }
-  return 1;
-}
 
 void vtkSVBoundaryMapper::PrintSelf(ostream& os, vtkIndent indent)
 {

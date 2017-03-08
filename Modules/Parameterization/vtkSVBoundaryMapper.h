@@ -57,11 +57,6 @@ public:
   vtkGetStringMacro(InternalIdsArrayName);
   vtkSetStringMacro(InternalIdsArrayName);
 
-  static int CheckSurface(vtkPolyData *pd);
-  static int RunLoopFind(vtkPolyData *pd, vtkIdType startPt, vtkIdType nextCell,
-                         vtkPolyData *loop);
-  static int CheckArrayExists(vtkPolyData *pd, int datatype, std::string arrayname);
-
 protected:
   vtkSVBoundaryMapper();
   ~vtkSVBoundaryMapper();
@@ -77,7 +72,6 @@ protected:
   int RunFilter();
   int GetBoundaryLoop();
   int FindBoundaries();
-  int RunLoopFind();
   virtual int SetBoundaries() = 0;
 
   vtkPolyData  *InitialPd;
