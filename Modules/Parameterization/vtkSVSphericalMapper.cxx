@@ -195,7 +195,7 @@ int vtkSVSphericalMapper::RequestData(
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
-  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
+  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != SV_OK)
   {
     vtkErrorMacro("Error when checking input surface");
     return SV_ERROR;
@@ -208,7 +208,7 @@ int vtkSVSphericalMapper::RequestData(
   vtkSVGeneralUtils::CreateEdgeTable(this->InitialPd, this->EdgeTable, this->EdgeWeights,
                                      this->EdgeNeighbors, this->IsBoundary);
 
-  if (this->PerformMapping() != 1)
+  if (this->PerformMapping() != SV_OK)
   {
     vtkErrorMacro("Error while doing CG Solve");
     return SV_ERROR;
@@ -249,7 +249,7 @@ int vtkSVSphericalMapper::PerformMapping()
   initialSpot->Update();
   this->HarmonicMap[0]->DeepCopy(initialSpot->GetOutput());
 
-  if(this->SetBoundaries() != 1)
+  if(this->SetBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error when setting boundaries");
     return SV_ERROR;
@@ -260,14 +260,14 @@ int vtkSVSphericalMapper::PerformMapping()
   //writer->SetFileName(filename.c_str());
   //writer->Write();
 
-  if (this->InitiateCGArrays() != 1)
+  if (this->InitiateCGArrays() != SV_OK)
   {
     vtkErrorMacro("Error when initiating arrays");
     return SV_ERROR;
   }
 
   //Run the Tutte Energy Step
-  if (this->SphericalTutteMapping() != 1)
+  if (this->SphericalTutteMapping() != SV_OK)
   {
     vtkErrorMacro("Error when computing the tutte map");
     return SV_ERROR;
@@ -276,7 +276,7 @@ int vtkSVSphericalMapper::PerformMapping()
   this->HarmonicMap[1]->DeepCopy(this->HarmonicMap[0]);
 
   //Run the Spherical Conformal Mapping Step
-  if (this->SphericalConformalMapper() != 1)
+  if (this->SphericalConformalMapper() != SV_OK)
   {
     vtkErrorMacro("Error when computing the conformal map");
     return SV_ERROR;
@@ -318,7 +318,7 @@ int vtkSVSphericalMapper::InitiateCGArrays()
  */
 int vtkSVSphericalMapper::SetBoundaries()
 {
-  if (this->FindBoundaries() != 1)
+  if (this->FindBoundaries() != SV_OK)
   {
     vtkErrorMacro("Could not find boundaries");
     return SV_ERROR;
@@ -358,7 +358,7 @@ int vtkSVSphericalMapper::SetBoundaries()
       return SV_ERROR;
     }
     if (vtkSVGeneralUtils::SeparateLoops(this->Boundaries, boundaryLoops, numBoundStarts,
-                                         this->ObjectXAxis, this->ObjectZAxis, boundaryStart) != 1)
+                                         this->ObjectXAxis, this->ObjectZAxis, boundaryStart) != SV_OK)
     {
       vtkErrorMacro("No separate");
       for (int j=0; j<this->NumBoundaries; j++)
@@ -381,7 +381,7 @@ int vtkSVSphericalMapper::SetBoundaries()
     {
       int numLoopPts = boundaryLoopPts[i]->GetNumberOfTuples();
       double *lengths = new double[numLoopPts];
-      if (this->CalculateSquareEdgeLengths(boundaryLoops[i], boundaryLoopPts[i], lengths) != 1)
+      if (this->CalculateSquareEdgeLengths(boundaryLoops[i], boundaryLoopPts[i], lengths) != SV_OK)
       {
         vtkErrorMacro("Didn't work");
         delete [] lengths;
@@ -415,7 +415,7 @@ int vtkSVSphericalMapper::SetBoundaries()
       }
 
       //double length = 0.0;
-      //if (this->CalculateCircleLength(boundaryLoops[i], length) != 1)
+      //if (this->CalculateCircleLength(boundaryLoops[i], length) != SV_OK)
       //{
       //  vtkErrorMacro("Didn't work");
       //  for (int j=0; j<this->NumBoundaries; j++)
@@ -425,7 +425,7 @@ int vtkSVSphericalMapper::SetBoundaries()
       //  delete [] boundaryLoops;
       //  return SV_ERROR;
       //}
-      //if (this->SetLoopOnUnitCircle(boundaryLoops[i], length, radius) != 1)
+      //if (this->SetLoopOnUnitCircle(boundaryLoops[i], length, radius) != SV_OK)
       //{
       //  vtkErrorMacro("Didn't work");
       //  for (int j=0; j<this->NumBoundaries; j++)
@@ -507,12 +507,12 @@ int vtkSVSphericalMapper::FirstStep(int map)
 
   if (vtkSVGeneralUtils::ComputeMeshLaplacian(this->HarmonicMap[map], this->EdgeTable,
                                               this->EdgeWeights, this->EdgeNeighbors,
-                                              laplacian, map) != 1)
+                                              laplacian, map) != SV_OK)
   {
     vtkErrorMacro("Error when computing laplacian");
     return SV_ERROR;
   }
-  if (this->UpdateMap(laplacian, map, CG_NONE) != 1)
+  if (this->UpdateMap(laplacian, map, CG_NONE) != SV_OK)
   {
     vtkErrorMacro("Error when updating tutte map");
     return SV_ERROR;
@@ -621,7 +621,7 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
   {
     fprintf(stdout,"Initial Tutte Energy: %.8f\n",E0);
   }
-  if (this->FirstStep(TUTTE) != 1)
+  if (this->FirstStep(TUTTE) != SV_OK)
   {
     vtkErrorMacro("Error during initial step");
     return SV_ERROR;
@@ -646,13 +646,13 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
     laplacian->SetNumberOfTuples(numPts);
     if (vtkSVGeneralUtils::ComputeMeshLaplacian(this->HarmonicMap[TUTTE], this->EdgeTable,
                                                 this->EdgeWeights, this->EdgeNeighbors,
-                                                laplacian, TUTTE) != 1)
+                                                laplacian, TUTTE) != SV_OK)
     {
       vtkErrorMacro("Error when computing laplacian");
       return SV_ERROR;
     }
 
-    if (this->UpdateMap(laplacian, TUTTE, this->CGUpdateMethod) != 1)
+    if (this->UpdateMap(laplacian, TUTTE, this->CGUpdateMethod) != SV_OK)
     {
       vtkErrorMacro("Error when updating tutte map");
       return SV_ERROR;
@@ -723,7 +723,7 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
   {
     fprintf(stdout,"Initial Harmonic Energy: %.8f\n",E0);
   }
-  if (this->FirstStep(HARMONIC) != 1)
+  if (this->FirstStep(HARMONIC) != SV_OK)
   {
     vtkErrorMacro("Error during initial step");
     return SV_ERROR;
@@ -748,13 +748,13 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
     laplacian->SetNumberOfTuples(numPts);
     if (vtkSVGeneralUtils::ComputeMeshLaplacian(this->HarmonicMap[HARMONIC], this->EdgeTable,
                                                 this->EdgeWeights, this->EdgeNeighbors,
-                                                laplacian, HARMONIC) != 1)
+                                                laplacian, HARMONIC) != SV_OK)
     {
       vtkErrorMacro("Error when computing laplacian");
       return SV_ERROR;
     }
 
-    if (this->UpdateMap(laplacian, HARMONIC, this->CGUpdateMethod) != 1)
+    if (this->UpdateMap(laplacian, HARMONIC, this->CGUpdateMethod) != SV_OK)
     {
       vtkErrorMacro("Error when updating tutte map");
       return SV_ERROR;
@@ -763,7 +763,7 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
     //Compute Mobius transformation
     if (this->NumBoundaries == 0)
     {
-      if (this->ComputeMobiusTransformation() != 1)
+      if (this->ComputeMobiusTransformation() != SV_OK)
       {
         vtkErrorMacro("Error when computing the mobius transformation");
         return SV_ERROR;
@@ -986,7 +986,7 @@ int vtkSVSphericalMapper::UpdateMap(vtkFloatArray *laplacian,
     }
   }
 
-  if (this->StepForward(map, cg_update) != 1)
+  if (this->StepForward(map, cg_update) != SV_OK)
   {
     vtkErrorMacro("Error when updating tutte map in CG step");
     return SV_ERROR;

@@ -810,7 +810,7 @@ int vtkDelaunay2D_60::RequestData(
         // the neighbor triangle should exist.
         // If more than one neighbor triangle exist,
         // the edge is non-manifold.
-        if( neighbors->GetNumberOfIds() != 1 )
+        if( neighbors->GetNumberOfIds() != SV_OK )
           {
           vtkErrorMacro("ERROR: Edge [" << p1 << " " << p2
               << "] is non-manifold!!!");
@@ -1133,7 +1133,7 @@ int vtkDelaunay2D_60::RecoverEdge(vtkIdType p1, vtkIdType p2)
   while ( v1 != p2 )
     {
     this->Mesh->GetCellEdgeNeighbors(cellId, v1, v2, neis);
-    if ( neis->GetNumberOfIds() != 1 )
+    if ( neis->GetNumberOfIds() != SV_OK )
       {//Mesh is folded or degenerate
       goto FAILURE;
       }

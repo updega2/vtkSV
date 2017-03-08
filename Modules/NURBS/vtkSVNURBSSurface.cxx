@@ -250,7 +250,7 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   for (int i=0; i<nUCon; i++)
   {
     if (vtkSVNURBSUtils::BasisEvaluationVec(this->UKnotVector, p,
-                                       i, uEvals, Nus) != 1)
+                                       i, uEvals, Nus) != SV_OK)
     {
       return SV_ERROR;
     }
@@ -301,7 +301,7 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   for (int i=0; i<nVCon; i++)
   {
     if (vtkSVNURBSUtils::BasisEvaluationVec(this->VKnotVector, q,
-                                       i, vEvals, Nvs) != 1)
+                                       i, vEvals, Nvs) != SV_OK)
     {
       return SV_ERROR;
     }
@@ -344,13 +344,13 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   vtkSVNURBSUtils::StructuredGridToTypedArray(this->ControlPointGrid, tmpControlGrid);
 
   vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, tmpControlGrid, 1, tmpUGrid) != 1)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, tmpControlGrid, 1, tmpUGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
   }
   vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, NVfinalT, 0, tmpVGrid) != 1)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, NVfinalT, 0, tmpVGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;

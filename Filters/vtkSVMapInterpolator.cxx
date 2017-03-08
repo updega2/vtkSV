@@ -160,13 +160,13 @@ int vtkSVMapInterpolator::RequestData(
     return SV_ERROR;
   }
 
-  if (this->MatchBoundaries() != 1)
+  if (this->MatchBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error matching the boundaries of the surfaces");
     return SV_ERROR;
   }
 
-  if (this->SubdivideAndInterpolate() != 1)
+  if (this->SubdivideAndInterpolate() != SV_OK)
   {
     return SV_ERROR;
   }
@@ -209,7 +209,7 @@ int vtkSVMapInterpolator::SubdivideAndInterpolate()
   if (this->InterpolateMapOntoSource(this->MappedS2Pd,
                                      this->TargetS2Pd,
                                      this->TargetPd,
-                                     this->MappedPd) != 1)
+                                     this->MappedPd) != SV_OK)
   {
     vtkErrorMacro("Error interpolating onto original target surface");
     return SV_ERROR;
@@ -297,18 +297,18 @@ int Sign(double testVal)
  */
 int vtkSVMapInterpolator::MatchBoundaries()
 {
-  if (this->FindBoundary(this->TargetS2Pd, this->TargetBoundary) != 1)
+  if (this->FindBoundary(this->TargetS2Pd, this->TargetBoundary) != SV_OK)
   {
     return SV_ERROR;
   }
-  if (this->FindBoundary(this->SourceS2Pd, this->SourceBoundary) != 1)
+  if (this->FindBoundary(this->SourceS2Pd, this->SourceBoundary) != SV_OK)
   {
     return SV_ERROR;
   }
 
   if (this->HasBoundary == 1)
   {
-    if (this->MoveBoundaryPoints() != 1)
+    if (this->MoveBoundaryPoints() != SV_OK)
     {
       return SV_ERROR;
     }
@@ -389,7 +389,7 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
       locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
 				distance);
       double newPt[3];
-      if (this->GetPointOnTargetBoundary(i, closestCell, newPt) != 1)
+      if (this->GetPointOnTargetBoundary(i, closestCell, newPt) != SV_OK)
       {
 	return SV_ERROR;
       }

@@ -106,7 +106,7 @@ int vtkSVLoftNURBSCurve::RequestData(
   vtkPolyData *input = vtkPolyData::GetData(inputVector[0], 0);
   vtkPolyData *output = vtkPolyData::GetData(outputVector, 0);
 
-  if (this->LoftNURBS(input, output) != 1)
+  if (this->LoftNURBS(input, output) != SV_OK)
   {
     vtkErrorMacro("Lofting failed!");
     return SV_ERROR;
@@ -143,13 +143,13 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   std::string ptype = this->ParametricSpanType;
 
   vtkNew(vtkDoubleArray, U);
-  if (vtkSVNURBSUtils::GetUs(input->GetPoints(), ptype, U) != 1)
+  if (vtkSVNURBSUtils::GetUs(input->GetPoints(), ptype, U) != SV_OK)
   {
     return SV_ERROR;
   }
 
   vtkNew(vtkDoubleArray, knots);
-  if (vtkSVNURBSUtils::GetKnots(U, p, ktype, knots) != 1)
+  if (vtkSVNURBSUtils::GetKnots(U, p, ktype, knots) != SV_OK)
   {
     fprintf(stderr,"Error getting knots\n");
     return SV_ERROR;
@@ -179,7 +179,7 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
 
   vtkNew(vtkPoints, cpoints);
   if (vtkSVNURBSUtils::GetControlPointsOfCurve(input->GetPoints(), U, weights,
-                                             knots, p, ktype, D0, DN, cpoints) != 1)
+                                             knots, p, ktype, D0, DN, cpoints) != SV_OK)
   {
     return SV_ERROR;
   }

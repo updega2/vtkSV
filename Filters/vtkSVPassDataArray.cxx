@@ -143,7 +143,7 @@ int vtkSVPassDataArray::RequestData(
 
     if (this->PassDataIsCellData == 0)
     {
-      if (this->GetArrays(this->SourcePd,0) != 1)
+      if (this->GetArrays(this->SourcePd,0) != SV_OK)
       {
         std::cout<<"No Point Array Named "<<this->PassArrayName<<" on surface"<<endl;
         return SV_ERROR;
@@ -151,14 +151,14 @@ int vtkSVPassDataArray::RequestData(
     }
     if (this->PassDataIsCellData == 1)
     {
-      if (this->GetArrays(this->SourcePd,1) != 1)
+      if (this->GetArrays(this->SourcePd,1) != SV_OK)
       {
         std::cout<<"No Cell Array Named "<<this->PassArrayName<<" on surface"<<endl;
         return SV_ERROR;
       }
     }
 
-    if (this->PassDataInformation() != 1)
+    if (this->PassDataInformation() != SV_OK)
     {
       vtkErrorMacro("Could not pass information\n");
       return SV_ERROR;
@@ -237,7 +237,7 @@ int vtkSVPassDataArray::PassDataInformation()
   {
     if (this->PassInformationToPoints(this->SourcePd, this->TargetPd,
                                       this->PassDataIsCellData, this->PassDataArray,
-                                      this->NewDataArray) != 1)
+                                      this->NewDataArray) != SV_OK)
     {
       return SV_ERROR;
     }
@@ -249,7 +249,7 @@ int vtkSVPassDataArray::PassDataInformation()
                                      this->PassDataIsCellData,
                                      this->UseCellCentroid,
                                      this->PassDataArray,
-                                     this->NewDataArray) != 1)
+                                     this->NewDataArray) != SV_OK)
     {
       return SV_ERROR;
     }

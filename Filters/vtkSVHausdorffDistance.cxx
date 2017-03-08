@@ -136,13 +136,13 @@ int vtkSVHausdorffDistance::RequestData(
     this->SourcePd->DeepCopy(input0);
     this->TargetPd->DeepCopy(input1);
 
-    if (this->PrepFilter() != 1)
+    if (this->PrepFilter() != SV_OK)
     {
       vtkErrorMacro("Error in prepping filter\n");
       return SV_ERROR;
     }
 
-    if (this->RunFilter() != 1)
+    if (this->RunFilter() != SV_OK)
     {
       vtkErrorMacro("Error in running filter\n");
       return SV_ERROR;

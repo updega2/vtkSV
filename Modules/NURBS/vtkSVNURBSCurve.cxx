@@ -192,7 +192,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
   for (int i=0; i<nCon; i++)
   {
     if (vtkSVNURBSUtils::BasisEvaluationVec(this->KnotVector, p,
-                                       i, uEvals, Nus) != 1)
+                                       i, uEvals, Nus) != SV_OK)
     {
       return SV_ERROR;
     }
@@ -229,7 +229,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
 
   vtkNew(vtkPoints, surfacePoints);
   if(vtkSVNURBSUtils::MatrixPointsMultiply(Nfinal, this->ControlPointGrid->GetPoints(),
-                                       surfacePoints) != 1)
+                                       surfacePoints) != SV_OK)
   {
     return SV_ERROR;
   }

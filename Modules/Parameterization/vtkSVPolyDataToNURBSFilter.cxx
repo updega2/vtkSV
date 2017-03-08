@@ -226,13 +226,13 @@ int vtkSVPolyDataToNURBSFilter::RequestData(
     this->ExtractBranches();
   }
 
-  if (this->SliceAndDice() != 1)
+  if (this->SliceAndDice() != SV_OK)
   {
     vtkErrorMacro("Error in slicing polydata\n");
     return SV_ERROR;
   }
 
-  if (this->PerformMappings() != 1)
+  if (this->PerformMappings() != SV_OK)
   {
     vtkErrorMacro("Error in perform mappings\n");
     return SV_ERROR;

@@ -118,26 +118,26 @@ int vtkSVPlacePointsOnS2::RequestData(
   this->FinalPd->SetPoints(this->InitialPd->GetPoints());
   this->FinalPd->SetPolys(this->InitialPd->GetPolys());
 
-  if (this->MoveToOrigin() != 1)
+  if (this->MoveToOrigin() != SV_OK)
   {
     vtkErrorMacro("Couldn't move to origin\n");
     return SV_ERROR;
   }
   if (this->UseCustomAxisAlign)
   {
-    if (this->RotateToCubeCenterAxis() != 1)
+    if (this->RotateToCubeCenterAxis() != SV_OK)
     {
       vtkErrorMacro("Couldn't rotate\n");
       return SV_ERROR;
     }
   }
-  if (this->ScaleToUnitCube() != 1)
+  if (this->ScaleToUnitCube() != SV_OK)
   {
     vtkErrorMacro("Couldn't scale\n");
     return SV_ERROR;
   }
 
-  if (this->DumbMapToSphere() != 1)
+  if (this->DumbMapToSphere() != SV_OK)
   {
     vtkErrorMacro("Point placement failed");
     return SV_ERROR;
@@ -156,11 +156,11 @@ int vtkSVPlacePointsOnS2::RequestData(
  */
 int vtkSVPlacePointsOnS2::DumbMapToSphere()
 {
-  if (this->TextureMap() != 1)
+  if (this->TextureMap() != SV_OK)
   {
     return SV_ERROR;
   }
-  if (this->ConvertTextureFieldToPolyData() != 1)
+  if (this->ConvertTextureFieldToPolyData() != SV_OK)
   {
     return SV_ERROR;
   }

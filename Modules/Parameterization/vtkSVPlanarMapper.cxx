@@ -172,14 +172,14 @@ int vtkSVPlanarMapper::RequestData(
   this->WorkPd->DeepCopy(this->InitialPd);
   this->PlanarPd->DeepCopy(this->InitialPd);
 
-  if (this->PrepFilter() != 1)
+  if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
     return SV_ERROR;
   }
 
-  if (this->RunFilter() != 1)
+  if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
@@ -213,7 +213,7 @@ int vtkSVPlanarMapper::PrepFilter()
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
-  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
+  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != SV_OK)
   {
     vtkErrorMacro("Error when checking input surface");
     return SV_ERROR;
@@ -267,19 +267,19 @@ int vtkSVPlanarMapper::PrepFilter()
  */
 int vtkSVPlanarMapper::RunFilter()
 {
-  if (this->SetBoundaries() != 1)
+  if (this->SetBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error in mapping");
     return SV_ERROR;
   }
 
-  if (this->SetInternalNodes() != 1)
+  if (this->SetInternalNodes() != SV_OK)
   {
     vtkErrorMacro("Error setting internal nodes");
     return SV_ERROR;
   }
 
-  if (this->SolveSystem() != 1)
+  if (this->SolveSystem() != SV_OK)
   {
     vtkErrorMacro("Error solving system");
     return SV_ERROR;

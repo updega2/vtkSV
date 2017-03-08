@@ -17,6 +17,7 @@
 #include "vtkDataArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
+#include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVControlGrid);
 
@@ -204,7 +205,7 @@ int vtkSVControlGrid::InsertControlPoint(const int i, const int j, const int k, 
 int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double p[3], double &w)
 {
   int ptId;
-  if (this->GetPointId(i, j, k, ptId) != 1)
+  if (this->GetPointId(i, j, k, ptId) != SV_OK)
   {
     vtkErrorMacro("Point not retrieved successfully");
     return SV_ERROR;
@@ -230,7 +231,7 @@ int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, dou
   }
   double w = pw[3];
 
-  if (this->GetControlPoint(i, j, k, onlyp, w) != 1)
+  if (this->GetControlPoint(i, j, k, onlyp, w) != SV_OK)
   {
     vtkErrorMacro("Point not retrieved successfully");
   }

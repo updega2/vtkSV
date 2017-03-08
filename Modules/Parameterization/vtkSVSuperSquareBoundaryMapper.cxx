@@ -70,7 +70,7 @@ vtkSVSuperSquareBoundaryMapper::~vtkSVSuperSquareBoundaryMapper()
 int vtkSVSuperSquareBoundaryMapper::SetBoundaries()
 {
   vtkNew(vtkIntArray, actualIds);
-  if (this->CalculateSquareEdgeLengths(actualIds) != 1)
+  if (this->CalculateSquareEdgeLengths(actualIds) != SV_OK)
   {
     vtkErrorMacro("Didn't work");
     return SV_ERROR;

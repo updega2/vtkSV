@@ -101,14 +101,14 @@ int vtkSVBoundaryMapper::RequestData(vtkInformation *vtkNotUsed(request),
   //Copy the input to operate on
   this->InitialPd->DeepCopy(input);
 
-  if (this->PrepFilter() != 1)
+  if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
     return SV_ERROR;
   }
 
-  if (this->RunFilter() != 1)
+  if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Error when mapping");
     output->DeepCopy(this->InitialPd);
@@ -143,7 +143,7 @@ int vtkSVBoundaryMapper::PrepFilter()
   }
 
   //Check the input to make sure it is manifold and a triangulated surface
-  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != 1)
+  if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != SV_OK)
   {
     vtkErrorMacro("Error when checking input surface");
     return SV_ERROR;
@@ -190,19 +190,19 @@ int vtkSVBoundaryMapper::PrepFilter()
  */
 int vtkSVBoundaryMapper::RunFilter()
 {
-  if (this->FindBoundaries() != 1)
+  if (this->FindBoundaries() != SV_OK)
   {
     vtkErrorMacro("Could not find boundaries");
     return SV_ERROR;
   }
 
-  if (this->GetBoundaryLoop() != 1)
+  if (this->GetBoundaryLoop() != SV_OK)
   {
     vtkErrorMacro("Error orienting boundary loop");
     return SV_ERROR;
   }
 
-  if (this->SetBoundaries() != 1)
+  if (this->SetBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error in mapping");
     return SV_ERROR;

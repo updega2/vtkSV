@@ -864,7 +864,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   polydataIntersection->SplitSecondOutputOn();
   polydataIntersection->SetTolerance(this->Tolerance);
   polydataIntersection->Update();
-  if (polydataIntersection->GetStatus() != 1)
+  if (polydataIntersection->GetStatus() != SV_OK)
     {
     this->Status = 0;
     return SV_ERROR;

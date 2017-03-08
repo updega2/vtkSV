@@ -140,7 +140,7 @@ int vtkSVPullApartPolyData::RequestData(
   this->WorkPd->DeepCopy(input);
 
   // Prep work for filter
-  if (this->PrepFilter() != 1)
+  if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
@@ -148,7 +148,7 @@ int vtkSVPullApartPolyData::RequestData(
   }
 
   // Run the filter
-  if (this->RunFilter() != 1)
+  if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(input);
@@ -416,7 +416,7 @@ int vtkSVPullApartPolyData::FindEdgeCells()
   }
   else
   {
-    if (this->FindStartingEdge(startPt0, startPt1, startPt2, startCellId) != 1)
+    if (this->FindStartingEdge(startPt0, startPt1, startPt2, startCellId) != SV_OK)
     {
       vtkErrorMacro("Starting edge could not be found");
       return SV_ERROR;
@@ -497,7 +497,7 @@ int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std
     for (int j=0; j<npts; j++)
     {
       int cutVal = cutPointValues->GetValue(pts[j]);
-      if (pts[j] != p1 && pts[j] != p2 && cutVal != 1)
+      if (pts[j] != p1 && pts[j] != p2 && cutVal != SV_OK)
       {
         int outP = pts[j];
         cellList.push_back(neighborCell);

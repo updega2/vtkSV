@@ -118,7 +118,7 @@ int vtkSVFindSeparateRegions::RequestData(
 	return SV_OK;
     }
 
-    if (this->GetCellArray(input) != 1)
+    if (this->GetCellArray(input) != SV_OK)
     {
       std::cout<<"No Cell Array Named "<<this->ArrayName<<" on surface"<<endl;
       return SV_ERROR;

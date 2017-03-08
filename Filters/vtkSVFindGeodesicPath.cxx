@@ -155,7 +155,7 @@ int vtkSVFindGeodesicPath::RequestData(
   this->WorkPd->DeepCopy(input);
 
   // Prep work for filter
-  if (this->PrepFilter() != 1)
+  if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
@@ -163,7 +163,7 @@ int vtkSVFindGeodesicPath::RequestData(
   }
 
   // Run the filter
-  if (this->RunFilter() != 1)
+  if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(input);
@@ -280,7 +280,7 @@ int vtkSVFindGeodesicPath::RunFilter()
 
   if (this->EndPtId == -1)
   {
-    if (this->FindClosestBoundaryPoint() != 1)
+    if (this->FindClosestBoundaryPoint() != SV_OK)
     {
       vtkErrorMacro("Error finding a point close on the boundary");
       return SV_ERROR;
@@ -289,7 +289,7 @@ int vtkSVFindGeodesicPath::RunFilter()
   vtkNew(vtkPoints, repelPoints);
   if (this->RepelCloseBoundaryPoints)
   {
-    if (this->GetCloseBoundaryPoints(this->StartPtId, this->EndPtId, repelPoints) != 1)
+    if (this->GetCloseBoundaryPoints(this->StartPtId, this->EndPtId, repelPoints) != SV_OK)
     {
       vtkErrorMacro("Error getting close points on the boundary to repel");
       return SV_ERROR;
@@ -298,7 +298,7 @@ int vtkSVFindGeodesicPath::RunFilter()
 
   if (runItChrisBrown)
   {
-    if (this->RunDijkstra(repelPoints) != 1)
+    if (this->RunDijkstra(repelPoints) != SV_OK)
     {
       vtkErrorMacro("vtkDijkstraGraphGeodesicPath failed");
       return SV_ERROR;
@@ -328,7 +328,7 @@ int vtkSVFindGeodesicPath::RunFilter()
  */
 int vtkSVFindGeodesicPath::FindClosestBoundaryPoint()
 {
-  if (this->RunDijkstra(NULL) != 1)
+  if (this->RunDijkstra(NULL) != SV_OK)
   {
     vtkErrorMacro("vtkDijkstraGraphGeodesicPath failed");
     return SV_ERROR;
@@ -439,7 +439,7 @@ int vtkSVFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
 
-  if (this->GetNeighborBoundaryPoints(startPtId, surfacer->GetOutput(), repelPoints) != 1)
+  if (this->GetNeighborBoundaryPoints(startPtId, surfacer->GetOutput(), repelPoints) != SV_OK)
   {
     vtkErrorMacro("Error getting neighbor boundary points");
     return SV_ERROR;
@@ -454,7 +454,7 @@ int vtkSVFindGeodesicPath::GetCloseBoundaryPoints(const int startPtId,
   surfacer2->SetInputData(connector2->GetOutput());
   surfacer2->Update();
 
-  if (this->GetNeighborBoundaryPoints(endPtId, surfacer2->GetOutput(), repelPoints) != 1)
+  if (this->GetNeighborBoundaryPoints(endPtId, surfacer2->GetOutput(), repelPoints) != SV_OK)
   {
     vtkErrorMacro("Error getting neighbor boundary points");
     return SV_ERROR;

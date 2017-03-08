@@ -129,19 +129,19 @@ int vtkSVCheckRotation::RequestData(
     return SV_ERROR;
   }
 
-  if (this->MoveCenters() != 1)
+  if (this->MoveCenters() != SV_OK)
   {
     return SV_ERROR;
   }
 
-  if (this->FindAndCheckRotation() != 1)
+  if (this->FindAndCheckRotation() != SV_OK)
   {
     return SV_ERROR;
   }
 
   if (this->OriginalPd != NULL)
   {
-    if (this->CheckAnglesWithOriginal() != 1)
+    if (this->CheckAnglesWithOriginal() != SV_OK)
     {
       return SV_ERROR;
     }
@@ -258,24 +258,24 @@ int vtkSVCheckRotation::FindAndCheckRotation()
  */
 int vtkSVCheckRotation::CheckAnglesWithOriginal()
 {
-  if (this->MatchPointOrder() != 1)
+  if (this->MatchPointOrder() != SV_OK)
   {
     return SV_ERROR;
   }
   vtkNew(vtkFloatArray, mappedS2Angles);
-  if (vtkSVGeneralUtils::GetPolyDataAngles(this->MappedPd, mappedS2Angles) != 1)
+  if (vtkSVGeneralUtils::GetPolyDataAngles(this->MappedPd, mappedS2Angles) != SV_OK)
   {
     return SV_ERROR;
   }
 
   vtkNew(vtkFloatArray, targetS2Angles);
-  if (vtkSVGeneralUtils::GetPolyDataAngles(this->TargetPd, targetS2Angles) != 1)
+  if (vtkSVGeneralUtils::GetPolyDataAngles(this->TargetPd, targetS2Angles) != SV_OK)
   {
     return SV_ERROR;
   }
 
   vtkNew(vtkFloatArray, originalPdAngles);
-  if (vtkSVGeneralUtils::GetPolyDataAngles(this->OriginalPd, originalPdAngles) != 1)
+  if (vtkSVGeneralUtils::GetPolyDataAngles(this->OriginalPd, originalPdAngles) != SV_OK)
   {
     return SV_ERROR;
   }

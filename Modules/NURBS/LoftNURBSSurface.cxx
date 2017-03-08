@@ -34,7 +34,7 @@
 
 int main(int argc, char *argv[])
 {
-  if (argc != 1)
+  if (argc != SV_OK)
   {
       std::cout << "Incorrect Usage! Should be:" <<endl;
       std::cout << "./TestNURBSCurve" <<endl;

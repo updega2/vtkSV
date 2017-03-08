@@ -381,14 +381,14 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
     tmpPoints->SetPoint(i, inputs[i]->GetPoint(0));
   }
   vtkNew(vtkDoubleArray, U);
-  if (vtkSVNURBSUtils::GetUs(tmpPoints, putype, U) != 1)
+  if (vtkSVNURBSUtils::GetUs(tmpPoints, putype, U) != SV_OK)
   {
     return SV_ERROR;
   }
   //fprintf(stdout,"U:\n");
   //vtkSVNURBSUtils::PrintArray(U);
   vtkNew(vtkDoubleArray, uKnots);
-  if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != 1)
+  if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
   {
     fprintf(stderr,"Error getting knots\n");
     return SV_ERROR;
@@ -396,7 +396,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   //fprintf(stdout,"X knots\n");
   //vtkSVNURBSUtils::PrintArray(uKnots);
   vtkNew(vtkDoubleArray, V);
-  if (vtkSVNURBSUtils::GetUs(inputs[0]->GetPoints(), pvtype, V) != 1)
+  if (vtkSVNURBSUtils::GetUs(inputs[0]->GetPoints(), pvtype, V) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -404,7 +404,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   //vtkSVNURBSUtils::PrintArray(V);
 
   vtkNew(vtkDoubleArray, vKnots);
-  if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != 1)
+  if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
   {
     fprintf(stderr,"Error getting knots\n");
     return SV_ERROR;
@@ -413,7 +413,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   //vtkSVNURBSUtils::PrintArray(vKnots);
 
   vtkNew(vtkStructuredGrid, inputPoints);
-  if (vtkSVNURBSUtils::PolyDatasToStructuredGrid(inputs, numInputs, inputPoints) != 1)
+  if (vtkSVNURBSUtils::PolyDatasToStructuredGrid(inputs, numInputs, inputPoints) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -444,7 +444,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   vtkNew(vtkDoubleArray, vWeights);
   if (vtkSVNURBSUtils::GetControlPointsOfSurface(inputPoints, U, V, uWeights, vWeights,
                                                uKnots, vKnots, p, q, kutype, kvtype,
-                                               DU0, DUN, DV0, DVN, cPoints) != 1)
+                                               DU0, DUN, DV0, DVN, cPoints) != SV_OK)
   {
     return SV_ERROR;
   }

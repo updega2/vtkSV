@@ -45,7 +45,7 @@ vtkStandardNewMacro(vtkSVSquareBoundaryMapper);
  */
 int vtkSVSquareBoundaryMapper::SetBoundaries()
 {
-  if (this->CalculateSquareEdgeLengths() != 1)
+  if (this->CalculateSquareEdgeLengths() != SV_OK)
   {
     vtkErrorMacro("Didn't work");
     return SV_ERROR;

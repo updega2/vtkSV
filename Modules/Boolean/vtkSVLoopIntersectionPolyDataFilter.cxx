@@ -1050,7 +1050,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
     {
     //Get polygon loops of intersected triangle
     std::vector<simPolygon> loops;
-    if (this->GetLoops(transformedpd, &loops) != 1)
+    if (this->GetLoops(transformedpd, &loops) != SV_OK)
       {
       splitCells->Delete();
       splitCells = NULL;
@@ -1434,7 +1434,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
       lineBool[nextCell] = true;
 
       //Get one loop for untouched point
-      if (this->GetSingleLoop(pd, &interloop, nextCell, ptBool, lineBool) != 1)
+      if (this->GetSingleLoop(pd, &interloop, nextCell, ptBool, lineBool) != SV_OK)
         {
         delete [] ptBool;
         delete [] lineBool;
@@ -1460,7 +1460,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
       nextCell = lineId;
 
       //Get single loop if the line is still untouched
-      if (this->GetSingleLoop(pd, &interloop, nextCell, ptBool, lineBool) != 1)
+      if (this->GetSingleLoop(pd, &interloop, nextCell, ptBool, lineBool) != SV_OK)
         {
         delete [] ptBool;
         delete [] lineBool;
@@ -1531,7 +1531,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
       else
         {
         if (this->FollowLoopOrientation(pd, loop, &nextCell, nextPt, prevPt,
-              pointCells) != 1)
+              pointCells) != SV_OK)
           {
           return SV_ERROR;
           }
@@ -2505,7 +2505,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
   if (this->SplitFirstOutput)
     {
     mesh0->BuildLinks();
-    if (impl->SplitMesh(0, outputPolyData0, outputIntersection) != 1)
+    if (impl->SplitMesh(0, outputPolyData0, outputIntersection) != SV_OK)
       {
       this->Status = 0;
       this->NumberOfIntersectionPoints = 0;
@@ -2545,7 +2545,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
   if (this->SplitSecondOutput)
     {
     mesh1->BuildLinks();
-    if (impl->SplitMesh(1, outputPolyData1, outputIntersection) != 1)
+    if (impl->SplitMesh(1, outputPolyData1, outputIntersection) != SV_OK)
       {
       this->Status = 0;
       this->NumberOfIntersectionPoints = 0;

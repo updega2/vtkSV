@@ -206,7 +206,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
     vtkErrorMacro("Error: no centerliens provided\n");
   }
 
-  if (this->PrepFilter() != 1)
+  if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Error in preprocessing the polydata\n");
     return SV_ERROR;
@@ -217,7 +217,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/graph.vtp");
   pdwriter->Write();
 
-  if (this->SliceBifurcations() != 1)
+  if (this->SliceBifurcations() != SV_OK)
   {
     vtkErrorMacro("Error in slicing the polydata\n");
     return SV_ERROR;
@@ -228,7 +228,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
     ddwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/ahbutofcourse.vtp");
     ddwriter->Write();
 
-  if (this->SliceBranches() != 1)
+  if (this->SliceBranches() != SV_OK)
   {
     vtkErrorMacro("Error in slicing the polydata\n");
     return SV_ERROR;
@@ -239,7 +239,7 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
   lwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/surglines.vtp");
   lwriter->Write();
 
-  if (this->BuildPolycube() != 1)
+  if (this->BuildPolycube() != SV_OK)
   {
     vtkErrorMacro("Error in constructing polycube\n");
     return SV_ERROR;
@@ -263,13 +263,13 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
  */
 int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
 {
-  if (this->FindGroupBoundaries() != 1)
+  if (this->FindGroupBoundaries() != SV_OK)
   {
     vtkErrorMacro("Unable to find boundaries of input group ids data array");
     return SV_ERROR;
   }
 
-  if (this->GetCriticalPoints() != 1)
+  if (this->GetCriticalPoints() != SV_OK)
   {
     vtkErrorMacro("Unable to retrieve critical points");
     return SV_ERROR;
@@ -284,7 +284,7 @@ int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
                                      this->GroupIdsArrayName,
                                      this->CriticalPointMap,
                                      this->DirectionTable);
-  if (this->CenterlineGraph->BuildGraph() != 1)
+  if (this->CenterlineGraph->BuildGraph() != SV_OK)
   {
     vtkErrorMacro("Unable to form skeleton of polydata");
     return SV_ERROR;
@@ -1196,7 +1196,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     }
     else
     {
-      if (this->CheckSlice(connectedPd) != 1)
+      if (this->CheckSlice(connectedPd) != SV_OK)
       {
         continue;
       }

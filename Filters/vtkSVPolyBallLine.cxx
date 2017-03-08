@@ -22,15 +22,8 @@ Version:   $Revision: 1.5 $
 #include "vtkPointData.h"
 #include "vtkPolyLine.h"
 #include "vtkObjectFactory.h"
+#include "vtkSVGlobals.h"
 #include "vtkVersion.h"
-
-#ifndef VTK_SV_DOUBLE_TOL
-#define VTK_SV_DOUBLE_TOL 1.0E-12
-#endif
-
-#ifndef VTK_SV_LARGE_DOUBLE
-#define VTK_SV_LARGE_DOUBLE 1.0E+32
-#endif
 
 vtkStandardNewMacro(vtkSVPolyBallLine);
 
@@ -89,13 +82,13 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
   if (!this->Input)
     {
     vtkErrorMacro(<<"No Input specified!");
-    return SV_ERROR.0;
+    return SV_ERROR;
     }
 
   if (this->Input->GetNumberOfPoints()==0)
     {
     vtkWarningMacro(<<"Empty Input specified!");
-    return SV_ERROR.0;
+    return SV_ERROR;
     }
 
   if (this->UseRadiusInformation)
@@ -103,7 +96,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     if (!this->PolyBallRadiusArrayName)
       {
       vtkErrorMacro(<<"No PolyBallRadiusArrayName specified!");
-      return SV_ERROR.0;
+      return SV_ERROR;
       }
 
     polyballRadiusArray = this->Input->GetPointData()->GetArray(this->PolyBallRadiusArrayName);
@@ -111,14 +104,14 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     if (polyballRadiusArray==NULL)
       {
       vtkErrorMacro(<<"PolyBallRadiusArray with name specified does not exist!");
-      return SV_ERROR.0;
+      return SV_ERROR;
       }
     }
 
   if (this->Input->GetLines()==NULL)
     {
     vtkWarningMacro(<<"No lines in Input dataset.");
-    return SV_ERROR.0;
+    return SV_ERROR;
     }
 
   this->Input->BuildCells();

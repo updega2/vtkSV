@@ -374,7 +374,7 @@ int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots
   //Get zero order basis function first
   vtkNew(vtkSparseArray<double>, N0);
   N0->Resize(nCon, nKnot-1);
-  if (vtkSVNURBSUtils::GetZeroBasisFunctions(U, knots, N0) != 1)
+  if (vtkSVNURBSUtils::GetZeroBasisFunctions(U, knots, N0) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -465,7 +465,7 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
 
   vtkNew(vtkSparseArray<double>, NPTmp);
   vtkNew(vtkSparseArray<double>, NPFinal);
-  if( vtkSVNURBSUtils::GetPBasisFunctions(U, knots, p, NPTmp) != 1)
+  if( vtkSVNURBSUtils::GetPBasisFunctions(U, knots, p, NPTmp) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -474,7 +474,7 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   vtkNew(vtkDenseArray<double>, pointArrayTmp);
   vtkNew(vtkDenseArray<double>, pointArrayFinal);
   vtkNew(vtkDenseArray<double>, cPointArray);
-  if (vtkSVNURBSUtils::PointsToTypedArray(points, pointArrayTmp) != 1)
+  if (vtkSVNURBSUtils::PointsToTypedArray(points, pointArrayTmp) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -491,17 +491,17 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   }
 
   vtkNew(vtkSparseArray<double>, NPinv);
-  if (vtkSVNURBSUtils::InvertSystem(NPFinal, NPinv) != 1)
+  if (vtkSVNURBSUtils::InvertSystem(NPFinal, NPinv) != SV_OK)
   {
     fprintf(stderr,"System could not be inverted\n");
     return SV_ERROR;
   }
-  if (vtkSVNURBSUtils::MatrixVecMultiply(NPinv, 0, pointArrayFinal, 1, cPointArray) != 1)
+  if (vtkSVNURBSUtils::MatrixVecMultiply(NPinv, 0, pointArrayFinal, 1, cPointArray) != SV_OK)
   {
     return SV_ERROR;
   }
 
-  if (vtkSVNURBSUtils::TypedArrayToPoints(cPointArray, cPoints) != 1)
+  if (vtkSVNURBSUtils::TypedArrayToPoints(cPointArray, cPoints) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -532,7 +532,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
 
   vtkNew(vtkSparseArray<double>, NPUTmp);
   vtkNew(vtkSparseArray<double>, NPUFinal);
-  if( vtkSVNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != 1)
+  if( vtkSVNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -540,7 +540,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
 
   vtkNew(vtkSparseArray<double>, NPVTmp);
   vtkNew(vtkSparseArray<double>, NPVFinal);
-  if( vtkSVNURBSUtils::GetPBasisFunctions(V, vKnots, q, NPVTmp) != 1)
+  if( vtkSVNURBSUtils::GetPBasisFunctions(V, vKnots, q, NPVTmp) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -577,7 +577,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   //fprintf(stdout,"Basis functions U:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPUFinal);
   vtkNew(vtkSparseArray<double>, NPUinv);
-  if (vtkSVNURBSUtils::InvertSystem(NPUFinal, NPUinv) != 1)
+  if (vtkSVNURBSUtils::InvertSystem(NPUFinal, NPUinv) != SV_OK)
   {
     fprintf(stderr,"System could not be inverted\n");
     return SV_ERROR;
@@ -586,7 +586,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   //fprintf(stdout,"Basis functions V:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPVFinal);
   vtkNew(vtkSparseArray<double>, NPVinv);
-  if (vtkSVNURBSUtils::InvertSystem(NPVFinal, NPVinv) != 1)
+  if (vtkSVNURBSUtils::InvertSystem(NPVFinal, NPVinv) != SV_OK)
   {
     fprintf(stderr,"System could not be inverted\n");
     return SV_ERROR;
@@ -598,7 +598,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   //fprintf(stdout,"Inverted system V:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPVinv);
   vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != 1)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
@@ -606,7 +606,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   vtkNew(vtkDenseArray<double>, tmpUGridT);
   vtkSVNURBSUtils::MatrixTranspose(tmpUGrid, 1, tmpUGridT);
   vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, tmpUGridT, 1, tmpVGrid) != 1)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, tmpUGridT, 1, tmpVGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
@@ -1373,7 +1373,7 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   vtkSVNURBSUtils::MatrixToVector(mat0, mat0Vec);
   vtkSVNURBSUtils::MatrixToVector(mat1, mat1Vec);
   if (vtkSVNURBSUtils::DGEMM(mat0Vec, nrM0, ncM0,
-                           mat1Vec, nrM1, ncM1, outVec) != 1)
+                           mat1Vec, nrM1, ncM1, outVec) != SV_OK)
   {
     delete [] mat0Vec;
     delete [] mat1Vec;
@@ -1428,7 +1428,7 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   for (int i=0; i<3; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vecs[i], nrM0, ncM0,
-                             mat1Vecs[i], nrM1, ncM1, outVecs[i]) != 1)
+                             mat1Vecs[i], nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       for (int i=0; i<3; i++)
       {
@@ -1490,7 +1490,7 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   for (int i=0; i<3; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vecs[i], nrM0, ncM0,
-                             mat1Vec, nrM1, ncM1, outVecs[i]) != 1)
+                             mat1Vec, nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       delete [] mat1Vec;
       for (int i=0; i<3; i++)
@@ -1552,7 +1552,7 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   for (int i=0; i<3; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vec, nrM0, ncM0,
-                             mat1Vecs[i], nrM1, ncM1, outVecs[i]) != 1)
+                             mat1Vecs[i], nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       delete [] mat0Vec;
       for (int i=0; i<3; i++)
@@ -1729,7 +1729,7 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   int dim[3];
   grid->GetDimensions(dim);
 
-  if (dim[2] != 1)
+  if (dim[2] != SV_OK)
   {
     fprintf(stderr,"3 Dimensions are not yet supported\n");
     return SV_ERROR;
