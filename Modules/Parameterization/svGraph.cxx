@@ -524,7 +524,8 @@ int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
       }
       for (int i=0; i<8; i++)
       {
-        fprintf(stdout,"%d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i]], tmpIds[cellIndices[rotIndices->GetValue(i)]]);
+        //fprintf(stdout,"Working on cube %d\n", gCell->GroupId);
+        //fprintf(stdout,"Inside graph %d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i]], tmpIds[cellIndices[rotIndices->GetValue(i)]]);
         gCell->CornerPtIds[cellIndices[i]] = tmpIds[cellIndices[rotIndices->GetValue(i)]];
       }
     }

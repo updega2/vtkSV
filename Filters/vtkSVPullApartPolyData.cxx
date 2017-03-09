@@ -230,7 +230,7 @@ int vtkSVPullApartPolyData::PrepFilter()
       }
       if (badCell == 2)
       {
-        //fprintf(stdout, "Bad start cell!, fixing\n");
+        fprintf(stdout, "Bad start cell!, fixing\n");
         this->FixTheBadStartCell(this->WorkPd, this->StartPtId, cellId);
       }
     }
@@ -421,7 +421,7 @@ int vtkSVPullApartPolyData::FindEdgeCells()
       vtkErrorMacro("Starting edge could not be found");
       return SV_ERROR;
     }
-    //fprintf(stdout,"Starts: %d %d %d\n", startPt0, startPt1, startPt2);
+    fprintf(stdout,"Starts: %d %d %d\n", startPt0, startPt1, startPt2);
     std::vector<int> list0; list0.push_back(startCellId);
     std::vector<int> list1; list1.push_back(startCellId);
     this->FindNextEdge(startPt0, startPt1, startPt2, startCellId, list0, 1);
@@ -466,7 +466,7 @@ int vtkSVPullApartPolyData::FindStartingEdge(int &p0, int &p1, int &p2, int &cel
           vtkIdType edgeId = this->EdgeTable->InsertEdge(p0, p1);
           cellId = i;
           vtkDebugMacro("First edge in list with points" << p0 << " and " << p1 << " on cell " << cellId);
-          //fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p0, p1, i);
+          fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p0, p1, i);
           return SV_OK;
         }
       }
@@ -502,7 +502,7 @@ int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std
         int outP = pts[j];
         cellList.push_back(neighborCell);
         vtkDebugMacro("Edge in same list with points" << p2 << " and " << p1 << " on cell " << neighborCell);
-        //fprintf(stdout,"Edge in same list with points %d and %d on cell %d\n", p2, p1, neighborCell);
+        fprintf(stdout,"Edge in same list with points %d and %d on cell %d\n", p2, p1, neighborCell);
         this->FindNextEdge(p2, p1, outP, neighborCell, cellList, 0);
       }
       else if (pts[j] != p1 && pts[j] != p2 && cutVal == 1)
@@ -511,13 +511,13 @@ int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std
         int newP = pts[j];
         cellList.push_back(neighborCell);
         vtkDebugMacro("Final edge in list with points" << p1 << " and " << newP << " on cell " << neighborCell);
-        //fprintf(stdout,"Final Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
+        fprintf(stdout,"Final Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
         this->ReplaceCellVector.push_back(cellList);
         this->ReplacePointVector.push_back(p1);
         std::vector<int> newCellList;
         newCellList.push_back(neighborCell);
         vtkDebugMacro("First edge in list with points" << p1 << " and " << newP << " on cell " << neighborCell);
-        //fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
+        fprintf(stdout,"First Edge in list with points %d and %d on cell %d\n", p1, newP, neighborCell);
         vtkIdType edgeId = this->EdgeTable->InsertEdge(p1, newP);
         this->FindNextEdge(p1, newP, p2, neighborCell, newCellList, 1);
         this->ReplaceCellVector.push_back(newCellList);
@@ -528,7 +528,7 @@ int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std
   }
   else if (neighborCells->GetNumberOfIds() == 0 && first)
   {
-    //fprintf(stdout,"Ending edge with point %d on cell %d\n", p1, cellId);
+    fprintf(stdout,"Ending edge with point %d on cell %d\n", p1, cellId);
     std::vector<int> newCellList;
     newCellList.push_back(cellId);
     this->ReplaceCellVector.push_back(newCellList);
@@ -552,6 +552,7 @@ int vtkSVPullApartPolyData::FindNextEdge(int p0, int p1, int p2, int cellId, std
 int vtkSVPullApartPolyData::FixTheBadStartCell(vtkPolyData *pd, const int pointId,
                                              const int cellId)
 {
+  fprintf(stdout,"Fixing bad start\n");
   vtkNew(vtkPointData, newPointData);
   vtkNew(vtkCellData, newCellData);
   newPointData->CopyAllocate(pd->GetPointData(), pd->GetNumberOfPoints() + 1);

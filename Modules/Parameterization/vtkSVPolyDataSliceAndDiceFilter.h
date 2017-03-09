@@ -181,14 +181,20 @@ protected:
                            const int front,
                            const int back,
                            vtkIdList *surgeryPoints);
-  int GetNextSurgeryPoints(vtkPolyData *pd, svGCell *gCell,
+  int GetNextSurgeryPoints(vtkPolyData *pd,
                            double centerPt[3],
                            vtkIdList *surgeryPoints,
-                           int endSurgeryIds[8],
                            double xvec[3], double zvec[3],
                            double radius,
-                           vtkIdList *surgeryLineIds,
-                           int cellIndices[8]);
+                           vtkIdList *surgeryLineIds);
+  int GetEndSurgeryPoints(vtkPolyData *pd, svGCell *gCell,
+                          double centerPt[3],
+                          vtkIdList *surgeryPoints,
+                          int endSurgeryIds[8],
+                          double xvec[3], double zvec[3],
+                          double radius,
+                          vtkIdList *surgeryLineIds,
+                          int cellIndices[8]);
   int DetermineSliceStrategy(vtkPolyData *branchPd,
                              svGCell *gCell,
                              vtkPolyData *branchCenterline,

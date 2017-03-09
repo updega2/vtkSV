@@ -422,6 +422,7 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
     "ParentDirection")->GetTuple1(branchId);
   int childDir = this->Polycube->GetCellData()->GetArray(
     "ChildDirection")->GetTuple1(branchId);
+  fprintf(stdout,"Parent dir is: %d and child dir is: %d\n", parentDir, childDir);
   int cellIndices[8];
   for (int i=0; i<8; i++)
     cellIndices[i] = vtkSVPolyDataSliceAndDiceFilter::LookupIndex(parentDir, childDir, i);
@@ -733,6 +734,11 @@ int vtkSVPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   boundaryLengths[0] = 3.0; boundaryLengths[1] = 1.0; boundaryLengths[2] = 3.0; boundaryLengths[3] = 1.0;
   int boundaryDivisions[4];
   boundaryDivisions[0] = 2; boundaryDivisions[1] = 0; boundaryDivisions[2] = 2; boundaryDivisions[3] = 0;
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Totsally.vtp";
+  vtkNew(vtkXMLPolyDataWriter, writer);
+  writer->SetInputData(slicePd);
+  writer->SetFileName(filename.c_str());
+  writer->Write();
 
   vtkNew(vtkSVSuperSquareBoundaryMapper, boundaryMapper);
   boundaryMapper->SetBoundaryIds(boundaryCorners);

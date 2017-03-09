@@ -521,9 +521,9 @@ int vtkSVMapInterpolator::GetClosestTwoPoints(vtkPolyData *pd, double projPt[], 
     int ptId = boundaryPts->GetId(i);
     double pt[3];
     pd->GetPoint(ptId, pt);
-    dist[i] = std::sqrt(std::pow(projPt[0]-pt[0], 2.0) +
-                        std::pow(projPt[1]-pt[1], 2.0) +
-                        std::pow(projPt[2]-pt[2], 2.0));
+    dist[i] = sqrt(pow(projPt[0]-pt[0], 2.0) +
+                   pow(projPt[1]-pt[1], 2.0) +
+                   pow(projPt[2]-pt[2], 2.0));
 
   }
 

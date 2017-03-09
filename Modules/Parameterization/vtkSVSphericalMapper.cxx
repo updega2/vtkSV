@@ -374,9 +374,9 @@ int vtkSVSphericalMapper::SetBoundaries()
     boundaryLoopPts[1] = this->SecondLoopPts;
     boundaryLoopHelper[0] = this->FirstLoopHelper;
     boundaryLoopHelper[1] = this->SecondLoopHelper;
-    //double rightval = 1 + std::sqrt(2.0)/2.0;
+    //double rightval = 1 + sqrt(2.0)/2.0;
     double rightval = 1 + 0.58;
-    double radius = std::sqrt(rightval/(2 - rightval));
+    double radius = sqrt(rightval/(2 - rightval));
     for (int i=0; i<this->NumBoundaries; i++)
     {
       int numLoopPts = boundaryLoopPts[i]->GetNumberOfTuples();
@@ -437,7 +437,7 @@ int vtkSVSphericalMapper::SetBoundaries()
       //}
       //delete [] lengths;
 
-      radius = std::sqrt((2 - rightval)/rightval);
+      radius = sqrt((2 - rightval)/rightval);
     }
 
     for (int i=0; i<this->NumBoundaries; i++)
@@ -1251,9 +1251,9 @@ int vtkSVSphericalMapper::CalculateCircleLength(vtkPolyData *lines,
     lines->GetPoint(pts[0], pt0);
     lines->GetPoint(pts[1], pt1);
 
-    double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                            std::pow(pt0[1]-pt1[1], 2.0) +
-                            std::pow(pt0[2]-pt1[2], 2.0));
+    double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                       pow(pt0[1]-pt1[1], 2.0) +
+                       pow(pt0[2]-pt1[2], 2.0));
     length += dist;
   }
 
@@ -1292,9 +1292,9 @@ int vtkSVSphericalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
       lines->GetPoint(pts[1], pt1);
       checkPt = pointIds->GetValue(pts[1]);
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                         pow(pt0[1]-pt1[1], 2.0) +
+                         pow(pt0[2]-pt1[2], 2.0));
       lengths[i] += dist;
 
       currCell++;
@@ -1329,9 +1329,9 @@ int vtkSVSphericalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
     lines->GetPoint(pts[0], pt0);
     lines->GetPoint(pts[1], pt1);
 
-    double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                            std::pow(pt0[1]-pt1[1], 2.0) +
-                            std::pow(pt0[2]-pt1[2], 2.0));
+    double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                       pow(pt0[1]-pt1[1], 2.0) +
+                       pow(pt0[2]-pt1[2], 2.0));
     currLength += dist;
 
     double angle = currLength/length * 2.0 * M_PI;
@@ -1387,9 +1387,9 @@ int vtkSVSphericalMapper::SetCircleBoundary(vtkPolyData *lines,
 
       checkPt = pointIds->GetValue(pts[1]);
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                         pow(pt0[1]-pt1[1], 2.0) +
+                         pow(pt0[2]-pt1[2], 2.0));
       currLength += dist;
 
       double boundaryVal[3];
@@ -1555,9 +1555,9 @@ int vtkSVSphericalMapper::SetCubeBoundary(vtkPolyData *lines,
       lines->GetPoint(pts[1], pt1);
       checkPt = pointIds->GetValue(pts[1]);
 
-      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-                              std::pow(pt0[1]-pt1[1], 2.0) +
-                              std::pow(pt0[2]-pt1[2], 2.0));
+      double dist = sqrt(pow(pt0[0]-pt1[0], 2.0) +
+                         pow(pt0[1]-pt1[1], 2.0) +
+                         pow(pt0[2]-pt1[2], 2.0));
       currLength += dist;
 
 
@@ -1610,9 +1610,9 @@ int vtkSVSphericalMapper::CubeBoundaryToSphere(double inCoords[], double outCoor
   double y2 = std::pow(inCoords[1], 2.0);
   double z2 = std::pow(inCoords[2], 2.0);
 
-  outCoords[0] = inCoords[0] * std::sqrt(1 - (y2/2.0) - (z2/2.0) + (y2*z2/3.0));
-  outCoords[1] = inCoords[1] * std::sqrt(1 - (x2/2.0) - (z2/2.0) + (x2*z2/3.0));
-  outCoords[2] = inCoords[2] * std::sqrt(1 - (y2/2.0) - (x2/2.0) + (y2*x2/3.0));
+  outCoords[0] = inCoords[0] * sqrt(1 - (y2/2.0) - (z2/2.0) + (y2*z2/3.0));
+  outCoords[1] = inCoords[1] * sqrt(1 - (x2/2.0) - (z2/2.0) + (x2*z2/3.0));
+  outCoords[2] = inCoords[2] * sqrt(1 - (y2/2.0) - (x2/2.0) + (y2*x2/3.0));
 
   return SV_OK;
 }

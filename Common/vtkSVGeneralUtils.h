@@ -90,6 +90,7 @@ public:
                      const int extractInside,
                      vtkPolyData *outPd,
                      vtkPolyData *clippedOutPd);
+  static double Distance(double pt0[3], double pt1[3]);
   static int GetPointsLength(vtkPolyData *points, double &length);
   static int ReplaceDataOnCells(vtkPointSet *pointset, vtkDataArray *sliceIds,
                                 const int sliceId, const int replaceVal,

@@ -574,9 +574,9 @@ int vtkSVGroupsClipper::SplitGroups(vtkPolyData *pd, vtkIdList *separateIds, vtk
     {
       double testPt[3];
       onePiece->GetPoint(j, testPt);
-      double dist = std::sqrt(std::pow(testPt[0] - circleCenter[0], 2.0) +
-                              std::pow(testPt[1] - circleCenter[1], 2.0) +
-                              std::pow(testPt[2] - circleCenter[2], 2.0));
+      double dist = sqrt(pow(testPt[0] - circleCenter[0], 2.0) +
+                         pow(testPt[1] - circleCenter[1], 2.0) +
+                         pow(testPt[2] - circleCenter[2], 2.0));
       if (dist > circleRadius)
         circleRadius = dist;
     }

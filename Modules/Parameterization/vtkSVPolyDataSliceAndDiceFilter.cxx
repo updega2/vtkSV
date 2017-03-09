@@ -98,6 +98,7 @@ vtkSVPolyDataSliceAndDiceFilter::vtkSVPolyDataSliceAndDiceFilter()
   this->CenterlineGraph = NULL;
 
   this->BoundaryPointsArrayName = NULL;
+  this->SegmentIdsArrayName = NULL;
   this->GroupIdsArrayName = NULL;
   this->SliceIdsArrayName = NULL;
   this->SphereRadiusArrayName = NULL;
@@ -158,6 +159,11 @@ vtkSVPolyDataSliceAndDiceFilter::~vtkSVPolyDataSliceAndDiceFilter()
   {
     delete [] this->GroupIdsArrayName;
     this->GroupIdsArrayName = NULL;
+  }
+  if (this->SegmentIdsArrayName != NULL)
+  {
+    delete [] this->SegmentIdsArrayName;
+    this->SegmentIdsArrayName = NULL;
   }
   if (this->SliceIdsArrayName != NULL)
   {
@@ -979,9 +985,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
-    length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                        std::pow(pt1[1] - pt0[1], 2.0) +
-                        std::pow(pt1[2] - pt0[2], 2.0));
+    length += vtkSVGeneralUtils::Distance(pt0, pt1);
   }
 
   //Finding the surgery points which separate each half of the boundary into
@@ -996,9 +1000,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
-    currLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                            std::pow(pt1[1] - pt0[1], 2.0) +
-                            std::pow(pt1[2] - pt0[2], 2.0));
+    currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
     if (currLength > length*(surgeryCount/3.0))
     {
       surgeryPoints->InsertNextId(pointIds->GetTuple1(pointId));
@@ -1103,19 +1105,19 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
       newIndices[i] = this->LookupIndex(gCell->Dir, defaultDirs[gCell->Dir], i);
   }
 
-  if (this->SliceDirection == 1)
-  {
-    for (int i=0; i<4; i++)
-      gCell->CornerPtIds[newIndices[i+4]] = surgeryPoints->GetId(i);
-  }
-  else
-  {
+  //if (this->SliceDirection == 1)
+  //{
+  //  for (int i=0; i<4; i++)
+  //    gCell->CornerPtIds[newIndices[i+4]] = surgeryPoints->GetId(i);
+  //}
+  //else
+  //{
     for (int i=0; i<4; i++)
     {
-      gCell->CornerPtIds[newIndices[i]] = surgeryPoints->GetId(i);
+      //gCell->CornerPtIds[newIndices[i]] = surgeryPoints->GetId(i);
       fprintf(stdout,"Starting are: %lld\n", surgeryPoints->GetId(i));
     }
-  }
+  //}
 
   if (branchId != 0)
   {
@@ -1160,9 +1162,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
       branchCenterline->GetPoint(linePtId, pt0);
       this->UpdatePtId(linePtId);
       branchCenterline->GetPoint(linePtId, pt1);
-      centerlineLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                                    std::pow(pt1[1] - pt0[1], 2.0) +
-                                    std::pow(pt1[2] - pt0[2], 2.0));
+      centerlineLength += vtkSVGeneralUtils::Distance(pt0, pt1);
     }
     currLength += centerlineLength;
 
@@ -1207,14 +1207,11 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     double contourRadius = radiusArray->GetTuple1(linePtId);
     if (!done)
     {
-      int dummyIds[8];
-      for (int j=0; j<8; j++)
-        dummyIds[j] = -1;
-      this->GetNextSurgeryPoints(connectedPd, gCell, contourClosePt, surgeryPoints, dummyIds, xvec, zvec, contourRadius, surgeryLineIds, newIndices);
+      this->GetNextSurgeryPoints(connectedPd, contourClosePt, surgeryPoints, xvec, zvec, contourRadius, surgeryLineIds);
     }
     else
     {
-      this->GetNextSurgeryPoints(branchPd, gCell, contourClosePt, surgeryPoints, gCell->CornerPtIds, xvec, zvec, contourRadius, surgeryLineIds, newIndices);
+      this->GetEndSurgeryPoints(branchPd, gCell, contourClosePt, surgeryPoints, gCell->CornerPtIds, xvec, zvec, contourRadius, surgeryLineIds, newIndices);
     }
 
     sliceId++;
@@ -1334,11 +1331,11 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcations()
     singleCompArray->SetNumberOfComponents(1);
     singleCompArray->SetNumberOfTuples(this->WorkPd->GetNumberOfPoints());
     singleCompArray->CopyComponent(0, this->WorkPd->GetPointData()->GetArray("SurgeryPoints"), groupId);
-    fprintf(stdout,"BERAK\n");
+    fprintf(stdout,"BREAK\n");
     for (int j=0; j<8; j++)
     {
       gCell->CornerPtIds[j] = singleCompArray->LookupValue(j);
-      fprintf(stdout,"ALLA POINTS: %d\n", gCell->CornerPtIds[j]);
+      fprintf(stdout,"ALL POINTS for %d: %d\n", gCell->GroupId, gCell->CornerPtIds[j]);
     }
   }
   this->WorkPd->GetPointData()->RemoveArray("SurgeryPoints");
@@ -1527,9 +1524,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   {
     double testPt[3];
     getClose0->GetOutput()->GetPoint(i, testPt);
-    double dist = std::sqrt(std::pow(testPt[0] - adjSlicePt0[0], 2.0) +
-                            std::pow(testPt[1] - adjSlicePt0[1], 2.0) +
-                            std::pow(testPt[2] - adjSlicePt0[2], 2.0));
+    double dist = vtkSVGeneralUtils::Distance(adjSlicePt0, testPt);
     if (dist > maxDist)
       maxDist = dist;
 
@@ -1573,9 +1568,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   {
     double testPt[3];
     getClose1->GetOutput()->GetPoint(i, testPt);
-    double dist = std::sqrt(std::pow(testPt[0] - adjSlicePt1[0], 2.0) +
-                            std::pow(testPt[1] - adjSlicePt1[1], 2.0) +
-                            std::pow(testPt[2] - adjSlicePt1[2], 2.0));
+    double dist = vtkSVGeneralUtils::Distance(adjSlicePt1, testPt);
     if (dist > maxDist)
       maxDist = dist;
 
@@ -2099,67 +2092,15 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCloseGeodesicPoint(vtkPolyData *pd, doub
  * @param *pd
  * @return
  */
-int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCell *gCell, double centerPt[3], vtkIdList *surgeryPoints, int endSurgeryIds[8], double xvec[3], double zvec[3], double radius, vtkIdList *surgeryLineIds, int cellIndices[8])
+int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3], vtkIdList *surgeryPoints, double xvec[3], double zvec[3], double radius, vtkIdList *surgeryLineIds)
 {
   int contourPtId;
   vtkNew(vtkPolyData, boundary);
-  //this->GetCloseGeodesicPoint(pd, centerPt, surgeryPoints->GetId(0),
-  //  contourPtId, zvec, boundary);
+
   int initialSurgeryPt = surgeryPoints->GetId(0);
-  int finalSurgeryId;
-  if (this->SliceDirection == 1)
-    finalSurgeryId = endSurgeryIds[cellIndices[0]];
-  else
-    finalSurgeryId = endSurgeryIds[cellIndices[4]];
+  this->GetClose3DPoint(pd, centerPt, initialSurgeryPt,
+    contourPtId, xvec, zvec, radius, boundary);
 
-  int finally = 0;
-  if (finalSurgeryId == -1)
-  {
-    this->GetClose3DPoint(pd, centerPt, surgeryPoints->GetId(0),
-      contourPtId, xvec, zvec, radius, boundary);
-  }
-  else
-  {
-    finally = 1;
-    vtkNew(vtkFeatureEdges, boundaries);
-    boundaries->SetInputData(pd);
-    boundaries->BoundaryEdgesOn();
-    boundaries->FeatureEdgesOff();
-    boundaries->NonManifoldEdgesOff();
-    boundaries->ManifoldEdgesOff();
-    boundaries->Update();
-    vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
-
-    double projVec[3];
-    for (int i=0; i<3; i++)
-    {
-      projVec[i] = xvec[i];
-    }
-    vtkMath::MultiplyScalar(projVec, 1.5*radius);
-    double closePt[3];
-    vtkMath::Add(centerPt, projVec, closePt);
-    double dist = 1.0e299;
-    for (int i=0; i<4; i++)
-    {
-      int testId = boundary->GetPointData()->GetArray(
-        this->InternalIdsArrayName)->LookupValue(endSurgeryIds[cellIndices[i+4]]);
-      double pt[3];
-      boundary->GetPoint(testId, pt);
-      double testDist = std::sqrt(std::pow(pt[0] - closePt[0], 2.0) +
-                                  std::pow(pt[1] - closePt[1], 2.0) +
-                                  std::pow(pt[2] - closePt[2], 2.0));
-      if (testDist < dist)
-      {
-        dist = testDist;
-        contourPtId = endSurgeryIds[cellIndices[i+4]];
-      }
-
-    }
-    if (contourPtId != endSurgeryIds[cellIndices[4]])
-      this->FixGraphDirections(gCell, contourPtId, cellIndices);
-    for (int i=0; i<4; i++)
-      surgeryPoints->SetId(i, gCell->CornerPtIds[cellIndices[i+4]]);
-  }
   //fprintf(stdout,"Ending point to use is : %d\n", contourPtId);
   surgeryPoints->SetId(0, contourPtId);
 
@@ -2207,9 +2148,180 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCe
     boundary->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(boundary, pointId, cellId);
     boundary->GetPoint(pointId, pt1);
-    length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                        std::pow(pt1[1] - pt0[1], 2.0) +
-                        std::pow(pt1[2] - pt0[2], 2.0));
+    length += vtkSVGeneralUtils::Distance(pt0, pt1);
+    iter++;
+  }
+
+  //Finding the surgery points which separate boundary into four points
+  double surgeryCount = 1.0;
+  double currLength = 0.0;;
+  back = pointId;
+  pointId = front;
+  prevCellId = cellId;
+  iter = 0;
+  while (pointId != back || iter == 0)
+  {
+    boundary->GetPoint(pointId, pt0);
+    vtkSVGeneralUtils::IteratePoint(boundary, pointId, prevCellId);
+    boundary->GetPoint(pointId, pt1);
+    currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
+    if (currLength > length*(surgeryCount/4.0))
+    {
+      if (surgeryCount < 4)
+      {
+        int newId = boundary->GetPointData()->GetArray(this->InternalIdsArrayName)->
+          GetTuple1(pointId);
+        surgeryPoints->SetId(surgeryCount, newId);
+      }
+      surgeryCount += 1.0;
+    }
+    iter++;
+  }
+
+  vtkNew(vtkSVFindGeodesicPath, finder);
+  finder->SetInputData(pd);
+  finder->SetStartPtId(pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
+    LookupValue(surgeryPoints->GetId(0)));
+  finder->SetEndPtId(pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
+    LookupValue(initialSurgeryPt));
+  finder->SetDijkstraArrayName(this->DijkstraArrayName);
+  finder->SetInternalIdsArrayName(this->InternalIdsArrayName);
+  finder->SetRepelCloseBoundaryPoints(1);
+  finder->Update();
+
+  vtkNew(vtkIdList, tmpIds);
+  tmpIds = finder->GetPathIds();
+  int numToAdd = tmpIds->GetNumberOfIds();
+  for (int i=0; i<numToAdd; i++)
+  {
+    int testId = pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
+      GetTuple1(tmpIds->GetId(i));
+    if (surgeryLineIds->IsId(testId) == -1)
+    {
+      surgeryLineIds->InsertNextId(testId);
+    }
+  }
+
+  return SV_OK;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCell *gCell, double centerPt[3], vtkIdList *surgeryPoints, int endSurgeryIds[8], double xvec[3], double zvec[3], double radius, vtkIdList *surgeryLineIds, int cellIndices[8])
+{
+  int contourPtId;
+  vtkNew(vtkPolyData, boundary);
+  //this->GetCloseGeodesicPoint(pd, centerPt, surgeryPoints->GetId(0),
+  //  contourPtId, zvec, boundary);
+  int initialSurgeryPt = surgeryPoints->GetId(0);
+  int finalSurgeryId;
+  if (this->SliceDirection == 1)
+    finalSurgeryId = endSurgeryIds[cellIndices[0]];
+  else
+    finalSurgeryId = endSurgeryIds[cellIndices[4]];
+
+  int finally = 0;
+  if (finalSurgeryId == -1)
+  {
+    this->GetClose3DPoint(pd, centerPt, surgeryPoints->GetId(0),
+      contourPtId, xvec, zvec, radius, boundary);
+    //fprintf(stdout,"Ending point to use is : %d\n", contourPtId);
+    surgeryPoints->SetId(0, contourPtId);
+  }
+  else
+  {
+    finally = 1;
+    vtkNew(vtkFeatureEdges, boundaries);
+    boundaries->SetInputData(pd);
+    boundaries->BoundaryEdgesOn();
+    boundaries->FeatureEdgesOff();
+    boundaries->NonManifoldEdgesOff();
+    boundaries->ManifoldEdgesOff();
+    boundaries->Update();
+    vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
+
+    double projVec[3];
+    for (int i=0; i<3; i++)
+    {
+      projVec[i] = xvec[i];
+    }
+    vtkMath::MultiplyScalar(projVec, 1.5*radius);
+    double closePt[3];
+    vtkMath::Add(centerPt, projVec, closePt);
+    double dist = 1.0e299;
+    for (int i=0; i<4; i++)
+    {
+      int testId = boundary->GetPointData()->GetArray(
+        this->InternalIdsArrayName)->LookupValue(endSurgeryIds[cellIndices[i+4]]);
+      double pt[3];
+      boundary->GetPoint(testId, pt);
+      double testDist = vtkSVGeneralUtils::Distance(closePt, pt);
+      if (testDist < dist)
+      {
+        dist = testDist;
+        contourPtId = endSurgeryIds[cellIndices[i+4]];
+      }
+
+    }
+    fprintf(stdout,"Closest point is!: %d\n", contourPtId);
+    if (contourPtId != endSurgeryIds[cellIndices[4]])
+      this->FixGraphDirections(gCell, contourPtId, cellIndices);
+    for (int i=0; i<4; i++)
+      surgeryPoints->SetId(i, gCell->CornerPtIds[cellIndices[i+4]]);
+  }
+  fprintf(stdout,"And the first surg point is: %d\n", surgeryPoints->GetId(0));
+
+  int pointId = boundary->GetPointData()->GetArray(this->InternalIdsArrayName)->
+    LookupValue(contourPtId);
+
+  vtkNew(vtkIdList, startCellIds);
+  boundary->BuildLinks();
+  boundary->GetPointCells(pointId, startCellIds);
+  int cellId = startCellIds->GetId(0);
+
+  vtkIdType npts, *pts;
+  boundary->GetCellPoints(cellId, npts, pts);
+  int secondPtId;
+  if (pts[0] == pointId)
+  {
+    secondPtId = pts[1];
+  }
+  else
+  {
+    secondPtId = pts[0];
+  }
+  double pt0[3], pt1[3];
+  boundary->GetPoint(pointId, pt0);
+  boundary->GetPoint(secondPtId, pt1);
+  double tmpXVec[3], vec0[3], vec1[3];
+  vtkMath::Subtract(pt1, pt0, vec0);
+  vtkMath::Normalize(vec0);
+  vtkMath::Subtract(pt0, centerPt, tmpXVec);
+  vtkMath::Normalize(tmpXVec);
+
+  vtkMath::Cross(tmpXVec, vec0, vec1);
+
+  if (vtkMath::Dot(zvec, vec1) > 0)
+  {
+    cellId = startCellIds->GetId(1);
+  }
+
+  //Getting full loop length
+  int front = pointId;
+  int back = pointId;
+  double length = 0.0;
+  int iter = 0;
+  int prevCellId = cellId;
+  while (pointId != back || iter == 0)
+  {
+    boundary->GetPoint(pointId, pt0);
+    vtkSVGeneralUtils::IteratePoint(boundary, pointId, cellId);
+    boundary->GetPoint(pointId, pt1);
+    length += vtkSVGeneralUtils::Distance(pt0, pt1);
     iter++;
   }
 
@@ -2227,9 +2339,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, svGCe
       boundary->GetPoint(pointId, pt0);
       vtkSVGeneralUtils::IteratePoint(boundary, pointId, prevCellId);
       boundary->GetPoint(pointId, pt1);
-      currLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                              std::pow(pt1[1] - pt0[1], 2.0) +
-                              std::pow(pt1[2] - pt0[2], 2.0));
+      currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
       if (currLength > length*(surgeryCount/4.0))
       {
         if (surgeryCount < 4)
@@ -2313,7 +2423,7 @@ int vtkSVPolyDataSliceAndDiceFilter::FixGraphDirections(svGCell *gCell, const in
       tmpIds[i] = gCell->CornerPtIds[i];
     for (int i=0; i<4; i++)
     {
-      fprintf(stdout,"%d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i+4]], tmpIds[cellIndices[rotIndices->GetValue(i+4)]]);
+      //fprintf(stdout,"%d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i+4]], tmpIds[cellIndices[rotIndices->GetValue(i+4)]]);
       gCell->CornerPtIds[cellIndices[i+4]] = tmpIds[cellIndices[rotIndices->GetValue(i+4)]];
     }
     gCell->Children[gCell->DivergingChild]->RefAngle += M_PI/2.0;
@@ -2326,6 +2436,9 @@ int vtkSVPolyDataSliceAndDiceFilter::FixGraphDirections(svGCell *gCell, const in
                      rotIndices, NULL, NULL);
   }
   fprintf(stdout,"NewANGe: %.4f\n", gCell->Children[gCell->DivergingChild]->RefAngle);
+  //Fix indices
+  //for (int i=0; i<8; i++)
+  //  cellIndices[i] = this->LookupIndex(gCell->Dir, gCell->Children[gCell->DivergingChild]->Dir, i);
   return SV_OK;
 }
 
@@ -2378,9 +2491,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, cellId);
     pd->GetPoint(pointId, pt1);
-    length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                        std::pow(pt1[1] - pt0[1], 2.0) +
-                        std::pow(pt1[2] - pt0[2], 2.0));
+    length += vtkSVGeneralUtils::Distance(pt0, pt1);
     iter++;
   }
 
@@ -2399,9 +2510,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
-    currLength += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                            std::pow(pt1[1] - pt0[1], 2.0) +
-                            std::pow(pt1[2] - pt0[2], 2.0));
+    currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
     if (currLength > length*(surgeryCount/4.0))
     {
       if (surgeryCount < 4)
@@ -2471,9 +2580,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetClose3DPoint(vtkPolyData *pd, double cen
   {
     double pt[3];
     boundary->GetPoint(i, pt);
-    double dist = std::sqrt(std::pow(pt[0] - startPt[0], 2.0) +
-                            std::pow(pt[1] - startPt[1], 2.0) +
-                            std::pow(pt[2] - startPt[2], 2.0));
+    double dist = vtkSVGeneralUtils::Distance(startPt, pt);
     if (dist < minDist)
     {
       minDist = dist;

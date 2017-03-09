@@ -81,27 +81,11 @@ int main(int argc, char *argv[])
       arglength = strlen(argv[iarg]);
       /* replace 0..arglength-1 with argv[iarg] */
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
-      if(tmpstr=="-h"){
-          RequestedHelp = true;
-      }
-      else if(tmpstr=="-source"){
-          SourceProvided = true;
-          iarg++;
-          sourceFileName = argv[iarg];
-      }
-      else if(tmpstr=="-target"){
-          TargetProvided = true;
-          iarg++;
-          targetFileName = argv[iarg];
-      }
-      else if(tmpstr=="-output"){
-          OutputProvided = true;
-          iarg++;
-          outputFileName = argv[iarg];
-      }
-      else {
-          BogusCmdLine = true;
-      }
+      if(tmpstr=="-h") {RequestedHelp = true;}
+      else if(tmpstr=="-source") {SourceProvided = true; sourceFileName = argv[++iarg];}
+      else if(tmpstr=="-target") {TargetProvided = true; targetFileName = argv[++iarg];}
+      else if(tmpstr=="-output") {OutputProvided = true; outputFileName = argv[++iarg];}
+      else {BogusCmdLine = true;}
       /* reset tmpstr for next argument */
       tmpstr.erase(0,arglength);
   }
@@ -110,7 +94,7 @@ int main(int argc, char *argv[])
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  HausdorffDistance -source [Source Surface] -target [Target Surface]" << endl;
+    cout << "  HausdorffDistance -source [Source Filename] -target [Target Filename] -output [Output Filename]" << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
@@ -122,7 +106,7 @@ int main(int argc, char *argv[])
   }
   if (!OutputProvided)
   {
-    cout << "Setting output name based on the source and target filenames" <<endl;
+    cout << "WARNING: Output Filename not provided, setting output name based on the source and target filenames" <<endl;
     std::string newDirName = vtkSVIOUtils::GetPath(targetFileName)+"/"+vtkSVIOUtils::GetRawName(targetFileName);
     //Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());

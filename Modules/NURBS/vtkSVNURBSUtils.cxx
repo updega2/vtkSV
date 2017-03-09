@@ -199,9 +199,9 @@ int vtkSVNURBSUtils::GetChordSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U
     double pt0[3], pt1[3];
     xyz->GetPoint(i-1, pt0);
     xyz->GetPoint(i, pt1);
-    double dist = std::sqrt(std::pow(pt1[0] - pt0[0], 2) +
-                            std::pow(pt1[1] - pt0[1], 2) +
-                            std::pow(pt1[2] - pt0[2], 2));
+    double dist = sqrt(pow(pt1[0] - pt0[0], 2) +
+                       pow(pt1[1] - pt0[1], 2) +
+                       pow(pt1[2] - pt0[2], 2));
     d += dist;
     dists->InsertTuple1(i-1, dist);
   }
@@ -237,10 +237,10 @@ int vtkSVNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleAr
     double pt0[3], pt1[3];
     xyz->GetPoint(i-1, pt0);
     xyz->GetPoint(i, pt1);
-    double dist = std::sqrt(std::pow(pt1[0] - pt0[0], 2) +
-                            std::pow(pt1[1] - pt0[1], 2) +
-                            std::pow(pt1[2] - pt0[2], 2));
-    d += std::sqrt(dist);
+    double dist = sqrt(pow(pt1[0] - pt0[0], 2) +
+                       pow(pt1[1] - pt0[1], 2) +
+                       pow(pt1[2] - pt0[2], 2));
+    d += sqrt(dist);
     dists->InsertTuple1(i-1, dist);
   }
 
@@ -250,7 +250,7 @@ int vtkSVNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleAr
   for (int i=1; i<num-1; i++)
   {
     double dist = dists->GetTuple1(i-1);
-    new_u += std::sqrt(dist)/d;
+    new_u += sqrt(dist)/d;
     U->SetTuple1(i, new_u);
   }
   U->SetTuple1(num-1, 1.0);

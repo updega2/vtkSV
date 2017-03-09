@@ -370,6 +370,18 @@ int vtkSVGeneralUtils::ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFuncti
     return SV_OK;
 }
 
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+double vtkSVGeneralUtils::Distance(double pt0[3], double pt1[3])
+{
+  return sqrt(pow(pt1[0] - pt0[0], 2.0) +
+              pow(pt1[1] - pt0[1], 2.0) +
+              pow(pt1[2] - pt0[2], 2.0));
+}
 
 //---------------------------------------------------------------------------
 /**
@@ -389,9 +401,7 @@ int vtkSVGeneralUtils::GetPointsLength(vtkPolyData *points, double &length)
     points->GetPoint(i-1, pt0);
     points->GetPoint(i, pt1);
 
-    length += std::sqrt(std::pow(pt1[0] - pt0[0], 2.0) +
-                        std::pow(pt1[1] - pt0[1], 2.0) +
-                        std::pow(pt1[2] - pt0[2], 2.0));
+    length += vtkSVGeneralUtils::Distance(pt0, pt1);
   }
 
   return SV_OK;
