@@ -128,7 +128,7 @@ public:
                                   vtkIntArray *edgeNeighbors,
                                   double laplacian[], int map);
   static int RunLoopFind(vtkPolyData *pd, vtkIdType startPt, vtkIdType nextCell,
-                         vtkPolyData *loop);
+                         vtkPolyData *loop, vtkIdList *boundaryIds);
   static int SeparateLoops(vtkPolyData *pd, vtkPolyData **loops, int numBoundaries, const double xvec[3], const double zvec[3], const int boundaryStart[2]);
   static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[], int numVals, int numComps);
   static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);

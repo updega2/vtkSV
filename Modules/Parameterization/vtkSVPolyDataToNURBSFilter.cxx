@@ -485,7 +485,7 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
       std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
       this->WriteToGroupsFile(mappedPd, groupfile);
       vtkNew(vtkPolyData, loftedPd);
-      //this->LoftNURBSSurface(mappedPd, loftedPd);
+      this->LoftNURBSSurface(mappedPd, loftedPd);
       loftAppender->AddInputData(loftedPd);
     }
   }
@@ -573,7 +573,7 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
     this->WriteToGroupsFile(mappedPd, groupfile);
     vtkNew(vtkPolyData, loftedPd);
-    //this->LoftNURBSSurface(mappedPd, loftedPd);
+    this->LoftNURBSSurface(mappedPd, loftedPd);
     loftAppender->AddInputData(loftedPd);
 
   }
@@ -829,6 +829,7 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
 
   double xSpacing, ySpacing;
   vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(pd, xSpacing, ySpacing);
+  fprintf(stdout,"What even is spacing: %.4f, %.4f\n", xSpacing, ySpacing);
 
   vtkNew(vtkSVLoftNURBSSurface, lofter);
 
@@ -853,12 +854,12 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
   }
   lofter->SetUDegree(2);
   lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(0.1);
-  lofter->SetPolyDataVSpacing(0.1);
-  //lofter->SetUKnotSpanType("average");
-  //lofter->SetVKnotSpanType("average");
-  lofter->SetUKnotSpanType("derivative");
-  lofter->SetVKnotSpanType("derivative");
+  lofter->SetPolyDataUSpacing(ySpacing);
+  lofter->SetPolyDataVSpacing(xSpacing);
+  lofter->SetUKnotSpanType("average");
+  lofter->SetVKnotSpanType("average");
+  //lofter->SetUKnotSpanType("derivative");
+  //lofter->SetVKnotSpanType("derivative");
   lofter->SetUParametricSpanType("chord");
   lofter->SetVParametricSpanType("chord");
   lofter->Update();

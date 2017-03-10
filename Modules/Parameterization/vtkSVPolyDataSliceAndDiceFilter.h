@@ -194,7 +194,8 @@ protected:
                           double xvec[3], double zvec[3],
                           double radius,
                           vtkIdList *surgeryLineIds,
-                          int cellIndices[8]);
+                          int cellIndices[8],
+                          int &secondRun);
   int DetermineSliceStrategy(vtkPolyData *branchPd,
                              svGCell *gCell,
                              vtkPolyData *branchCenterline,
@@ -212,7 +213,8 @@ protected:
                     vtkDataArray *sliceIds,
                     vtkPoints *surgeryPts,
                     vtkCellArray *surgeryLines,
-                    vtkIntArray *surgeryData);
+                    vtkIntArray *surgeryData,
+                    int secondRun);
   int SliceBifurcations();
   int SliceBifurcation(vtkPolyData *pd,
                        svGCell *gCell);

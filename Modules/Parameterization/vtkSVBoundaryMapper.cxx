@@ -238,44 +238,22 @@ int vtkSVBoundaryMapper::GetBoundaryLoop()
   this->Boundaries->GetPointCells(startPt,cellIds);
 
   nextCell = cellIds->GetId(0);
-  vtkIdType npts, *pts;
-  int testPt = -1;
-  this->Boundaries->GetCellPoints(nextCell, npts, pts);
-  if (pts[0] == startPt)
-    testPt = pts[1];
-  else
-    testPt = pts[0];
-  fprintf(stdout,"And the next ponit: %f\n", pointIds->GetTuple1(testPt));
 
-  double pt0[3], pt1[3], vec0[3], vec1[3];
-  this->Boundaries->GetPoint(startPt, pt0);
-  this->Boundaries->GetPoint(testPt, pt1);
-  vtkMath::Subtract(pt1, pt0, vec0);
-  vtkMath::Normalize(vec0);
-  vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec1);
-  vtkMath::Normalize(vec1);
-
-  vtkIdType checknpts, *checkpts;
-  this->Boundaries->GetCellPoints(cellIds->GetId(1), checknpts, checkpts);
-  int doubleCheckPt = -1;
-  if (checkpts[0] == startPt)
-    doubleCheckPt = checkpts[1];
-  else
-    doubleCheckPt = checkpts[0];
-  double pt2[3], vec2[3], vec3[3];
-  this->Boundaries->GetPoint(doubleCheckPt, pt2);
-  vtkMath::Subtract(pt2, pt0, vec2);
-  vtkMath::Normalize(vec2);
-  vtkMath::Cross(this->ObjectZAxis, this->ObjectXAxis, vec3);
-  vtkMath::Normalize(vec3);
-  fprintf(stdout,"And the other ponit: %f\n", pointIds->GetTuple1(doubleCheckPt));
-  if (vtkMath::Dot(vec0, vec1) < vtkMath::Dot(vec2, vec3))
+  vtkNew(vtkIdList, boundaryIds);
+  boundaryIds->SetNumberOfIds(this->BoundaryIds->GetNumberOfTuples());
+  for (int i=0; i<this->BoundaryIds->GetNumberOfTuples(); i++)
+    boundaryIds->SetId(i, pointIds->LookupValue(this->BoundaryIds->GetTuple1(i)));
+  if (vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop, boundaryIds) != SV_OK)
   {
-    fprintf(stdout,"Fliippped\n");
+    fprintf(stdout,"Other direction!\n");
     nextCell = cellIds->GetId(1);
+    this->BoundaryLoop->DeleteCells();
+    if (vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop, boundaryIds) != SV_OK)
+    {
+      fprintf(stdout,"Both directions didn't work!!\n");
+      return SV_ERROR;
+    }
   }
-
-  vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop);
 
   return SV_OK;
 }

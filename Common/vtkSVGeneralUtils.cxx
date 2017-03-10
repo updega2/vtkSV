@@ -40,12 +40,15 @@
 
 #include "vtkSVGeneralUtils.h"
 
+#include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCenterOfMass.h"
 #include "vtkClipPolyData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkExtractGeometry.h"
+#include "vtkIdList.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
@@ -957,8 +960,27 @@ int vtkSVGeneralUtils::ComputeDataArrayLaplacian(vtkFloatArray *data,
 int vtkSVGeneralUtils::RunLoopFind(vtkPolyData *pd,
                                    vtkIdType startPt,
                                    vtkIdType nextCell,
-                                   vtkPolyData *loop)
+                                   vtkPolyData *loop,
+                                   vtkIdList *boundaryIds)
 {
+  int checkIds = 0;
+  int checkNum = 0;
+  vtkNew(vtkIntArray, checkList);
+  checkList->SetNumberOfTuples(pd->GetNumberOfPoints());
+  checkList->FillComponent(0, 0);
+  if (boundaryIds != NULL)
+  {
+    checkIds = 1;
+    for (int i=0; i<boundaryIds->GetNumberOfIds(); i++)
+      checkList->SetTuple1(boundaryIds->GetId(i), 1);
+    if (startPt != boundaryIds->GetId(0))
+    {
+      fprintf(stdout,"Start point does not match given\n");
+      return SV_ERROR;
+    }
+    checkNum++;
+  }
+
   vtkIdType prevPt = startPt;
   vtkIdType nextPt = startPt;
   vtkNew(vtkIdList, pointIds);
@@ -979,6 +1001,15 @@ int vtkSVGeneralUtils::RunLoopFind(vtkPolyData *pd,
 
   while(nextPt != startPt)
   {
+    if (checkIds && checkList->GetTuple1(nextPt))
+    {
+      if (checkNum != boundaryIds->IsId(nextPt))
+      {
+        fprintf(stdout,"Boundary points are not in correct order\n");
+        return SV_ERROR;
+      }
+      checkNum++;
+    }
     pd->GetPointCells(nextPt,cellIds);
     if (cellIds->GetId(0) == nextCell)
       nextCell = cellIds->GetId(1);
@@ -1057,7 +1088,7 @@ int vtkSVGeneralUtils::SeparateLoops(vtkPolyData *pd,
     //}
 
     //Run through intersection lines to get loops!
-    vtkSVGeneralUtils::RunLoopFind(pd, startPt, nextCell, newloop);
+    vtkSVGeneralUtils::RunLoopFind(pd, startPt, nextCell, newloop, NULL);
     loops[count++] = newloop;
   }
 
