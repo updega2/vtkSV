@@ -2254,6 +2254,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCel
     boundaries->Update();
     vtkSVGeneralUtils::GetClosestPointConnectedRegion(boundaries->GetOutput(), centerPt, boundary);
 
+    int iContour = 0;
     if (secondRun)
       contourPtId = endSurgeryIds[cellIndices[4]];
     else
@@ -2278,10 +2279,12 @@ int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCel
         {
           dist = testDist;
           contourPtId = endSurgeryIds[cellIndices[i+4]];
+          iContour = i;
         }
       }
     }
     fprintf(stdout,"Closest point is!: %d\n", contourPtId);
+    fprintf(stdout,"Supposed to be: %d\n", endSurgeryIds[cellIndices[4]]);
     if (contourPtId != endSurgeryIds[cellIndices[4]])
     {
       this->FixGraphDirections(gCell, contourPtId, cellIndices);
@@ -2447,8 +2450,8 @@ int vtkSVPolyDataSliceAndDiceFilter::FixGraphDirections(svGCell *gCell, const in
       tmpIds[i] = gCell->CornerPtIds[i];
     for (int i=0; i<4; i++)
     {
-      //fprintf(stdout,"%d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i+4]], tmpIds[cellIndices[rotIndices->GetValue(i+4)]]);
-      gCell->CornerPtIds[cellIndices[i+4]] = tmpIds[cellIndices[rotIndices->GetValue(i+4)]];
+      fprintf(stdout,"%d is now becoming %d\n", gCell->CornerPtIds[cellIndices[i+4]], tmpIds[rotIndices->GetValue(cellIndices[i+4])]);
+      gCell->CornerPtIds[cellIndices[i+4]] = tmpIds[rotIndices->GetValue(cellIndices[i+4])];
     }
     gCell->Children[gCell->DivergingChild]->RefAngle += M_PI/2.0;
     if (gCell->Children[gCell->DivergingChild]->RefAngle > 2.0*M_PI)
