@@ -39,42 +39,29 @@
 
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
 
-#include "vtkAppendPolyData.h"
 #include "vtkAppendFilter.h"
+#include "vtkAppendPolyData.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkCenterOfMass.h"
 #include "vtkCleanPolyData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkCutter.h"
-#include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
 #include "vtkFeatureEdges.h"
-#include "vtkSVFindGeodesicPath.h"
-#include "vtkSVFindSeparateRegions.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkFloatArray.h"
-#include "vtkGradientFilter.h"
 #include "vtkIdFilter.h"
 #include "vtkIntArray.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlanes.h"
 #include "vtkPointData.h"
-#include "vtkPointDataToCellData.h"
 #include "vtkPointLocator.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
-#include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
-#include "vtkSortDataArray.h"
+#include "vtkSVFindGeodesicPath.h"
+#include "vtkSVFindSeparateRegions.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkThreshold.h"
-#include "vtkTransform.h"
-#include "vtkTransformPolyDataFilter.h"
-#include "vtkTriangle.h"
-#include "vtkUnstructuredGrid.h"
-#include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
 
@@ -218,63 +205,30 @@ int vtkSVPolyDataSliceAndDiceFilter::RequestData(
     return SV_ERROR;
   }
   fprintf(stdout,"Graph built...\n");
-  vtkNew(vtkXMLPolyDataWriter, pdwriter);
-  pdwriter->SetInputData(this->GraphPd);
-  pdwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/graph.vtp");
-  pdwriter->Write();
 
-  if (this->SliceBifurcations() != SV_OK)
+  if (this->RunFilter() != SV_OK)
   {
-    vtkErrorMacro("Error in slicing the polydata\n");
+    vtkErrorMacro("Error when running main operation\n");
     return SV_ERROR;
   }
-  fprintf(stdout,"Bifurcations segmented...\n");
-    vtkNew(vtkXMLPolyDataWriter, ddwriter);
-    ddwriter->SetInputData(this->WorkPd);
-    ddwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/ahbutofcourse.vtp");
-    ddwriter->Write();
-
-  if (this->SliceBranches() != SV_OK)
-  {
-    vtkErrorMacro("Error in slicing the polydata\n");
-    return SV_ERROR;
-  }
-  fprintf(stdout,"Branches segmented...\n");
-  vtkNew(vtkXMLPolyDataWriter, lwriter);
-  lwriter->SetInputData(this->SurgeryLines);
-  lwriter->SetFileName("/Users/adamupdegrove/Desktop/tmp/surglines.vtp");
-  lwriter->Write();
-
-  if (this->BuildPolycube() != SV_OK)
-  {
-    vtkErrorMacro("Error in constructing polycube\n");
-    return SV_ERROR;
-  }
-  fprintf(stdout,"Polycube built...\n");
-
-  vtkNew(vtkXMLUnstructuredGridWriter, writer);
-  writer->SetInputData(this->Polycube);
-  writer->SetFileName("/Users/adamupdegrove/Desktop/tmp/polycube.vtu");
-  writer->Write();
 
   output->DeepCopy(this->WorkPd);
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrepFilter
+// ----------------------
 int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
 {
+  // Find and label nodes that form the boundary between groups
   if (this->FindGroupBoundaries() != SV_OK)
   {
     vtkErrorMacro("Unable to find boundaries of input group ids data array");
     return SV_ERROR;
   }
 
+  // Find the points that touch three or more different groups
   if (this->GetCriticalPoints() != SV_OK)
   {
     vtkErrorMacro("Unable to retrieve critical points");
@@ -296,6 +250,34 @@ int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
     return SV_ERROR;
   }
   this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
+
+  return SV_OK;
+}
+
+// ----------------------
+// RunFilter
+// ----------------------
+int vtkSVPolyDataSliceAndDiceFilter::RunFilter()
+{
+  if (this->SliceBifurcations() != SV_OK)
+  {
+    vtkErrorMacro("Error in slicing the polydata\n");
+    return SV_ERROR;
+  }
+
+  if (this->SliceBranches() != SV_OK)
+  {
+    vtkErrorMacro("Error in slicing the polydata\n");
+    return SV_ERROR;
+  }
+  fprintf(stdout,"Branches segmented...\n");
+
+  if (this->BuildPolycube() != SV_OK)
+  {
+    vtkErrorMacro("Error in constructing polycube\n");
+    return SV_ERROR;
+  }
+  fprintf(stdout,"Polycube built...\n");
 
   return SV_OK;
 }

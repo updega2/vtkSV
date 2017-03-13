@@ -73,7 +73,6 @@
  * @reutrn this returns 1 if the array exists and zero if it doesn't
  * or the function does not return properly.
  */
-
 int vtkSVGeneralUtils::CheckArrayExists(vtkDataSet *ds,
                                         int datatype,
                                         std::string arrayname)

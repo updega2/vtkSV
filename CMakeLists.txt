@@ -57,6 +57,21 @@ endif()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
+# Setup documentation
+if(VTKSV_BUILD_DOCUMENTATION)
+  find_package(Doxygen REQUIRED)
+  if(DOXYGEN_FOUND)
+    configure_file(${VTKSV_SOURCE_DIR}/Documentation/vtksv.Doxyfile.in
+      ${VTKSV_BINARY_DIR}/vtksv.Doxyfile @ONLY)
+    add_custom_target(doc ${DOXYGEN_EXECUTABLE} ${VTKSV_BINARY_DIR}/vtksv.Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating API documentation with Doxygen" VERBATIM
+      )
+  endif()
+endif()
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
 # Find VTK, only major dependency
 if(NOT VTK_LIBRARIES)
   find_package(VTK REQUIRED)

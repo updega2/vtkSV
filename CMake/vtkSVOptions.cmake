@@ -35,6 +35,12 @@ option(BUILD_TESTING "Build ${PROJECT_NAME} testing" OFF)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
+# Enable Testing
+option(VTKSV_BUILD_DOCUMENTATION "Build ${PROJECT_NAME} documentation" OFF)
+set(VTKSV_DOCS_DIR ${VTKSV_BINARY_DIR}/Doxygen CACHE PATH "Location to put doxygen files")
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
 # Libs options
 option(BUILD_SHARED_LIBS "Build ${PROJECT_NAME} as shared libraries." OFF)
 

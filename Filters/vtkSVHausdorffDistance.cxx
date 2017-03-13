@@ -28,52 +28,30 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVHausdorffDistance.cxx
- *  @brief This implements the vtkSVHausdorffDistance filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVHausdorffDistance.h"
 
-#include "vtkCellArray.h"
-#include "vtkCellData.h"
 #include "vtkCellLocator.h"
-#include "vtkCharArray.h"
 #include "vtkDoubleArray.h"
-#include "vtkFloatArray.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkIntArray.h"
-#include "vtkLocator.h"
-#include "vtkLongArray.h"
-#include "vtkLongLongArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkPointLocator.h"
 #include "vtkPolyData.h"
-#include "vtkPolygon.h"
-#include "vtkShortArray.h"
-#include "vtkSignedCharArray.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkUnsignedCharArray.h"
-#include "vtkUnsignedIntArray.h"
-#include "vtkUnsignedLongArray.h"
-#include "vtkUnsignedLongLongArray.h"
-#include "vtkUnsignedShortArray.h"
-#include "vtkUnstructuredGrid.h"
 
 #include <iostream>
 
-//vtkCxxRevisionMacro(vtkSVHausdorffDistance, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVHausdorffDistance);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVHausdorffDistance::vtkSVHausdorffDistance()
 {
   this->SetNumberOfInputPorts(2);
@@ -87,6 +65,9 @@ vtkSVHausdorffDistance::vtkSVHausdorffDistance()
   this->HausdorffDistance = 0.0;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVHausdorffDistance::~vtkSVHausdorffDistance()
 {
   if (this->SourcePd)
@@ -106,28 +87,33 @@ vtkSVHausdorffDistance::~vtkSVHausdorffDistance()
   }
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVHausdorffDistance::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
-// Generate Separated Surfaces with Region ID Numbers
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVHausdorffDistance::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
 {
-    // get the input and output
+    // Tet the input and output
     vtkPolyData *input0 = vtkPolyData::GetData(inputVector[0]);
     vtkPolyData *input1 = vtkPolyData::GetData(inputVector[1]);
     vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
-    //Get the number of Polys for scalar  allocation
+    // Get the number of Polys for scalar  allocation
     int numPolys0 = input0->GetNumberOfPolys();
     int numPolys1 = input1->GetNumberOfPolys();
     int numPts0 = input0->GetNumberOfPoints();
     int numPts1 = input1->GetNumberOfPoints();
 
-    //Check the input to make sure it is there
+    // Check the input to make sure it is there
     if (numPolys0 < 1 || numPolys1 < 1)
     {
        vtkDebugMacro("No input!");
@@ -152,6 +138,9 @@ int vtkSVHausdorffDistance::RequestData(
     return SV_OK;
 }
 
+// ----------------------
+// PrepFilter
+// ----------------------
 int vtkSVHausdorffDistance::PrepFilter()
 {
   if (this->DistanceArrayName == NULL)
@@ -164,18 +153,24 @@ int vtkSVHausdorffDistance::PrepFilter()
   return SV_OK;
 }
 
+// ----------------------
+// RunFilter
+// ----------------------
 int vtkSVHausdorffDistance::RunFilter()
 {
+  // Set up destination array to contain point-wise distances
   int numPoints = this->TargetPd->GetNumberOfPoints();
   vtkNew(vtkDoubleArray, distances);
   distances->SetNumberOfComponents(1);
   distances->SetNumberOfTuples(numPoints);
   distances->SetName(this->DistanceArrayName);
 
+  // Cell locator using the source pd
   vtkNew(vtkCellLocator, locator);
   locator->SetDataSet(this->SourcePd);
   locator->BuildLocator();
 
+  // Loop through each point in target and get distance
   double maxDistance   = 0.0;
   double totalDistance = 0.0;
   for (int i=0; i<numPoints; i++)
@@ -190,20 +185,19 @@ int vtkSVHausdorffDistance::RunFilter()
     vtkNew(vtkGenericCell, genericCell);
     locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
                               dist2);
-    double distance = sqrt(pow(pt[0] - closestPt[0], 2.0) +
-                           pow(pt[1] - closestPt[1], 2.0) +
-                           pow(pt[2] - closestPt[2], 2.0));
+    double distance = vtkSVGeneralUtils::Distance(closestPt, pt);
+
     distances->SetTuple1(i, distance);
     if (distance > maxDistance)
       maxDistance = distance;
 
     totalDistance += distance;
   }
-  this->TargetPd->GetPointData()->AddArray(distances);
 
+  // Add array and update distance information
+  this->TargetPd->GetPointData()->AddArray(distances);
   this->AverageDistance   = totalDistance/numPoints;
   this->HausdorffDistance = maxDistance;
 
   return SV_OK;
 }
-

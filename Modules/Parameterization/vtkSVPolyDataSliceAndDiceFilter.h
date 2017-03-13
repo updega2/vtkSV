@@ -134,6 +134,7 @@ protected:
 		  vtkInformationVector *outputVector);
 
   int PrepFilter();
+  int RunFilter();
   int FindGroupBoundaries();
   int BuildPolycube();
   void CheckLength(int &ptId, const int numPts,

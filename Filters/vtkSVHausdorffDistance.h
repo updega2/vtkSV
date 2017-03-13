@@ -28,33 +28,23 @@
  *
  *=========================================================================*/
 
-// .NAME vtkSVHausdorffDistance - Get Boundary Faces from poldata and label them with integers
-// .SECTION Description
-// vtkSVHausdorffDistance is a filter to extract the boundary surfaces of a model, separate the surace into multiple regions and number each region.
-
-// .SECTION Caveats
-// To see the coloring of the lines you may have to set the ScalarMode
-// instance variable of the mapper to SetScalarModeToUseCellData(). (This
-// is only a problem if there are point data scalars.)
-
-// .SECTION See Also
-// vtkExtractEdges
-
-/** @file vtkSVHausdorffDistance.h
- *  @brief This filter passes data information from one vtkPolyData to another.
- *  These polydatas do not need to be associated in any way. It uses
- *  vtkPointLocator and vtkCellLocators to find the closest points and pass
- *  the information. It passes the array set with PassArrayName. Will be modified
- *  in the future to pass all data arrays if specified.
+/**
+ * \class vtkSVHausdorffDistance
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ * \brief This is a filter to calculate the average and hausdorff distances
+ * between two surfaces. The first input is the source polydata and used as
+ * the reference polydata. The algorithm processes each point in the second
+ * input and calculates the distance of each point to the reference surface.
+ * A vtkCellLocator is used for the distance calculation.
+ *
+ * \author Adam Updegrove
+ * \author updega2@gmail.com
+ * \author UC Berkeley
+ * \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVHausdorffDistance_h
-#define __vtkSVHausdorffDistance_h
+#ifndef vtkSVHausdorffDistance_h
+#define vtkSVHausdorffDistance_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -65,15 +55,17 @@ public:
   //vtkTypeRevisionMacro(vtkSVHausdorffDistance, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Set name for data array to be used to determine the in between sections
-  vtkGetStringMacro(DistanceArrayName);
+  //@{
+  /// \brief Set/Get name for data array to be used to determine the in between sections
   vtkSetStringMacro(DistanceArrayName);
+  vtkGetStringMacro(DistanceArrayName);
+  //@}
 
-  // Description:
-  // Variables to get the hausdorff and average distance found
+  //@{
+  /// \brief Get macros for hausdorff and average distance found
   vtkGetMacro(HausdorffDistance, double);
   vtkGetMacro(AverageDistance, double);
+  //@}
 
 protected:
   vtkSVHausdorffDistance();
@@ -84,16 +76,16 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int PrepFilter();
-  int RunFilter();
+  int PrepFilter(); // Prep work
+  int RunFilter(); // Run filter operations
 
-  char* DistanceArrayName;
+  char* DistanceArrayName; // Name of distance data array
 
-  vtkPolyData *SourcePd;
-  vtkPolyData *TargetPd;
+  vtkPolyData *SourcePd; // First input to the filter
+  vtkPolyData *TargetPd; // Second input to the filter
 
-  double AverageDistance;
-  double HausdorffDistance;
+  double AverageDistance; // The average calculated distance from target to source
+  double HausdorffDistance; // The largest distance from all point distances
 
 private:
   vtkSVHausdorffDistance(const vtkSVHausdorffDistance&);  // Not implemented.
