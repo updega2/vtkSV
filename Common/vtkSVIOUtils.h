@@ -46,6 +46,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
+#include "vtkUnstructuredGrid.h"
 
 #include <string>
 #include <sstream>
@@ -70,6 +71,9 @@ public:
   static int ReadInputFile(std::string inputFilename, vtkPolyData *polydata);
   static int WriteVTPFile(std::string outputFilename, vtkPolyData *writePolyData);
   static int WriteVTPFile(std::string inputFilename, vtkPolyData *writePolyData,std::string attachName);
+  static int WriteVTUFile(std::string outputFilename, vtkUnstructuredGrid *writeUnstructuredGrid);
+  static int WriteVTUFile(std::string inputFilename, vtkUnstructuredGrid *writeUnstructuredGrid,std::string attachName);
+  static int WriteVTSFile(std::string outputFilename, vtkStructuredGrid *writeStructuredGrid);
   static int WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName);
 
 protected:

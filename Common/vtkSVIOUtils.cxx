@@ -152,7 +152,6 @@ int vtkSVIOUtils::WriteVTPFile(std::string outputFilename,vtkPolyData *writePoly
 #else
   writer->SetInputData(writePolyData);
 #endif
-  //writer->SetDataModeToAscii();
 
   writer->Write();
   return SV_OK;
@@ -176,7 +175,59 @@ int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyD
 #else
   writer->SetInputData(writePolyData);
 #endif
-  //writer->SetDataModeToAscii();
+
+  writer->Write();
+  return SV_OK;
+}
+
+//Function to write unstructured grid
+int vtkSVIOUtils::WriteVTUFile(std::string outputFilename,vtkUnstructuredGrid *writeUnstructuredGrid)
+{
+  vtkNew(vtkXMLUnstructuredGridWriter, writer);
+  writer->SetFileName(outputFilename.c_str());
+#if VTK_MAJOR_VERSION <= 5
+  writer->SetInput(writeUnstructuredGrid);
+#else
+  writer->SetInputData(writeUnstructuredGrid);
+#endif
+
+  writer->Write();
+  return SV_OK;
+}
+
+//Function to write unstructured grid
+int vtkSVIOUtils::WriteVTUFile(std::string inputFilename,vtkUnstructuredGrid *writeUnstructuredGrid,std::string attachName)
+{
+  std::string rawName, pathName, outputFilename;
+
+  vtkNew(vtkXMLUnstructuredGridWriter, writer);
+
+  pathName = vtkSVIOUtils::GetPath(inputFilename);
+  rawName = vtkSVIOUtils::GetRawName(inputFilename);
+
+  outputFilename = pathName+"/"+rawName+attachName+".vtu";
+
+  writer->SetFileName(outputFilename.c_str());
+#if VTK_MAJOR_VERSION <= 5
+  writer->SetInput(writeUnstructuredGrid);
+#else
+  writer->SetInputData(writeUnstructuredGrid);
+#endif
+
+  writer->Write();
+  return SV_OK;
+}
+
+//Function to write structured grid
+int vtkSVIOUtils::WriteVTSFile(std::string outputFilename,vtkStructuredGrid *writeStructuredGrid)
+{
+  vtkNew(vtkXMLStructuredGridWriter, writer);
+  writer->SetFileName(outputFilename.c_str());
+#if VTK_MAJOR_VERSION <= 5
+  writer->SetInput(writeStructuredGrid);
+#else
+  writer->SetInputData(writeStructuredGrid);
+#endif
 
   writer->Write();
   return SV_OK;
@@ -199,8 +250,6 @@ int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writ
 #else
   writer->SetInputData(writeStructuredGrid);
 #endif
-  //writer->SetDataModeToAscii();
 
   writer->Write();
 }
-

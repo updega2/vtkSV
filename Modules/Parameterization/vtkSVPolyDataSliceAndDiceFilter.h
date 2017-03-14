@@ -112,14 +112,17 @@ public:
   vtkGetObjectMacro(Polycube, vtkSVGeneralizedPolycube);
   //@}
 
-  /// \brief Get macros for the surgery lines along length of object
+  /// \brief Get macro for the surgery lines along length of object
   vtkGetObjectMacro(SurgeryLinesPd, vtkPolyData);
+
+  /// \brief Get macro for the graph
+  vtkGetObjectMacro(GraphPd, vtkPolyData);
 
   /**
    * \brief Constructs cubes to populate a polycube structure from node of svGraph
    * \details This function is constructed to be used with svGraph::Recurse. The
    * void pointers are made available to pass any extra information through the function.
-   * \param *gCell Node of graph to generate cubes for a polycube structure.
+   * \param gCell Node of graph to generate cubes for a polycube structure.
    * \return SV_OK if function completes without error
    */
   static int GraphToPolycube(svGCell *gCell, void *arg0,
@@ -135,9 +138,7 @@ public:
   static int LookupIndex(const int parent, const int divchild, const int index);
 
 
-  /**
-   * \brief directions of nodes in graph simplification
-   */
+  /// \brief directions of nodes in graph simplification
   enum DIRECTIONS
   {
     RIGHT = 0,
@@ -148,8 +149,8 @@ public:
     DOWN
   };
 
-  const static int DT[6][4];
-  const static int RT[9][8];
+  const static int DT[6][4]; ///< \brief Direction Table
+  const static int RT[9][8]; ///< \brief Index Rotation Table
 
 protected:
   vtkSVPolyDataSliceAndDiceFilter();
@@ -233,15 +234,26 @@ protected:
                              vtkIdList *surgeryPoints,
                              int &centerlineStartPtId,
                              int &strategy);
+  /*
+   * \brief Insert a critical point and its associated groups into the
+   * CriticalPointMap.
+   * \param pointId Id of point to add to map
+   * \param groupIds List of group ids that touch the point
+   * \return SV_OK
+   */
   int InsertCriticalPoints(const int pointId, vtkIdList *groupIds);
+  /*
+   * \brief Threshold out a specific group of the full polydata.
+   * \param branchId Group id to threshold.
+   * \param branchPd Empty polydata to fill with branch pd.
+   * \param branchCenterlinesPd Empty polydata for corresponding group's centerlines.
+   * \return SV_OK
+   */
   int GetBranch(const int branchId, vtkPolyData *branchPd,
                 vtkPolyData *branchCenterlinesPd);
   int SliceBranch(vtkPolyData *branchPd, vtkPolyData *branchCenterline,
                     svGCell *gCell,
                     vtkDataArray *sliceIds,
-                    vtkPoints *surgeryPts,
-                    vtkCellArray *surgeryLines,
-                    vtkIntArray *surgeryData,
                     int secondRun);
   int SliceBifurcation(vtkPolyData *pd,
                        svGCell *gCell);
@@ -259,8 +271,7 @@ protected:
                       vtkPolyData *boundary);
   int GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3],
                             double zvec[3], int &startSecondId);
-  int AddSurgeryPoints(vtkIdList *surgeryLineIds, vtkPoints *surgeryPts,
-                       vtkCellArray *surgeryLines, vtkIntArray *surgeryData);
+  int AddSurgeryPoints(vtkIdList *surgeryLineIds);
 
 
 private:
