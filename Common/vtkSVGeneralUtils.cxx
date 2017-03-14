@@ -47,6 +47,7 @@
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkExtractGeometry.h"
+#include "vtkIdFilter.h"
 #include "vtkIdList.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
@@ -183,6 +184,41 @@ int vtkSVGeneralUtils::GetClosestPointConnectedRegion(vtkPolyData *inPd,
 {
   outPd->DeepCopy(inPd);
   vtkSVGeneralUtils::GetClosestPointConnectedRegion(outPd, origin);
+
+  return SV_OK;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GiveIds(vtkPolyData *pd,
+                               std::string arrayName)
+{
+  vtkNew(vtkIdFilter, ider);
+  ider->SetInputData(pd);
+  ider->SetIdsArrayName(arrayName.c_str());
+  ider->Update();
+
+  pd->DeepCopy(ider->GetOutput());
+
+  return SV_OK;
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief
+ * @param *pd
+ * @return
+ */
+int vtkSVGeneralUtils::GiveIds(vtkPolyData *inPd,
+                               std::string arrayName,
+                               vtkPolyData *outPd)
+{
+  outPd->DeepCopy(inPd);
+  vtkSVGeneralUtils::GiveIds(outPd, arrayName);
 
   return SV_OK;
 }

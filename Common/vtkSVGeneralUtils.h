@@ -75,6 +75,11 @@ public:
   static int GetClosestPointConnectedRegion(vtkPolyData *inPd,
                                             double origin[3],
                                             vtkPolyData *outPd);
+  static int GiveIds(vtkPolyData *pd,
+                     std::string arrayName);
+  static int GiveIds(vtkPolyData *inPd,
+                     std::string arrayName,
+                     vtkPolyData *outPd);
   static int IteratePoint(vtkPolyData *pd, int &pointId, int &prevCellId);
   static int ThresholdPd(vtkPolyData *pd, int minVal, int maxVal, int dataType,
                          std::string arrayName, vtkPolyData *returnPd);
