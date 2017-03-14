@@ -92,15 +92,23 @@ vtkSVHausdorffDistance::~vtkSVHausdorffDistance()
 // ----------------------
 void vtkSVHausdorffDistance::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+
+  if (this->DistanceArrayName != NULL)
+  {
+    os << indent << "Distance array name: " <<
+      this->DistanceArrayName << "\n";
+  }
+  os << indent << "Average Distance: " << this->AverageDistance << "\n";
+  os << indent << "Hausdorff Distance: " << this->HausdorffDistance << "\n";
 }
 
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVHausdorffDistance::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+int vtkSVHausdorffDistance::RequestData(vtkInformation *vtkNotUsed(request),
+                                        vtkInformationVector **inputVector,
+                                        vtkInformationVector *outputVector)
 {
     // Tet the input and output
     vtkPolyData *input0 = vtkPolyData::GetData(inputVector[0]);

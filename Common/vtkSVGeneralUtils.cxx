@@ -1464,4 +1464,3 @@ int vtkSVGeneralUtils::ListIntersection(std::list<int> &listA,
 
   return SV_OK;
 }
-

@@ -54,8 +54,7 @@ svGraph::svGraph()
 svGraph::svGraph(int rootId,
                  vtkPolyData *linesPd,
                  std::string groupIdsArrayName,
-                 std::multimap<int, int> criticalPointMap,
-                 int directionTable[6][4])
+                 std::multimap<int, int> criticalPointMap)
 {
   this->NumberOfCells = 0;
   this->NumberOfNodes = 1; // The root
@@ -67,13 +66,6 @@ svGraph::svGraph(int rootId,
   this->Lines->DeepCopy(linesPd);
   this->GroupIdsArrayName = groupIdsArrayName;
   this->CriticalPointMap = criticalPointMap;
-  for (int i=0; i<6; i++)
-  {
-    for (int j=0; j<4; j++)
-    {
-      this->DirectionTable[i][j] = directionTable[i][j];
-    }
-  }
 }
 
 svGraph::~svGraph()
@@ -493,16 +485,16 @@ int svGraph::UpdateCellDirection(svGCell *gCell, void *arg0,
     {
       int ang = gCell->RefAngle;
       if (ang >= 7.0*M_PI/4.0 || ang < M_PI/4.0)
-        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 0);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::DT[direction0][0];
 
       else if (ang >= M_PI/4.0 && ang < 3.0*M_PI/4.0)
-        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 1);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::DT[direction0][1];
 
       else if (ang >= 3.0*M_PI/4.0 && ang < 5.0*M_PI/4.0)
-        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 2);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::DT[direction0][2];
 
       else if (ang >= 5.0*M_PI/4.0 && ang < 7.0*M_PI/4.0)
-        direction1 = vtkSVPolyDataSliceAndDiceFilter::LookupDirection(direction0, 3);
+        direction1 = vtkSVPolyDataSliceAndDiceFilter::DT[direction0][3];
     }
     gCell->Dir = direction1;
     double dirVector[3];

@@ -52,7 +52,6 @@ class vtkSVHausdorffDistance : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVHausdorffDistance* New();
-  //vtkTypeRevisionMacro(vtkSVHausdorffDistance, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{

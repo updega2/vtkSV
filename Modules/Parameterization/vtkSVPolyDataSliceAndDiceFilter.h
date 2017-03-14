@@ -29,18 +29,22 @@
  *=========================================================================*/
 
 
-/** @file vtkSVPolyDataSliceAndDiceFilter.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ * \class vtkSVPolyDataSliceAndDiceFilter
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ * \brief This is a filter to decompose a polydata surface into a series
+ * of patches that represent a polycube structure using the object centerlines
+ * \details The centerlines are first processed and a graph simplification
+ * of the basic structure of the polydata is constructed. The polydata is
+ * segmented at each bifurcation and a new patch is created to become the linking
+ * cube at branching locations of a polycube structure. Finally, the polycube
+ * is constructed based on the final decomposition and the necessary information
+ * attached to the polycube in order to parameterize each individual patch
+ *
+ * \author Adam Updegrove
+ * \author updega2@gmail.com
+ * \author UC Berkeley
+ * \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVPolyDataSliceAndDiceFilter_h
@@ -50,8 +54,8 @@
 
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
-#include "vtkSVGeneralizedPolycube.h"
 #include "vtkPolyData.h"
+#include "vtkSVGeneralizedPolycube.h"
 
 #include "svGraph.h"
 
@@ -62,22 +66,24 @@ class vtkSVPolyDataSliceAndDiceFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPolyDataSliceAndDiceFilter* New();
-  //vtkTypeRevisionMacro(vtkSVPolyDataSliceAndDiceFilter, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // For slice length
-  vtkGetMacro(SliceLength, double);
+  //@{
+  /// \brief Set/Get macros for the slice length along the vessel length. Governs
+  /// how often the polydata is sliced for the surgery lines
   vtkSetMacro(SliceLength, double);
+  vtkGetMacro(SliceLength, double);
+  //@}
 
-  // Description:
-  // If this flag is on, the a polycube will be constructed based on the
-  // separation of the polydata object
-  vtkGetMacro(ConstructPolycube, int);
+  //@{
+  /// \brief Set/Get macros to a indicate whether the polycube will be constructed
   vtkSetMacro(ConstructPolycube, int);
+  vtkGetMacro(ConstructPolycube, int);
+  //@}
 
-  // Description:
-  // array names used in the filter
+  //@{
+  /// \brief Set/Get macros for all the array names either used in the filter
+  /// or assigned to a surface during the course of the operation
   vtkGetStringMacro(SliceIdsArrayName);
   vtkSetStringMacro(SliceIdsArrayName);
   vtkGetStringMacro(GroupIdsArrayName);
@@ -92,28 +98,46 @@ public:
   vtkSetStringMacro(InternalIdsArrayName);
   vtkGetStringMacro(DijkstraArrayName);
   vtkSetStringMacro(DijkstraArrayName);
+  //@}
 
-  // Description:
-  // Macro to set object centerlines
-  vtkGetObjectMacro(Centerlines, vtkPolyData);
-  vtkSetObjectMacro(Centerlines, vtkPolyData);
+  //@{
+  /// \brief Set/Get macro for the centerlines. CenterlinesPd must be provided!
+  vtkSetObjectMacro(CenterlinesPd, vtkPolyData);
+  vtkGetObjectMacro(CenterlinesPd, vtkPolyData);
+  //@}
 
-  // Description:
-  // Macro to set object polycube; will only be populated if ConstructPolycube is turned on
-  vtkGetObjectMacro(Polycube, vtkSVGeneralizedPolycube);
+  //@{
+  /// \brief Set/Get macros for the final polycube structure
   vtkSetObjectMacro(Polycube, vtkSVGeneralizedPolycube);
+  vtkGetObjectMacro(Polycube, vtkSVGeneralizedPolycube);
+  //@}
 
-  // Description:
-  // Macro to set/get surgery lines along length of objectn
-  vtkGetObjectMacro(SurgeryLines, vtkPolyData);
-  vtkSetObjectMacro(SurgeryLines, vtkPolyData);
+  /// \brief Get macros for the surgery lines along length of object
+  vtkGetObjectMacro(SurgeryLinesPd, vtkPolyData);
 
+  /**
+   * \brief Constructs cubes to populate a polycube structure from node of svGraph
+   * \details This function is constructed to be used with svGraph::Recurse. The
+   * void pointers are made available to pass any extra information through the function.
+   * \param *gCell Node of graph to generate cubes for a polycube structure.
+   * \return SV_OK if function completes without error
+   */
   static int GraphToPolycube(svGCell *gCell, void *arg0,
                              void *arg1, void *arg2);
-  static int LookupDirection(const int dir, const int ang);
+  /**
+   * \brief Gets the index on the polycube based on the parent node and diverging
+   * node directions.
+   * \param PARENT direction of parent (Numbers correspond to DIRECTIONS enum)
+   * \param DIVCHILD direction of parent (Numbers correspond to DIRECTIONS enum)
+   * \param index index of cube to get (0-7)
+   * \return SV_OK if function completes without error
+   */
   static int LookupIndex(const int PARENT, const int DIVCHILD, const int index);
 
 
+  /**
+   * \brief directions of nodes in graph simplification
+   */
   enum DIRECTIONS
   {
     RIGHT = 0,
@@ -124,6 +148,9 @@ public:
     DOWN
   };
 
+  const static int DT[6][4];
+  const static int IT[9][8];
+
 protected:
   vtkSVPolyDataSliceAndDiceFilter();
   ~vtkSVPolyDataSliceAndDiceFilter();
@@ -133,15 +160,18 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int PrepFilter();
-  int RunFilter();
-  int FindGroupBoundaries();
-  int BuildPolycube();
-  void CheckLength(int &ptId, const int numPts,
+  int PrepFilter(); // Prep work
+  int RunFilter(); // Run filter operations
+  int FindGroupBoundaries(); // Find and label nodes that form boundary between groups
+  int BuildPolycube(); // If building polycube, construct it based off graph
+  int GetCriticalPoints(); // Get points that separate three or more regions
+  int SliceBifurcations(); // Process and cut each bifurcation
+  int SliceBranches(); // Process and cut each branch
+  void CheckLength(int &ptId,
+                  const int numPts,
                   int &done);
   int CheckSlice(vtkPolyData *pd);
   void UpdatePtId(int &ptId);
-  int FormDirectionTable(int dirTable[6][4]);
   int GetCorrectFrontPoint(vtkPolyData *pd,
                            double frontDir[3],
                            int &frontId,
@@ -151,7 +181,6 @@ protected:
                              const int id1, vtkPolyData *pd1,
                              const int id2, vtkPolyData *pd2,
                              vtkPolyData *leftovers);
-  int CheckStartSurgeryPoints(vtkPolyData *pd, vtkIdList *startPoints);
   int CriticalSurgeryPoints(vtkPolyData *pd,
                            const int frontId,
                            const int backId,
@@ -204,11 +233,9 @@ protected:
                              vtkIdList *surgeryPoints,
                              int &centerlineStartPtId,
                              int &strategy);
-  int GetCriticalPoints();
   int InsertCriticalPoints(const int pointId, vtkIdList *groupIds);
   int GetBranch(const int branchId, vtkPolyData *branchPd,
-                                    vtkPolyData *branchCenterlines);
-  int SliceBranches();
+                vtkPolyData *branchCenterlinesPd);
   int SliceBranch(vtkPolyData *branchPd, vtkPolyData *branchCenterline,
                     svGCell *gCell,
                     vtkDataArray *sliceIds,
@@ -216,7 +243,6 @@ protected:
                     vtkCellArray *surgeryLines,
                     vtkIntArray *surgeryData,
                     int secondRun);
-  int SliceBifurcations();
   int SliceBifurcation(vtkPolyData *pd,
                        svGCell *gCell);
   int FixGraphDirections(svGCell *gCell, const int actualId,
@@ -226,48 +252,46 @@ protected:
   int GetSectionXAxis(const double endPt[3], const double startPt[3],
                       const double surfacePt[3], double xvec[3]);
 
-  int GetCloseGeodesicPoint(vtkPolyData *pd, double centerPt[3],
-                            const int startPtId, int &returnStartId,
-                            double zvec[3], vtkPolyData *boundary);
   int GetClose3DPoint(vtkPolyData *pd, double centerPt[3],
                       const int startPtId, int &returnStartId,
                       double xvec[3], double zvec[3],
                       double radius,
                       vtkPolyData *boundary);
-  int GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3], double zvec[3], int &startSecondId);
-  int AddSurgeryPoints(vtkIdList *surgeryLineIds, vtkPoints *surgeryPts, vtkCellArray *surgeryLines, vtkIntArray *surgeryData);
+  int GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3],
+                            double zvec[3], int &startSecondId);
+  int AddSurgeryPoints(vtkIdList *surgeryLineIds, vtkPoints *surgeryPts,
+                       vtkCellArray *surgeryLines, vtkIntArray *surgeryData);
+
 
 private:
   vtkSVPolyDataSliceAndDiceFilter(const vtkSVPolyDataSliceAndDiceFilter&);  // Not implemented.
   void operator=(const vtkSVPolyDataSliceAndDiceFilter&);  // Not implemented.
 
-  char *BoundaryPointsArrayName;
-  char *SliceIdsArrayName;
-  char *SphereRadiusArrayName;
-  char *GroupIdsArrayName;
-  char *SegmentIdsArrayName;
-  char *InternalIdsArrayName;
-  char *DijkstraArrayName;
+  char *BoundaryPointsArrayName; // Array for boundary points (internal)
+  char *DijkstraArrayName; // Array for dijkstra filter (internal)
+  char *GroupIdsArrayName; // Array for groupids; must be defined on centerlines
+  char *InternalIdsArrayName; // Array to keep track of node numbers wehn thresholding and slicing (internal)
+  char *SegmentIdsArrayName; // Array for new patch ids
+  char *SliceIdsArrayName; // Unnecessary array name TODO: Remove
+  char *SphereRadiusArrayName;  // Array for maximum inscribed sphere radius; must be defined on centerlines
 
-  vtkPolyData    *InitialPd;
-  vtkPolyData    *WorkPd;
-  vtkPolyData    *GraphPd;
-  vtkPolyData    *Centerlines;
-  vtkPolyData    *SurgeryLines;
-  svGraph *CenterlineGraph;
+  vtkPolyData    *InitialPd; // Input polydata, kept for reference
+  vtkPolyData    *WorkPd; // Polydata used during filter processing
+  vtkPolyData    *GraphPd; // Polydata populated with the graph simplification
+  vtkPolyData    *CenterlinesPd; // Polydata containing centerlines; must be provided!
+  vtkPolyData    *SurgeryLinesPd; // Polydata containing the lines slicing the vessels along their length
+  svGraph        *CenterlineGraph; // A graph simplification
+  vtkSVGeneralizedPolycube *Polycube; // The polycube structure
 
-  std::multimap<int , int> CriticalPointMap;
+  std::multimap<int , int> CriticalPointMap; // Stl map keeping track of what points map to what groups and vice versa
 
   int ConstructPolycube;
   int SliceDirection;
   int TotalSliceId;
-  int DirectionTable[6][4];
-  int IT[9][8];
 
   double FirstBranchVec[3];
   double SliceLength;
 
-  vtkSVGeneralizedPolycube *Polycube;
 };
 
 #endif

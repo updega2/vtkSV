@@ -274,7 +274,7 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
 {
   vtkNew(vtkSVPolyDataSliceAndDiceFilter, slicer);
   slicer->SetInputData(this->InputPd);
-  slicer->SetCenterlines(this->Centerlines);
+  slicer->SetCenterlinesPd(this->Centerlines);
   slicer->SetSliceLength(1.0);
   slicer->SetConstructPolycube(1);
   slicer->SetBoundaryPointsArrayName(this->BoundaryPointsArrayName);
@@ -288,7 +288,7 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
 
   this->InputPd->DeepCopy(slicer->GetOutput());
   this->Polycube->DeepCopy(slicer->GetPolycube());
-  this->SurgeryLines->DeepCopy(slicer->GetSurgeryLines());
+  this->SurgeryLines->DeepCopy(slicer->GetSurgeryLinesPd());
 
   return SV_OK;
 }

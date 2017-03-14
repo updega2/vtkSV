@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
   // OPERATION
   std::cout<<"Performing Operation..."<<endl;
   Slicer->SetInputData(inputPd);
-  Slicer->SetCenterlines(centerlinesPd);
+  Slicer->SetCenterlinesPd(centerlinesPd);
   Slicer->SetSliceLength(sliceLength);
   Slicer->SetConstructPolycube(constructPolycube);
   Slicer->SetBoundaryPointsArrayName(boundaryPointsArrayName.c_str());

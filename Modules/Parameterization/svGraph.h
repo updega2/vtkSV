@@ -54,8 +54,7 @@ public:
   svGraph(int rootId,
           vtkPolyData *linesPd,
           std::string groupIdsArrayName,
-          std::multimap<int, int> criticalPointMap,
-          int directionTable[6][4]);
+          std::multimap<int, int> criticalPointMap);
 
 
   //Destructor
@@ -91,7 +90,6 @@ public:
   vtkPolyData *Lines;
   std::string GroupIdsArrayName;
   std::multimap<int, int> CriticalPointMap;
-  double DirectionTable[6][4];
   double ReferenceVecs[3][3];
 
 };

@@ -151,6 +151,21 @@ public:
   static int ListIntersection(std::list<int> &listA,
                               std::list<int> &listB,
                               std::list<int> &returnList);
+  template <typename T, size_t nr, size_t nc>
+  static void PrintArray(T (&array)[nr][nc])
+  {
+    std::cout << "Array: " << nr << "by " << nc << endl;
+    std::cout << "-----------------------------------------------------------" << endl;
+    for (int i=0; i<nr; i++)
+    {
+      for (int j=0; j<nc; j++)
+      {
+        std::cout << "| " << array[i][j] << " |" << endl;
+      }
+      std::cout << endl;
+    }
+    std::cout << "-----------------------------------------------------------" << endl;
+  };
 
 protected:
   vtkSVGeneralUtils();

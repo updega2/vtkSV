@@ -28,13 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVPolyDataSliceAndDiceFilter.cxx
- *  @brief This implements the vtkSVPolyDataSliceAndDiceFilter filter as a class
+/**
+ *  \brief This implements the vtkSVPolyDataSliceAndDiceFilter
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
@@ -69,19 +69,22 @@
 #include <sstream>
 #include <cmath>
 
-//---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkSVPolyDataSliceAndDiceFilter, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVPolyDataSliceAndDiceFilter);
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPolyDataSliceAndDiceFilter::vtkSVPolyDataSliceAndDiceFilter()
 {
   this->InitialPd       = vtkPolyData::New();
   this->WorkPd          = vtkPolyData::New();
   this->GraphPd         = vtkPolyData::New();
-  this->SurgeryLines    = vtkPolyData::New();
+  this->SurgeryLinesPd  = vtkPolyData::New();
   this->Polycube        = vtkSVGeneralizedPolycube::New();
-  this->Centerlines     = NULL;
+  this->CenterlinesPd   = NULL;
   this->CenterlineGraph = NULL;
 
   this->BoundaryPointsArrayName = NULL;
@@ -98,7 +101,9 @@ vtkSVPolyDataSliceAndDiceFilter::vtkSVPolyDataSliceAndDiceFilter()
   this->SliceLength = 1.5;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVPolyDataSliceAndDiceFilter::~vtkSVPolyDataSliceAndDiceFilter()
 {
   if (this->InitialPd != NULL)
@@ -116,15 +121,15 @@ vtkSVPolyDataSliceAndDiceFilter::~vtkSVPolyDataSliceAndDiceFilter()
     this->GraphPd->Delete();
     this->GraphPd = NULL;
   }
-  if (this->Centerlines != NULL)
+  if (this->CenterlinesPd != NULL)
   {
-    this->Centerlines->UnRegister(this);
-    this->Centerlines = NULL;
+    this->CenterlinesPd->UnRegister(this);
+    this->CenterlinesPd = NULL;
   }
-  if (this->SurgeryLines != NULL)
+  if (this->SurgeryLinesPd != NULL)
   {
-    this->SurgeryLines->Delete();
-    this->SurgeryLines = NULL;
+    this->SurgeryLinesPd->Delete();
+    this->SurgeryLinesPd = NULL;
   }
   if (this->Polycube != NULL)
   {
@@ -174,27 +179,47 @@ vtkSVPolyDataSliceAndDiceFilter::~vtkSVPolyDataSliceAndDiceFilter()
   }
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVPolyDataSliceAndDiceFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+
+  os << indent << "Construct Polycube: " <<
+    this->ConstructPolycube << "\n";
+  if (this->BoundaryPointsArrayName != NULL)
+    os << indent << "Boundary points array name: " << this->BoundaryPointsArrayName << "\n";
+  if (this->GroupIdsArrayName != NULL)
+    os << indent << "Group Ids array name: " << this->GroupIdsArrayName << "\n";
+  if (this->SegmentIdsArrayName != NULL)
+    os << indent << "Segment Ids array name: " << this->SegmentIdsArrayName << "\n";
+  if (this->SliceIdsArrayName != NULL)
+    os << indent << "Slice Ids array name: " << this->SliceIdsArrayName << "\n";
+  if (this->SphereRadiusArrayName != NULL)
+    os << indent << "Sphere radius array name: " << this->SphereRadiusArrayName << "\n";
+  if (this->InternalIdsArrayName != NULL)
+    os << indent << "Internal Ids array name: " << this->InternalIdsArrayName << "\n";
+  if (this->DijkstraArrayName != NULL)
+    os << indent << "Dijkstra distance array name: " << this->DijkstraArrayName << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-//---------------------------------------------------------------------------
-int vtkSVPolyDataSliceAndDiceFilter::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+// ----------------------
+// RequestData
+// ----------------------
+int vtkSVPolyDataSliceAndDiceFilter::RequestData(vtkInformation *vtkNotUsed(request),
+                                                 vtkInformationVector **inputVector,
+                                                 vtkInformationVector *outputVector)
 {
   // get the input and output
   vtkPolyData *input1 = vtkPolyData::GetData(inputVector[0]);
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
-  //Copy the input to operate on
+  // Copy the input to operate on
   this->InitialPd->DeepCopy(input1);
 
   this->WorkPd->DeepCopy(this->InitialPd);
-  if (this->Centerlines == NULL)
+  if (this->CenterlinesPd == NULL)
   {
     vtkErrorMacro("Error: no centerliens provided\n");
   }
@@ -235,15 +260,12 @@ int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
     return SV_ERROR;
   }
 
-  this->FormDirectionTable(this->DirectionTable);
-
   vtkNew(vtkPoints, skeletonPoints);
   vtkNew(vtkCellArray, skeletonCells);
   vtkNew(vtkIntArray, skeletonGroupIds);
-  this->CenterlineGraph = new svGraph(0, this->Centerlines,
+  this->CenterlineGraph = new svGraph(0, this->CenterlinesPd,
                                      this->GroupIdsArrayName,
-                                     this->CriticalPointMap,
-                                     this->DirectionTable);
+                                     this->CriticalPointMap);
   if (this->CenterlineGraph->BuildGraph() != SV_OK)
   {
     vtkErrorMacro("Unable to form skeleton of polydata");
@@ -282,105 +304,31 @@ int vtkSVPolyDataSliceAndDiceFilter::RunFilter()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
 /**
- *                     315-45°  45-135° 135-225° 225-315°
- *          P   RIGHT:  FRONT    UP      BACK     DOWN
- *          A   LEFT:   BACK     DOWN    FRONT    UP
- *          R   BACK:   DOWN     RIGHT   UP       LEFT
- *          E   FRONT:  UP       LEFT    DOWN     RIGHT
- *          N   UP:     LEFT     BACK    RIGHT    FRONT
- *          T   DOWN:   RIGHT    FRONT   LEFT     BACK
- * @brief
- * @param *pd
- * @return
+ * \details 6x4 table with new graph directions based
+ * on the parent direction (rows) and the angle made with the aligning
+ * reference direction (columns)
+ *
+ * <table>
+ *  <caption id="multi_row">Complex table</caption>
+ *  <tr><th> <th colspan="4">Angles </tr>
+ *  <tr><th>Parent Dir. <th>315-45° <th>45-135° <th>135-225° <th>225-315° </tr>
+ *  <tr> <td>RIGHT <td>FRONT <td>UP    <td>BACK  <td>DOWN  </tr>
+ *  <tr> <td>LEFT  <td>BACK  <td>DOWN  <td>FRONT <td>UP    </tr>
+ *  <tr> <td>BACK  <td>DOWN  <td>RIGHT <td>UP    <td>LEFT  </tr>
+ *  <tr> <td>FRONT <td>UP    <td>LEFT  <td>DOWN  <td>RIGHT </tr>
+ *  <tr> <td>UP    <td>LEFT  <td>BACK  <td>RIGHT <td>FRONT </tr>
+ *  <tr> <td>DOWN  <td>RIGHT <td>FRONT <td>LEFT  <td>BACK  </tr>
+ * </table>
  */
-int vtkSVPolyDataSliceAndDiceFilter::FormDirectionTable(int dirTable[6][4])
-{
+const int vtkSVPolyDataSliceAndDiceFilter::DT[6][4] =
+  {{FRONT,  UP,    BACK,  DOWN},
+    {BACK,  DOWN,  FRONT, UP},
+    {DOWN,  RIGHT, UP,    LEFT},
+    {UP,    LEFT,  DOWN,  RIGHT},
+    {LEFT,  BACK,  RIGHT, FRONT},
+    {RIGHT, FRONT, LEFT,  BACK}};
 
-
-  dirTable[RIGHT][0] = FRONT; dirTable[RIGHT][1] = UP;    dirTable[RIGHT][2] = BACK;  dirTable[RIGHT][3] = DOWN;
-  dirTable[LEFT][0]  = BACK;  dirTable[LEFT][1]  = DOWN;  dirTable[LEFT][2]  = FRONT; dirTable[LEFT][3]  = UP;
-  dirTable[BACK][0]  = DOWN;  dirTable[BACK][1]  = RIGHT; dirTable[BACK][2]  = UP;    dirTable[BACK][3]  = LEFT;
-  dirTable[FRONT][0] = UP;    dirTable[FRONT][1] = LEFT;  dirTable[FRONT][2] = DOWN;  dirTable[FRONT][3] = RIGHT;
-  dirTable[UP][0]    = LEFT;  dirTable[UP][1]    = BACK;  dirTable[UP][2]    = RIGHT; dirTable[UP][3]    = FRONT;
-  dirTable[DOWN][0]  = RIGHT; dirTable[DOWN][1]  = FRONT; dirTable[DOWN][2]  = LEFT;  dirTable[DOWN][3]  = BACK;
-
-  return SV_OK;
-}
-
-int vtkSVPolyDataSliceAndDiceFilter::LookupDirection(const int dir, const int ang)
-{
-  int newDir = -1;
-  if (dir == RIGHT)
-  {
-    if (ang == 0)
-      newDir = FRONT;
-    else if (ang == 1)
-      newDir = UP;
-    else if (ang == 2)
-      newDir = BACK;
-    else if (ang == 3)
-      newDir = DOWN;
-  }
-  else if (dir == LEFT)
-  {
-    if (ang == 0)
-      newDir = BACK;
-    else if (ang == 1)
-      newDir = DOWN;
-    else if (ang == 2)
-      newDir = FRONT;
-    else if (ang == 3)
-      newDir = UP;
-  }
-  else if (dir == BACK)
-  {
-    if (ang == 0)
-      newDir = DOWN;
-    else if (ang == 1)
-      newDir = RIGHT;
-    else if (ang == 2)
-      newDir = UP;
-    else if (ang == 3)
-      newDir = LEFT;
-  }
-  else if (dir == FRONT)
-  {
-    if (ang == 0)
-      newDir = UP;
-    else if (ang == 1)
-      newDir = LEFT;
-    else if (ang == 2)
-      newDir = DOWN;
-    else if (ang == 3)
-      newDir = RIGHT;
-  }
-  else if (dir == UP)
-  {
-    if (ang == 0)
-      newDir = LEFT;
-    else if (ang == 1)
-      newDir = BACK;
-    else if (ang == 2)
-      newDir = RIGHT;
-    else if (ang == 3)
-      newDir = FRONT;
-  }
-  else if (dir == DOWN)
-  {
-    if (ang == 0)
-      newDir = RIGHT;
-    else if (ang == 1)
-      newDir = FRONT;
-    else if (ang == 2)
-      newDir = LEFT;
-    else if (ang == 3)
-      newDir = BACK;
-  }
-
-  return newDir;
-}
 /**
  *                             2---------1
  *                            /|        /|
@@ -421,6 +369,16 @@ int vtkSVPolyDataSliceAndDiceFilter::LookupDirection(const int dir, const int an
  * T    D   i    zz   z    zzz  -1   -1
  *
  */
+const int vtkSVPolyDataSliceAndDiceFilter::IT[9][8] =
+{{4, 0, 3, 7, 5, 1, 2, 6},  // x
+ {4, 5, 1, 0, 7, 6, 2, 3},  // y
+ {1, 2, 3, 0, 5, 6, 7, 4},  // z
+ {5, 4, 7, 6, 1, 0, 3, 2},  // xx
+ {7, 6, 5, 4, 3, 2, 1, 0},  // yy
+ {2, 3, 0, 1, 6, 7, 4, 5},  // zz
+ {1, 5, 6, 2, 0, 4, 7, 3},  // xxx
+ {3, 2, 6, 7, 0, 1, 5, 4},  // yyy
+ {3, 0, 1, 2, 7, 4, 5, 6}}; // zzz
 
 int vtkSVPolyDataSliceAndDiceFilter::LookupIndex(const int PARENT, const int DIVCHILD, const int index)
 {
@@ -438,6 +396,7 @@ int vtkSVPolyDataSliceAndDiceFilter::LookupIndex(const int PARENT, const int DIV
     for (int j=0; j<8; j++)
       iT[i][j] = iT[i-6][iT[i-3][j]];
   }
+  vtkSVGeneralUtils::PrintArray(iT);
   if (PARENT == RIGHT)
   {
     if (DIVCHILD == BACK)
@@ -594,7 +553,7 @@ int vtkSVPolyDataSliceAndDiceFilter::InsertCriticalPoints(const int pointId, vtk
  * @return
  */
 int vtkSVPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *branchPd,
-                                             vtkPolyData *branchCenterlines)
+                                             vtkPolyData *branchCenterlinesPd)
 {
   vtkSVGeneralUtils::ThresholdPd(this->WorkPd, branchId, branchId, 1,
     this->SegmentIdsArrayName, branchPd);
@@ -602,7 +561,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *
   if (branchPd != NULL)
   {
     vtkNew(vtkPolyData, centerlineBranchPd);
-    vtkSVGeneralUtils::ThresholdPd(this->Centerlines, branchId, branchId, 1,
+    vtkSVGeneralUtils::ThresholdPd(this->CenterlinesPd, branchId, branchId, 1,
       this->GroupIdsArrayName, centerlineBranchPd);
 
     //Need to get just first cell of centerlines. There are duplicate for each centerline running through
@@ -614,10 +573,10 @@ int vtkSVPolyDataSliceAndDiceFilter::GetBranch(const int branchId, vtkPolyData *
     tmpPd->ShallowCopy(ider->GetOutput());
 
     vtkSVGeneralUtils::ThresholdPd(tmpPd, 0, 0, 1,
-      this->InternalIdsArrayName, branchCenterlines);
+      this->InternalIdsArrayName, branchCenterlinesPd);
 
-    branchCenterlines->GetCellData()->RemoveArray(this->InternalIdsArrayName);
-    branchCenterlines->GetPointData()->RemoveArray(this->InternalIdsArrayName);
+    branchCenterlinesPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
+    branchCenterlinesPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
   }
 
   return SV_OK;
@@ -665,12 +624,12 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranches()
       surgeryCellData->InsertNextValue(branchId);
     }
   }
-  this->SurgeryLines->SetPoints(surgeryPts);
-  this->SurgeryLines->SetLines(surgeryLines);
+  this->SurgeryLinesPd->SetPoints(surgeryPts);
+  this->SurgeryLinesPd->SetLines(surgeryLines);
   surgeryData->SetName(this->InternalIdsArrayName);
   surgeryCellData->SetName(this->SegmentIdsArrayName);
-  this->SurgeryLines->GetPointData()->AddArray(surgeryData);
-  this->SurgeryLines->GetCellData()->AddArray(surgeryCellData);
+  this->SurgeryLinesPd->GetPointData()->AddArray(surgeryData);
+  this->SurgeryLinesPd->GetCellData()->AddArray(surgeryCellData);
 
   this->WorkPd->GetCellData()->AddArray(sliceIds);
 
@@ -1347,7 +1306,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   int badKidId  = gCell->Children[gCell->DivergingChild]->GroupId;
 
   vtkNew(vtkPolyData, centerlineBranchPd);
-  vtkSVGeneralUtils::ThresholdPd(this->Centerlines, badKidId, badKidId, 1,
+  vtkSVGeneralUtils::ThresholdPd(this->CenterlinesPd, badKidId, badKidId, 1,
     this->GroupIdsArrayName, centerlineBranchPd);
   vtkNew(vtkPolyData, branchCenterline);
   //Need to get just first cell of centerlines. There are duplicate for each centerline running through
@@ -1859,35 +1818,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFourPolyDataRegions(vtkPolyData *startPd
  * @param *pd
  * @return
  */
-int vtkSVPolyDataSliceAndDiceFilter::CheckStartSurgeryPoints(vtkPolyData *pd, vtkIdList *startPoints)
-{
-  vtkDataArray *groupIds = pd->GetPointData()->GetArray(this->InternalIdsArrayName);
-
-  vtkNew(vtkPointLocator, pointLocator);
-  pointLocator->SetDataSet(pd);
-  pointLocator->BuildLocator();
-
-  for (int i=0; i<startPoints->GetNumberOfIds(); i++)
-  {
-    int pdId = groupIds->LookupValue(startPoints->GetId(i));
-    if (pdId == -1)
-    {
-      double pt[3];
-      this->WorkPd->GetPoint(startPoints->GetId(i), pt);
-      int findPtId = pointLocator->FindClosestPoint(pt);
-      startPoints->SetId(i, groupIds->GetTuple1(findPtId));
-    }
-  }
-
-  return SV_OK;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkSVPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
                                                          const int frontId,
                                                          const int backId,
@@ -1978,11 +1908,12 @@ int vtkSVPolyDataSliceAndDiceFilter::BuildPolycube()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// GraphToPolycube
+// ----------------------
 /**
- * @brief
- * @param *pd
- * @return
+ * \details If both children of the node are not NULL, then four cubes will be created.
+ * One for the given node, one for the linking patch, and one for each child node.
  */
 int vtkSVPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
                                                    void *arg1, void *arg2)
@@ -2046,34 +1977,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
     }
 
   }
-
-  return SV_OK;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataSliceAndDiceFilter::GetCloseGeodesicPoint(vtkPolyData *pd, double centerPt[3], const int startPtId, int &returnStartId, double zvec[3],
-                                                         vtkPolyData *boundary)
-{
-  int actualId = pd->GetPointData()->GetArray(this->InternalIdsArrayName)->
-    LookupValue(startPtId);
-
-  vtkNew(vtkSVFindGeodesicPath, finder);
-  finder->SetInputData(pd);
-  finder->SetStartPtId(actualId);
-  finder->SetClosePt(centerPt);
-  finder->SetDijkstraArrayName(this->DijkstraArrayName);
-  finder->SetRepelCloseBoundaryPoints(1);
-  finder->Update();
-
-  boundary->DeepCopy(finder->GetBoundary());
-  int endPtId = finder->GetEndPtId();
-  returnStartId = boundary->GetPointData()->GetArray(this->InternalIdsArrayName)->
-    GetTuple1(endPtId);
 
   return SV_OK;
 }
@@ -2207,8 +2110,6 @@ int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCel
 {
   int contourPtId;
   vtkNew(vtkPolyData, boundary);
-  //this->GetCloseGeodesicPoint(pd, centerPt, surgeryPoints->GetId(0),
-  //  contourPtId, zvec, boundary);
   int initialSurgeryPt = surgeryPoints->GetId(0);
   int finalSurgeryId;
   if (this->SliceDirection == 1)
