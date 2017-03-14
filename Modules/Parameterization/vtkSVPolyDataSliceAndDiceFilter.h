@@ -161,27 +161,61 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int PrepFilter(); // Prep work
-  int RunFilter(); // Run filter operations
-  int FindGroupBoundaries(); ///< \brief Find and label nodes that form boundary between groups
-  int BuildPolycube(); ///< \brief If building polycube, construct it based off graph
-  int GetCriticalPoints(); ///< \brief Get points that separate three or more regions
-  int SliceBifurcations(); ///< \brief Process and cut each bifurcation
-  int SliceBranches(); ///< \brief Process and cut each branch
-  void CheckLength(int &ptId,
-                  const int numPts,
-                  int &done);
-  int CheckSlice(vtkPolyData *pd);
+  int PrepFilter(); // Prep work.
+  int RunFilter(); // Run filter operations.
+  int FindGroupBoundaries(); ///< \brief Find and label nodes that form boundary between groups.
+  int BuildPolycube(); ///< \brief If building polycube, construct it based off graph.
+  int GetCriticalPoints(); ///< \brief Get points that separate three or more regions.
+  int SliceBifurcations(); ///< \brief Process and cut each bifurcation.
+  int SliceBranches(); ///< \brief Process and cut each branch.
+
+  /// \brief Checks to see if the number of points in a centerline has been
+  /// surpassed and need to set back in order to process the final bit correctly.
+  /// \param ptId The current point id; will be modified if number of points has been surpassed.
+  /// \param numPts Number of total points in the centerline.
+  /// \return If number of points is surpassed, 1 should be returned; otherwise, 0.
+  int CheckLength(int &ptId, const int numPts);
+
+  /// \brief Increments the pt id if slicing down and decrements the pt id if slicing up.
+  /// \param ptId The current point id; will be increased or decreased.
   void UpdatePtId(int &ptId);
+
+  /// \brief Function to double check that slice is bueno.
+  /// \param pd The polydata to double check.
+  /// \return SV_OK if the polydata passes inspection.
+  int CheckSlice(vtkPolyData *pd);
+
+  /// \brief Small function to ensure that we have the correcting starting
+  /// point according to what we have defined to be the "front".
+  /// \param pd The full polydata
+  /// \param frontDir The vector to test
+  /// \param frontId The current front id, will be switched if incorrect direction
+  /// \param backId The current back id, will be switched if incorrect direction
+  /// \return SV_OK
   int GetCorrectFrontPoint(vtkPolyData *pd,
                            double frontDir[3],
                            int &frontId,
                            int &backId);
+
+  /// \brief Thresholds out a region for each of the ids provided, and then
+  /// also returns whatever is leftover after all of that thresholding.
+  /// \param startPd The pd to threshold.
+  /// \param id0, The first id.
+  /// \param pd0, Empty polydata to fill with region 0
+  /// \param id1, The second id.
+  /// \param pd1, Empty polydata to fill with region 1
+  /// \param id2, The third id.
+  /// \param pd2, Empty polydata to fill with region 2
+  /// \param leftovers, Whatever is left of startPd
+  /// \return SV_OK
   int GetFourPolyDataRegions(vtkPolyData *startPd,
                              const int id0, vtkPolyData *pd0,
                              const int id1, vtkPolyData *pd1,
                              const int id2, vtkPolyData *pd2,
                              vtkPolyData *leftovers);
+
+  /// \brief Function to get the critical surgery points, or the surgery points
+  /// at a bifurcation.
   int CriticalSurgeryPoints(vtkPolyData *pd,
                            const int frontId,
                            const int backId,
@@ -192,9 +226,12 @@ protected:
                            vtkIdList *fixedGoToPoints,
                            vtkIdList *fixedSurgeryPoints,
                            double startDir[3]);
+
+  /// \brief Function to the starting surgery points
   int GetFirstSurgeryPoints(vtkPolyData *pd, int pointId,
                             vtkIdList *surgeryPoints,
                             double xvec[3], double zvec[3]);
+  /// \brief Function to get four points around length of ring
   int GetSurgeryPoints(vtkPolyData *pd,
                        vtkPolyData *parentPd,
                        vtkDataArray *pointIds,
@@ -206,18 +243,23 @@ protected:
                        std::string arrayName,
                        vtkIdList *surgeryPoints,
                        double startDir[3]);
+  /// \brief Function to get two points from front to back
   int GetHalfSurgeryPoints(vtkPolyData *pd,
                            vtkDataArray *pointIds,
                            const int cellId,
                            const int front,
                            const int back,
                            vtkIdList *surgeryPoints);
+
+  /// \brief Function to the next surgery points when processing
   int GetNextSurgeryPoints(vtkPolyData *pd,
                            double centerPt[3],
                            vtkIdList *surgeryPoints,
                            double xvec[3], double zvec[3],
                            double radius,
                            vtkIdList *surgeryLineIds);
+
+  /// \brief Function to the final surgery points
   int GetEndSurgeryPoints(vtkPolyData *pd, svGCell *gCell,
                           double centerPt[3],
                           vtkIdList *surgeryPoints,
@@ -227,50 +269,103 @@ protected:
                           vtkIdList *surgeryLineIds,
                           int cellIndices[8],
                           int &secondRun);
+
+  /// \brief Function to determine branch slicing strategy based on number
+  /// of critical points.
+  /// \param branchPd Polydata for the specific branch.
+  /// \param branchCenterline Corresponding centerline for the group.
+  /// \param gCell Corresponding graph node.
+  /// \return SV_OK if function completes without error.
   int DetermineSliceStrategy(vtkPolyData *branchPd,
-                             svGCell *gCell,
                              vtkPolyData *branchCenterline,
-                             int &branchStartPtId,
-                             vtkIdList *surgeryPoints,
-                             int &centerlineStartPtId,
-                             int &strategy);
-  /*
-   * \brief Insert a critical point and its associated groups into the
-   * CriticalPointMap.
-   * \param pointId Id of point to add to map
-   * \param groupIds List of group ids that touch the point
-   * \return SV_OK
-   */
+                             svGCell *gCell,
+                             vtkIdList *surgeryPoints);
+
+  /// \brief Insert a critical point and its associated groups into the
+  /// CriticalPointMap.
+  /// \param pointId Id of point to add to map
+  /// \param groupIds List of group ids that touch the point
+  /// \return SV_OK
   int InsertCriticalPoints(const int pointId, vtkIdList *groupIds);
-  /*
-   * \brief Threshold out a specific group of the full polydata.
-   * \param branchId Group id to threshold.
-   * \param branchPd Empty polydata to fill with branch pd.
-   * \param branchCenterlinesPd Empty polydata for corresponding group's centerlines.
-   * \return SV_OK
-   */
+
+  /// \brief Threshold out a specific group of the full polydata.
+  /// \param branchId Group id to threshold.
+  /// \param branchPd Empty polydata to fill with branch pd.
+  /// \param branchCenterlinesPd Empty polydata for corresponding group's centerlines.
+  /// \return SV_OK
   int GetBranch(const int branchId, vtkPolyData *branchPd,
                 vtkPolyData *branchCenterlinesPd);
+
+  /// \brief Function to slice individual branch.
+  /// \param branchPd Polydata for the specific branch.
+  /// \param branchCenterline Corresponding centerline for the group
+  /// \param gCell Corresponding graph node.
+  /// \param sliceIds If branch segmented into multiple regions, these ids fill
+  /// \param secondRun If the surgery line does not end up at the correct node
+  /// of a segment internal to two bifurcations, the graph needs to be rotated
+  //  and we need to run again. In this case, we indicate this with this parameter.
+  //  the different regions.
+  /// \return SV_OK if function completes without error.
   int SliceBranch(vtkPolyData *branchPd, vtkPolyData *branchCenterline,
                     svGCell *gCell,
                     vtkDataArray *sliceIds,
                     int secondRun);
-  int SliceBifurcation(vtkPolyData *pd,
-                       svGCell *gCell);
+
+  /// \brief Function to slice a single bifurcation
+  /// \param pd The full polydata.
+  /// \param gCell The corresponding cell where bifurcation is in between cell
+  /// and its children.
+  int SliceBifurcation(vtkPolyData *pd, svGCell *gCell);
+
+  /// \brief A helpful function that first updates the direction of the
+  /// gCell's diverging child, and then proceeds to call the UpdateCellDirection function
+  /// in svGraph. This gives us a correct polycube structure!
+  /// \param gCell The gCell who's diverging child direction needs to be fixed!
+  /// \actualId The id of the point that corresponds to the bottom of where we
+  /// started in gCell
+  /// \param cellIndices The cellIndices corresponding to current gCell and
+  /// diverging child direction
+  /// \return SV_OK if function completes without error
   int FixGraphDirections(svGCell *gCell, const int actualId,
                          int cellIndices[8]);
-  int GetSectionZAxis(const double endPt[3], const double startPt[3],
+
+  /// \brief Convenience function to get z axis from centerline start and end point
+  /// \param startPt Start point of line
+  /// \param endPt End point of line
+  /// \param zvec Empty triple to hold the result z vector
+  /// \return SV_OK
+  int GetSectionZAxis(const double startPt[3], const double endPt[3],
                       double zvec[3]);
-  int GetSectionXAxis(const double endPt[3], const double startPt[3],
+
+  /// \brief Convenience function to get x axis from centerline start and end point
+  /// \param startPt Start point of line
+  /// \param endPt End point of line
+  /// \param surfacePt Point on the surface to use as reference
+  /// \param xvec Empty triple to hold the result x vector
+  /// \return SV_OK
+  int GetSectionXAxis(const double startPt[3], const double endPt[3],
                       const double surfacePt[3], double xvec[3]);
 
+  /// \brief Gets point that is on boundary closest to point projected in
+  /// direction xvec from centerPt
+  /// \param pd Polydata to find point on boundary
+  /// \param centerPt Point on centerline near boundary
+  /// \param xvec Direction to project in
+  /// \param radius Radius of vessel at current location
+  /// \param boundary Empty polydata to be filled with the boundary close to
+  /// centerPt
+  /// \param returnStartId Id of point that is on the boundary edge of the given
+  /// polydata and closest to the projected point
+  /// \return SV_OK
   int GetClose3DPoint(vtkPolyData *pd, double centerPt[3],
-                      const int startPtId, int &returnStartId,
-                      double xvec[3], double zvec[3],
+                      double xvec[3],
                       double radius,
-                      vtkPolyData *boundary);
-  int GetContourSecondPoint(vtkPolyData *pd, int ptId, double centerPt[3],
-                            double zvec[3], int &startSecondId);
+                      vtkPolyData *boundary,
+                      int &returnStartId);
+
+  /// \brief Adds the ids in the list to the full Surgery Lines
+  /// \param surgeryLineIds List of point ids to add to the Surgery Lines
+  /// \return SV_OK
   int AddSurgeryPoints(vtkIdList *surgeryLineIds);
 
 
