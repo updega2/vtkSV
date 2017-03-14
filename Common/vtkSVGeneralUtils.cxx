@@ -66,14 +66,6 @@
 // ----------------------
 // CheckArrayExists
 // ----------------------
-/**
- * @brief Function to check is array with name exists in cell or point data
- * @param ds this is the object to check if the array exists
- * @param datatype this is point or cell. point=0,cell=1
- * @param arrayname this is the name of the array to check
- * @reutrn this returns 1 if the array exists and zero if it doesn't
- * or the function does not return properly.
- */
 int vtkSVGeneralUtils::CheckArrayExists(vtkDataSet *ds,
                                         int datatype,
                                         std::string arrayname)
@@ -106,11 +98,11 @@ int vtkSVGeneralUtils::CheckArrayExists(vtkDataSet *ds,
   return exists;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
+// ----------------------
+// CheckSurface
+// ----------------------
+/*
+ * \details TODO: Want to make more checks
  */
 int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
 {
@@ -148,55 +140,51 @@ int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
 }
 
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetClosestPointConnectedRegion
+// ----------------------
 int vtkSVGeneralUtils::GetClosestPointConnectedRegion(vtkPolyData *pd,
-                                                      double origin[3])
+                                                      double pt[3])
 {
+  // Connectivity filter
   vtkNew(vtkConnectivityFilter, connector);
   connector->SetInputData(pd);
   connector->SetExtractionModeToClosestPointRegion();
-  connector->SetClosestPoint(origin);
+  connector->SetClosestPoint(pt);
   connector->Update();
 
+  // Convert unstructured grid to polydata
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
 
+  // Copy the result
   pd->DeepCopy(surfacer->GetOutput());
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetClosestPointConnectedRegion
+// ----------------------
 int vtkSVGeneralUtils::GetClosestPointConnectedRegion(vtkPolyData *inPd,
-                                                      double origin[3],
+                                                      double pt[3],
                                                       vtkPolyData *outPd)
 {
+  // Simple, call same function
   outPd->DeepCopy(inPd);
-  vtkSVGeneralUtils::GetClosestPointConnectedRegion(outPd, origin);
+  vtkSVGeneralUtils::GetClosestPointConnectedRegion(outPd, pt);
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GiveIds
+// ----------------------
 int vtkSVGeneralUtils::GiveIds(vtkPolyData *pd,
                                std::string arrayName)
 {
+  // Send through Id filter
   vtkNew(vtkIdFilter, ider);
   ider->SetInputData(pd);
   ider->SetIdsArrayName(arrayName.c_str());
@@ -207,213 +195,230 @@ int vtkSVGeneralUtils::GiveIds(vtkPolyData *pd,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GiveIds
+// ----------------------
 int vtkSVGeneralUtils::GiveIds(vtkPolyData *inPd,
                                std::string arrayName,
                                vtkPolyData *outPd)
 {
+  // Simple, call same function
   outPd->DeepCopy(inPd);
   vtkSVGeneralUtils::GiveIds(outPd, arrayName);
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GiveIds
+// ----------------------
 int vtkSVGeneralUtils::IteratePoint(vtkPolyData *pd, int &pointId, int &prevCellId)
 {
+  // Get given point cells
   vtkNew(vtkIdList, ptCellIds);
   pd->GetPointCells(pointId, ptCellIds);
+
+  // Get next cell which isnt prevCellId
   int cellId;
   if (ptCellIds->GetId(0) == prevCellId)
-  {
     cellId = ptCellIds->GetId(1);
-  }
   else
-  {
     cellId = ptCellIds->GetId(0);
-  }
+
+  // Set prevCellId now to and get next point
   prevCellId = cellId;
 
+  // Get cell points
   vtkIdType npts, *pts;
   pd->GetCellPoints(prevCellId, npts, pts);
+
+  // Get next point which isnt the pointId we started with
   int newId;
   if (pts[0] == pointId)
-  {
     newId = pts[1];
-  }
   else
-  {
     newId = pts[0];
-  }
+
+  // Set the pointId to this new Id
   pointId = newId;
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ThresholdPd
+// ----------------------
 int vtkSVGeneralUtils::ThresholdPd(vtkPolyData *pd, int minVal,
                                    int maxVal, int dataType,
-                                   std::string arrayName,
-                                   vtkPolyData *returnPd)
+                                   std::string arrayName)
 {
+  // Set up threshold filter
   vtkNew(vtkThreshold, thresholder);
   thresholder->SetInputData(pd);
   //Set Input Array to 0 port,0 connection, dataType (0 - point, 1 - cell, and Regions is the type name
   thresholder->SetInputArrayToProcess(0, 0, 0, dataType, arrayName.c_str());
   thresholder->ThresholdBetween(minVal, maxVal);
   thresholder->Update();
-  if (thresholder->GetOutput()->GetNumberOfPoints() == 0)
-  {
-    //vtkDebugMacro("No points after threshold");
-    return SV_ERROR;
-  }
 
+  // Check to see if the result has points, don't run surface filter
+  if (thresholder->GetOutput()->GetNumberOfPoints() == 0)
+    return SV_ERROR;
+
+  // Convert unstructured grid to polydata
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(thresholder->GetOutput());
   surfacer->Update();
 
-  returnPd->DeepCopy(surfacer->GetOutput());
+  // Set the final pd
+  pd->DeepCopy(surfacer->GetOutput());
 
   return SV_OK;
 }
 
+// ----------------------
+// ThresholdPd
+// ----------------------
+int vtkSVGeneralUtils::ThresholdPd(vtkPolyData *pd, int minVal,
+                                   int maxVal, int dataType,
+                                   std::string arrayName,
+                                   vtkPolyData *returnPd)
+{
+  // Simple, call the other implementation
+  returnPd->DeepCopy(pd);
+  return vtkSVGeneralUtils::ThresholdPd(returnPd, minVal, maxVal, dataType,
+                                        arrayName);
+}
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+
+// ----------------------
+// GetCentroidOfPoints
+// ----------------------
 int vtkSVGeneralUtils::GetCentroidOfPoints(vtkPoints *points,
                                            double centroid[3])
 {
+  // Number of points
   int numPoints = points->GetNumberOfPoints();
   centroid[0] = 0.0; centroid[1] = 0.0; centroid[2] = 0.0;
+
+  // Loop through points
   for (int i=0; i<numPoints; i++)
   {
+    // Get point
     double pt[3];
     points->GetPoint(i, pt);
+
+    //Update centroid
     for (int j=0; j<3; j++)
-    {
       centroid[j] += pt[j];
-    }
   }
 
+  // Divide by the number of points to get centroid
   vtkMath::MultiplyScalar(centroid, 1.0/numPoints);
+
   return SV_OK;
 }
 
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVGeneralUtils::GetPointGroups(vtkPolyData *pd, std::string arrayName,
-                                                  const int pointId, vtkIdList *groupIds)
+// ----------------------
+// GetPointCellsValues
+// ----------------------
+/** \details The value is not added to the list of values if it is -1 */
+int vtkSVGeneralUtils::GetPointCellsValues(vtkPolyData *pd, std::string arrayName,
+                                           const int pointId, vtkIdList *valList)
 {
-  vtkDataArray *groupIdsArray =
+  // Get data from pd
+  vtkDataArray *valArray =
     pd->GetCellData()->GetArray(arrayName.c_str());
+  valList->Reset();
 
+  // Get point cells
   vtkNew(vtkIdList, cellIds);
   pd->GetPointCells(pointId, cellIds);
-  groupIds->Reset();
+
+  // Loop through and check each point
   for (int i=0; i<cellIds->GetNumberOfIds(); i++)
   {
-    int groupValue = groupIdsArray->GetTuple1(cellIds->GetId(i));
-    if (groupIds->IsId(groupValue) == -1)
-    {
-      groupIds->InsertNextId(groupValue);
-    }
+    int groupValue = valArray->GetTuple1(cellIds->GetId(i));
+
+    // Only adding to list if value is not -1
+    if (valList->IsId(groupValue) == -1)
+      valList->InsertNextId(groupValue);
   }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ExtractionCut
+// ----------------------
 int vtkSVGeneralUtils::ExtractionCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
                                      const int extractBoundaryCells,
                                      const int extractInside,
                                      vtkPolyData *outPd)
 {
-    vtkNew(vtkExtractGeometry, cutter);
-    cutter->SetInputData(inPd);
-    cutter->SetImplicitFunction(cutFunction);
-    cutter->SetExtractBoundaryCells(extractBoundaryCells);
-    cutter->ExtractOnlyBoundaryCellsOff();
-    cutter->SetExtractInside(extractInside);
-    cutter->Update();
+  // Set up vtkExtractGeometry filter
+  vtkNew(vtkExtractGeometry, cutter);
+  cutter->SetInputData(inPd);
+  cutter->SetImplicitFunction(cutFunction);
+  cutter->SetExtractBoundaryCells(extractBoundaryCells);
+  cutter->ExtractOnlyBoundaryCellsOff();
+  cutter->SetExtractInside(extractInside);
+  cutter->Update();
 
-    vtkNew(vtkDataSetSurfaceFilter, surfacer);
-    surfacer->SetInputData(cutter->GetOutput());
-    surfacer->Update();
+  // Convert unstructured grid to polydata
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(cutter->GetOutput());
+  surfacer->Update();
 
-    outPd->DeepCopy(surfacer->GetOutput());
+  // Copy output
+  outPd->DeepCopy(surfacer->GetOutput());
 
-    return SV_OK;
+  return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ClipCut
+// ----------------------
 int vtkSVGeneralUtils::ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFunction,
                                const int generateClippedOutput,
                                const int extractInside,
                                vtkPolyData *outPd,
                                vtkPolyData *clippedOutPd)
 {
-    vtkNew(vtkClipPolyData, cutter);
-    cutter->SetInputData(inPd);
-    cutter->SetClipFunction(cutFunction);
-    cutter->SetInsideOut(extractInside);
-    cutter->SetGenerateClippedOutput(generateClippedOutput);
-    cutter->Update();
+  // Set up vtkClipPolyData
+  vtkNew(vtkClipPolyData, cutter);
+  cutter->SetInputData(inPd);
+  cutter->SetClipFunction(cutFunction);
+  cutter->SetInsideOut(extractInside);
+  cutter->SetGenerateClippedOutput(generateClippedOutput);
+  cutter->Update();
 
-    vtkNew(vtkTriangleFilter, triangulator);
-    triangulator->SetInputData(cutter->GetOutput(0));
+  // This clips through cells, need to retriangulate
+  vtkNew(vtkTriangleFilter, triangulator);
+  triangulator->SetInputData(cutter->GetOutput(0));
+  triangulator->Update();
+
+  // Copy output
+  outPd->DeepCopy(triangulator->GetOutput());
+
+  // If we are generating clipped output, then get itj
+  if (generateClippedOutput)
+  {
+    // Triangulate clipped output
+    triangulator->SetInputData(cutter->GetOutput(1));
     triangulator->Update();
 
-    outPd->DeepCopy(triangulator->GetOutput());
-    if (generateClippedOutput)
-    {
-      triangulator->SetInputData(cutter->GetOutput(1));
-      triangulator->Update();
+    // Only if pd is provided to we copy output
+    if (clippedOutPd != NULL)
       clippedOutPd->DeepCopy(triangulator->GetOutput());
-    }
+  }
 
-    return SV_OK;
+  return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Distance
+// ----------------------
 double vtkSVGeneralUtils::Distance(double pt0[3], double pt1[3])
 {
   return sqrt(pow(pt1[0] - pt0[0], 2.0) +
@@ -421,86 +426,80 @@ double vtkSVGeneralUtils::Distance(double pt0[3], double pt1[3])
               pow(pt1[2] - pt0[2], 2.0));
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVGeneralUtils::GetPointsLength(vtkPolyData *points, double &length)
+// ----------------------
+// GetPointsLength
+// ----------------------
+double vtkSVGeneralUtils::GetPointsLength(vtkPolyData *pd)
 {
-  int numPts = points->GetNumberOfPoints();
+  int numPts = pd->GetNumberOfPoints();
 
-  length = 0.0;
+  double length = 0.0;
 
   for (int i=1; i<numPts; i++)
   {
     double pt0[3], pt1[3];
-    points->GetPoint(i-1, pt0);
-    points->GetPoint(i, pt1);
+    pd->GetPoint(i-1, pt0);
+    pd->GetPoint(i, pt1);
 
     length += vtkSVGeneralUtils::Distance(pt0, pt1);
   }
 
-  return SV_OK;
+  return length;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ReplaceDataOnCells
+// ----------------------
 int vtkSVGeneralUtils::ReplaceDataOnCells(vtkPointSet *pointset,
                                                       vtkDataArray *sliceIds,
                                                       const int sliceId,
                                                       const int replaceVal,
                                                       const std::string &arrName)
 {
+  // Get number of cells in dataset
   int numCells = pointset->GetNumberOfCells();
+
+  // Get the designated array
+  if (vtkSVGeneralUtils::CheckArrayExists(pointset, 1, arrName) != SV_OK)
+    return SV_ERROR;
   vtkDataArray *cellIds = pointset->GetCellData()->GetArray(arrName.c_str());
 
+  // Loop through cells
   for (int i=0; i<numCells; i++)
   {
     int cellId = cellIds->GetTuple1(i);
     int currVal = sliceIds->GetTuple1(cellId);
+    // We only replace the value if it equal to the designated value
     if (currVal == replaceVal)
-    {
       sliceIds->SetTuple1(cellId, sliceId);
-    }
   }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVGeneralUtils::GetCutPlane(const double endPt[3], const double startPt[3],
-                                   const double length, double origin[3], vtkPlane *cutPlane)
+// ----------------------
+// GetCutPlane
+// ----------------------
+int vtkSVGeneralUtils::GetCutPlane(double endPt[3], double startPt[3],
+                                   vtkPlane *cutPlane)
 {
+  // Get normal from end pt and start pt
   double normal[3];
+
+  // Get normal vector
   vtkMath::Subtract(endPt, startPt, normal);
   vtkMath::Normalize(normal);
 
-  for (int i=0; i<3; i++)
-    origin[i] = endPt[i];
-
-  cutPlane->SetOrigin(origin);
+  // Set up plane
+  cutPlane->SetOrigin(endPt);
   cutPlane->SetNormal(normal);
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ComputeTriangleArea
+// ----------------------
 int vtkSVGeneralUtils::ComputeTriangleArea(double pt0[], double pt1[],
                                            double pt2[], double &area)
 {

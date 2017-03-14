@@ -519,7 +519,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetCriticalPoints()
     // If this point is on the boundary, find out if it separate mores than 2 groups!
     if (isBoundary)
     {
-      vtkSVGeneralUtils::GetPointGroups(this->WorkPd, this->GroupIdsArrayName, i, groupIds);
+      vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, i, groupIds);
       int pointType = groupIds->GetNumberOfIds();
       // This should not be possible!
       if (pointType < 2)
@@ -817,7 +817,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetSurgeryPoints(vtkPolyData *pd,
   else
     secondPtId = pts[0];
   vtkNew(vtkIdList, checkIds);
-  vtkSVGeneralUtils::GetPointGroups(parentPd, arrayName, pd->GetPointData()->GetArray(
+  vtkSVGeneralUtils::GetPointCellsValues(parentPd, arrayName, pd->GetPointData()->GetArray(
     this->InternalIdsArrayName)->GetTuple1(secondPtId), checkIds);
   fprintf(stdout,"Checking the id of %f\n", pd->GetPointData()->GetArray(
       this->InternalIdsArrayName)->GetTuple1(secondPtId));
@@ -997,8 +997,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
   vtkNew(vtkPolyData, leftovers); leftovers->DeepCopy(branchPd);
 
   // Need to know the full length to know when we are close to being done
-  double totalLength = 0.0;
-  vtkSVGeneralUtils::GetPointsLength(branchCenterline, totalLength);
+  double totalLength = vtkSVGeneralUtils::GetPointsLength(branchCenterline);
 
   // Determine the slice staregy and set up for strategy
   int linePtId = 0;
@@ -1097,9 +1096,8 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     this->GetSectionXAxis(pt1, surfacePt, startPt, xvec);
 
     //Get the cut plane
-    double origin[3];
     vtkNew(vtkPlane, cutPlane);
-    vtkSVGeneralUtils::GetCutPlane(pt1, pt0, centerlineLength, origin, cutPlane);
+    vtkSVGeneralUtils::GetCutPlane(pt1, pt0, cutPlane);
 
     //Cut the pds
     vtkNew(vtkPolyData, slicePd);
@@ -1107,7 +1105,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
 
     //Get closestPoint region
     vtkNew(vtkPolyData, connectedPd);
-    vtkSVGeneralUtils::GetClosestPointConnectedRegion(slicePd, origin, connectedPd);
+    vtkSVGeneralUtils::GetClosestPointConnectedRegion(slicePd, pt1, connectedPd);
 
     // Check to see if our connected polydata equals the input; we may be done
     if (connectedPd->GetNumberOfCells() == numCells)
@@ -1850,8 +1848,8 @@ int vtkSVPolyDataSliceAndDiceFilter::CriticalSurgeryPoints(vtkPolyData *pd,
 // ----------------------
 // BuildPolycube
 // ----------------------
-/*
- * \details This function set the initial grid for the inlet branch and then
+/**
+ * \details This function sets the initial grid for the inlet branch and then
  * calls the recursive function in svGraph to populate the rest of the polycube
  */
 int vtkSVPolyDataSliceAndDiceFilter::BuildPolycube()
@@ -2012,7 +2010,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GraphToPolycube(svGCell *gCell, void *arg0,
 // ----------------------
 // GetNextSurgeryPoints
 // ----------------------
-/**
+/*
  * \details TODO: Want to make changes
  */
 int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, double centerPt[3], vtkIdList *surgeryPoints, double xvec[3], double zvec[3], double radius, vtkIdList *surgeryLineIds)
@@ -2130,7 +2128,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, doubl
 // ----------------------
 // GetEndSurgeryPoints
 // ----------------------
-/**
+/*
  * \details TODO: Want to make changes
  */
 int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCell *gCell, double centerPt[3], vtkIdList *surgeryPoints, int endSurgeryIds[8], double xvec[3], double zvec[3], double radius, vtkIdList *surgeryLineIds, int cellIndices[8], int &secondRun)
@@ -2391,7 +2389,7 @@ int vtkSVPolyDataSliceAndDiceFilter::FixGraphDirections(svGCell *gCell, const in
 // ----------------------
 // GetFirstSurgeryPoints
 // ----------------------
-/**
+/*
  * \details TODO: Want to make changes
  */
 int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int pointId, vtkIdList *surgeryPoints, double xvec[3], double zvec[3])

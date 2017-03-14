@@ -497,7 +497,7 @@ int vtkSVGroupsClipper::FindGroupSeparatingPoints(vtkPolyData *pd,
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, groupIds);
-    vtkSVGeneralUtils::GetPointGroups(pd, this->GroupIdsArrayName, i, groupIds);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, this->GroupIdsArrayName, i, groupIds);
     int pointType = groupIds->GetNumberOfIds();
     if (pointType == 3)
     {
