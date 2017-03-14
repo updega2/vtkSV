@@ -32,6 +32,7 @@ option(VTKSV_BUILD_SINGLE_LIBRARY "Option to override default build system and j
 #-----------------------------------------------------------------------------
 # Enable Testing
 option(BUILD_TESTING "Build ${PROJECT_NAME} testing" OFF)
+option(VTKSV_TEST_COVERAGE "Add test coverage" OFF)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------

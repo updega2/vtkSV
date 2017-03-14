@@ -52,6 +52,17 @@ if(BUILD_TESTING)
   set(VTKSV_TEST_DIR "${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary")
   make_directory(${VTKSV_TEST_DIR})
   enable_testing()
+  if(VTKSV_TEST_COVERAGE)
+    set(COVERAGE_COMMAND "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/llvm-cov" CACHE STRING "Forcing llvm-cov" FORCE)
+    set(CTEST_COVERAGE_COMMAND "${COVERAGE_COMMAND}" CACHE STRING "Forcing llvm-cov" FORCE)
+    set(COVERAGE_EXTRA_FLAGS "gcov -l" CACHE STRING "Force coverage flags" FORCE)
+    set(CTEST_COVERAGE_EXTRA_FLAGS "${COVERAGE_EXTRA_FLAGS}" CACHE STRING "Force coverage flags" FORCE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -Wall -W -Wshadow -Wunused-variable \
+      -Wunused-parameter -Wunused-function -Wunused -Wno-system-headers \
+      -Wno-deprecated -Woverloaded-virtual -Wwrite-strings -fprofile-arcs -ftest-coverage")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0 -Wall -W -fprofile-arcs -ftest-coverage")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fprofile-arcs -ftest-coverage")
+  endif()
   include(CTest)
 endif()
 #-----------------------------------------------------------------------------
