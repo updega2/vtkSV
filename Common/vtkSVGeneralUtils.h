@@ -160,7 +160,7 @@ public:
     {
       for (int j=0; j<nc; j++)
       {
-        std::cout << "| " << array[i][j] << " |" << endl;
+        std::cout << "| " << array[i][j] << " | ";
       }
       std::cout << endl;
     }

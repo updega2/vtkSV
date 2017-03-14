@@ -304,32 +304,43 @@ int vtkSVPolyDataSliceAndDiceFilter::RunFilter()
   return SV_OK;
 }
 
+// ----------------------
+// DT
+// ----------------------
 /**
  * \details 6x4 table with new graph directions based
  * on the parent direction (rows) and the angle made with the aligning
  * reference direction (columns)
  *
  * <table>
- *  <caption id="multi_row">Complex table</caption>
+ *  <caption id="multi_row">Angle lookup table</caption>
  *  <tr><th> <th colspan="4">Angles </tr>
  *  <tr><th>Parent Dir. <th>315-45° <th>45-135° <th>135-225° <th>225-315° </tr>
  *  <tr> <td>RIGHT <td>FRONT <td>UP    <td>BACK  <td>DOWN  </tr>
  *  <tr> <td>LEFT  <td>BACK  <td>DOWN  <td>FRONT <td>UP    </tr>
- *  <tr> <td>BACK  <td>DOWN  <td>RIGHT <td>UP    <td>LEFT  </tr>
  *  <tr> <td>FRONT <td>UP    <td>LEFT  <td>DOWN  <td>RIGHT </tr>
+ *  <tr> <td>BACK  <td>DOWN  <td>RIGHT <td>UP    <td>LEFT  </tr>
  *  <tr> <td>UP    <td>LEFT  <td>BACK  <td>RIGHT <td>FRONT </tr>
  *  <tr> <td>DOWN  <td>RIGHT <td>FRONT <td>LEFT  <td>BACK  </tr>
  * </table>
  */
 const int vtkSVPolyDataSliceAndDiceFilter::DT[6][4] =
-  {{FRONT,  UP,    BACK,  DOWN},
-    {BACK,  DOWN,  FRONT, UP},
-    {DOWN,  RIGHT, UP,    LEFT},
-    {UP,    LEFT,  DOWN,  RIGHT},
-    {LEFT,  BACK,  RIGHT, FRONT},
-    {RIGHT, FRONT, LEFT,  BACK}};
+  {{FRONT, UP,    BACK,  DOWN},
+   {BACK,  DOWN,  FRONT, UP},
+   {UP,    LEFT,  DOWN,  RIGHT},
+   {DOWN,  RIGHT, UP,    LEFT},
+   {LEFT,  BACK,  RIGHT, FRONT},
+   {RIGHT, FRONT, LEFT,  BACK}};
 
+// ----------------------
+// RT
+// ----------------------
 /**
+ * \details
+ * \verbatim
+ *       z  y
+ *       | /
+ *       0 -- x
  *                             2---------1
  *                            /|        /|
  *                           / |       / |
@@ -339,37 +350,25 @@ const int vtkSVPolyDataSliceAndDiceFilter::DT[6][4] =
  *                          | /       | /
  *                          |/        |/
  *                          7---------4
- * 3 90° rotations and 8 indices give 24 permutations of the indices
+ * \endverbatim
+ * 3 90° rotations and 8 indices give 24 permutations of the indices.
  * To make it easier, we do nine rows and rows 3-5 are two calls of row 0-2
  * and 6-8 are three calls of row 0-2
- *       z  y
- *       | /
- *       0 -- x
- *                  row 0: x - 90° CCW around axis 1
- *                  row 1: y - 90° CCW around axis 2
- *                  row 2: z - 90° CCW around axis 0
- *                  row 3: xx
- *                  row 4: yy
- *                  row 5: zz
- *                  row 6: xxx
- *                  row 7: yyy
- *                  row 8: zzz
- *
- * Parent and diverging child combination to get the index based on
- * cube permutation groups. Uses the index look up table with combinations
- * of 90° rotations in the CCW direction areound the three reference axis
- * see http://www.euclideanspace.com/maths/discrete/groups/categorise/finite/cube/
- *                DIVERGING CHILD
- *          R    L    B    F    U    D
- * P    R   -1   -1   xzzy xyyy yyy  zzy
- * A    L   -1   -1   xy   xxxy xxy  y
- * R    B   x    yyx  -1   -1   yyyx yx
- * E    F   xxx  xyy  -1   -1   zxxy yxxx
- * N    U   xx   yy   zyy  zxx  -1   -1
- * T    D   i    zz   z    zzz  -1   -1
- *
+ * <table>
+ *  <caption id="multi_row">Index rotation table</caption>
+ *  <tr><th>Row # <th>Rotation <th>Angle <th>Axis
+ *  <tr> <td>0 <td> x   <td>90°  CCW <td>1  </tr>
+ *  <tr> <td>1 <td> y   <td>90°  CCW <td>2  </tr>
+ *  <tr> <td>2 <td> z   <td>90°  CCW <td>0  </tr>
+ *  <tr> <td>3 <td> xx  <td>180° CCW <td>1  </tr>
+ *  <tr> <td>4 <td> yy  <td>180° CCW <td>2  </tr>
+ *  <tr> <td>5 <td> zz  <td>180° CCW <td>0  </tr>
+ *  <tr> <td>6 <td> xxx <td>270° CCW <td>1  </tr>
+ *  <tr> <td>7 <td> yyy <td>270° CCW <td>2  </tr>
+ *  <tr> <td>8 <td> zzz <td>270° CCW <td>0  </tr>
+ * </table>
  */
-const int vtkSVPolyDataSliceAndDiceFilter::IT[9][8] =
+const int vtkSVPolyDataSliceAndDiceFilter::RT[9][8] =
 {{4, 0, 3, 7, 5, 1, 2, 6},  // x
  {4, 5, 1, 0, 7, 6, 2, 3},  // y
  {1, 2, 3, 0, 5, 6, 7, 4},  // z
@@ -380,99 +379,105 @@ const int vtkSVPolyDataSliceAndDiceFilter::IT[9][8] =
  {3, 2, 6, 7, 0, 1, 5, 4},  // yyy
  {3, 0, 1, 2, 7, 4, 5, 6}}; // zzz
 
-int vtkSVPolyDataSliceAndDiceFilter::LookupIndex(const int PARENT, const int DIVCHILD, const int index)
+// ----------------------
+// LookupIndex
+// ----------------------
+/**
+ * \details
+ * Parent and diverging child combination to get the index based on
+ * cube permutation groups. Uses the index look up table with combinations
+ * of 90° rotations in the CCW direction areound the three reference axis
+ * see http://www.euclideanspace.com/maths/discrete/groups/categorise/finite/cube/
+ * <table>
+ *  <caption id="multi_row">Rotation index lookup</caption>
+ *  <tr><th> <th colspan="6">Diverging Child Dir. </tr>
+ *  <tr><th>Parent Dir. <th>RIGHT <th>LEFT <th>FRONT <th>BACK <th>UP <th>DOWN </tr>
+ *  <tr> <td>RIGHT <td>-1  <td>-1  <td>xyyy <td>xzzy <td>yyy  <td>zzy </tr>
+ *  <tr> <td>LEFT  <td>-1  <td>-1  <td>xxxy <td>xy   <td>xxy  <td>y   </tr>
+ *  <tr> <td>FRONT <td>xxx <td>xyy <td>-1   <td>-1   <td>zxxy <td>yxxx</tr>
+ *  <tr> <td>BACK  <td>x   <td>yyx <td>-1   <td>-1   <td>yyyx <td>yx  </tr>
+ *  <tr> <td>UP    <td>xx  <td>yy  <td>zxx  <td>zyy  <td>-1   <td>-1  </tr>
+ *  <tr> <td>DOWN  <td>i   <td>zz  <td>zzz  <td>z    <td>-1   <td>-1  </tr>
+ * </table>
+ */
+int vtkSVPolyDataSliceAndDiceFilter::LookupIndex(const int parent, const int divchild, const int index)
 {
-  int iT[9][8];
-  iT[0][0] = 4; iT[0][1] = 0; iT[0][2] = 3; iT[0][3] = 7; iT[0][4] = 5; iT[0][5] = 1; iT[0][6] = 2; iT[0][7] = 6;
-  iT[1][0] = 4; iT[1][1] = 5; iT[1][2] = 1; iT[1][3] = 0; iT[1][4] = 7; iT[1][5] = 6; iT[1][6] = 2; iT[1][7] = 3;
-  iT[2][0] = 1; iT[2][1] = 2; iT[2][2] = 3; iT[2][3] = 0; iT[2][4] = 5; iT[2][5] = 6; iT[2][6] = 7; iT[2][7] = 4;
-  for (int i=3; i<6; i++)
+  if (parent == RIGHT)
   {
-    for (int j=0; j<8; j++)
-      iT[i][j] = iT[i-3][iT[i-3][j]];
+    if (divchild == BACK)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[0][vtkSVPolyDataSliceAndDiceFilter::RT[5][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]]];
+    if (divchild == FRONT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[0][vtkSVPolyDataSliceAndDiceFilter::RT[7][index]];
+    if (divchild == UP)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[7][index];
+    if (divchild == DOWN)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[5][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]];
   }
-  for (int i=6; i<9; i++)
+  if (parent == LEFT)
   {
-    for (int j=0; j<8; j++)
-      iT[i][j] = iT[i-6][iT[i-3][j]];
+    if (divchild == BACK)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[0][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]];
+    if (divchild == FRONT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[6][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]];
+    if (divchild == UP)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[3][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]];
+    if (divchild == DOWN)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[1][index];
   }
-  vtkSVGeneralUtils::PrintArray(iT);
-  if (PARENT == RIGHT)
+  if (parent == FRONT)
   {
-    if (DIVCHILD == BACK)
-      return iT[0][iT[5][iT[1][index]]];
-    if (DIVCHILD == FRONT)
-      return iT[0][iT[7][index]];
-    if (DIVCHILD == UP)
-      return iT[7][index];
-    if (DIVCHILD == DOWN)
-      return iT[5][iT[1][index]];
+    if (divchild == RIGHT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[6][index];
+    if (divchild == LEFT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[0][vtkSVPolyDataSliceAndDiceFilter::RT[4][index]];
+    if (divchild == UP)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[2][vtkSVPolyDataSliceAndDiceFilter::RT[3][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]]];
+    if (divchild == DOWN)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[1][vtkSVPolyDataSliceAndDiceFilter::RT[6][index]];
   }
-  if (PARENT == LEFT)
+  if (parent == BACK)
   {
-    if (DIVCHILD == BACK)
-      return iT[0][iT[1][index]];
-    if (DIVCHILD == FRONT)
-      return iT[6][iT[1][index]];
-    if (DIVCHILD == UP)
-      return iT[3][iT[1][index]];
-    if (DIVCHILD == DOWN)
-      return iT[1][index];
+    if (divchild == RIGHT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[0][index];
+    if (divchild == LEFT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[4][vtkSVPolyDataSliceAndDiceFilter::RT[0][index]];
+    if (divchild == UP)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[7][vtkSVPolyDataSliceAndDiceFilter::RT[0][index]];
+    if (divchild == DOWN)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[1][vtkSVPolyDataSliceAndDiceFilter::RT[1][index]];
   }
-  if (PARENT == BACK)
+  if (parent == UP)
   {
-    if (DIVCHILD == RIGHT)
-      return iT[0][index];
-    if (DIVCHILD == LEFT)
-      return iT[4][iT[0][index]];
-    if (DIVCHILD == UP)
-      return iT[7][iT[0][index]];
-    if (DIVCHILD == DOWN)
-      return iT[1][iT[1][index]];
+    if (divchild == RIGHT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[3][index];
+    if (divchild == LEFT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[4][index];
+    if (divchild == BACK)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[2][vtkSVPolyDataSliceAndDiceFilter::RT[4][index]];
+    if (divchild == FRONT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[2][vtkSVPolyDataSliceAndDiceFilter::RT[3][index]];
   }
-  if (PARENT == FRONT)
+  if (parent == DOWN)
   {
-    if (DIVCHILD == RIGHT)
-      return iT[6][index];
-    if (DIVCHILD == LEFT)
-      return iT[0][iT[4][index]];
-    if (DIVCHILD == UP)
-      return iT[2][iT[3][iT[1][index]]];
-    if (DIVCHILD == DOWN)
-      return iT[1][iT[6][index]];
-  }
-  if (PARENT == UP)
-  {
-    if (DIVCHILD == RIGHT)
-      return iT[3][index];
-    if (DIVCHILD == LEFT)
-      return iT[4][index];
-    if (DIVCHILD == BACK)
-      return iT[2][iT[4][index]];
-    if (DIVCHILD == FRONT)
-      return iT[2][iT[3][index]];
-  }
-  if (PARENT == DOWN)
-  {
-    if (DIVCHILD == RIGHT)
+    if (divchild == RIGHT)
       return index;
-    if (DIVCHILD == LEFT)
-      return iT[5][index];
-    if (DIVCHILD == BACK)
-      return iT[2][index];
-    if (DIVCHILD == FRONT)
-      return iT[8][index];
+    if (divchild == LEFT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[5][index];
+    if (divchild == BACK)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[2][index];
+    if (divchild == FRONT)
+      return vtkSVPolyDataSliceAndDiceFilter::RT[8][index];
   }
 
-  fprintf(stdout,"Parent diverging couple is not possible\n");
   return -1;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// FindGroupBoundaries
+// ----------------------
 /**
- * @brief
- * @param *pd
- * @return
+ * \details Calls vtkSVFindSeparateRegions to find the points that are boundaries
+ * between all different Group Id numbers
  */
 int vtkSVPolyDataSliceAndDiceFilter::FindGroupBoundaries()
 {
@@ -487,50 +492,49 @@ int vtkSVPolyDataSliceAndDiceFilter::FindGroupBoundaries()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// GetCriticalPoints
+// ----------------------
 /**
- * @brief
- * @param *pd
- * @return
+ * \details Forms a map of groups to critical points
+ * Keys: Group ids on surface
+ * Values: Ids of points on surface that touch key group
  */
 int vtkSVPolyDataSliceAndDiceFilter::GetCriticalPoints()
 {
-  //Forms a map of groups to critical points
-  //Keys: Group ids on surface
-  //Values: Ids of points on surface that touch key group
+  // Get points and boundary point data off of surface
   this->WorkPd->BuildLinks();
   int numPoints = this->WorkPd->GetNumberOfPoints();
   vtkDataArray *boundaryPointArray =
     this->WorkPd->GetPointData()->GetArray(this->BoundaryPointsArrayName);
 
+  // Loop through all points finding
   for (int i=0; i<numPoints; i++)
   {
     int isBoundary = boundaryPointArray->GetTuple1(i);
     vtkNew(vtkIdList, groupIds);
+    // If this point is on the boundary, find out if it separate mores than 2 groups!
     if (isBoundary)
     {
       vtkSVGeneralUtils::GetPointGroups(this->WorkPd, this->GroupIdsArrayName, i, groupIds);
       int pointType = groupIds->GetNumberOfIds();
+      // This should not be possible!
       if (pointType < 2)
-      {
         vtkErrorMacro("Point incorrectly identified");
-      }
+      // Oh boy, we found ourselves a critical point!
       if (pointType == 3)
-      {
         this->InsertCriticalPoints(i, groupIds);
-      }
     }
   }
 
   return SV_OK;
 }
 
-
-//---------------------------------------------------------------------------
+// ----------------------
+// InsertCriticalPoints
+// ----------------------
 /**
- * @brief
- * @param *pd
- * @return
+ * \details
  */
 int vtkSVPolyDataSliceAndDiceFilter::InsertCriticalPoints(const int pointId, vtkIdList *groupIds)
 {

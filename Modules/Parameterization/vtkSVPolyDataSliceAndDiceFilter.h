@@ -127,12 +127,12 @@ public:
   /**
    * \brief Gets the index on the polycube based on the parent node and diverging
    * node directions.
-   * \param PARENT direction of parent (Numbers correspond to DIRECTIONS enum)
-   * \param DIVCHILD direction of parent (Numbers correspond to DIRECTIONS enum)
+   * \param parent direction of parent (Numbers correspond to DIRECTIONS enum)
+   * \param divchild direction of parent (Numbers correspond to DIRECTIONS enum)
    * \param index index of cube to get (0-7)
    * \return SV_OK if function completes without error
    */
-  static int LookupIndex(const int PARENT, const int DIVCHILD, const int index);
+  static int LookupIndex(const int parent, const int divchild, const int index);
 
 
   /**
@@ -149,7 +149,7 @@ public:
   };
 
   const static int DT[6][4];
-  const static int IT[9][8];
+  const static int RT[9][8];
 
 protected:
   vtkSVPolyDataSliceAndDiceFilter();
@@ -162,11 +162,11 @@ protected:
 
   int PrepFilter(); // Prep work
   int RunFilter(); // Run filter operations
-  int FindGroupBoundaries(); // Find and label nodes that form boundary between groups
-  int BuildPolycube(); // If building polycube, construct it based off graph
-  int GetCriticalPoints(); // Get points that separate three or more regions
-  int SliceBifurcations(); // Process and cut each bifurcation
-  int SliceBranches(); // Process and cut each branch
+  int FindGroupBoundaries(); ///< \brief Find and label nodes that form boundary between groups
+  int BuildPolycube(); ///< \brief If building polycube, construct it based off graph
+  int GetCriticalPoints(); ///< \brief Get points that separate three or more regions
+  int SliceBifurcations(); ///< \brief Process and cut each bifurcation
+  int SliceBranches(); ///< \brief Process and cut each branch
   void CheckLength(int &ptId,
                   const int numPts,
                   int &done);
@@ -288,6 +288,7 @@ private:
   int ConstructPolycube;
   int SliceDirection;
   int TotalSliceId;
+  int IT[6][6][8];
 
   double FirstBranchVec[3];
   double SliceLength;
