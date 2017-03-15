@@ -28,15 +28,6 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVMapInterpolator.cxx
- *  @brief This implements the vtkSVMapInterpolator filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVMapInterpolator.h"
 
 #include "vtkCellArray.h"
@@ -65,52 +56,52 @@
 #include <iostream>
 #include <cmath>
 
-//---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkSVMapInterpolator, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVMapInterpolator);
 
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVMapInterpolator::vtkSVMapInterpolator()
 {
+  // Three input ports
   this->SetNumberOfInputPorts(3);
 
-  this->Verbose               = 1;
   this->NumSourceSubdivisions = 0;
   this->HasBoundary           = 0;
 
-  this->SourceS2Pd = vtkPolyData::New();
+  this->SourceBaseDomainPd = vtkPolyData::New();
   this->TargetPd   = vtkPolyData::New();
-  this->TargetS2Pd = vtkPolyData::New();
-  this->MappedPd   = vtkPolyData::New();
-  this->MappedS2Pd = vtkPolyData::New();
+  this->TargetBaseDomainPd = vtkPolyData::New();
+  this->SourceOnTargetPd   = vtkPolyData::New();
 
   this->TargetBoundary = vtkIntArray::New();
   this->SourceBoundary = vtkIntArray::New();
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVMapInterpolator::~vtkSVMapInterpolator()
 {
-  if (this->SourceS2Pd != NULL)
+  if (this->SourceBaseDomainPd != NULL)
   {
-    this->SourceS2Pd->Delete();
+    this->SourceBaseDomainPd->Delete();
   }
   if (this->TargetPd != NULL)
   {
     this->TargetPd->Delete();
   }
-  if (this->TargetS2Pd != NULL)
+  if (this->TargetBaseDomainPd != NULL)
   {
-    this->TargetS2Pd->Delete();
+    this->TargetBaseDomainPd->Delete();
   }
-  if (this->MappedPd != NULL)
+  if (this->SourceOnTargetPd != NULL)
   {
-    this->MappedPd->Delete();
-  }
-  if (this->MappedS2Pd != NULL)
-  {
-    this->MappedS2Pd->Delete();
+    this->SourceOnTargetPd->Delete();
   }
   if (this->TargetBoundary != NULL)
   {
@@ -122,17 +113,22 @@ vtkSVMapInterpolator::~vtkSVMapInterpolator()
   }
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVMapInterpolator::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+  os << indent << "Number of source subdivisions: " << this->NumSourceSubdivisions << "\n";
+  os << indent << "Has Boundary: " << this->HasBoundary << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-//---------------------------------------------------------------------------
-int vtkSVMapInterpolator::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+// ----------------------
+// RequestData
+// ----------------------
+int vtkSVMapInterpolator::RequestData(vtkInformation *vtkNotUsed(request),
+                                      vtkInformationVector **inputVector,
+                                      vtkInformationVector *outputVector)
 {
   // get the input and output
   vtkPolyData *input1 = vtkPolyData::GetData(inputVector[0]);
@@ -141,11 +137,76 @@ int vtkSVMapInterpolator::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   //Copy the input to operate on
-  this->SourceS2Pd->DeepCopy(input1);
+  this->SourceBaseDomainPd->DeepCopy(input1);
   this->TargetPd->DeepCopy(input2);
-  this->TargetS2Pd->DeepCopy(input3);
+  this->TargetBaseDomainPd->DeepCopy(input3);
 
-  vtkIdType numSourcePolys = this->SourceS2Pd->GetNumberOfPolys();
+  // Prep work for filter
+  if (this->PrepFilter() != SV_OK)
+  {
+    vtkErrorMacro("Prep of filter failed");
+    output->DeepCopy(input1);
+    return SV_ERROR;
+  }
+
+  // Run the filter
+  if (this->RunFilter() != SV_OK)
+  {
+    vtkErrorMacro("Filter failed");
+    output->DeepCopy(input1);
+    return SV_ERROR;
+  }
+
+  // copy to output and pass data
+  output->DeepCopy(this->SourceOnTargetPd);
+  output->GetPointData()->PassData(input1->GetPointData());
+  output->GetCellData()->PassData(input1->GetCellData());
+  if (vtkSVGeneralUtils::CheckArrayExists(output, 0 , "Normals") == 1)
+    output->GetPointData()->RemoveArray("Normals");
+  if (vtkSVGeneralUtils::CheckArrayExists(output, 1, "cellNormals") == 1)
+    output->GetCellData()->RemoveArray("cellNormals");
+
+  return SV_OK;
+}
+
+// ----------------------
+// RunFilter
+// ----------------------
+int vtkSVMapInterpolator::RunFilter()
+{
+  // set up temporary polydata to pass to filter
+  vtkNew(vtkPolyData, tmpPd);
+  // If dividing source, do it and then copy to s2
+  if (this->NumSourceSubdivisions != 0)
+  {
+    vtkNew(vtkLoopSubdivisionFilter, subdivider);
+    subdivider->SetInputData(this->SourceBaseDomainPd);
+    subdivider->SetNumberOfSubdivisions(this->NumSourceSubdivisions);
+    subdivider->Update();
+    tmpPd->DeepCopy(subdivider->GetOutput());
+  }
+  else
+    tmpPd->DeepCopy(this->SourceBaseDomainPd);
+
+  // Perform the mapping
+  if (this->MapSourceToTarget(tmpPd,
+                              this->TargetBaseDomainPd,
+                              this->TargetPd,
+                              this->SourceOnTargetPd) != SV_OK)
+  {
+    vtkErrorMacro("Error interpolating onto original target surface");
+    return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// PrepFilter
+// ----------------------
+int vtkSVMapInterpolator::PrepFilter()
+{
+  vtkIdType numSourcePolys = this->SourceBaseDomainPd->GetNumberOfPolys();
   //Check the input to make sure it is there
   if (numSourcePolys < 1)
   {
@@ -166,80 +227,29 @@ int vtkSVMapInterpolator::RequestData(
     return SV_ERROR;
   }
 
-  if (this->SubdivideAndInterpolate() != SV_OK)
-  {
-    return SV_ERROR;
-  }
-
-  output->DeepCopy(this->MappedPd);
-  output->GetPointData()->PassData(input1->GetPointData());
-  output->GetCellData()->PassData(input1->GetCellData());
-  if (vtkSVGeneralUtils::CheckArrayExists(output, 0 , "Normals") == 1)
-  {
-    output->GetPointData()->RemoveArray("Normals");
-  }
-  if (vtkSVGeneralUtils::CheckArrayExists(output, 1, "cellNormals") == 1)
-  {
-    output->GetCellData()->RemoveArray("cellNormals");
-  }
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVMapInterpolator::SubdivideAndInterpolate()
+// ----------------------
+// MapSourceToTarget
+// ----------------------
+int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
+                                            vtkPolyData *targetBaseDomainPd,
+                                            vtkPolyData *originalTargetPd,
+                                            vtkPolyData *sourceOnTargetPd)
 {
-  if (this->NumSourceSubdivisions != 0)
-  {
-    vtkNew(vtkLoopSubdivisionFilter, subdivider);
-    subdivider->SetInputData(this->SourceS2Pd);
-    subdivider->SetNumberOfSubdivisions(this->NumSourceSubdivisions);
-    subdivider->Update();
-    this->MappedS2Pd->DeepCopy(subdivider->GetOutput());
-  }
-  else
-  {
-    this->MappedS2Pd->DeepCopy(this->SourceS2Pd);
-  }
-
-  if (this->InterpolateMapOntoSource(this->MappedS2Pd,
-                                     this->TargetS2Pd,
-                                     this->TargetPd,
-                                     this->MappedPd) != SV_OK)
-  {
-    vtkErrorMacro("Error interpolating onto original target surface");
-    return SV_ERROR;
-  }
-
-  return SV_OK;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
-                                                 vtkPolyData *mappedTargetPd,
-                                                 vtkPolyData *originalTargetPd,
-                                                 vtkPolyData *sourceToTargetPd)
-{
+  // create a locator using the base domain
   vtkNew(vtkCellLocator, locator);
 
-  locator->SetDataSet(mappedTargetPd);
+  locator->SetDataSet(targetBaseDomainPd);
   locator->BuildLocator();
 
-  sourceToTargetPd->DeepCopy(mappedSourcePd);
-  int numPts = mappedSourcePd->GetNumberOfPoints();
+  sourceOnTargetPd->DeepCopy(sourceBaseDomainPd);
+  int numPts = sourceBaseDomainPd->GetNumberOfPoints();
   for (int i=0; i<numPts; i++)
   {
     double pt[3];
-    mappedSourcePd->GetPoint(i, pt);
+    sourceBaseDomainPd->GetPoint(i, pt);
 
     double closestPt[3];
     vtkIdType closestCell;
@@ -250,11 +260,11 @@ int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
                               distance);
 
     vtkIdType npts, *pts;
-    mappedTargetPd->GetCellPoints(closestCell, npts, pts);
+    targetBaseDomainPd->GetCellPoints(closestCell, npts, pts);
     double pt0[3], pt1[3], pt2[3], a0, a1, a2;
-    mappedTargetPd->GetPoint(pts[0], pt0);
-    mappedTargetPd->GetPoint(pts[1], pt1);
-    mappedTargetPd->GetPoint(pts[2], pt2);
+    targetBaseDomainPd->GetPoint(pts[0], pt0);
+    targetBaseDomainPd->GetPoint(pts[1], pt1);
+    targetBaseDomainPd->GetPoint(pts[2], pt2);
     double area = 0.0;
     vtkSVGeneralUtils::GetBarycentricCoordinates(closestPt, pt0, pt1, pt2, a0, a1, a2);
 
@@ -267,89 +277,66 @@ int vtkSVMapInterpolator::InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
     {
       newPoint[j] = a0*realPt0[j] + a1*realPt1[j] + a2*realPt2[j];
     }
-    sourceToTargetPd->GetPoints()->InsertPoint(i, newPoint);
+    sourceOnTargetPd->GetPoints()->InsertPoint(i, newPoint);
   }
 
   return SV_OK;
 }
 
-int Sign(double testVal)
-{
-  int asign;
-  bool is_negative = testVal < 0;
-  if (is_negative)
-  {
-    asign = -1;
-  }
-  else
-  {
-    asign = 1;
-  }
-  return asign;
-}
-
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatchBoundaries
+// ----------------------
 int vtkSVMapInterpolator::MatchBoundaries()
 {
-  if (this->FindBoundary(this->TargetS2Pd, this->TargetBoundary) != SV_OK)
-  {
+  // Find boundary of target base domain
+  if (this->FindBoundary(this->TargetBaseDomainPd, this->TargetBoundary) != SV_OK)
     return SV_ERROR;
-  }
-  if (this->FindBoundary(this->SourceS2Pd, this->SourceBoundary) != SV_OK)
-  {
-    return SV_ERROR;
-  }
 
+  // Find boundary of source base domain
+  if (this->FindBoundary(this->SourceBaseDomainPd, this->SourceBoundary) != SV_OK)
+    return SV_ERROR;
+
+  // If boundary indicated then do spcial matching technique
   if (this->HasBoundary == 1)
   {
     if (this->MoveBoundaryPoints() != SV_OK)
-    {
       return SV_ERROR;
-    }
   }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// FindBoundary
+// ----------------------
 int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
 {
+  // Get number of points and cells
   int numPoints = pd->GetNumberOfPoints();
   int numCells = pd->GetNumberOfCells();
   pd->BuildLinks();
 
-  for (int i=0; i<numPoints; i++)
-  {
-    isBoundary->InsertValue(i, 0);
-  }
+  // Initialize to zero
+  isBoundary->FillComponent(0, 0);
+
+  // Loop through cells
   for (int i=0; i<numCells; i++)
   {
+    // Get cell points
     vtkIdType npts, *pts;
     pd->GetCellPoints(i, npts, pts);
-    //if (npts != 3)
-    //{
-    //  return SV_ERROR;
-    //}
     for (int j=0; j<npts; j++)
     {
+      // Get one edge of cell
       vtkIdType p0, p1;
       p0 = pts[j];
       p1 = pts[(j+1)%npts];
 
+      // Get cell edge neighbors
       vtkNew(vtkIdList, edgeNeighbor);
       pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
 
+      // If no neighbors, we have boundary!
       if (edgeNeighbor->GetNumberOfIds() == 0)
       {
         isBoundary->InsertValue(p0, 1);
@@ -358,29 +345,34 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
       }
     }
   }
+
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MoveBoundaryPoints
+// ----------------------
 int vtkSVMapInterpolator::MoveBoundaryPoints()
 {
-  int numPoints = this->SourceS2Pd->GetNumberOfPoints();
-  vtkNew(vtkCellLocator, locator);
+  // Get number of points
+  int numPoints = this->SourceBaseDomainPd->GetNumberOfPoints();
 
-  locator->SetDataSet(this->TargetS2Pd);
+  // set up locator with target base domain
+  vtkNew(vtkCellLocator, locator);
+  locator->SetDataSet(this->TargetBaseDomainPd);
   locator->BuildLocator();
 
+  // Loop through points
   for (int i=0; i<numPoints; i++)
   {
+    // See if boundary point
     if (this->SourceBoundary->GetValue(i) == 1)
     {
+      // Get the point
       double pt[3];
-      this->SourceS2Pd->GetPoint(i, pt);
+      this->SourceBaseDomainPd->GetPoint(i, pt);
+
+      // Set up and get closest cell on target base domain
       double closestPt[3];
       vtkIdType closestCell;
       int subId;
@@ -388,52 +380,66 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
       vtkNew(vtkGenericCell, genericCell);
       locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
 				distance);
+
+      // Set the new point location to be exactly on target base domain boundary
       double newPt[3];
       if (this->GetPointOnTargetBoundary(i, closestCell, newPt) != SV_OK)
-      {
-	return SV_ERROR;
-      }
-      this->SourceS2Pd->GetPoints()->SetPoint(i, newPt);
+	      return SV_ERROR;
+      this->SourceBaseDomainPd->GetPoints()->SetPoint(i, newPt);
     }
   }
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, double returnPt[])
+// ----------------------
+// GetPointsOnTargetBoundary
+// ----------------------
+int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, double returnPt[3])
 {
+  // Get the source point
   double srcPt[3];
-  this->SourceS2Pd->GetPoint(srcPtId, srcPt);
-  vtkNew(vtkIdList, boundaryPts);
-  int numBoundaryPts = this->BoundaryPointsOnCell(this->TargetS2Pd, targCellId, boundaryPts, this->TargetBoundary);
+  this->SourceBaseDomainPd->GetPoint(srcPtId, srcPt);
 
+  // Get the boundary points associated with the cell
+  vtkNew(vtkIdList, boundaryPts);
+  int numBoundaryPts = this->BoundaryPointsOnCell(this->TargetBaseDomainPd, targCellId, boundaryPts, this->TargetBoundary);
+
+  // If only one boundary point
   if (numBoundaryPts == 1)
   {
+    // We found the point we need to return
     int ptId = boundaryPts->GetId(0);
-    this->TargetS2Pd->GetPoint(ptId, returnPt);
+    this->TargetBaseDomainPd->GetPoint(ptId, returnPt);
   }
+  // If two boundary points
   else if (numBoundaryPts == 2)
   {
+    // Get the two point ids
     int ptId0 = boundaryPts->GetId(0);
     int ptId1 = boundaryPts->GetId(1);
+
+    // Get the 3d locations
     double pt0[3], pt1[3];
-    this->TargetS2Pd->GetPoint(ptId0, pt0);
-    this->TargetS2Pd->GetPoint(ptId1, pt1);
+    this->TargetBaseDomainPd->GetPoint(ptId0, pt0);
+    this->TargetBaseDomainPd->GetPoint(ptId1, pt1);
+
+    // Return the point location projected onto line of pt0 and pt1
     this->GetProjectedPoint(pt0, pt1, srcPt, returnPt);
   }
+  // If three boundary points
   else if (numBoundaryPts == 3)
   {
+    // Get the two closest point ids
     int ptId0;
     int ptId1;
-    this->GetClosestTwoPoints(this->TargetS2Pd, srcPt, boundaryPts, ptId0, ptId1);
+    this->GetClosestTwoPoints(this->TargetBaseDomainPd, srcPt, boundaryPts, ptId0, ptId1);
+
+    // Get the 3d locations
     double pt0[3], pt1[3];
-    this->TargetS2Pd->GetPoint(ptId0, pt0);
-    this->TargetS2Pd->GetPoint(ptId1, pt1);
+    this->TargetBaseDomainPd->GetPoint(ptId0, pt0);
+    this->TargetBaseDomainPd->GetPoint(ptId1, pt1);
+
+    // Get the point location projected onto the two closest points
     this->GetProjectedPoint(pt0, pt1, srcPt, returnPt);
   }
   else
@@ -444,33 +450,42 @@ int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// BoundaryPointsOnCell
+// ----------------------
 int vtkSVMapInterpolator::BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary)
 {
+  // Initialize the number of boundaries
   int numBounds = 0;
+
+  // Get target cell points
   vtkIdType npts, *pts;
   pd->GetCellPoints(targCellId, npts, pts);
+
+  // Initialize the boundaryPts
   boundaryPts->Reset();
+
+  // Loop through cell points
   for (int j=0; j<npts; j++)
   {
+    // If its on boundary, add to point list
     if (isBoundary->GetValue(pts[j]) == 1)
     {
       boundaryPts->InsertNextId(pts[j]);
       numBounds++;
     }
   }
+  // If we have two points on boundary
   if (numBounds == 2)
   {
+    // Get cell edge neighbors
     vtkNew(vtkIdList, edgeNeighbor);
     int p0 = boundaryPts->GetId(0);
     int p1 = boundaryPts->GetId(1);
     pd->GetCellEdgeNeighbors(targCellId, p0, p1, edgeNeighbor);
 
+    // If it has a neighbor then, this is a false positive!
+    // We need to run again on the new cell to see if truly has boundary
     if (edgeNeighbor->GetNumberOfIds() != 0)
     {
       int newCell = edgeNeighbor->GetId(0);
@@ -487,7 +502,7 @@ int vtkSVMapInterpolator::BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, 
  * @param *pd
  * @return
  */
-int vtkSVMapInterpolator::GetProjectedPoint(double pt0[], double pt1[], double projPt[], double returnPt[])
+int vtkSVMapInterpolator::GetProjectedPoint(double pt0[3], double pt1[3], double projPt[3], double returnPt[3])
 {
   double vec0[3];
   double vec1[3];
@@ -531,25 +546,17 @@ int vtkSVMapInterpolator::GetClosestTwoPoints(vtkPolyData *pd, double projPt[], 
   {
     ptId0 = boundaryPts->GetId(1);
     if (dist[0] > dist[2])
-    {
       ptId1 = boundaryPts->GetId(2);
-    }
     else
-    {
       ptId1 = boundaryPts->GetId(0);
-    }
   }
   else
   {
     ptId0 = boundaryPts->GetId(0);
     if (dist[1] > dist[2])
-    {
       ptId1 = boundaryPts->GetId(2);
-    }
     else
-    {
       ptId1 = boundaryPts->GetId(1);
-    }
   }
   return SV_OK;
 }

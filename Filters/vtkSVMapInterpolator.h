@@ -28,28 +28,32 @@
  *
  *=========================================================================*/
 
-
-/** @file vtkSVMapInterpolator.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ *  \class vtkSVMapInterpolator
+ *  \brief This is a filter to map a polydata to a target polydata given
+ *  a paramterization of the target polydata is given and on the same base domain
+ *  of the source polydata.
+ *  \details If we have two polydatas that occupy the same region in space;
+ *  say the surface of a sphere, or the same planar domain, but they are triangulated
+ *  differently, we can compute where each point of the source polydata lies
+ *  in the target polydata using barycentric coordinates. This is useful when
+ *  we would like to map a point from one surface to another. If the target
+ *  polydata has been parameterized in some based domain, then we can take an arbitrary
+ *  representation of the same domain, and using the computed barycentric coordinates,
+ *  map it to the target surface. The target polydata and the parameterization of the
+ *  target polydata must be the same point set with the same connectivity.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVMapInterpolator_h
-#define __vtkSVMapInterpolator_h
+#ifndef vtkSVMapInterpolator_h
+#define vtkSVMapInterpolator_h
 
 #include "vtkPolyDataAlgorithm.h"
 
-#include "vtkEdgeTable.h"
-#include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 
 #include <complex>
@@ -62,21 +66,21 @@ public:
   //vtkTypeRevisionMacro(vtkSVMapInterpolator, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Print statements used for debugging
-  vtkGetMacro(Verbose, int);
-  vtkSetMacro(Verbose, int);
-
-  // Description:
-  // Print statements used for dnumber of subdivisions
+  //@{
+  /// \brief Number of subdivision of source polydata before mapping to
+  /// target
   vtkGetMacro(NumSourceSubdivisions, int);
   vtkSetMacro(NumSourceSubdivisions, int);
+  //@}
 
-  // Functions to set up complex linear system for landmark constraint
-  static int InterpolateMapOntoSource(vtkPolyData *mappedSourcePd,
-                                      vtkPolyData *mappedTargetPd,
-                                      vtkPolyData *originalTargetPd,
-                                      vtkPolyData *sourceToTargetPd);
+  //@{
+  /// \brief static function to map a source polydata to a target polydata
+  /// given the parameterization of the target as well
+  static int MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
+                               vtkPolyData *targetBaseDomainPd,
+                               vtkPolyData *originalTargetPd,
+                               vtkPolyData *sourceOnTargetPd);
+  //@}
 
   // Setup and Check Functions
 protected:
@@ -84,38 +88,71 @@ protected:
   ~vtkSVMapInterpolator();
 
   // Usual data generation method
+  /** \details Three inputs for this filter:
+   *  1. The base domain to map to the target.
+   *  2. The target domain.
+   *  3. The target domain that has been paramterized on the base domain. */
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
   // Main functions in filter
-  int SubdivideAndInterpolate();
+  int PrepFilter(); // Prep work.
+  int RunFilter(); // Run filter operations.
 
+  /** \brief Run at the end of filter to make sure boundaries batch. */
   int MatchBoundaries();
-  int FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary);
-  int MoveBoundaryPoints();
-  int GetPointOnTargetBoundary(int targPtId, int srcCellId, double returnPt[]);
-  int BoundaryPointsOnCell(vtkPolyData *pd, int srcCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary);
-  int GetProjectedPoint(double pt0[], double pt1[], double projPt[], double returnPt[]);
-  int GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1);
 
+  /** \brief Finds the boundary of the given polydata and fills integery
+   *  array with boolean values indicating whether point is boundary or not. */
+  int FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary);
+
+  /** \brief special function to move boundary points to target if needed. */
+  int MoveBoundaryPoints();
+
+  /** \brief Retrieves the cloest point on the target boundary.
+   *  \param srcPtId the point id corresponding to the point to find the new
+   *  location of.
+   *  \param targCellId the cell id that srcPtId is closest to on target.
+   *  \param returnPt  the new 3D location of the srcPtId. */
+  int GetPointOnTargetBoundary(int srcPtId, int targCellId, double returnPt[]);
+
+  /** \brief Gets the number of and ids of boundary points on the cell.
+   *  \param targCellId Id of cell to get boundaryPts on.
+   *  \param boundaryPts empty list that will contain the list of boundary point ids.
+   *  \param vtkIntArray isBoundary The boolean array telling which points are
+   *  boundary or not. Must be given! Retrieved with FindBoundary function. */
+  int BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary);
+
+  /** \brief Projects a point that is not on the boundary onto the boundary.
+   *  \param pt0 first point that is on the boundary.
+   *  \param pt1 second point that is on the boundary.
+   *  \param projPt point that we would like to project to line made by pt0 and pt1.
+   *  \param returnPt 3d location of the new projected point. */
+  int GetProjectedPoint(double pt0[], double pt1[], double projPt[], double returnPt[]);
+
+  /** \brief Function to find the two closest points on the target boundary.
+   *  \param projPt given 3d location to find closest points to.
+   *  \param boundaryPts list of three point ids to get closest two from.
+   *  \param ptId0 empty int to contain pt id of first closest point.
+   *  \param ptId1 empty int to contain pt id of second closest point. */
+  int GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1);
 
 private:
   vtkSVMapInterpolator(const vtkSVMapInterpolator&);  // Not implemented.
   void operator=(const vtkSVMapInterpolator&);  // Not implemented.
 
-  int Verbose;
-  int NumSourceSubdivisions;
-  int HasBoundary;
-
-  vtkPolyData *SourceS2Pd;
+  vtkPolyData *SourceBaseDomainPd;
   vtkPolyData *TargetPd;
-  vtkPolyData *TargetS2Pd;
-  vtkPolyData *MappedPd;
-  vtkPolyData *MappedS2Pd;
+  vtkPolyData *TargetBaseDomainPd;
+  vtkPolyData *SourceOnTargetPd;
 
   vtkIntArray *SourceBoundary;
   vtkIntArray *TargetBoundary;
+
+  int NumSourceSubdivisions;
+  int HasBoundary;
+
 };
 
 #endif
