@@ -209,49 +209,152 @@ public:
   static int GetCutPlane(double endPt[3], double startPt[3],
                          vtkPlane *cutPlane);
 
-  static int ComputeTriangleArea(double pt0[], double pt1[], double pt2[], double &area);
+  /** \brief Compute the signed area of a triangle given the three vertices.
+   *  \return the signed area. */
+  static double ComputeTriangleArea(double pt0[3], double pt1[3], double pt2[3]);
+
+  /** \brief Computes the mass center of points use vtkCenterOfMass.
+   *  \return SV_OK.  */
   static int ComputeMassCenter(vtkPolyData *pd, double massCenter[3]);
+
+  /** \brief Computes the scalar values for the barycentric coordinates of a
+   *  point in a triangle given its three vertices.
+   *  \param f The point where the barycentric coordinates are going to be
+   *  calculated.
+   *  \param a0 The returned scalar coordinate of vertex 0.
+   *  \param a1 The returned scalar coordinate of vertex 1.
+   *  \param a2 The returned scalar coordinate of vertex 2.
+   *  \return SV_OK.  */
   static int GetBarycentricCoordinates(double f[3], double pt0[3], double pt1[3],
                                        double pt2[3], double &a0, double &a1, double &a2);
+
+  /** \brief Get the nieghboring points, or the points that share an edge
+   *  with the point of interest.
+   *  \param p0 The point to get neighbors of.
+   *  \param pd The polydata to use to get neighbors.
+   *  \param pointNeighbors The list of returned neighboring point ids.
+   *  \return SV_OK.  */
   static int GetPointNeighbors(vtkIdType p0, vtkPolyData *pd, vtkIdList *pointNeighbors);
+
+  /** \brief Get cotangent angle of a directional edge.
+   *  \param pt0 The first point of the edge.
+   *  \param pt1 The second point of the edge.
+   *  \param pt2 The point making a triangle with the first two points, and
+   *  where the angle is to be computed.
+   *  \param angle The angle of the directional edge.
+   *  \return SV_OK.  */
   static int GetEdgeCotangentAngle(double pt0[3], double pt1[3], double pt2[3], double &angle);
+
+  /** \brief Function to create an edge table from an arbitrary polydata
+   *  \param pd The polydata to create an edge table for.
+   *  \param edgeTable an empty edge table populate with edges.
+   *  \param edgeWeights An empty array to fill with harmonic edge weights.
+   *  \param edgeNeighbors An empy array to fill with the edge cell neighbors.
+   *  \param isBoundary An empty array to act as a boolean indicating if edge is on a boundary.
+   *  \return SV_OK.  */
   static int CreateEdgeTable(vtkPolyData *pd, vtkEdgeTable *edgeTable,
                              vtkFloatArray *edgeWeights,
                              vtkIntArray *edgeNeighbors,
                              vtkIntArray *isBoundary);
+
+  /** \brief Function to compute the harmonic edge weight.
+   *  \param pd The polydata on which the edge lies.
+   *  \param cellId The cellId containing the edge.
+   *  \param neighborCellId The neighboring cell containing the edge (The cell
+   *  and its neighbor should have one common edge).
+   *  \param p0 First point id of edge.
+   *  \param p1 Second point id of edge.
+   *  \param The returned weight of the edge.
+   *  \return SV_OK.  */
   static int ComputeHarmonicEdgeWeight(vtkPolyData *pd, vtkIdType cellId,
                                        vtkIdType neighborCellId,
                                        vtkIdType p0, vtkIdType p1, double &weight);
+
+  /** \brief Convert a data field to its own polydata.
+   *  \param inPd polydata with array of fieldName, as long as it has three components.
+   *  \param fieldName Name of data array on surface.
+   *  \param outPd Empty polydata to be filled with dara array polydata.
+   *  return SV_OK if function completes without error */
   static int ConvertFieldToPolyData(vtkPolyData *inPd, std::string fieldName, vtkPolyData *outPd);
-  static int ProjectOntoUnitSphere(vtkPolyData *inPd, vtkPolyData *outPd);
+
+  /** \brief Computes normals of polydata and adds normal data array to surface.
+   *  return SV_OK if function completes without error */
   static int ComputeNormals(vtkPolyData *pd);
+
+  /** \brief Compute laplacian of points of a mesh using harmonic edge weights.
+   *  \return SV_OK */
   static int ComputeMeshLaplacian(vtkPolyData *pd, vtkEdgeTable *edgeTable,
                                   vtkFloatArray *edgeWeights, vtkIntArray *edgeNeighbors,
                                   vtkFloatArray *laplacian, int map);
+
+  /** \brief Compute laplacian of mesh data array using harmonic edge weights.
+   *  \return SV_OK */
   static int ComputeDataArrayLaplacian(vtkFloatArray *data, vtkPolyData *pd,
                                        vtkEdgeTable *edgeTable,
                                        vtkFloatArray *edgeWeights, vtkIntArray *edgeNeighbors,
                                        vtkFloatArray *laplacian, int map);
+
+  /** \brief Compute laplacian at specific point of mesh.
+   *  \return SV_OK */
   static int ComputePointLaplacian(vtkIdType p0, vtkPolyData *pd,
                             vtkEdgeTable *edgeTable, vtkFloatArray *edgeWeights,
                             vtkIntArray *edgeNeighbors, double laplacian[], int map);
+
+  /** \brief Compute laplacian at specific data point of mesh.
+   *  \return SV_OK */
   static int ComputeDataLaplacian(vtkIdType p0, vtkFloatArray *data, vtkPolyData *pd,
                                   vtkEdgeTable *edgeTable, vtkFloatArray *edgeWeights,
                                   vtkIntArray *edgeNeighbors,
                                   double laplacian[], int map);
+
+  /** \brief Function to iterate around a polydata of VTK_LINE's and get an
+   *  ordered set of points.
+   *  \param pd The polydata of lines.
+   *  \param startPt The id of the point to start at.
+   *  \param nextCell The id of the next cell to go to.
+   *  \param loop Empty polydata to hold ordered points.
+   *  \param boundaryIds If not NULL, this should contain a list of some of
+   *  the points on the boundary. The algorithm will check and see if they
+   *  come in the correct order, and if they don't, it will return SV_ERROR.
+   *  \return SV_OK. If boundaryIds provided, SV_OK if boundaryIds are in correct order. */
   static int RunLoopFind(vtkPolyData *pd, vtkIdType startPt, vtkIdType nextCell,
                          vtkPolyData *loop, vtkIdList *boundaryIds);
+
+
+  /** \brief Function separate multiple boundary loops. */
   static int SeparateLoops(vtkPolyData *pd, vtkPolyData **loops, int numBoundaries, const double xvec[3], const double zvec[3], const int boundaryStart[2]);
-  static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[], int numVals, int numComps);
+
+  /** \brief Dot product between each tuple of two data arrays. */
+  static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps);
+
+  /** \brief Addition between each tuple of two data arrays. */
   static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);
+
+  //@{
+  /** \brief Get rotation matrix to align two vectors.
+   *  \param rotMatrix populated with resultant matrix.
+   *  return SV_OK */
   static int GetRotationMatrix(double vec0[3], double vec1[3], vtkMatrix4x4 *rotMatrix);
   static int GetRotationMatrix(double vec0[3], double vec1[3], double rotMatrix[16]);
+  //@}
+
+  //@{
+  /** \brief Transforms pd with the given rotation matrix.
+   *  return SV_OK */
   static int ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMatrix);
   static int ApplyRotationMatrix(vtkPolyData *pd, double rotMatrix[16]);
+  //@}
+
+  /** \brief Get all angles of a polydata surface.
+   *  \param cellAngles data array containing the angle values of all on mesh.
+   *  It has three components as there are three angles per cell.
+   *  return SV_OK */
   static int GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles);
 
-
-  //std::map functions
+  //@{
+  /** \brief Convenience functions for multimaps. Not sure how long I'll keep
+   *  these.
+   *  return SV_OK */
   static int GetAllMapKeys(std::multimap<int, int> &map, std::list<int> &list);
   static int GetAllMapValues(std::multimap<int, int> &map, std::list<int> &list);
   static int GetValuesFromMap(std::multimap<int, int> &map, const int key, std::list<int> &list);
@@ -263,21 +366,7 @@ public:
   static int ListIntersection(std::list<int> &listA,
                               std::list<int> &listB,
                               std::list<int> &returnList);
-  template <typename T, size_t nr, size_t nc>
-  static void PrintArray(T (&array)[nr][nc])
-  {
-    std::cout << "Array: " << nr << "by " << nc << endl;
-    std::cout << "-----------------------------------------------------------" << endl;
-    for (int i=0; i<nr; i++)
-    {
-      for (int j=0; j<nc; j++)
-      {
-        std::cout << "| " << array[i][j] << " | ";
-      }
-      std::cout << endl;
-    }
-    std::cout << "-----------------------------------------------------------" << endl;
-  };
+  //@}
 
 protected:
   vtkSVGeneralUtils();
