@@ -487,7 +487,7 @@ int vtkSVPolyDataSliceAndDiceFilter::FindGroupBoundaries()
   vtkNew(vtkSVFindSeparateRegions, separator);
   separator->SetInputData(this->WorkPd);
   separator->SetOutPointArrayName(this->BoundaryPointsArrayName);
-  separator->SetArrayName(this->GroupIdsArrayName);
+  separator->SetCellArrayName(this->GroupIdsArrayName);
   separator->Update();
 
   this->WorkPd->DeepCopy(separator->GetOutput());
@@ -1350,7 +1350,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   vtkNew(vtkSVFindSeparateRegions, separator);
   separator->SetInputData(cleaner->GetOutput());
   separator->SetOutPointArrayName(this->BoundaryPointsArrayName);
-  separator->SetArrayName(this->GroupIdsArrayName);
+  separator->SetCellArrayName(this->GroupIdsArrayName);
   separator->Update();
 
   vtkIntArray *isBoundary = vtkIntArray::SafeDownCast(

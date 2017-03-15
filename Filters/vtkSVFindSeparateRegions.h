@@ -28,35 +28,19 @@
  *
  *=========================================================================*/
 
-// .NAME vtkSVFindSeparateRegions - Get Boundary Faces from poldata and label them with integers
-// .SECTION Description
-// vtkSVFindSeparateRegions is a filter to extract the boundary surfaces of a model, separate the surace into multiple regions and number each region.
-
-// .SECTION Caveats
-// To see the coloring of the lines you may have to set the ScalarMode
-// instance variable of the mapper to SetScalarModeToUseCellData(). (This
-// is only a problem if there are point data scalars.)
-
-// .SECTION See Also
-// vtkExtractEdges
-
-/** @file vtkSVFindSeparateRegions.h
- *  @brief This is a vtk filter to extract the boundaries from a vtk. It uses
- *  the common conventions to be able to load this filter into Paraview and
- *  use it as a filter.
- *  @details This filter is based off of the vtkFeatureEdges filter which
- *  finds lines and points that are defined as the separation between two
- *  faces based on the angle difference in the normals between these faces
+/**
+ *  \class vtkSVFindSeparateRegions
+ *  \brief This is a filter to locate points that form the boundaries in
+ *  between values of a given cell data array
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- *  @note Most functions in class call functions in cv_polydatasolid_utils.
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVFindSeparateRegions_h
-#define __vtkSVFindSeparateRegions_h
+#ifndef vtkSVFindSeparateRegions_h
+#define vtkSVFindSeparateRegions_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkIdList.h"
@@ -65,17 +49,20 @@ class vtkSVFindSeparateRegions : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVFindSeparateRegions* New();
-  vtkTypeMacro(vtkSVFindSeparateRegions, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  vtkGetStringMacro(ArrayName);
-  vtkSetStringMacro(ArrayName);
-
+  //@{
+  /// \brief Get/Set macro for array names used by filter
+  vtkGetStringMacro(CellArrayName);
+  vtkSetStringMacro(CellArrayName);
   vtkGetStringMacro(OutPointArrayName);
   vtkSetStringMacro(OutPointArrayName);
+  //@}
 
-  int SetCellIds(vtkIdList *cellIds);
+  //@{
+  /// \brief Set macro for target cell values
+  vtkSetObjectMacro(TargetCellIds, vtkIdList);
+  //@}
 
 protected:
   vtkSVFindSeparateRegions();
@@ -86,11 +73,15 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  vtkIntArray *intCellScalars;
-  vtkIdList *targetCellIds;
+  int PrepFilter(); // Prep work.
+  int RunFilter(); // Run filter operations.
 
-  char* ArrayName;
+  char* CellArrayName;
   char* OutPointArrayName;
+
+  vtkPolyData *WorkPd;
+  vtkIntArray *IntCellScalars;
+  vtkIdList *TargetCellIds;
 
   int GetCellArray(vtkPolyData *object);
   int SetAllCellIds();

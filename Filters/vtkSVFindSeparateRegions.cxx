@@ -58,156 +58,230 @@
 #include "vtkUnstructuredGrid.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkXMLPolyDataWriter.h"
 
 #include <iostream>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVFindSeparateRegions);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVFindSeparateRegions::vtkSVFindSeparateRegions()
 {
-//    this->intCellScalars = vtkIntArray::New();
-    this->ArrayName = 0;
-    this->OutPointArrayName = 0;
+  this->CellArrayName     = NULL;
+  this->OutPointArrayName = NULL;
 
-    this->targetCellIds = NULL;
+  this->WorkPd        = vtkPolyData::New();
+  this->TargetCellIds = vtkIdList::New();
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVFindSeparateRegions::~vtkSVFindSeparateRegions()
 {
-  if (this->targetCellIds)
-    this->targetCellIds->Delete();
+  if (this->WorkPd)
+  {
+    this->WorkPd->Delete();
+    this->WorkPd = NULL;
+  }
+  if (this->TargetCellIds)
+  {
+    this->TargetCellIds->Delete();
+    this->TargetCellIds = NULL;
+  }
 
-//    if (this->intCellScalars)
-//	this->intCellScalars->Delete();
+  if (this->CellArrayName != NULL)
+  {
+    delete [] this->CellArrayName;
+    this->CellArrayName = NULL;
+  }
+
+  if (this->OutPointArrayName != NULL)
+  {
+    delete [] this->OutPointArrayName;
+    this->OutPointArrayName = NULL;
+  }
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVFindSeparateRegions::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+
+  if (this->CellArrayName != NULL)
+    os << indent << "Cell array name: " << this->CellArrayName << "\n";
+  if (this->OutPointArrayName != NULL)
+    os << indent << "Out point array name: " << this->OutPointArrayName << "\n";
+  if (this->TargetCellIds->GetNumberOfIds() != 0)
+  {
+    os << indent << "Target values to separate: "<< "\n";
+      os << indent;
+    for (int i=0; i<this->TargetCellIds->GetNumberOfIds(); i++)
+      os << this->TargetCellIds->GetId(i);
+    os << "\n";
+  }
 }
 
-// Generate Separated Surfaces with Region ID Numbers
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVFindSeparateRegions::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
 {
-    // get the input and output
-    vtkPolyData *input = vtkPolyData::GetData(inputVector[0]);
-    vtkPolyData *output = vtkPolyData::GetData(outputVector);
+  // get the input and output
+  vtkPolyData *input = vtkPolyData::GetData(inputVector[0]);
+  vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
-    // Define variables used by the algorithm
-    vtkNew(vtkPoints, inpts);
-    vtkNew(vtkCellArray, inPolys);
-    vtkIdType numPts, numPolys;
-    vtkIdType newId, cellId,pointId;
+  // Copy input to working polydata
+  this->WorkPd->DeepCopy(input);
 
-    //Get input points, polys and set the up in the vtkPolyData mesh
-    inpts = input->GetPoints();
-    inPolys = input->GetPolys();
-
-    //Get the number of Polys for scalar  allocation
-    numPolys = input->GetNumberOfPolys();
-    numPts = input->GetNumberOfPoints();
-
-    //Check the input to make sure it is there
-    if (numPolys < 1)
-    {
-        vtkDebugMacro("No input!");
-	return SV_OK;
-    }
-
-    if (this->GetCellArray(input) != SV_OK)
-    {
-      std::cout<<"No Cell Array Named "<<this->ArrayName<<" on surface"<<endl;
-      return SV_ERROR;
-    }
-    if (this->OutPointArrayName == 0)
-    {
-      std::cout<<"Need name for output point data information"<<endl;
-      return SV_ERROR;
-    }
-
-    input->BuildLinks();
-    vtkNew(vtkIntArray, newPointArray);
-    vtkNew(vtkIdList, pointCells);
-    vtkNew(vtkIdList, checkList);
-
-    if (this->targetCellIds == NULL)
-      this->SetAllCellIds();
-    for (pointId = 0;pointId < numPts;pointId++)
-    {
-      checkList->Reset();
-      int boundaryPoint = 0;
-      input->GetPointCells(pointId,pointCells);
-      for (int i=0;i<pointCells->GetNumberOfIds();i++)
-      {
-	cellId = pointCells->GetId(i);
-	vtkIdType value = this->intCellScalars->GetValue(cellId);
-	if (this->targetCellIds->IsId(value) != -1)
-	{
-	  vtkIdType check = checkList->InsertUniqueId(value);
-	  if (check != 0)
-	    boundaryPoint = 1;
-	}
-      }
-      if (boundaryPoint)
-	newPointArray->InsertValue(pointId,1);
-      else
-	newPointArray->InsertValue(pointId,0);
-    }
-
-    newPointArray->SetName(this->OutPointArrayName);
+  // Prep work for filter
+  if (this->PrepFilter() != SV_OK)
+  {
+    vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
-    output->GetPointData()->RemoveArray(this->OutPointArrayName);
-    output->GetPointData()->AddArray(newPointArray);
-    output->GetPointData()->SetActiveScalars(this->OutPointArrayName);
+    return SV_ERROR;
+  }
 
-    return SV_OK;
+  // Run the filter
+  if (this->RunFilter() != SV_OK)
+  {
+    vtkErrorMacro("Filter failed");
+    output->DeepCopy(input);
+    return SV_ERROR;
+  }
+
+  output->DeepCopy(this->WorkPd);
+
+  return SV_OK;
 }
 
+// ----------------------
+// PrepFilter
+// ----------------------
+int vtkSVFindSeparateRegions::PrepFilter()
+{
+  //Get the number of Polys for scalar  allocation
+  int numPolys = this->WorkPd->GetNumberOfPolys();
+  int numPts = this->WorkPd->GetNumberOfPoints();
+
+  //Check the input to make sure it is there
+  if (numPolys < 1)
+  {
+    vtkDebugMacro("No input!");
+    return SV_ERROR;
+  }
+
+  if (this->GetCellArray(this->WorkPd) != SV_OK)
+  {
+    std::cout<<"No Cell Array Named "<<this->CellArrayName<<" on surface"<<endl;
+    return SV_ERROR;
+  }
+  if (this->OutPointArrayName == NULL)
+  {
+    std::cout<<"Need name for output point data information"<<endl;
+    return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// RunFilter
+// ----------------------
+int vtkSVFindSeparateRegions::RunFilter()
+{
+  //Get the number of Polys for scalar  allocation
+  int numPolys = this->WorkPd->GetNumberOfPolys();
+  int numPts = this->WorkPd->GetNumberOfPoints();
+
+  this->WorkPd->BuildLinks();
+  vtkNew(vtkIntArray, newPointArray);
+  vtkNew(vtkIdList, pointCells);
+  vtkNew(vtkIdList, checkList);
+
+  // If no targets given, assume we are using all
+  if (this->TargetCellIds->GetNumberOfIds() == 0)
+    this->SetAllCellIds();
+
+  // Loop through all points
+  for (int pointId = 0;pointId < numPts;pointId++)
+  {
+    // Get point cells
+    checkList->Reset();
+    int boundaryPoint = 0;
+    this->WorkPd->GetPointCells(pointId,pointCells);
+
+    // Loop through all point cells
+    for (int i=0;i<pointCells->GetNumberOfIds();i++)
+    {
+      // Check the values of point
+      int cellId = pointCells->GetId(i);
+      vtkIdType value = this->IntCellScalars->GetValue(cellId);
+      if (this->TargetCellIds->IsId(value) != -1)
+      {
+        vtkIdType check = checkList->InsertUniqueId(value);
+
+        // The value of check isnt zero, we found a point that touches
+        // cells of multiple values
+        if (check != 0)
+          boundaryPoint = 1;
+      }
+    }
+
+    // Add corrct array value
+    if (boundaryPoint)
+      newPointArray->InsertValue(pointId,1);
+    else
+      newPointArray->InsertValue(pointId,0);
+  }
+
+  // Add array to polydata
+  newPointArray->SetName(this->OutPointArrayName);
+  this->WorkPd->GetPointData()->AddArray(newPointArray);
+  this->WorkPd->GetPointData()->SetActiveScalars(this->OutPointArrayName);
+
+  return SV_OK;
+}
+
+
+// ----------------------
+// GetCellArray
+// ----------------------
 int vtkSVFindSeparateRegions::GetCellArray(vtkPolyData *object)
 {
-  vtkIdType i;
-  int exists = 0;
-  int numArrays;
-
-  numArrays = object->GetCellData()->GetNumberOfArrays();
-  for (i=0;i<numArrays;i++)
-  {
-    if (!strcmp(object->GetCellData()->GetArrayName(i),
-	  this->ArrayName))
-    {
-      exists = 1;
-    }
-  }
+  int exists = vtkSVGeneralUtils::CheckArrayExists(object, 1, this->CellArrayName);
 
   if (exists)
   {
-    this->intCellScalars = vtkIntArray::SafeDownCast(
-	object->GetCellData()->GetArray(this->ArrayName));
+    this->IntCellScalars = vtkIntArray::SafeDownCast(
+	object->GetCellData()->GetArray(this->CellArrayName));
   }
 
   return exists;
 }
 
-int vtkSVFindSeparateRegions::SetCellIds(vtkIdList *cellIds)
-{
-  this->targetCellIds = vtkIdList::New();
-  this->targetCellIds->DeepCopy(cellIds);
-  return SV_OK;
-}
-
+// ----------------------
+// SetAllCellIds
+// ----------------------
 int vtkSVFindSeparateRegions::SetAllCellIds()
 {
-  this->targetCellIds = vtkIdList::New();
   double range[2];
-  this->intCellScalars->GetRange(range);
+  this->IntCellScalars->GetRange(range);
 
   int max = range[1];
   for (int i=0;i <= max;i++)
-    this->targetCellIds->InsertNextId(i);
+    this->TargetCellIds->InsertNextId(i);
 
   return SV_OK;
 }
