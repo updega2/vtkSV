@@ -189,6 +189,7 @@ public:
    *  \return the unsigned distance. */
   static double GetPointsLength(vtkPolyData *pd);
 
+  //@{
   /** \brief Given a pointset and an array, we populate the array with a value,
    *  but only if the current value has a certain value.
    *  \param pointset The given dataset.
@@ -202,6 +203,10 @@ public:
   static int ReplaceDataOnCells(vtkPointSet *pointset, vtkDataArray *sliceIds,
                                 const int sliceId, const int replaceVal,
                                 const std::string &arrName);
+  static int ReplaceDataOnCells(vtkPointSet *pointset,
+                                const int replaceVal, const int currVal,
+                                const std::string &arrName);
+  //@}
 
   /** \brief Given two points, return the cutPlane perpendicular to their vector
    *  \param endPt End point of vector.

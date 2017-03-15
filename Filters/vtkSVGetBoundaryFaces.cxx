@@ -171,10 +171,9 @@ void vtkSVGetBoundaryFaces::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVGetBoundaryFaces::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+int vtkSVGetBoundaryFaces::RequestData(vtkInformation *vtkNotUsed(request),
+                                       vtkInformationVector **inputVector,
+                                       vtkInformationVector *outputVector)
 {
     // get the input and output
     vtkPolyData *input = vtkPolyData::GetData(inputVector[0]);

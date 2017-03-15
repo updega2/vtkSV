@@ -477,6 +477,34 @@ int vtkSVGeneralUtils::ReplaceDataOnCells(vtkPointSet *pointset,
 }
 
 // ----------------------
+// ReplaceDataOnCells
+// ----------------------
+int vtkSVGeneralUtils::ReplaceDataOnCells(vtkPointSet *pointset,
+                                          const int replaceVal,
+                                          const int currVal,
+                                          const std::string &arrName)
+{
+  // Get number of cells in dataset
+  int numCells = pointset->GetNumberOfCells();
+
+  // Get the designated array
+  vtkIntArray *cellIds = vtkIntArray::SafeDownCast(pointset->GetCellData()->GetArray(arrName.c_str()));
+
+  // Loop through cells
+  for (int i=0; i<numCells; i++)
+  {
+    int val = cellIds->GetValue(i);
+    // We only replace the value if it equal to the designated value
+    if (val == currVal)
+    {
+      cellIds->SetValue(i, replaceVal);
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
 // GetCutPlane
 // ----------------------
 int vtkSVGeneralUtils::GetCutPlane(double endPt[3], double startPt[3],
