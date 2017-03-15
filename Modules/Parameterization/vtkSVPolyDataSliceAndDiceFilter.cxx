@@ -939,9 +939,9 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
 // ----------------------
 // CheckLength
 // ----------------------
-int vtkSVPolyDataSliceAndDiceFilter::CheckLength(int &ptId, const int numPts)
+void vtkSVPolyDataSliceAndDiceFilter::CheckLength(int &ptId, const int numPts,
+                                                  int &done)
 {
-  int done = 0;
   if (this->SliceDirection == 0)
   {
     if (ptId > numPts - 2)
@@ -958,8 +958,6 @@ int vtkSVPolyDataSliceAndDiceFilter::CheckLength(int &ptId, const int numPts)
       done = 1;
     }
   }
-
-  return done;
 }
 
 // ----------------------
@@ -1076,7 +1074,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     // Loop through until slice length exceeded
     while (centerlineLength < sliceLength)
     {
-      done = this->CheckLength(linePtId, numCenterlinePts);
+      this->CheckLength(linePtId, numCenterlinePts, done);
       branchCenterline->GetPoint(linePtId, pt0);
       this->UpdatePtId(linePtId);
       branchCenterline->GetPoint(linePtId, pt1);
@@ -1093,7 +1091,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
     double surfacePt[3];
     int pointId = pointIds->LookupValue(surgeryPoints->GetId(0));
     branchPd->GetPoint(pointId, surfacePt);
-    this->GetSectionXAxis(pt1, surfacePt, startPt, xvec);
+    this->GetSectionXAxis(startPt, pt1, surfacePt, xvec);
 
     //Get the cut plane
     vtkNew(vtkPlane, cutPlane);

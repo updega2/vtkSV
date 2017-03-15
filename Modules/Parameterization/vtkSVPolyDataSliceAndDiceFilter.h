@@ -174,7 +174,7 @@ protected:
    * \param ptId The current point id; will be modified if number of points has been surpassed.
    * \param numPts Number of total points in the centerline.
    * \return If number of points is surpassed, 1 should be returned; otherwise, 0. */
-  int CheckLength(int &ptId, const int numPts);
+  void CheckLength(int &ptId, const int numPts, int &done);
 
   /** \brief Increments the pt id if slicing down and decrements the pt id if slicing up.
    * \param ptId The current point id; will be increased or decreased. */

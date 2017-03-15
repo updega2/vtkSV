@@ -132,6 +132,7 @@ int main(int argc, char *argv[])
     cout << "  -dijkstra           : Name to be used for distance calculated from dijkstra filter [default DijkstraDistance]"<< endl;
     cout << "  -polycube           : Construct polycube if turned on [default 1]"<< endl;
     cout << "  -writepolycube      : Write polycube it it constructed and if turned on [default 0]"<< endl;
+    cout << "  -writesurgerylines  : Write surgery lines if turned on [default 0]"<< endl;
     cout << "  -writegraph         : Write the graph as a vtp [default 0]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
