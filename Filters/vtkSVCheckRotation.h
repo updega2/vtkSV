@@ -78,7 +78,7 @@ protected:
   int MoveCenters(); /**< \brief Function to move centers to same location. */
   int FindAndCheckRotation(); /**< \brief Function to rotate and check points. */
   int CheckAnglesWithOriginal(); /**< \brief Checks angles if OriginalPd provided. */
-  int MatchPointOrder(); /**< \brief Changed original pd cells to match mapped cells. */
+  int MatchPointOrder(); /**< \brief Changes original pd cells to match mapped cells. */
 
 private:
   vtkSVCheckRotation(const vtkSVCheckRotation&);  // Not implemented.

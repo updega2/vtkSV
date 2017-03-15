@@ -29,18 +29,14 @@
  *=========================================================================*/
 
 
-/** @file vtkSVFindGeodesicPath.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ *  \class vtkSVFindGeodesicPath
+ *  \brief This class uses vtkDijkstraGraphGeodesicPath to get path betwen points
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVFindGeodesicPath_h
@@ -48,8 +44,6 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-#include "vtkEdgeTable.h"
-#include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
@@ -57,54 +51,59 @@ class vtkSVFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVFindGeodesicPath* New();
-  //vtkTypeRevisionMacro(vtkSVFindGeodesicPath, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Print statements used for debugging
-  vtkGetMacro(Verbose, int);
-  vtkSetMacro(Verbose, int);
-
-  // Description:
-  // Point that will be close to the boundary in which the boundary
-  // should be
+  //@{
+  /// \brief Get/Set macros for point that will be close to the target boundary
   vtkGetVector3Macro(ClosePt, double);
   vtkSetVector3Macro(ClosePt, double);
+  //@}
 
-  // Description:
-  // Boundary on which the closest point lies
-  vtkGetObjectMacro(Boundary, vtkPolyData);
-  vtkSetObjectMacro(Boundary, vtkPolyData);
+  //@{
+  /// \brief Get/Set macros for boundary on which the closest point lies
+  vtkGetObjectMacro(BoundaryPd, vtkPolyData);
+  vtkSetObjectMacro(BoundaryPd, vtkPolyData);
+  //@}
 
-  // Description:
-  // Ids that create the path from the start to the end point (if using end pt)
+  //@{
+  /// \brief Get/Set macros for Ids that create the path from the start to the end point
+  /// (if using end pt)
   vtkGetObjectMacro(PathIds, vtkIdList);
   vtkSetObjectMacro(PathIds, vtkIdList);
+  //@}
 
-  // Description:
-  // Point that starts and ends that closest points on the boundaries
+  //@{
+  /// \brief Point ids for start and end of geodesic path. Start point must
+  /// be provided
   vtkGetMacro(StartPtId, int);
   vtkSetMacro(StartPtId, int);
   vtkGetMacro(EndPtId, int);
   vtkSetMacro(EndPtId, int);
+  //@}
 
-  // Description:
-  // Ids that create the path from the start to the end point (if using end pt)
+  //@{
+  /// \brief Get/Set macro to designate whether to repel from points
+  /// that are close to the end point on the boundary
   vtkGetMacro(RepelCloseBoundaryPoints, int);
   vtkSetMacro(RepelCloseBoundaryPoints, int);
+  //@}
 
-  // Description:
-  // Add boolean array to polydata indicating whether point is on path to
-  // closest point
+  //@{
+  /// \brief Set/Get macro to indicate whether an array should be created on
+  /// the surface with PathBooleanArrayName.
   vtkGetMacro(AddPathBooleanArray, int);
   vtkSetMacro(AddPathBooleanArray, int);
+  //@}
 
+  //@{
+  /// \brief Get/Set macros for the names of arrays used by filter
   vtkGetStringMacro(InternalIdsArrayName);
   vtkSetStringMacro(InternalIdsArrayName);
   vtkGetStringMacro(DijkstraArrayName);
   vtkSetStringMacro(DijkstraArrayName);
   vtkGetStringMacro(PathBooleanArrayName);
   vtkSetStringMacro(PathBooleanArrayName);
+  //@}
 
 protected:
   vtkSVFindGeodesicPath();
@@ -115,12 +114,24 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int PrepFilter();
-  int RunFilter();
+  int PrepFilter(); // Prep work.
+  int RunFilter(); // Run filter operations.
+
+  /** \brief Sets up and runs vtkDijkstra filter, and if repelPoints are
+   *  provided, these are set and used. */
   int RunDijkstra(vtkPoints *repelPoints);
+
+  /** \brief Finds closes boundary point to the given ClosePt to use as the
+   *  EndPtId if the EndPtId is not provided. */
   int FindClosestBoundaryPoint();
+
+  /** \brief If RepelCloseBoundaryPoints is turned on, this function is used
+   *  to get the close boundary points to both StartPtId and EndPtId. */
   int GetCloseBoundaryPoints(const int startPtId, const int endPtId,
                              vtkPoints *repelPoints);
+
+  /** \brief Gets the boundary points that are direct neighbors to given
+   *  pointId. */
   int GetNeighborBoundaryPoints(const int ptId,vtkPolyData *pd,
                                 vtkPoints *repelPoints);
 
@@ -128,22 +139,22 @@ private:
   vtkSVFindGeodesicPath(const vtkSVFindGeodesicPath&);  // Not implemented.
   void operator=(const vtkSVFindGeodesicPath&);  // Not implemented.
 
-  int Verbose;
-  double ClosePt[3];
+  char *InternalIdsArrayName;
+  char *DijkstraArrayName;
+  char *PathBooleanArrayName;
+
+  vtkPolyData *WorkPd;
+  vtkPolyData *BoundaryPd;
+  vtkIdList   *PathIds;
+  vtkIntArray *PathBoolean;
+
   int StartPtId;
   int EndPtId;
   int AddPathBooleanArray;
   int RemoveInternalIds;
   int RepelCloseBoundaryPoints;
 
-  char *InternalIdsArrayName;
-  char *DijkstraArrayName;
-  char *PathBooleanArrayName;
-
-  vtkPolyData *WorkPd;
-  vtkPolyData *Boundary;
-  vtkIdList   *PathIds;
-  vtkIntArray *PathBoolean;
+  double ClosePt[3];
 };
 
 #endif
