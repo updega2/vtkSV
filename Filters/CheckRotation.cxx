@@ -80,7 +80,6 @@ int main(int argc, char *argv[])
   {
     Checker->SetOriginalPd(pd3);
   }
-  Checker->SetVerbose(1);
   Checker->Update();
 
   //Write Files

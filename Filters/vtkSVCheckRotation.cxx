@@ -28,52 +28,39 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVCheckRotation.cxx
- *  @brief This implements the vtkSVCheckRotation filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+/**
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #include "vtkSVCheckRotation.h"
 
-#include "vtkCellArray.h"
-#include "vtkCellData.h"
-#include "vtkCenterOfMass.h"
-#include "vtkCleanPolyData.h"
 #include "vtkFloatArray.h"
-#include "vtkGradientFilter.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkPointData.h"
-#include "vtkPointDataToCellData.h"
-#include "vtkPoints.h"
 #include "vtkPolyData.h"
-#include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkTransform.h"
-#include "vtkTransformPolyDataFilter.h"
-#include "vtkTriangle.h"
-#include "vtkXMLPolyDataWriter.h"
 
 #include <iostream>
 #include <cmath>
 
-//---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkSVCheckRotation, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVCheckRotation);
 
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVCheckRotation::vtkSVCheckRotation()
 {
   this->SetNumberOfInputPorts(2);
 
-  this->Verbose = 1;
   this->CellId  = 0;
 
   this->SourcePd = vtkPolyData::New();
@@ -83,7 +70,9 @@ vtkSVCheckRotation::vtkSVCheckRotation()
   this->OriginalPd = NULL;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVCheckRotation::~vtkSVCheckRotation()
 {
   if (this->SourcePd != NULL)
@@ -100,13 +89,20 @@ vtkSVCheckRotation::~vtkSVCheckRotation()
   }
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVCheckRotation::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+
+  os << indent << "Matching cell id: " <<
+    this->CellId << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-//---------------------------------------------------------------------------
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVCheckRotation::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
@@ -121,6 +117,27 @@ int vtkSVCheckRotation::RequestData(
   this->SourcePd->DeepCopy(input1);
   this->TargetPd->DeepCopy(input2);
 
+  if (this->PrepFilter() != SV_OK)
+  {
+    vtkErrorMacro("Error in preprocessing the polydata\n");
+    return SV_ERROR;
+  }
+
+  if (this->RunFilter() != SV_OK)
+  {
+    vtkErrorMacro("Error when running main operation\n");
+    return SV_ERROR;
+  }
+
+  output->DeepCopy(this->MappedPd);
+  return SV_OK;
+}
+
+// ----------------------
+// PrepFilter
+// ----------------------
+int vtkSVCheckRotation::PrepFilter()
+{
   vtkIdType numSourcePolys = this->SourcePd->GetNumberOfPolys();
   //Check the input to make sure it is there
   if (numSourcePolys < 1)
@@ -129,16 +146,27 @@ int vtkSVCheckRotation::RequestData(
     return SV_ERROR;
   }
 
+  return SV_OK;
+}
+
+// ----------------------
+// RunFilter
+// ----------------------
+int vtkSVCheckRotation::RunFilter()
+{
+  // Match centers of surfaces
   if (this->MoveCenters() != SV_OK)
   {
     return SV_ERROR;
   }
 
+  // Rotate and check
   if (this->FindAndCheckRotation() != SV_OK)
   {
     return SV_ERROR;
   }
 
+  // Check the angles with a third polydata if provided
   if (this->OriginalPd != NULL)
   {
     if (this->CheckAnglesWithOriginal() != SV_OK)
@@ -147,28 +175,29 @@ int vtkSVCheckRotation::RequestData(
     }
   }
 
-  output->DeepCopy(this->MappedPd);
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MoveCenters
+// ----------------------
 int vtkSVCheckRotation::MoveCenters()
 {
+  // Get mass center of each surface
   double sourceCenter[3], targetCenter[3];
   vtkSVGeneralUtils::ComputeMassCenter(this->SourcePd, sourceCenter);
   vtkSVGeneralUtils::ComputeMassCenter(this->TargetPd, targetCenter);
 
+  // Loop through points
   int numPts = this->SourcePd->GetNumberOfPoints();
   for (int i=0; i<numPts; i++)
   {
+    // Get 3D point on each surface
     double srcPt[3], targPt[3];
     this->SourcePd->GetPoint(i, srcPt);
     this->TargetPd->GetPoint(i, targPt);
+
+    // Subtract the center of mass of each set to set center to (0,0,0)
     double newSrcPt[3], newTargPt[3];
     vtkMath::Subtract(srcPt, sourceCenter, newSrcPt);
     vtkMath::Subtract(targPt, targetCenter, newTargPt);
@@ -179,18 +208,20 @@ int vtkSVCheckRotation::MoveCenters()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
+// ----------------------
+// FindAndCheckRotation
+// ----------------------
+/*
+ * \details TODO: Need more documentation
  */
 int vtkSVCheckRotation::FindAndCheckRotation()
 {
+  // Get cell points of matching cell
   vtkIdType npts, *pts;
   vtkIdType targNpts, *targPts;
   this->SourcePd->GetCellPoints(this->CellId, npts, pts);
   this->TargetPd->GetCellPoints(this->CellId, targNpts, targPts);
+
   double allSrcPts[3][3], allTargPts[3][3];
   this->SourcePd->GetPoint(pts[0], allSrcPts[0]);
   this->TargetPd->GetPoint(targPts[0], allTargPts[0]);
@@ -250,36 +281,39 @@ int vtkSVCheckRotation::FindAndCheckRotation()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// CheckAnglesWithOriginal
+// ----------------------
 int vtkSVCheckRotation::CheckAnglesWithOriginal()
 {
+  // Make sure points match
   if (this->MatchPointOrder() != SV_OK)
   {
     return SV_ERROR;
   }
+
+  // Get all angles of the mapped polydata
   vtkNew(vtkFloatArray, mappedS2Angles);
   if (vtkSVGeneralUtils::GetPolyDataAngles(this->MappedPd, mappedS2Angles) != SV_OK)
   {
     return SV_ERROR;
   }
 
+  // Get all angles of the target polydata
   vtkNew(vtkFloatArray, targetS2Angles);
   if (vtkSVGeneralUtils::GetPolyDataAngles(this->TargetPd, targetS2Angles) != SV_OK)
   {
     return SV_ERROR;
   }
 
+  // Get all angles of the original polydata
   vtkNew(vtkFloatArray, originalPdAngles);
   if (vtkSVGeneralUtils::GetPolyDataAngles(this->OriginalPd, originalPdAngles) != SV_OK)
   {
     return SV_ERROR;
   }
 
+  // Set up quantities to get from comparison
   int numCells = this->OriginalPd->GetNumberOfCells();
   double avgMAng = 0.0;
   double maxMAng = 0.0;
@@ -287,13 +321,17 @@ int vtkSVCheckRotation::CheckAnglesWithOriginal()
   double avgTAng = 0.0;
   double maxTAng = 0.0;
   double minTAng = 1.0e8;
+
+  // Loop through cells
   for (int i=0; i<numCells; i++)
   {
+    // Get angles on cell
     double mappedAngs[3], targetAngs[3], originalAngs[3];
     mappedS2Angles->GetTuple(i, mappedAngs);
     targetS2Angles->GetTuple(i, targetAngs);
     originalPdAngles->GetTuple(i, originalAngs);
 
+    // Look at each component, or each angle in the cell
     for (int j=0; j<3; j++)
     {
       double mDiff = fabs(mappedAngs[j] - originalAngs[j]);
@@ -314,6 +352,7 @@ int vtkSVCheckRotation::CheckAnglesWithOriginal()
     }
   }
 
+  // Compute averages
   avgMAng = avgMAng / (numCells *3);
   avgTAng = avgTAng / (numCells *3);
   fprintf(stdout, "Average angle difference between source and original is: %.8f\n",avgMAng);
@@ -327,23 +366,26 @@ int vtkSVCheckRotation::CheckAnglesWithOriginal()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatchPointOrder
+// ----------------------
 int vtkSVCheckRotation::MatchPointOrder()
 {
+  // Get number of cells
   int numCells = this->OriginalPd->GetNumberOfCells();
 
+  // Loop through cells
   for (int i=0; i<numCells; i++)
   {
+    // Get cell point ids for original
     vtkIdType dnpts, *dpts;
     this->OriginalPd->GetCellPoints(i, dnpts, dpts);
+
+    // Get cell point ids for mapped
     vtkIdType npts, *pts;
     this->MappedPd->GetCellPoints(i, npts, pts);
 
+    // Replace cell point ids of original
     this->OriginalPd->ReplaceCell(i, npts, pts);
   }
   return SV_OK;

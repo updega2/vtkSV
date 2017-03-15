@@ -29,18 +29,16 @@
  *=========================================================================*/
 
 
-/** @file vtkSVCheckRotation.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ *  \class vtkSVCheckRotation
+ *  \brief This is a class to rotate a polydata to another polydata in space
+ *  of the same number of points and cells and do a point-wise comparison
+ *  arther the rotation.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVCheckRotation_h
@@ -48,23 +46,23 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-#include "vtkEdgeTable.h"
-#include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 
 class vtkSVCheckRotation : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVCheckRotation* New();
-  //vtkTypeRevisionMacro(vtkSVCheckRotation, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Print statements used for debugging
-  vtkGetMacro(Verbose, int);
-  vtkSetMacro(Verbose, int);
-
+  //@{
+  /// \brief Set macro for a third polydata to compare angles to
   vtkSetObjectMacro(OriginalPd, vtkPolyData);
+  //@}
+
+  //@{
+  /// \brief Set macro for the cell id to match between the two polydatas
+  vtkSetMacro(CellId, int);
+  //@}
 
 protected:
   vtkSVCheckRotation();
@@ -75,16 +73,17 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int MoveCenters();
-  int FindAndCheckRotation();
-  int CheckAnglesWithOriginal();
-  int MatchPointOrder();
+  int PrepFilter(); // Prep work.
+  int RunFilter(); // Run filter operations.
+  int MoveCenters(); /**< \brief Function to move centers to same location. */
+  int FindAndCheckRotation(); /**< \brief Function to rotate and check points. */
+  int CheckAnglesWithOriginal(); /**< \brief Checks angles if OriginalPd provided. */
+  int MatchPointOrder(); /**< \brief Changed original pd cells to match mapped cells. */
 
 private:
   vtkSVCheckRotation(const vtkSVCheckRotation&);  // Not implemented.
   void operator=(const vtkSVCheckRotation&);  // Not implemented.
 
-  int Verbose;
   int CellId;
 
   vtkPolyData *SourcePd;
