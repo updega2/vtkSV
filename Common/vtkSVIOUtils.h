@@ -28,14 +28,14 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVIOUtils.h
- *  @brief
- *  @brief
+/**
+ *  \class  vtkSVIOUtils
+ *  \brief This is class of useful functions for reading and writing vtk files.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVIOUtils_h
@@ -59,22 +59,39 @@ public:
   vtkTypeMacro(vtkSVIOUtils,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  //String processing functions
-  static std::string IntToString(int i);
-  static std::string GetPath(std::string fullName);
-  static std::string GetRawName(std::string fullName);
-  static std::string GetExt(std::string fullName);
+  //String processing function
+  static std::string IntToString(int i); /**< \brief Converts integer to string. */
+  static std::string GetPath(std::string fullName); /**< \brief Gets filename path. */
+  static std::string GetRawName(std::string fullName); /**< \brief Gets filename raw name without extension. */
+  static std::string GetExt(std::string fullName); /**< \brief Gets filename extension (e.g. vtp). */
 
   //Read Write functions for stl, vtp
+  /** \brief read an stl file. */
   static int ReadSTLFile(std::string inputFilename, vtkPolyData *polydata);
+
+  /** \brief read a polydata file. */
   static int ReadVTPFile(std::string inputFilename, vtkPolyData *polydata);
+
+  /** \brief read an stl or polydata file. */
   static int ReadInputFile(std::string inputFilename, vtkPolyData *polydata);
+
+  //@{
+  /** \brief write a vtp file. */
   static int WriteVTPFile(std::string outputFilename, vtkPolyData *writePolyData);
   static int WriteVTPFile(std::string inputFilename, vtkPolyData *writePolyData,std::string attachName);
+  //@}
+
+  //@{
+  /** \brief write a vtu file. */
   static int WriteVTUFile(std::string outputFilename, vtkUnstructuredGrid *writeUnstructuredGrid);
   static int WriteVTUFile(std::string inputFilename, vtkUnstructuredGrid *writeUnstructuredGrid,std::string attachName);
+  //@}
+
+  //@{
+  /** \brief write a vts file. */
   static int WriteVTSFile(std::string outputFilename, vtkStructuredGrid *writeStructuredGrid);
   static int WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName);
+  //@}
 
 protected:
   vtkSVIOUtils();

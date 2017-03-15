@@ -28,14 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVIOUtils.cxx
- *  @brief
- *  @brief
+/**
+ *  \brief This is class of useful functions for reading and writing vtk files.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #include "vtkSVIOUtils.h"
@@ -51,7 +50,10 @@
 #include "vtkXMLStructuredGridWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
 
-//Function to turn an integer into a string
+// ----------------------
+// IntToString
+// ----------------------
+/** \details Function to turn an integer into a string. */
 std::string vtkSVIOUtils::IntToString(int i)
 {
   std::stringstream out;
@@ -59,8 +61,11 @@ std::string vtkSVIOUtils::IntToString(int i)
   return out.str();
 }
 
-//Function to get the directory from the input File Name
-//For example, /User/Adam.stl returns /User
+// ----------------------
+// GetPath
+// ----------------------
+/** \details Function to get the directory from the input File Name
+ * For example, /User/Adam.stl returns /User */
 std::string vtkSVIOUtils::GetPath(std::string fullName)
 {
   std::string pathName;
@@ -69,8 +74,11 @@ std::string vtkSVIOUtils::GetPath(std::string fullName)
   return pathName;
 }
 
-//Function to get the raw file name from the input File name
-//For example, Adam.stl returns Adam
+// ----------------------
+// GetRawName
+// ----------------------
+/** \details Function to get the raw file name from the input File name.
+ * For example, Adam.stl returns Adam  */
 std::string vtkSVIOUtils::GetRawName(std::string fullName)
 {
   std::string rawName;
@@ -80,7 +88,10 @@ std::string vtkSVIOUtils::GetRawName(std::string fullName)
   return rawName;
 }
 
-//Function to get extension from an input string
+// ----------------------
+// GetExt
+// ----------------------
+/** \details Function to get extension from an input string. */
 std::string vtkSVIOUtils::GetExt(std::string fullName)
 {
   std::string extName;
@@ -89,8 +100,11 @@ std::string vtkSVIOUtils::GetExt(std::string fullName)
   return extName;
 }
 
-//Function to read in the STL file, extract the boundaries and pass the input
-//Poly Data information
+// ----------------------
+// ReadSTLFile
+// ----------------------
+/** Function to read in the STL file, extract the boundaries and pass the input
+ * Poly Data information */
 int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
 {
   //Create an STL reader for reading the file
@@ -106,6 +120,9 @@ int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
   return SV_OK;
 }
 
+// ----------------------
+// ReadVTPFile
+// ----------------------
 int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
 {
   //Create an STL reader for reading the file
@@ -121,18 +138,25 @@ int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
   return SV_OK;
 }
 
+// ----------------------
+// ReadInputFile
+// ----------------------
 int vtkSVIOUtils::ReadInputFile(std::string inputFilename, vtkPolyData *polydata)
 {
+  // Get the extension of the file
   std::string ext = vtkSVIOUtils::GetExt(inputFilename);
-  std:cout<<"Extension... "<<ext<<endl;
+
+  // If it is an stl, read
   if(!strncmp(ext.c_str(),"stl",3))
   {
     vtkSVIOUtils::ReadSTLFile(inputFilename, polydata);
   }
+  // If it is a vtp, read
   else if(!strncmp(ext.c_str(),"vtp",3))
   {
     vtkSVIOUtils::ReadVTPFile(inputFilename, polydata);
   }
+  // Other file types are not supported
   else
   {
     std::cout<<"Unrecognized file extension, stl and vtp accepted"<<endl;
@@ -142,7 +166,9 @@ int vtkSVIOUtils::ReadInputFile(std::string inputFilename, vtkPolyData *polydata
   return SV_OK;
 }
 
-//Function to write the polydata to a vtp
+// ----------------------
+// WriteVTPFile
+// ----------------------
 int vtkSVIOUtils::WriteVTPFile(std::string outputFilename,vtkPolyData *writePolyData)
 {
   vtkNew(vtkXMLPolyDataWriter, writer);
@@ -157,7 +183,12 @@ int vtkSVIOUtils::WriteVTPFile(std::string outputFilename,vtkPolyData *writePoly
   return SV_OK;
 }
 
-//Function to write the polydata to a vtp
+// ----------------------
+// WriteVTPFile
+// ----------------------
+/** \details In this version, the inputFilename is used to get the path and raw name.
+ *  The attachName is then attached to the end of the inputFilename
+ *  for the ouput filename. */
 int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyData,std::string attachName)
 {
   std::string rawName, pathName, outputFilename;
@@ -180,7 +211,9 @@ int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyD
   return SV_OK;
 }
 
-//Function to write unstructured grid
+// ----------------------
+// WriteVTUFile
+// ----------------------
 int vtkSVIOUtils::WriteVTUFile(std::string outputFilename,vtkUnstructuredGrid *writeUnstructuredGrid)
 {
   vtkNew(vtkXMLUnstructuredGridWriter, writer);
@@ -195,7 +228,12 @@ int vtkSVIOUtils::WriteVTUFile(std::string outputFilename,vtkUnstructuredGrid *w
   return SV_OK;
 }
 
-//Function to write unstructured grid
+// ----------------------
+// WriteVTUFile
+// ----------------------
+/** \details In this version, the inputFilename is used to get the path and raw name.
+ *  The attachName is then attached to the end of the inputFilename
+ *  for the ouput filename. */
 int vtkSVIOUtils::WriteVTUFile(std::string inputFilename,vtkUnstructuredGrid *writeUnstructuredGrid,std::string attachName)
 {
   std::string rawName, pathName, outputFilename;
@@ -218,7 +256,9 @@ int vtkSVIOUtils::WriteVTUFile(std::string inputFilename,vtkUnstructuredGrid *wr
   return SV_OK;
 }
 
-//Function to write structured grid
+// ----------------------
+// WriteVTSFile
+// ----------------------
 int vtkSVIOUtils::WriteVTSFile(std::string outputFilename,vtkStructuredGrid *writeStructuredGrid)
 {
   vtkNew(vtkXMLStructuredGridWriter, writer);
@@ -233,6 +273,12 @@ int vtkSVIOUtils::WriteVTSFile(std::string outputFilename,vtkStructuredGrid *wri
   return SV_OK;
 }
 
+// ----------------------
+// WriteVTSFile
+// ----------------------
+/** \details In this version, the inputFilename is used to get the path and raw name.
+ *  The attachName is then attached to the end of the inputFilename
+ *  for the ouput filename. */
 int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName)
 {
   std::string rawName, pathName, outputFilename;

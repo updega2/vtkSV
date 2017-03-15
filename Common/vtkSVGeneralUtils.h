@@ -28,14 +28,16 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVGeneralUtils.h
- *  @brief
- *  @brief
+/**
+ *  \class vtkSVGeneralUtils
+ *  \brief This is a class of purely static functions and no member data.
+ *  It is essentially a compilation of useful and simple functions to be called
+ *  anywhere in code base.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVGeneralUtils_h

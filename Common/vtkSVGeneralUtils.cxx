@@ -28,14 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVGeneralUtils.cxx
- *  @brief
- *  @brief
+/**
+ *  \brief A compilation of general useful functions used throughout code base
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #include "vtkSVGeneralUtils.h"
