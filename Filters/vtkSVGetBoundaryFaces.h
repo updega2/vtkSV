@@ -28,35 +28,28 @@
  *
  *=========================================================================*/
 
-// .NAME vtkSVGetBoundaryFaces - Get Boundary Faces from poldata and label them with integers
-// .SECTION Description
-// vtkSVGetBoundaryFaces is a filter to extract the boundary surfaces of a model, separate the surace into multiple regions and number each region.
-
-// .SECTION Caveats
-// To see the coloring of the lines you may have to set the ScalarMode
-// instance variable of the mapper to SetScalarModeToUseCellData(). (This
-// is only a problem if there are point data scalars.)
-
-// .SECTION See Also
-// vtkExtractEdges
-
-/** @file vtkSVGetBoundaryFaces.h
- *  @brief This is a vtk filter to extract the boundaries from a vtk. It uses
- *  the common conventions to be able to load this filter into Paraview and
- *  use it as a filter.
- *  @details This filter is based off of the vtkFeatureEdges filter which
- *  finds lines and points that are defined as the separation between two
- *  faces based on the angle difference in the normals between these faces
+/**
+ *  \class vtkSVGetBoundaryFaces
+ *  \brief Get boundary faces separated by feature edges
+ *  from poldata and label them with integers
+ *  \details
+ *  vtkSVGetBoundaryFaces is a filter to extract the boundary surfaces of a model,
+ *  separate the surace into multiple regions and number each region. It is
+ *  similar to using vtkPolyDataNormals with SplittingOn and then a
+ *  vtkConnectivityFilter.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- *  @note Most functions in class call functions in cv_polydatasolid_utils.
+ *  \note See Also vtkExtractEdges
+ *
+ *
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVGetBoundaryFaces_h
-#define __vtkSVGetBoundaryFaces_h
+
+#ifndef vtkSVGetBoundaryFaces_h
+#define vtkSVGetBoundaryFaces_h
 
 #include "vtkFeatureEdges.h"
 #include "vtkDoubleArray.h"
@@ -69,44 +62,52 @@ public:
   vtkTypeMacro(vtkSVGetBoundaryFaces, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Specify the feature angle for extracting feature edges.
+  //@{
+  // \brief Specify the feature angle for extracting feature edges.
   vtkGetMacro(FeatureAngle,double);
   vtkSetMacro(FeatureAngle,double);
+  //@}
 
-  // Description:
-  // Get the number of regions created.
+  //@{
+  // \brief Get the number of regions created.
   vtkGetMacro(NumberOfRegions,int);
+  //@}
 
-  // Description:
-  // The name given to the regions created
+  //@{
+  // \brief The name given to the regions created
   vtkSetStringMacro(RegionIdsArrayName);
   vtkGetStringMacro(RegionIdsArrayName);
+  //@}
 
-  // Description:
-  // Specify if boundary edges should be extracted.
+  //@{
+  // \brief Specify if boundary edges should be extracted.
   vtkGetMacro(BoundaryEdges, int);
   vtkSetMacro(BoundaryEdges, int);
+  //@}
 
-  // Description:
-  // Specify if boundary edges should be extracted.
+  //@{
+  // \brief Specify if manifold edges should be extracted.
   vtkGetMacro(ManifoldEdges, int);
   vtkSetMacro(ManifoldEdges, int);
+  //@}
 
-  // Description:
-  // Specify if boundary edges should be extracted.
+  //@{
+  // \brief Specify if non-manifold edges should be extracted.
   vtkGetMacro(NonManifoldEdges, int);
   vtkSetMacro(NonManifoldEdges, int);
+  //@}
 
-  // Description:
-  // Specify if boundary edges should be extracted.
+  //@{
+  // \brief Specify if feature edges should be extracted.
   vtkGetMacro(FeatureEdges, int);
   vtkSetMacro(FeatureEdges, int);
+  //@}
 
-  // Description:
-  // Specify if boundary edges should be extracted.
+  //@{
+  // \brief Specify if largest region should be extracted
   vtkGetMacro(ExtractLargestRegion, int);
   vtkSetMacro(ExtractLargestRegion, int);
+  //@}
 
 protected:
   vtkSVGetBoundaryFaces();
@@ -119,11 +120,27 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  vtkFeatureEdges* boundaries;
-  vtkIntArray *newScalars;
+  /** \brief Function to flood fill region fast. */
+  void FindBoundaryRegion(int reg,int start, double &area);
+
+  /** \brief Function to flood fill region slower, but is necessary close
+   *  to boundaries to make sure it doesn't step over boundary. */
+  void FindBoundaryRegionTipToe(int reg, double &area);
+
+  /** \brief Initializes boundary arrays. */
+  void SetBoundaryArrays();
+
+  /** \brief function to add currnet cell area to full area.
+   *  \param cellId cell whose are to be computed.
+   *  \param area area which will be updated with cell area. */
+  int  AddCellArea(const int cellId, double &area);
+
+  char *RegionIdsArrayName;
+
+  vtkIntArray *NewScalars;
   vtkDoubleArray *RegionAreas;
-  vtkPolyData *mesh;
-  vtkPolyData *boundaryLines;
+  vtkPolyData *WorkPd;
+  vtkPolyData *BoundaryLines;
   vtkIntArray *BoundaryPointArray;
   vtkIntArray *BoundaryCellArray;
   vtkIdList *CheckCells;
@@ -131,16 +148,10 @@ protected:
   vtkIdList *CheckCellsCareful;
   vtkIdList *CheckCellsCareful2;
 
-  vtkIdType *checked;
-  vtkIdType *checkedcarefully;
-  vtkIdType *pointMapper;
-
-  void FindBoundaryRegion(int reg,int start, double &area);
-  void FindBoundaryRegionTipToe(int reg, double &area);
-  void SetBoundaryArrays();
-  int  AddCellArea(const int cellId, double &area);
-
-  char *RegionIdsArrayName;
+  // dynamic allocated arrays
+  int *checked;
+  int *checkedcarefully;
+  int *pointMapper;
 
   // Feature edges options
   int BoundaryEdges;

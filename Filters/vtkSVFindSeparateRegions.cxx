@@ -28,36 +28,19 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVFindSeparateRegions.cxx
- *  @brief This implements the vtkSVFindSeparateRegions filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVFindSeparateRegions.h"
 
-#include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCellDataToPointData.h"
 #include "vtkDataSetSurfaceFilter.h"
-#include "vtkDoubleArray.h"
-#include "vtkEdgeTable.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
-#include "vtkFloatArray.h"
-#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
-#include "vtkPolygon.h"
-#include "vtkThreshold.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkSmartPointer.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 

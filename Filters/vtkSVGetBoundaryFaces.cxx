@@ -28,38 +28,22 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVGetBoundaryFaces.cxx
- *  @brief This implements the vtkSVGetBoundaryFaces filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVGetBoundaryFaces.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkCellLocator.h"
 #include "vtkDataSetSurfaceFilter.h"
-#include "vtkExtractEdges.h"
 #include "vtkFeatureEdges.h"
-#include "vtkFloatArray.h"
-#include "vtkIncrementalPointLocator.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkIntArray.h"
-#include "vtkMath.h"
-#include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
+#include "vtkPointLocator.h"
 #include "vtkPolyData.h"
-#include "vtkPolygon.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkThreshold.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleStrip.h"
 #include "vtkUnsignedCharArray.h"
@@ -67,36 +51,21 @@
 
 #include <iostream>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVGetBoundaryFaces);
 
-// Construct object with feature angle = 50.0;
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVGetBoundaryFaces::vtkSVGetBoundaryFaces()
 {
-/**
- * @brief member data that is the Feature Edges filter. Extracts edges!
- */
-    this->boundaries = vtkFeatureEdges::New();
-/**
- * @Default angle of extraction. Can be easily changed by setting Feature
- * Angle
- */
     this->FeatureAngle = 50.0;
-/**
- * @brief Integer Array containing the values associated with the region
- * number at each face
- */
-    this->newScalars = vtkIntArray::New();
-/**
- * @brief PolyData that contains the output mesh with region scalars
- */
-    this->mesh = vtkPolyData::New();
-/**
- * @brief The series of points and lines output from the Feature Edges filter
- */
-    this->boundaryLines = vtkPolyData::New();
-/**
- * @brief The list of cell Ids that have been checked
- */
+    this->NewScalars = vtkIntArray::New();
+    this->WorkPd = vtkPolyData::New();
+    this->BoundaryLines = vtkPolyData::New();
+
     this->CheckCells = vtkIdList::New();
     this->CheckCells2 = vtkIdList::New();
     this->CheckCellsCareful = vtkIdList::New();
@@ -123,40 +92,61 @@ vtkSVGetBoundaryFaces::vtkSVGetBoundaryFaces()
     this->ExtractLargestRegion = 0;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVGetBoundaryFaces::~vtkSVGetBoundaryFaces()
 {
-    if (this->boundaries)
-      this->boundaries->Delete();
-
-    if (this->newScalars)
-      this->newScalars->Delete();
-
-    if (this->mesh)
-      this->mesh->Delete();
-
-    if (this->boundaryLines)
-      this->boundaryLines->Delete();
-
+    if (this->NewScalars)
+    {
+      this->NewScalars->Delete();
+      this->NewScalars = NULL;
+    }
+    if (this->WorkPd)
+    {
+      this->WorkPd->Delete();
+      this->WorkPd = NULL;
+    }
+    if (this->BoundaryLines)
+    {
+      this->BoundaryLines->Delete();
+      this->BoundaryLines = NULL;
+    }
     if (this->BoundaryPointArray)
+    {
       this->BoundaryPointArray->Delete();
-
+      this->BoundaryPointArray = NULL;
+    }
     if (this->BoundaryCellArray)
+    {
       this->BoundaryCellArray->Delete();
-
+      this->BoundaryCellArray = NULL;
+    }
     if (this->RegionAreas)
+    {
       this->RegionAreas->Delete();
-
+      this->RegionAreas = NULL;
+    }
     if (this->CheckCells)
+    {
       this->CheckCells->Delete();
-
+      this->CheckCells = NULL;
+    }
     if (this->CheckCells2)
+    {
       this->CheckCells2->Delete();
-
+      this->CheckCells2 = NULL;
+    }
     if (this->CheckCellsCareful)
+    {
       this->CheckCellsCareful->Delete();
-
+      this->CheckCellsCareful = NULL;
+    }
     if (this->CheckCellsCareful2)
+    {
       this->CheckCellsCareful2->Delete();
+      this->CheckCellsCareful2 = NULL;
+    }
 
     if (this->checked != NULL)
       delete [] this->checked;
@@ -178,7 +168,9 @@ void vtkSVGetBoundaryFaces::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "Feature Angle: " << this->FeatureAngle << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVGetBoundaryFaces::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
@@ -200,10 +192,10 @@ int vtkSVGetBoundaryFaces::RequestData(
     //Get input points, polys and set the up in the vtkPolyData mesh
     inpts = input->GetPoints();
     inPolys = input->GetPolys();
-    this->mesh->SetPoints(inpts);
-    this->mesh->SetPolys(inPolys);
+    this->WorkPd->SetPoints(inpts);
+    this->WorkPd->SetPolys(inPolys);
     //Build Links in the mesh to be able to perform complex polydata processes;
-    this->mesh->BuildLinks();
+    this->WorkPd->BuildLinks();
 
     //Get the number of Polys for scalar  allocation
     numPolys = input->GetNumberOfPolys();
@@ -212,67 +204,69 @@ int vtkSVGetBoundaryFaces::RequestData(
     //Check the input to make sure it is there
     if (numPolys < 1)
     {
-        vtkDebugMacro("No input!");
-	return SV_OK;
+      vtkDebugMacro("No input!");
+	    return SV_OK;
     }
 
     //Set up Region scalar for each surface
-    this->newScalars->SetNumberOfTuples(numPolys);
+    this->NewScalars->SetNumberOfTuples(numPolys);
 
     //Set up Feature Edges for Boundary Edge Detection
     vtkPolyData* inputCopy = input->NewInstance();
     inputCopy->ShallowCopy(input);
+
     //Set the Data to hold onto given Point Markers
+    vtkNew(vtkFeatureEdges, boundaries);
     inputCopy->GlobalReleaseDataFlagOff();
-    this->boundaries->SetInputData(inputCopy);
-    this->boundaries->SetBoundaryEdges(this->BoundaryEdges);
-    this->boundaries->SetManifoldEdges(this->ManifoldEdges);
-    this->boundaries->SetNonManifoldEdges(this->NonManifoldEdges);
-    this->boundaries->SetFeatureEdges(this->FeatureEdges);
-    this->boundaries->SetFeatureAngle(this->FeatureAngle);
+    boundaries->SetInputData(inputCopy);
+    boundaries->SetBoundaryEdges(this->BoundaryEdges);
+    boundaries->SetManifoldEdges(this->ManifoldEdges);
+    boundaries->SetNonManifoldEdges(this->NonManifoldEdges);
+    boundaries->SetFeatureEdges(this->FeatureEdges);
+    boundaries->SetFeatureAngle(this->FeatureAngle);
     inputCopy->Delete();
-    this->boundaries->Update();
+    boundaries->Update();
 
-    this->boundaryLines->DeepCopy(this->boundaries->GetOutput());
-    //this->boundaryLines->BuildLinks();
-    //std::cout<<"Number Points: "<<this->boundaryLines->GetNumberOfPoints()<<endl;
+    // Set the boundary lines
+    this->BoundaryLines->DeepCopy(boundaries->GetOutput());
 
+    // Initialize the arrays to be used in the flood fills
     this->SetBoundaryArrays();
 
     vtkDebugMacro("Starting Boundary Face Separation");
     //Set Region value of each cell to be zero initially
     for(cellId = 0; cellId < numPolys ; cellId ++)
-    {
-        this->newScalars->InsertValue(cellId, reg);
-    }
+      this->NewScalars->InsertValue(cellId, reg);
 
     //Go through each cell and perfrom region identification proces
     for (cellId=0; cellId< numPolys; cellId++)
     {
        //Check to make sure the value of the region at this cellId hasn't been set
-       if (this->newScalars->GetValue(cellId) == 0)
+       if (this->NewScalars->GetValue(cellId) == 0)
        {
-	   reg++;
-	   this->CheckCells->InsertNextId(cellId);
-           double area = 0.0;
-	   //Call function to find all cells within certain region
-	   this->FindBoundaryRegion(reg, 1, area);
-           this->RegionAreas->InsertNextValue(area);
-	   this->CheckCells->Reset();
-	   this->CheckCells2->Reset();
-	   this->CheckCellsCareful->Reset();
-	   this->CheckCellsCareful2->Reset();
+         reg++;
+         this->CheckCells->InsertNextId(cellId);
+               double area = 0.0;
+         //Call function to find all cells within certain region
+         this->FindBoundaryRegion(reg, 1, area);
+         this->RegionAreas->InsertNextValue(area);
+         this->CheckCells->Reset();
+         this->CheckCells2->Reset();
+         this->CheckCellsCareful->Reset();
+         this->CheckCellsCareful2->Reset();
        }
     }
+
+    // Check to see if anything left
     int extraregion=0;
     for(cellId = 0; cellId < numPolys ; cellId ++)
     {
       double area = 0.0;
       if (this->checked[cellId] == 0 || this->checkedcarefully[cellId] == 0)
       {
-	this->newScalars->InsertValue(cellId,reg+1);
+	      this->NewScalars->InsertValue(cellId,reg+1);
         this->AddCellArea(cellId, area);
-	extraregion=1;
+	      extraregion=1;
       }
       this->RegionAreas->InsertNextValue(area);
     }
@@ -289,10 +283,11 @@ int vtkSVGetBoundaryFaces::RequestData(
     output->GetCellData()->PassData(input->GetCellData());
 
     //Add the new scalars array to the output
-    this->newScalars->SetName(this->RegionIdsArrayName);
-    output->GetCellData()->AddArray(this->newScalars);
+    this->NewScalars->SetName(this->RegionIdsArrayName);
+    output->GetCellData()->AddArray(this->NewScalars);
     output->GetCellData()->SetActiveScalars(this->RegionIdsArrayName);
 
+    // If extracting largets region, get it out
     if (this->ExtractLargestRegion)
     {
       double maxVal = 0.0;
@@ -305,20 +300,10 @@ int vtkSVGetBoundaryFaces::RequestData(
           maxRegion = i+1;
         }
       }
-      vtkNew(vtkThreshold, thresholder);
-      thresholder->SetInputData(output);
-      //Set Input Array to 0 port,0 connection, dataType (0 - point, 1 - cell, and Regions is the type name
-      thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->RegionIdsArrayName);
-      thresholder->ThresholdBetween(maxRegion, maxRegion);
-      thresholder->Update();
-
-      vtkNew(vtkDataSetSurfaceFilter, surfacer);
-      surfacer->SetInputData(thresholder->GetOutput());
-      surfacer->Update();
-
-      output->DeepCopy(surfacer->GetOutput());
+      vtkSVGeneralUtils::ThresholdPd(output, maxRegion, maxRegion, 1, this->RegionIdsArrayName);
     }
 
+    // Total number of regions
     this->NumberOfRegions = reg;
 
     return SV_OK;
@@ -352,18 +337,18 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegion(int reg, int start, double &area)
     {
       cellId = this->CheckCells->GetId(c);
       //Get the three points of the cell
-      this->mesh->GetCellPoints(cellId,npts,pts);
+      this->WorkPd->GetCellPoints(cellId,npts,pts);
       if (this->checked[cellId] == 0)
       {
         //Mark cell as checked and insert the fillnumber value to cell
-        this->newScalars->InsertValue(cellId,reg);
+        this->NewScalars->InsertValue(cellId,reg);
         this->AddCellArea(cellId, area);
         this->checked[cellId] = 1;
         for (i=0; i < npts; i++)
         {
           p1 = pts[i];
           //Get the cells attached to each point
-          this->mesh->GetPointCells(p1,neighbors);
+          this->WorkPd->GetPointCells(p1,neighbors);
           numNei = neighbors->GetNumberOfIds();
 
           //For each neighboring cell
@@ -375,8 +360,8 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegion(int reg, int start, double &area)
               //If this cell hasn't been checked already
               if (this->checkedcarefully[neighbors->GetId(j)] == 0)
               {
-              //Add this cell to the careful check cells list and run
-              //the region finding tip toe code
+                //Add this cell to the careful check cells list and run
+                //the region finding tip toe code
                 this->CheckCellsCareful->
                 InsertNextId(neighbors->GetId(j));
                 this->FindBoundaryRegionTipToe(reg, area);
@@ -393,13 +378,12 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegion(int reg, int start, double &area)
           }
         }
       }
-      //This statement is for if the start cell is a boundary cell
+      //If the start cell is a boundary cell
       else if (this->checkedcarefully[cellId] == 0 && start)
       {
-        //std::cout<<"Aqui senor"<<endl;
+        // Reset the check cell list and start a careful search
         start=0;
         this->CheckCells->Reset();
-              //std::cout<<"I have been added begin"<<cellId<<endl;
         this->CheckCellsCareful->InsertNextId(cellId);
         this->FindBoundaryRegionTipToe(reg, area);
       }
@@ -415,7 +399,6 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegion(int reg, int start, double &area)
 
 void vtkSVGetBoundaryFaces::FindBoundaryRegionTipToe(int reg, double &area)
 {
-  //std::cout<<"Am tip toeing"<<endl;
   //Variables used in function
   int i;
   vtkIdType j,k,l;
@@ -445,12 +428,12 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegionTipToe(int reg, double &area)
       neiIds->Reset();
       cellId = this->CheckCellsCareful->GetId(c);
       //Get the three points of the cell
-      this->mesh->GetCellPoints(cellId,npts,pts);
+      this->WorkPd->GetCellPoints(cellId,npts,pts);
       if (this->checkedcarefully[cellId] == 0)
       {
         //Update this cell to have been checked carefully and assign it
         //with the fillnumber scalar
-        this->newScalars->InsertValue(cellId,reg);
+        this->NewScalars->InsertValue(cellId,reg);
         this->AddCellArea(cellId, area);
         this->checkedcarefully[cellId] = 1;
         //For each edge of the cell
@@ -462,7 +445,7 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegionTipToe(int reg, double &area)
 
           vtkNew(vtkIdList, neighbors);
           //Initial check to make sure the cell is in fact a face cell
-          this->mesh->GetCellEdgeNeighbors(cellId,p1,p2,neighbors);
+          this->WorkPd->GetCellEdgeNeighbors(cellId,p1,p2,neighbors);
           numNei = neighbors->GetNumberOfIds();
 
           //Check to make sure it is an oustide surface cell,
@@ -490,32 +473,19 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegionTipToe(int reg, double &area)
             //is a false positive
             else
             {
-              this->boundaryLines->BuildLinks();
+              this->BoundaryLines->BuildLinks();
               vtkIdType bPt1 = pointMapper[p1];
-              this->boundaryLines->GetPointCells(bPt1,bLinesOne);
+              this->BoundaryLines->GetPointCells(bPt1,bLinesOne);
 
               vtkIdType bPt2 = pointMapper[p2];
-              this->boundaryLines->GetPointCells(bPt2,bLinesTwo);
+              this->BoundaryLines->GetPointCells(bPt2,bLinesTwo);
 
               bLinesOne->IntersectWith(bLinesTwo);
               //Cell is false positive. Add to check list.
               if (bLinesOne->GetNumberOfIds() == 0)
               {
-                      //std::cout<<"False positive! "<<nei<<endl;
                 neiIds->InsertNextId(nei);
               }
-              //else
-                //std::cout<<"I have not been added because false"<<endl;
-            }
-          }
-          else
-          {
-            //cout<<"NumNei is not 1"<<endl;
-            //cout<<"Number of Neighbors "<<numNei<<endl;
-            //cout<<"Cell is "<<cellId<<endl;
-            for (k=0;k<numNei;k++)
-            {
-              //cout<<"Id!!! "<<neighbors->GetId(k)<<endl;
             }
           }
         }
@@ -558,37 +528,37 @@ void vtkSVGetBoundaryFaces::SetBoundaryArrays()
   //Point locator to find points on mesh that are the points on the boundary
   //lines
   vtkNew(vtkPointLocator, pointLocator);
-  pointLocator->SetDataSet(this->mesh);
+  pointLocator->SetDataSet(this->WorkPd);
   pointLocator->BuildLocator();
 
-  int numMeshPoints = this->mesh->GetNumberOfPoints();
-  int numMeshCells = this->mesh->GetNumberOfCells();
-  this->checked = new vtkIdType[numMeshCells];
-  this->checkedcarefully = new vtkIdType[numMeshCells];
-  this->pointMapper = new vtkIdType[numMeshCells];
-  this->BoundaryPointArray->SetNumberOfTuples(numMeshPoints);
-  this->BoundaryCellArray->SetNumberOfTuples(numMeshCells);
+  // Get number of points and cells
+  int numMeshPoints = this->WorkPd->GetNumberOfPoints();
+  int numMeshCells = this->WorkPd->GetNumberOfCells();
 
-  for (int i =0;i<numMeshPoints;i++)
-  {
-    this->BoundaryPointArray->InsertValue(i,0);
-  }
+  // Set up check arrays
+  this->checked = new int[numMeshCells];
+  this->checkedcarefully = new int[numMeshCells];
+  this->pointMapper = new int[numMeshCells];
   for (int i =0;i<numMeshCells;i++)
-  {
     this->checked[i] = 0;
-    this->BoundaryCellArray->InsertValue(i,0);
-  }
 
-  int numPoints = this->boundaryLines->GetNumberOfPoints();
+  // Set up boundary arrays
+  this->BoundaryPointArray->SetNumberOfTuples(numMeshPoints);
+  this->BoundaryPointArray->FillComponent(0, 0);
+  this->BoundaryCellArray->SetNumberOfTuples(numMeshCells);
+  this->BoundaryCellArray->FillComponent(0,0);
+
+  // Number of boundary line points
+  int numPoints = this->BoundaryLines->GetNumberOfPoints();
 
   for (pointId = 0;pointId < numPoints;pointId++)
   {
-    this->boundaryLines->GetPoint(pointId,pt);
+    this->BoundaryLines->GetPoint(pointId,pt);
     //Find point on mesh
     bp = pointLocator->FindClosestPoint(pt);
     this->pointMapper[bp] = pointId;
     this->BoundaryPointArray->InsertValue(bp,1);
-    this->mesh->GetPointCells(bp,bpCellIds);
+    this->WorkPd->GetPointCells(bp,bpCellIds);
     //Set the point mapping array
     //Assign each cell attached to this point as a boundary cell
     for (i = 0;i < bpCellIds->GetNumberOfIds();i++)
@@ -598,6 +568,7 @@ void vtkSVGetBoundaryFaces::SetBoundaryArrays()
     }
   }
 
+  // Flip the values of checked carefully
   for (int i=0;i < numMeshCells;i++)
   {
     if (this->checked[i] == 0)
@@ -609,14 +580,17 @@ void vtkSVGetBoundaryFaces::SetBoundaryArrays()
 
 int vtkSVGetBoundaryFaces::AddCellArea(const int cellId, double &area)
 {
+  // Get cell points
   vtkIdType npts, *pts;
-  this->mesh->GetCellPoints(cellId, npts, pts);
+  this->WorkPd->GetCellPoints(cellId, npts, pts);
 
+  // Get points
   double pt0[3], pt1[3], pt2[3];
-  this->mesh->GetPoint(pts[0], pt0);
-  this->mesh->GetPoint(pts[1], pt1);
-  this->mesh->GetPoint(pts[2], pt2);
+  this->WorkPd->GetPoint(pts[0], pt0);
+  this->WorkPd->GetPoint(pts[1], pt1);
+  this->WorkPd->GetPoint(pts[2], pt2);
 
-  area += std::abs(vtkTriangle::TriangleArea(pt0, pt1, pt2));
+  // Calculate are of triangle
+  area += std::abs(vtkSVGeneralUtils::ComputeTriangleArea(pt0, pt1, pt2));
   return SV_OK;
 }
