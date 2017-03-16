@@ -50,6 +50,7 @@
 #include "vtkIdList.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkPlaneSource.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
@@ -61,6 +62,36 @@
 #include "vtkTriangleFilter.h"
 #include "vtkDataSet.h"
 #include "vtkUnstructuredGrid.h"
+
+// ----------------------
+// CheckArrayExists
+// ----------------------
+int vtkSVGeneralUtils::MakePlane(double pt0[3], double pt1[3], double pt2[3],
+                                 int res0, int res1, int triangulate, vtkPolyData *pd)
+{
+  // Set up plane source
+  vtkNew(vtkPlaneSource, makePlane);
+  makePlane->SetOrigin(pt0);
+  makePlane->SetPoint1(pt1);
+  makePlane->SetPoint2(pt2);
+  makePlane->SetResolution(res0, res1);
+  makePlane->Update();
+
+  // triangulate if asked to
+  if (triangulate)
+  {
+    vtkNew(vtkTriangleFilter, triangulator);
+    triangulator->SetInputData(makePlane->GetOutput());
+    triangulator->Update();
+
+    // copy output
+    pd->DeepCopy(triangulator->GetOutput());
+  }
+  else
+    pd->DeepCopy(makePlane->GetOutput());
+
+  return SV_OK;
+}
 
 // ----------------------
 // CheckArrayExists

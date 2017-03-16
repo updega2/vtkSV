@@ -67,7 +67,20 @@ public:
   vtkTypeMacro(vtkSVGeneralUtils,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Source functions
+ /** \brief Function to make a polydata of a plane.
+  *  \param pt0 origin of plane.
+  *  \param pt1 point to extend line from origin to create first axis.
+  *  \param pt2 point to extend line from origin to create second axis.
+  *  \param res0 resolution to set on first axis.
+  *  \param res1 resolution to set on second axis.
+  *  \param triangulate indicate whether plane should be triangulated.
+  *  \param pd empty polydata to return plane in. */
+  static int MakePlane(double pt0[3], double pt1[3], double pt2[3],
+                       int res0, int res1, int triangulate, vtkPolyData *pd);
+
   //Checking functions
+
   /** \brief Function to check is array with name exists in cell or point data
    *  \param ds this is the object to check if the array exists
    *  \param datatype this is point or cell. point=0,cell=1

@@ -67,16 +67,18 @@ vtkStandardNewMacro(vtkSVPolyDataToNURBSFilter);
 vtkSVPolyDataToNURBSFilter::vtkSVPolyDataToNURBSFilter()
 {
   this->AddTextureCoordinates = 1;
+  this->BaseDomainXResolution = 32;
+  this->BaseDomainYResolution = 8;
 
-  this->InputPd         = vtkPolyData::New();
-  this->ParameterizedPd = vtkPolyData::New();
-  this->TexturedPd      = vtkPolyData::New();
-  this->LoftedPd        = vtkPolyData::New();
-  this->Centerlines     = NULL;
-  this->CubeS2Pd        = NULL;
-  this->OpenCubeS2Pd    = NULL;
-  this->SurgeryLines    = vtkPolyData::New();
-  this->Polycube        = vtkSVGeneralizedPolycube::New();
+  this->InputPd                 = vtkPolyData::New();
+  this->ParameterizedPd         = vtkPolyData::New();
+  this->TexturedPd              = vtkPolyData::New();
+  this->LoftedPd                = vtkPolyData::New();
+  this->CenterlinesPd           = NULL;
+  this->BranchBaseDomainPd      = NULL;
+  this->BifurcationBaseDomainPd = NULL;
+  this->SurgeryLinesPd          = vtkPolyData::New();
+  this->Polycube                = vtkSVGeneralizedPolycube::New();
 
   this->BoundaryPointsArrayName = NULL;
   this->GroupIdsArrayName       = NULL;
@@ -98,15 +100,15 @@ vtkSVPolyDataToNURBSFilter::~vtkSVPolyDataToNURBSFilter()
     this->InputPd->Delete();
     this->InputPd = NULL;
   }
-  if (this->CubeS2Pd != NULL)
+  if (this->BranchBaseDomainPd != NULL)
   {
-    this->CubeS2Pd->UnRegister(this);
-    this->CubeS2Pd = NULL;
+    this->BranchBaseDomainPd->UnRegister(this);
+    this->BranchBaseDomainPd = NULL;
   }
-  if (this->OpenCubeS2Pd != NULL)
+  if (this->BifurcationBaseDomainPd != NULL)
   {
-    this->OpenCubeS2Pd->UnRegister(this);
-    this->OpenCubeS2Pd = NULL;
+    this->BifurcationBaseDomainPd->UnRegister(this);
+    this->BifurcationBaseDomainPd = NULL;
   }
   if (this->ParameterizedPd != NULL)
   {
@@ -123,20 +125,20 @@ vtkSVPolyDataToNURBSFilter::~vtkSVPolyDataToNURBSFilter()
     this->LoftedPd->Delete();
     this->LoftedPd = NULL;
   }
-  if (this->Centerlines != NULL)
+  if (this->CenterlinesPd != NULL)
   {
-    this->Centerlines->UnRegister(this);
-    this->Centerlines = NULL;
+    this->CenterlinesPd->UnRegister(this);
+    this->CenterlinesPd = NULL;
   }
   if (this->Polycube != NULL)
   {
     this->Polycube->Delete();
     this->Polycube = NULL;
   }
-  if (this->SurgeryLines != NULL)
+  if (this->SurgeryLinesPd != NULL)
   {
-    this->SurgeryLines->Delete();
-    this->SurgeryLines = NULL;
+    this->SurgeryLinesPd->Delete();
+    this->SurgeryLinesPd = NULL;
   }
   if (this->BoundaryPointsArrayName != NULL)
   {
@@ -233,14 +235,21 @@ int vtkSVPolyDataToNURBSFilter::RunFilter()
   // Slice it up
   if (this->SliceAndDice() != SV_OK)
   {
-    vtkErrorMacro("Error in slicing polydata\n");
+    vtkErrorMacro("Error in slicing polydata");
+    return SV_ERROR;
+  }
+
+  // Make our base domains to match
+  if (this->MakeBaseDomains() != SV_OK)
+  {
+    vtkErrorMacro("Error in making the base domains");
     return SV_ERROR;
   }
 
   // Now perform some mappings
   if (this->PerformMappings() != SV_OK)
   {
-    vtkErrorMacro("Error in perform mappings\n");
+    vtkErrorMacro("Error in perform mappings");
     return SV_ERROR;
   }
 
@@ -255,7 +264,7 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
   // Set up slice and dice filter
   vtkNew(vtkSVPolyDataSliceAndDiceFilter, slicer);
   slicer->SetInputData(this->InputPd);
-  slicer->SetCenterlinesPd(this->Centerlines);
+  slicer->SetCenterlinesPd(this->CenterlinesPd);
   slicer->SetSliceLength(1.0);
   slicer->SetConstructPolycube(1);
   slicer->SetBoundaryPointsArrayName(this->BoundaryPointsArrayName);
@@ -270,8 +279,40 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
   // Get the output, the polycube, and the surgerylines
   this->InputPd->DeepCopy(slicer->GetOutput());
   this->Polycube->DeepCopy(slicer->GetPolycube());
-  this->SurgeryLines->DeepCopy(slicer->GetSurgeryLinesPd());
+  this->SurgeryLinesPd->DeepCopy(slicer->GetSurgeryLinesPd());
 
+  return SV_OK;
+}
+
+// ----------------------
+// MakeBaseDomains
+// ----------------------
+int vtkSVPolyDataToNURBSFilter::MakeBaseDomains()
+{
+  double origin[3]; origin[0] = 0.0; origin[1] = 0.0; origin[2] = 0.0;
+  if (this->BranchBaseDomainPd == NULL)
+  {
+    // fine then, we will make our own
+    this->BranchBaseDomainPd = vtkPolyData::New();
+    double brp1[3]; brp1[0] = 4.0; brp1[1] = 0.0; brp1[2] = 0.0;
+    double brp2[3]; brp2[0] = 0.0; brp2[1] = 1.0; brp2[2] = 0.0;
+    vtkSVGeneralUtils::MakePlane(origin, brp1, brp2,
+                                 this->BaseDomainXResolution,
+                                 this->BaseDomainYResolution,
+                                 0, this->BranchBaseDomainPd);
+  }
+
+  if (this->BifurcationBaseDomainPd == NULL)
+  {
+    // fine then, we will make our own
+    this->BifurcationBaseDomainPd = vtkPolyData::New();
+    double bip1[3]; bip1[0] = 3.0; bip1[1] = 0.0; bip1[2] = 0.0;
+    double bip2[3]; bip2[0] = 0.0; bip2[1] = 1.0; bip2[2] = 0.0;
+    vtkSVGeneralUtils::MakePlane(origin, bip1, bip2,
+                                 round(this->BaseDomainXResolution*(3/4.)),
+                                 this->BaseDomainYResolution,
+                                 0, this->BifurcationBaseDomainPd);
+  }
   return SV_OK;
 }
 
@@ -336,7 +377,7 @@ int vtkSVPolyDataToNURBSFilter::GetSegment(const int segmentId, vtkPolyData *seg
 {
   // Threshold
   vtkSVGeneralUtils::ThresholdPd(this->InputPd, segmentId, segmentId, 1, this->SegmentIdsArrayName, segmentPd);
-  vtkSVGeneralUtils::ThresholdPd(this->SurgeryLines, segmentId, segmentId, 1, this->SegmentIdsArrayName, surgeryLinePd);
+  vtkSVGeneralUtils::ThresholdPd(this->SurgeryLinesPd, segmentId, segmentId, 1, this->SegmentIdsArrayName, surgeryLinePd);
 
   return SV_OK;
 }
@@ -425,7 +466,7 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
       vtkNew(vtkPolyData, mappedPd);
       this->MapSliceToBaseDomain(slicePd, surgeryLinePd, sliceBaseDomain, firstLoopPts, secondLoopPts, xvec, zvec);
       //this->GetCorrespondingCube(cubeS2Pd, boundary);
-      this->InterpolateMapOntoTarget(this->CubeS2Pd, slicePd, sliceBaseDomain, mappedPd);
+      this->InterpolateMapOntoTarget(this->BranchBaseDomainPd, slicePd, sliceBaseDomain, mappedPd);
       fprintf(stdout,"Done with mapping...\n");
 
       // Copy the mapped polydata
@@ -514,7 +555,7 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     this->MapOpenSliceToBaseDomain(bifurcationPd, sliceBaseDomain, firstLoopPts, secondLoopPts, xvec, zvec);
 
     // Call interpolator to map base domain to original surface
-    this->InterpolateMapOntoTarget(this->OpenCubeS2Pd, bifurcationPd, sliceBaseDomain, mappedPd);
+    this->InterpolateMapOntoTarget(this->BifurcationBaseDomainPd, bifurcationPd, sliceBaseDomain, mappedPd);
     fprintf(stdout,"Done with mapping...\n");
 
     // append output parameterization
@@ -768,8 +809,8 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
 
   int xNum = 1.0/xSpacing + 2;
   int yNum = 1.0/ySpacing + 2;
-  fprintf(stdout,"XNum: %d\n", xNum);
-  fprintf(stdout,"YNum: %d\n", yNum);
+  //fprintf(stdout,"XNum: %d\n", xNum);
+  //fprintf(stdout,"YNum: %d\n", yNum);
   for (int i=0; i<yNum; i++)
   {
     vtkNew(vtkPoints, newPoints);
@@ -823,8 +864,8 @@ int vtkSVPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string f
 
   int xNum = 1.0/xSpacing + 2;
   int yNum = 1.0/ySpacing + 2;
-  fprintf(stdout,"XNum: %d\n", xNum);
-  fprintf(stdout,"YNum: %d\n", yNum);
+  //fprintf(stdout,"XNum: %d\n", xNum);
+  //fprintf(stdout,"YNum: %d\n", yNum);
   for (int i=0; i<yNum; i++)
   {
     fprintf(pFile, "/group/test/%d\n", i);

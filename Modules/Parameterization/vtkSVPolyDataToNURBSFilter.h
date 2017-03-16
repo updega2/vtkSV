@@ -91,12 +91,12 @@ public:
 
   //@{
   // \brief Macro to Get/Set objects used by filter
-  vtkGetObjectMacro(Centerlines, vtkPolyData);
-  vtkSetObjectMacro(Centerlines, vtkPolyData);
-  vtkGetObjectMacro(CubeS2Pd, vtkPolyData);
-  vtkSetObjectMacro(CubeS2Pd, vtkPolyData);
-  vtkGetObjectMacro(OpenCubeS2Pd, vtkPolyData);
-  vtkSetObjectMacro(OpenCubeS2Pd, vtkPolyData);
+  vtkGetObjectMacro(CenterlinesPd, vtkPolyData);
+  vtkSetObjectMacro(CenterlinesPd, vtkPolyData);
+  vtkGetObjectMacro(BranchBaseDomainPd, vtkPolyData);
+  vtkSetObjectMacro(BranchBaseDomainPd, vtkPolyData);
+  vtkGetObjectMacro(BifurcationBaseDomainPd, vtkPolyData);
+  vtkSetObjectMacro(BifurcationBaseDomainPd, vtkPolyData);
   vtkGetObjectMacro(TexturedPd, vtkPolyData);
   vtkSetObjectMacro(TexturedPd, vtkPolyData);
   vtkGetObjectMacro(LoftedPd, vtkPolyData);
@@ -123,9 +123,8 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int AddTextureCoordinates;
-
   int RunFilter(); // Perform operation
+  int MakeBaseDomains(); // Perform operation
   int PerformMappings(); // Perform all mappings
   int SliceAndDice();  // Send to slice and dice filter
 
@@ -205,15 +204,20 @@ private:
   char *BooleanPathArrayName;
 
   vtkPolyData *InputPd;
-  vtkPolyData *CubeS2Pd;
-  vtkPolyData *OpenCubeS2Pd;
+  vtkPolyData *BranchBaseDomainPd;
+  vtkPolyData *BifurcationBaseDomainPd;
   vtkPolyData *ParameterizedPd;
   vtkPolyData *TexturedPd;
   vtkPolyData *LoftedPd;
-  vtkPolyData *Centerlines;
-  vtkPolyData *SurgeryLines;
+  vtkPolyData *CenterlinesPd;
+  vtkPolyData *SurgeryLinesPd;
 
   vtkSVGeneralizedPolycube *Polycube;
+
+  int AddTextureCoordinates;
+  int BaseDomainXResolution;
+  int BaseDomainYResolution;
+
 
 };
 

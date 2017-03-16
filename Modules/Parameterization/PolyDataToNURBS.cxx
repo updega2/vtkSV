@@ -33,31 +33,25 @@
 
 int main(int argc, char *argv[])
 {
-  if (argc != 5)
+  if (argc != 3)
   {
-      std::cout << "Need four objects: [PolyData with Ids] [Centerlines] [S2 Matching Parameterization] [S2 Matching Open Parameterization]!" <<endl;
+      std::cout << "Need two objects: [PolyData with Ids] [Centerlines]!" <<endl;
       return EXIT_FAILURE;
   }
 
   //Create string from input File Name on command line
   std::string inputFilename1 = argv[1];
   std::string inputFilename2 = argv[2];
-  std::string inputFilename3 = argv[3];
-  std::string inputFilename4 = argv[4];
 
   //creating the full poly data to read in from file and the operation filter
   vtkNew(vtkPolyData, pd1);
   vtkNew(vtkPolyData, pd2);
-  vtkNew(vtkPolyData, pd3);
-  vtkNew(vtkPolyData, pd4);
   vtkNew(vtkSVPolyDataToNURBSFilter, Converter);
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkSVIOUtils::ReadInputFile(inputFilename1,pd1);
   vtkSVIOUtils::ReadInputFile(inputFilename2,pd2);
-  vtkSVIOUtils::ReadInputFile(inputFilename3,pd3);
-  vtkSVIOUtils::ReadInputFile(inputFilename4,pd4);
 
   //OPERATION
   std::string newDirName = vtkSVIOUtils::GetPath(inputFilename1)+"/"+vtkSVIOUtils::GetRawName(inputFilename1);
@@ -65,9 +59,7 @@ int main(int argc, char *argv[])
   system(("mkdir -p "+newDirName).c_str());
   std::cout<<"Performing Operation..."<<endl;
   Converter->SetInputData(pd1);
-  Converter->SetCenterlines(pd2);
-  Converter->SetCubeS2Pd(pd3);
-  Converter->SetOpenCubeS2Pd(pd4);
+  Converter->SetCenterlinesPd(pd2);
   Converter->SetAddTextureCoordinates(1);
   Converter->SetBoundaryPointsArrayName("BoundaryPoints");
   Converter->SetGroupIdsArrayName("GroupIds");
