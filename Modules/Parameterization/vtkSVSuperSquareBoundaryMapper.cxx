@@ -121,6 +121,7 @@ int vtkSVSuperSquareBoundaryMapper::CalculateSquareEdgeLengths(vtkIntArray *actu
     int checkPt = -1;
     double boundaryDistance = 0.0;
     int done = 0;
+
     // Go till we can't no more
     while (!done)
     {
@@ -139,7 +140,7 @@ int vtkSVSuperSquareBoundaryMapper::CalculateSquareEdgeLengths(vtkIntArray *actu
         if (checkPt == pointIds->LookupValue(this->BoundaryIds->GetValue(j)))
         {
           actualIds->SetValue((i+1)%numBoundaryPts, pointIds->GetTuple1(checkPt));
-          fprintf(stdout,"Found boundary ID!: %d\n", this->BoundaryIds->GetValue(j));
+          //fprintf(stdout,"Found boundary ID!: %d\n", this->BoundaryIds->GetValue(j));
           done = 1;
         }
       }

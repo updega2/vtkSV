@@ -32,7 +32,7 @@
  * \class vtkSVSuperSquareBoundaryMapper
  *
  * \brief This filter is derived from vtkSVBoundaryMapper to implement a
- * special plane boundary where it is actually set up to define a rectangular;
+ * special plane boundary where it is actually set up to define a rectangule;
  * however, the boundary points do not necessarily all have to be corners.
  * That is set by defining the number of divisions in each length of the
  * rectangle.
