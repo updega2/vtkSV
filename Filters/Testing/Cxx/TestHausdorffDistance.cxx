@@ -28,13 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file TestHausdorffDistance.cxx
- *  @brief This implements the vtkSVHausdorffDistance filter as a class
+/**
+ *  \file TestHausdorffDistance.cxx
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 #include <vtkSVHausdorffDistance.h>
 
