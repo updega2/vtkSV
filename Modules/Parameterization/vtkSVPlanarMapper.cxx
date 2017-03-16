@@ -28,46 +28,35 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVPlanarMapper.cxx
- *  @brief This implements the vtkSVPlanarMapper filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVPlanarMapper.h"
 
-#include "vtkSVBoundaryMapper.h"
-#include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkConnectivityFilter.h"
-#include "vtkDataSetSurfaceFilter.h"
-#include "vtkFeatureEdges.h"
 #include "vtkIdFilter.h"
+#include "vtkIdList.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVBoundaryMapper.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkTransform.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkXMLPolyDataWriter.h"
 
 #include <iostream>
 #include <sstream>
 #include <cmath>
 
-//---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkSVPlanarMapper, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVPlanarMapper);
 
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPlanarMapper::vtkSVPlanarMapper()
 {
   this->RemoveInternalIds = 1;
@@ -93,7 +82,9 @@ vtkSVPlanarMapper::vtkSVPlanarMapper()
   this->AHarm  = NULL;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPlanarMapper::~vtkSVPlanarMapper()
 {
   if (this->InitialPd != NULL)
@@ -149,17 +140,23 @@ vtkSVPlanarMapper::~vtkSVPlanarMapper()
   }
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 void vtkSVPlanarMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+
+  if (this->InternalIdsArrayName != NULL)
+    os << indent << "Internal Ids array name: " << this->InternalIdsArrayName << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-//---------------------------------------------------------------------------
-int vtkSVPlanarMapper::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+// ----------------------
+// RequestData
+// ----------------------
+int vtkSVPlanarMapper::RequestData(vtkInformation *vtkNotUsed(request),
+                                   vtkInformationVector **inputVector,
+                                   vtkInformationVector *outputVector)
 {
   // get the input and output
   vtkPolyData *input = vtkPolyData::GetData(inputVector[0]);
@@ -195,14 +192,12 @@ int vtkSVPlanarMapper::RequestData(
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrepFilter
+// ----------------------
 int vtkSVPlanarMapper::PrepFilter()
 {
+  // Get number of points and cells
   vtkIdType numPolys = this->InitialPd->GetNumberOfPolys();
   vtkIdType numPoints = this->InitialPd->GetNumberOfPoints();
   //Check the input to make sure it is there
@@ -259,26 +254,27 @@ int vtkSVPlanarMapper::PrepFilter()
 
   return SV_OK;
 }
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+
+// ----------------------
+// RunFilter
+// ----------------------
 int vtkSVPlanarMapper::RunFilter()
 {
+  // Set boundaries using given boundary mapper
   if (this->SetBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error in mapping");
     return SV_ERROR;
   }
 
+  // Set internal nodes
   if (this->SetInternalNodes() != SV_OK)
   {
     vtkErrorMacro("Error setting internal nodes");
     return SV_ERROR;
   }
 
+  // Solve the system
   if (this->SolveSystem() != SV_OK)
   {
     vtkErrorMacro("Error solving system");
@@ -288,19 +284,19 @@ int vtkSVPlanarMapper::RunFilter()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetBoundaries
+// ----------------------
 int vtkSVPlanarMapper::SetBoundaries()
 {
+  // Set up the boundary mapper, should already have most data set to
+  // it, but need to apply last little bit
   this->BoundaryMapper->SetInputData(this->WorkPd);
   this->BoundaryMapper->SetEdgeTable(this->EdgeTable);
   this->BoundaryMapper->SetInternalIdsArrayName(this->InternalIdsArrayName);
   this->BoundaryMapper->Update();
 
+  // Get the output from the boundary mapper
   vtkNew(vtkPolyData, boundaryPd);
   boundaryPd->DeepCopy(this->BoundaryMapper->GetOutput());
   // Check if array internal ids is already on pd
@@ -309,16 +305,23 @@ int vtkSVPlanarMapper::SetBoundaries()
     vtkErrorMacro("No internal ids array name on boundary pd");
     return SV_ERROR;
   }
+
+  // Get the original point ids from boundary
   vtkDataArray *originalIds = boundaryPd->GetPointData()->GetArray(this->InternalIdsArrayName);
+
+  // Loop through points
   int numBoundPts = boundaryPd->GetNumberOfPoints();
   for (int i=0; i<numBoundPts; i++)
   {
+    // Get point
     int id = originalIds->GetTuple1(i);
     double pt[3];
     boundaryPd->GetPoint(i, pt);
+
     // Set diagonal to be 1 for boundary points
     this->AHarm->set_element(id, id, 1.0);
     this->ATutte->set_element(id, id, 1.0);
+
     // Set right hand side to be point on boundary
     this->Bu[id] = pt[0];
     this->Bv[id] = pt[1];
@@ -327,85 +330,33 @@ int vtkSVPlanarMapper::SetBoundaries()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPlanarMapper::SetCircleBoundary()
-{
-//  vtkDataArray *pointIds = this->BoundaryLoop->GetPointData()->GetArray(this->InternalIdsArrayName);
-//  int numLines = this->BoundaryLoop->GetNumberOfLines();
-//
-//  double currCoords[3];
-//  for (int i=0; i<3; i++)
-//  {
-//    currCoords[i] = 0.0;
-//  }
-//
-//  double unitLength = M_PI / 2.0;
-//  int currCell = 0;
-//  int checkPt = -1;
-//  for (int i=0; i<4; i++)
-//  {
-//    double currLength = 0.0;
-//    int lastPt = pointIds->LookupValue(this->BoundaryCorners[i]);
-//    int dir = 0; //TODO: Figure out dir
-//    vtkIdType npts, *pts;
-//    while (checkPt != lastPt)
-//    {
-//      this->BoundaryLoop->GetCellPoints(currCell, npts, pts);
-//      double pt0[3], pt1[3];
-//      this->BoundaryLoop->GetPoint(pts[0], pt0);
-//      this->BoundaryLoop->GetPoint(pts[1], pt1);
-//
-//      checkPt = pts[1];
-//
-//      double dist = std::sqrt(std::pow(pt0[0]-pt1[0], 2.0) +
-//                              std::pow(pt0[1]-pt1[1], 2.0) +
-//                              std::pow(pt0[2]-pt1[2], 2.0));
-//      currLength += dist;
-//
-//      double boundaryVal[3];
-//
-//      double angle = currLength/this->BoundaryLengths[i] * unitLength + unitLength*i;// + unitLength/2.0;
-//      //boundaryVal[0] = (2.0 * radius * std::cos(angle))/(1.0 + std::pow(radius, 2.0));
-//      //boundaryVal[1] = (2.0 * radius * std::sin(angle))/(1.0 + std::pow(radius, 2.0));
-//      //boundaryVal[2] = (-1.0 + std::pow(radius, 2.0))/(1.0 + std::pow(radius, 2.0));
-//
-//      int id = pointIds->GetTuple1(pts[1]);
-//
-//      //this->HarmonicMap[0]->GetPoints()->SetPoint(id, boundaryVal);
-//
-//      currCell++;
-//    }
-//  }
-
-  return SV_OK;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetInternalNodes
+// ----------------------
 int vtkSVPlanarMapper::SetInternalNodes()
 {
+  // Get number of points
   int numPoints = this->WorkPd->GetNumberOfPoints();
 
+  // Loop through points
   for (int i=0; i<numPoints; i++)
   {
+    // If its not on the boundary, process
     if (this->IsBoundary->GetValue(i) == 0)
     {
+      // Get the weight of point
       double tot_weight = 0.0;
       double tot_tutte_weight = 0.0;
+
+      // Get points sharing edge with point
       vtkNew(vtkIdList, pointNeighbors);
       vtkSVGeneralUtils::GetPointNeighbors(i, this->WorkPd, pointNeighbors);
+
+      // Get weight of edges from edge table
       double weight_tot;
       for (int j=0; j<pointNeighbors->GetNumberOfIds(); j++)
       {
+        // neighbor point id
         int p1 = pointNeighbors->GetId(j);
 
         // Get edge info
@@ -413,20 +364,26 @@ int vtkSVPlanarMapper::SetInternalNodes()
         int edgeNeighbor = this->EdgeNeighbors->GetValue(edgeId);
         double weight    = this->EdgeWeights->GetValue(edgeId);
 
+        // if no edge neighbor, then we can leave
         if (edgeNeighbor == -1)
-        {
           continue;
-        }
 
+        // Set the harmonic weight and tutte weight for i,j
         this->AHarm->set_element(i,p1, weight);
         this->ATutte->set_element(i, p1, 1.0);
+
+        // Update the total harmonic and tutte weight for point i
         tot_weight -= weight;
         tot_tutte_weight -= 1.0;
       }
+
+      // Set the total harmonic and tutte weight for i,i
       double pt[3];
       this->WorkPd->GetPoint(i, pt);
       this->AHarm->set_element(i, i, tot_weight);
       this->ATutte->set_element(i, i, tot_tutte_weight);
+
+      // Set initial values for solution vector
       this->Xu[i] = pt[0];
       this->Xv[i] = pt[1];
     }
@@ -435,12 +392,9 @@ int vtkSVPlanarMapper::SetInternalNodes()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SolveSystem
+// ----------------------
 int vtkSVPlanarMapper::SolveSystem()
 {
   int numPoints = this->WorkPd->GetNumberOfPoints();
@@ -470,12 +424,9 @@ int vtkSVPlanarMapper::SolveSystem()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// InvertSystem
+// ----------------------
 int vtkSVPlanarMapper::InvertSystem(std::vector<std::vector<double> > &mat,
                                   std::vector<std::vector<double> > &invMat)
 {
