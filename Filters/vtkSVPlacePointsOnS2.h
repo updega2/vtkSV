@@ -28,19 +28,13 @@
  *
  *=========================================================================*/
 
-
-/** @file vtkSVPlacePointsOnS2.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ *  \class vtkSVPlacePointsOnS2
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVPlacePointsOnS2_h
@@ -48,32 +42,28 @@
 
 #include "vtkPolyDataAlgorithm.h"
 
-#include "vtkEdgeTable.h"
-#include "vtkFloatArray.h"
-#include "vtkMatrix4x4.h"
 #include "vtkPolyData.h"
 
 class vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPlacePointsOnS2* New();
-  //vtkTypeRevisionMacro(vtkSVPlacePointsOnS2, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Print statements used for debugging
-  vtkGetMacro(Verbose, int);
-  vtkSetMacro(Verbose, int);
-
-  // Description:
-  // Macro to set/get the axis that the object aligns with in order to orient
-  // the object with a unit cube
+  //@{
+  // \brief Macro to set/get the axis that the object aligns with in order to orient
+  // the object with a unit cube.
   vtkSetVector3Macro(ZAxis, double);
   vtkGetVector3Macro(ZAxis, double);
   vtkSetVector3Macro(XAxis, double);
   vtkGetVector3Macro(XAxis, double);
+
+  //@{
+  // \brief Specify whether to use custom axis alignment.
   vtkSetMacro(UseCustomAxisAlign, int);
   vtkGetMacro(UseCustomAxisAlign, int);
+  vtkBooleanMacro(UseCustomAxisAlign, int);
+  //@}
 
 protected:
   vtkSVPlacePointsOnS2();
@@ -84,6 +74,7 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
+  int RunFilter(); // Run filter operations.
   int MoveToOrigin();
   int RotateToCubeCenterAxis();
   int ScaleToUnitCube();
@@ -95,10 +86,8 @@ private:
   vtkSVPlacePointsOnS2(const vtkSVPlacePointsOnS2&);  // Not implemented.
   void operator=(const vtkSVPlacePointsOnS2&);  // Not implemented.
 
-  int Verbose;
-
   vtkPolyData *InitialPd;
-  vtkPolyData *FinalPd;
+  vtkPolyData *WorkPd;
 
   int UseCustomAxisAlign;
   double ZAxis[3];

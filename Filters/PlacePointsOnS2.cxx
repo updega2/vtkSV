@@ -62,7 +62,6 @@ int main(int argc, char *argv[])
   //OPERATION
   std::cout<<"Performing Operation..."<<endl;
   Placer->SetInputData(0, pd1);
-  Placer->SetVerbose(1);
   Placer->Update();
 
   //Write Files
