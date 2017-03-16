@@ -28,21 +28,9 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVLoftNURBSCurve.cxx
- *  @brief This is the filter to loft a solid from segmentation groups
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVLoftNURBSCurve.h"
 
-#include "vtkAlgorithmOutput.h"
-#include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkDataSetAttributes.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
@@ -51,19 +39,21 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkTrivialProducer.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
-#include "vtkIntArray.h"
 
 #include <string>
 #include <sstream>
 #include <iostream>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVLoftNURBSCurve);
 
-//----------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVLoftNURBSCurve::vtkSVLoftNURBSCurve()
 {
   this->SetNumberOfInputPorts(1);
@@ -84,7 +74,9 @@ vtkSVLoftNURBSCurve::vtkSVLoftNURBSCurve()
   this->ParametricSpanType = NULL;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVLoftNURBSCurve::~vtkSVLoftNURBSCurve()
 {
   if (this->Curve != NULL)
@@ -93,9 +85,9 @@ vtkSVLoftNURBSCurve::~vtkSVLoftNURBSCurve()
   }
 }
 
-//----------------------------------------------------------------------------
-// This method is much too long, and has to be broken up!
-// Append data sets into single polygonal data set.
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVLoftNURBSCurve::RequestData(
     vtkInformation *vtkNotUsed(request),
     vtkInformationVector **inputVector,
@@ -115,14 +107,25 @@ int vtkSVLoftNURBSCurve::RequestData(
   return SV_OK;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVLoftNURBSCurve::PrintSelf(ostream& os,
     vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
+  os << indent << "Degree: " << this->Degree << "\n";
+  os << indent << "Knot span type: " << this->KnotSpanType << "\n";
+  os << indent << "Parametric values span type: " << this->ParametricSpanType << "\n";
+  os << indent << "Start Derivative: " << this->StartDerivative[0] << " ";
+  os << this->StartDerivative[1] << " " << this->StartDerivative[2] << "\n";
+  os << indent << "End Derivative: " << this->EndDerivative[0] << " ";
+  os << this->EndDerivative[1] << " " << this->EndDerivative[2] << "\n";
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// FillInputPortInformation
+// ----------------------
 int vtkSVLoftNURBSCurve::FillInputPortInformation(
     int port, vtkInformation *info)
 {
@@ -134,30 +137,38 @@ int vtkSVLoftNURBSCurve::FillInputPortInformation(
   return SV_OK;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// LoftNURBS
+// ----------------------
 int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
 {
+  // Get number of control points and degree of surface
   int nCon = input->GetNumberOfPoints();
   int p    = this->Degree;
+
+  // Get the span types
   std::string ktype = this->KnotSpanType;
   std::string ptype = this->ParametricSpanType;
 
+  // Get the input point set u representation
   vtkNew(vtkDoubleArray, U);
   if (vtkSVNURBSUtils::GetUs(input->GetPoints(), ptype, U) != SV_OK)
-  {
     return SV_ERROR;
-  }
 
+  // Get the knots
   vtkNew(vtkDoubleArray, knots);
   if (vtkSVNURBSUtils::GetKnots(U, p, ktype, knots) != SV_OK)
   {
     fprintf(stderr,"Error getting knots\n");
     return SV_ERROR;
   }
+
+  // Set weigths to equal weighting
   vtkNew(vtkDoubleArray, weights);
   weights->SetNumberOfTuples(nCon);
   weights->FillComponent(0 , 1.0);
 
+  // If using derivatives, set the right format for derivatives
   double D0[3], DN[3];
   if (!strncmp(ktype.c_str(), "derivative", 10))
   {
@@ -167,16 +178,14 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
       D0[i] = this->StartDerivative[i];
       DN[i] = this->EndDerivative[i];
       if (D0[i] == -1 || DN[i] == -1)
-      {
         neg = 1;
-      }
     }
+    // If non provided, set our own!
     if (neg == 1)
-    {
       this->GetDefaultDerivatives(input->GetPoints(), D0, DN);
-    }
   }
 
+  // Get the control points, lengthy operation in vtkNURBSUtils
   vtkNew(vtkPoints, cpoints);
   if (vtkSVNURBSUtils::GetControlPointsOfCurve(input->GetPoints(), U, weights,
                                              knots, p, ktype, D0, DN, cpoints) != SV_OK)
@@ -184,33 +193,43 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
     return SV_ERROR;
   }
 
+  // Set the output curve knots and control points
   Curve->SetKnotVector(knots);
   Curve->SetControlPoints(cpoints);
+
+  // Generate the polydata representation finally :)
   Curve->GeneratePolyDataRepresentation(this->PolyDataSpacing);
   outputPD->DeepCopy(Curve->GetCurveRepresentation());
 
   return SV_OK;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// LoftNURBS
+// ----------------------
 int vtkSVLoftNURBSCurve::GetDefaultDerivatives(vtkPoints *points, double D0[3], double DN[3])
 {
+  // Get number of points
   int n = points->GetNumberOfPoints();
   double p0[3];
   double p1[3];
   double pnm1[3];
   double pnm2[3];
 
+  // Get points
   points->GetPoint(0, p0);
   points->GetPoint(1, p1);
   points->GetPoint(n-1,pnm1);
   points->GetPoint(n-2,pnm2);
 
+  // Get vectors between beginning and end points
   for (int i=0; i<3; i++)
   {
     D0[i] = p1[i] - p0[i];
     DN[i] = pnm1[i] - pnm2[i];
   }
+
+  // Normalize default vectors
   vtkMath::Normalize(D0);
   vtkMath::Normalize(DN);
 

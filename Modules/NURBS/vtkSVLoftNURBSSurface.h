@@ -28,18 +28,19 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVLoftNURBSSurface.h
- *  @brief This is the filter to perform the intersection between multiple
- *  @brief vessels
+/**
+ *  \class vtkSVLoftNURBSSurface
+ *  \brief Filter to take an input set of points and loft a full nurbs
+ *  curve using global interpolation techniques
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVLoftNURBSSurface_h
-#define __vtkSVLoftNURBSSurface_h
+#ifndef vtkSVLoftNURBSSurface_h
+#define vtkSVLoftNURBSSurface_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -53,101 +54,117 @@ public:
   vtkTypeMacro(vtkSVLoftNURBSSurface,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // UserManagedInputs allows the user to set inputs by number instead of
-  // using the AddInput/RemoveInput functions. Calls to
-  // SetNumberOfInputs/SetInputConnectionByNumber should not be mixed with calls
-  // to AddInput/RemoveInput. By default, UserManagedInputs is false.
+  //@{
+  /// \brief UserManagedInputs allows the user to set inputs by number instead of
+  /// using the AddInput/RemoveInput functions. Calls to
+  /// SetNumberOfInputs/SetInputConnectionByNumber should not be mixed with calls
+  /// to AddInput/RemoveInput. By default, UserManagedInputs is false.
   vtkSetMacro(UserManagedInputs,int);
   vtkGetMacro(UserManagedInputs,int);
   vtkBooleanMacro(UserManagedInputs,int);
 
-  // Description:
-  // Add a dataset to the list of data to append. Should not be
-  // used when UserManagedInputs is true, use SetInputByNumber instead.
+  //@{
+  /// \brief Add a dataset to the list of data to append. Should not be
+  /// used when UserManagedInputs is true, use SetInputByNumber instead.
   void AddInputData(vtkPolyData *);
+  //@}
 
-  // Description:
-  // Remove a dataset from the list of data to append. Should not be
-  // used when UserManagedInputs is true, use SetInputByNumber (NULL) instead.
+  //@{
+  /// \brief Remove a dataset from the list of data to append. Should not be
+  /// used when UserManagedInputs is true, use SetInputByNumber (NULL) instead.
   void RemoveInputData(vtkPolyData *);
+  //@}
 
-//BTX
-  // Description:
-  // Get any input of this filter.
+  //@{
+  //// \brief Get any input of this filter.
   vtkPolyData *GetInput(int idx);
   vtkPolyData *GetInput() { return this->GetInput( 0 ); };
-//ETX
+  //@}
 
-  // Description:
-  // Directly set(allocate) number of inputs, should only be used
+  //@{
+  /// \brief Directly set(allocate) number of inputs, should only be used
   // when UserManagedInputs is true.
   void SetNumberOfInputs(int num);
+  //@}
 
-  // Definition:
-  // Get and set macro for degree of output curve
+  //@{
+  /// \brief Get and set macro for degree of output surface
   vtkGetMacro(UDegree, int);
   vtkSetMacro(UDegree, int);
   vtkGetMacro(VDegree, int);
   vtkSetMacro(VDegree, int);
+  //@}
 
-  // Definition:
-  // Set knot span type. Can be 'equal', 'avg', or 'endderiv'
+  //@{
+  /// \brief Set knot span type. Can be 'equal', 'avg', or 'endderiv'
   vtkSetStringMacro(UKnotSpanType);
   vtkGetStringMacro(UKnotSpanType);
   vtkSetStringMacro(VKnotSpanType);
   vtkGetStringMacro(VKnotSpanType);
+  //@}
 
-  // Definition:
-  // Set parametric span type. Can be 'equal', 'chord', or 'centripetal'
+  //@{
+  /// \brief Set parametric span type. Can be 'equal', 'chord', or 'centripetal'
   vtkSetStringMacro(UParametricSpanType);
   vtkGetStringMacro(UParametricSpanType);
   vtkSetStringMacro(VParametricSpanType);
   vtkGetStringMacro(VParametricSpanType);
+  //@}
 
+  /// \brief Get the nurbs surface
   vtkGetObjectMacro(Surface, vtkSVNURBSSurface);
 
   // Set Nth input, should only be used when UserManagedInputs is true.
   void SetInputConnectionByNumber(int num, vtkAlgorithmOutput *input);
   void SetInputDataByNumber(int num, vtkPolyData *ds);
 
-  // Description:
-  // ParallelStreaming is for a particular application.
-  // It causes this filter to ask for a different piece
-  // from each of its inputs.  If all the inputs are the same,
-  // then the output of this append filter is the whole dataset
-  // pieced back together.  Duplicate points are create
-  // along the seams.  The purpose of this feature is to get
-  // data parallelism at a course scale.  Each of the inputs
-  // can be generated in a different process at the same time.
+
+  //@{
+  /// \details ParallelStreaming is for a particular application.
+  /// It causes this filter to ask for a different piece
+  /// from each of its inputs.  If all the inputs are the same,
+  /// then the output of this append filter is the whole dataset
+  /// pieced back together.  Duplicate points are create
+  /// along the seams.  The purpose of this feature is to get
+  /// data parallelism at a course scale.  Each of the inputs
+  /// can be generated in a different process at the same time.
   vtkSetMacro(ParallelStreaming, int);
   vtkGetMacro(ParallelStreaming, int);
   vtkBooleanMacro(ParallelStreaming, int);
+  //@}
 
-  // Definition:
-  // U spacing in the polydata representation when retrieved (0 - 1)
+  //@{
+  /// \brief U spacing in the polydata representation when retrieved (0 - 1)
   vtkGetMacro(PolyDataUSpacing, double);
   vtkSetMacro(PolyDataUSpacing, double);
+  //@}
 
-  // V spacing in the polydata representation when retrieved (0 - 1)
+  //@{
+  /// \brief V spacing in the polydata representation when retrieved (0 - 1)
   vtkGetMacro(PolyDataVSpacing, double);
   vtkSetMacro(PolyDataVSpacing, double);
+  //@}
 
-  // Definition:
-  // Get and set object macros for the start derivatives. Should have the
+  //@{
+  /// \brief Get and set object macros for the start derivatives. Should have the
   // same number of values as the input point data in respective direction
   vtkSetObjectMacro(StartUDerivatives, vtkDoubleArray);
   vtkGetObjectMacro(StartUDerivatives, vtkDoubleArray);
   vtkSetObjectMacro(StartVDerivatives, vtkDoubleArray);
   vtkGetObjectMacro(StartVDerivatives, vtkDoubleArray);
+  //@}
 
-  // Get and set object macros for the end derivatives. Should have the
+  //@{
+  /// \brief Get and set object macros for the end derivatives. Should have the
   // same number of values as the input point data in respective direction
   vtkSetObjectMacro(EndUDerivatives, vtkDoubleArray);
   vtkGetObjectMacro(EndUDerivatives, vtkDoubleArray);
   vtkSetObjectMacro(EndVDerivatives, vtkDoubleArray);
   vtkGetObjectMacro(EndVDerivatives, vtkDoubleArray);
+  //@}
 
+  /** \brief Function to get a default set of derivatives if none are given
+   *  and a knot span type of derivative is given. */
   int GetDefaultDerivatives(vtkStructuredGrid *input, const int comp,
                             vtkDoubleArray *D0out, vtkDoubleArray *DNout);
 //ETX
@@ -176,16 +193,16 @@ protected:
   //User defined booleans for filter management
   int UserManagedInputs;
 
+  char *UKnotSpanType;
+  char *VKnotSpanType;
+  char *UParametricSpanType;
+  char *VParametricSpanType;
+
   int UDegree;
   int VDegree;
 
   double PolyDataUSpacing;
   double PolyDataVSpacing;
-
-  char *UKnotSpanType;
-  char *VKnotSpanType;
-  char *UParametricSpanType;
-  char *VParametricSpanType;
 
   vtkSVNURBSSurface *Surface;
 
@@ -200,5 +217,3 @@ private:
 };
 
 #endif
-
-

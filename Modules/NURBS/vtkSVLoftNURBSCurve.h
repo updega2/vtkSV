@@ -30,6 +30,8 @@
 
 /**
  *  \class vtkSVLoftNURBSCurve
+ *  \brief Filter to take an input set of points and loft a full nurbs
+ *  curve using global interpolation techniques
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -52,35 +54,44 @@ public:
   vtkTypeMacro(vtkSVLoftNURBSCurve,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Definition:
-  // Get and set macro for degree of output curve
+  //@{
+  /// \brief Get and set macro for degree of output curve
   vtkGetMacro(Degree, int);
   vtkSetMacro(Degree, int);
+  //@}
 
-  // Definition:
-  // Set knot span type. Can be 'equal', 'average', or 'derivative'
+  //@{
+  /// \brief Set knot span type. Can be 'equal', 'average', or 'derivative'
   vtkSetStringMacro(KnotSpanType);
   vtkGetStringMacro(KnotSpanType);
-  // Definition:
-  // Set parametric span type. Can be 'equal', 'chord', or 'centripetal'
+  //@}
+  //@{
+  /// \brief Set parametric span type. Can be 'equal', 'chord', or 'centripetal'
   vtkSetStringMacro(ParametricSpanType);
   vtkGetStringMacro(ParametricSpanType);
+  //@}
 
-  // Get and set macro for spacing of generated polydata
+  //@{
+  /// \brief Get and set macro for spacing of generated polydata
   vtkGetMacro(PolyDataSpacing, double);
   vtkSetMacro(PolyDataSpacing, double);
+  //@}
 
-  // Definition
-  // Get and set the the derivatives for start and end. Only used if KnotSpanType = "derivative"
+  //@{
+  /// \brief Get and set the the derivatives for start and end. Only used if KnotSpanType = "derivative"
   vtkSetVector3Macro(StartDerivative, double);
   vtkGetVector3Macro(StartDerivative, double);
   vtkSetVector3Macro(EndDerivative, double);
   vtkGetVector3Macro(EndDerivative, double);
+  //@}
 
-  // Definition:
-  // Get macro for the numrbs curve object
+  //@{
+  /// \brief Get macro for the numrbs curve object
   vtkGetObjectMacro(Curve, vtkSVNURBSCurve);
+  //@}
 
+  /** \brief Function to get a default set of derivatives if none are given
+   *  and a knot span type of derivative is given. */
   static int GetDefaultDerivatives(vtkPoints *points, double D0[3], double DN[3]);
 
 //ETX
@@ -93,13 +104,14 @@ protected:
                           vtkInformationVector **, vtkInformationVector *);
   virtual int FillInputPortInformation(int, vtkInformation *);
 
- private:
-
+  /** \brief lofts a surface and generates polydata representation. */
   int LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD);
-  int Degree;
-  double PolyDataSpacing;
+
   char *KnotSpanType;
   char *ParametricSpanType;
+
+  int Degree;
+  double PolyDataSpacing;
   double StartDerivative[3];
   double EndDerivative[3];
 
@@ -111,5 +123,3 @@ private:
 };
 
 #endif
-
-
