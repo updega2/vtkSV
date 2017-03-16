@@ -1,37 +1,43 @@
 /*=========================================================================
+ *
+ * Copyright (c) 2014-2015 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
-  Program:   Visualization Toolkit
-  Module:    vtkSVNURBSUtils.h
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================
-  Copyright 2011 Sandia Corporation.
-  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
-  license for use of this work by or on behalf of the
-  U.S. Government. Redistribution and use in source and binary forms, with
-  or without modification, are permitted provided that this Notice and any
-  statement of authorship are reproduced on all copies.
-
-  Contact: pppebay@sandia.gov,dcthomp@sandia.gov
-
-=========================================================================*/
-// .NAME vtkSVNURBSUtils - performs common math operations
-// .SECTION Description
-// vtkSVNURBSUtils provides methods to perform common math operations. These
-// include providing constants such as Pi; conversion from degrees to
-// radians; vector operations such as dot and cross products and vector
-// norm; matrix determinant for 2x2 and 3x3 matrices; univariate polynomial
-// solvers; and for random number generation (for backward compatibility only).
-// .SECTION See Also
-// vtkMinimalStandardRandomSequence, vtkBoxMuellerRandomSequence,
-// vtkQuaternion
+/**
+ *  \class vtkSVNURBSUtils
+ *  \brief A compilation of static functions to be used in a variety of
+ *  NURBS applications
+ *
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
+ */
 
 #ifndef vtkSVNURBSUtils_h
 #define vtkSVNURBSUtils_h
@@ -55,6 +61,7 @@ public:
   vtkTypeMacro(vtkSVNURBSUtils,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // TODO: Document functions
   static int GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U);
   static int LinSpace(double min, double max, int num, vtkDoubleArray *U);
   static int LinSpaceClamp(double min, double max, int num, int p, vtkDoubleArray *U);

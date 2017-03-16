@@ -1,27 +1,33 @@
 /*=========================================================================
+ *
+ * Copyright (c) 2014-2015 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
-  Program:   Visualization Toolkit
-  Module:    vtkMath.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================
-  Copyright 2011 Sandia Corporation.
-  Under the terms of Contract DE-AC04-94AL85000, there is a non-exclusive
-  license for use of this work by or on behalf of the
-  U.S. Government. Redistribution and use in source and binary forms, with
-  or without modification, are permitted provided that this Notice and any
-  statement of authorship are reproduced on all copies.
-
-  Contact: pppebay@sandia.gov,dcthomp@sandia.gov,
-
-=========================================================================*/
 #include "vtkSVNURBSUtils.h"
 
 #include "vtkDataArray.h"
@@ -37,27 +43,36 @@
 #include <cmath>
 #include <string>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVNURBSUtils);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVNURBSUtils::vtkSVNURBSUtils()
 {
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVNURBSUtils::~vtkSVNURBSUtils()
 {
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVNURBSUtils::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// LinSpace
+// ----------------------
 int vtkSVNURBSUtils::LinSpace(double min, double max, int num, vtkDoubleArray *result)
 {
   result->SetNumberOfTuples(num);
@@ -70,12 +85,9 @@ int vtkSVNURBSUtils::LinSpace(double min, double max, int num, vtkDoubleArray *r
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// LinSpaceClamp
+// ----------------------
 int vtkSVNURBSUtils::LinSpaceClamp(double min, double max, int num, int p, vtkDoubleArray *result)
 {
   result->SetNumberOfTuples(num);
@@ -102,12 +114,9 @@ int vtkSVNURBSUtils::LinSpaceClamp(double min, double max, int num, int p, vtkDo
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetAvgKnots
+// ----------------------
 int vtkSVNURBSUtils::GetAvgKnots(double min, double max, int num, int p, vtkDoubleArray *U, vtkDoubleArray *knots)
 {
   int nCon = U->GetNumberOfTuples();
@@ -139,12 +148,9 @@ int vtkSVNURBSUtils::GetAvgKnots(double min, double max, int num, int p, vtkDoub
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetEndDerivKnots
+// ----------------------
 int vtkSVNURBSUtils::GetEndDerivKnots(double min, double max, int num, int p, vtkDoubleArray *U, vtkDoubleArray *knots)
 {
   int nCon = U->GetNumberOfTuples();
@@ -182,12 +188,9 @@ int vtkSVNURBSUtils::GetEndDerivKnots(double min, double max, int num, int p, vt
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetChordSpacedUs
+// ----------------------
 int vtkSVNURBSUtils::GetChordSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U)
 {
   double d=0;
@@ -220,12 +223,9 @@ int vtkSVNURBSUtils::GetChordSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetCentripetalSpacedUs
+// ----------------------
 int vtkSVNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleArray *U)
 {
   double d=0;
@@ -257,12 +257,10 @@ int vtkSVNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleAr
 
   return SV_OK;
 }
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+
+// ----------------------
+// GetUs
+// ----------------------
 int vtkSVNURBSUtils::GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U)
 {
   int nCon = xyz->GetNumberOfPoints();
@@ -288,12 +286,9 @@ int vtkSVNURBSUtils::GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetKnots
+// ----------------------
 int vtkSVNURBSUtils::GetKnots(vtkDoubleArray *U, int p, std::string type, vtkDoubleArray *knots)
 {
   int nCon  = U->GetNumberOfTuples();
@@ -322,12 +317,9 @@ int vtkSVNURBSUtils::GetKnots(vtkDoubleArray *U, int p, std::string type, vtkDou
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetZeroBasisFunctions
+// ----------------------
 int vtkSVNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots,
                                          vtkTypedArray<double> *N0)
 {
@@ -358,12 +350,9 @@ int vtkSVNURBSUtils::GetZeroBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *kn
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetPBasisFunctions
+// ----------------------
 int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots,
                                       const int p,
                                       vtkTypedArray<double> *NP)
@@ -450,12 +439,9 @@ int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetControlPointOfCurve
+// ----------------------
 int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U, vtkDoubleArray *weights,
                                           vtkDoubleArray *knots,
                                           const int p, std::string ktype, const double D0[3], const double DN[3],
@@ -509,12 +495,9 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetControlPointOfSurface
+// ----------------------
 int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
                                              vtkDoubleArray *V, vtkDoubleArray *uWeights,
                                              vtkDoubleArray *vWeights, vtkDoubleArray *uKnots,
@@ -623,12 +606,9 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetCurveEndDerivatives
+// ----------------------
 int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
 		                          const int p, const double D0[3],
                                           const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
@@ -641,12 +621,9 @@ int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedA
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// AddDerivativePoints
+// ----------------------
 int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
 		                       const int p, const double D0[3],
                                        const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
@@ -701,12 +678,9 @@ int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetSurfaceEndDerivatives
+// ----------------------
 int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTypedArray<double> *NPV,
                                             vtkTypedArray<double> *points,
 		                            const int p, const int q,
@@ -806,12 +780,9 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// AddDerivativeRows
+// ----------------------
 int vtkSVNURBSUtils::AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                      const int p, vtkDoubleArray *knots)
 {
@@ -854,12 +825,9 @@ int vtkSVNURBSUtils::AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// DeepCopy
+// ----------------------
 int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double> *output)
 {
   int dims = input->GetDimensions();
@@ -892,19 +860,19 @@ int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double
     {
       for (int j=0; j<dim[1]; j++)
       {
-	if (dims == 2)
-	{
-	  double val = input->GetValue(i,j);
-	  output->SetValue(i, j, val);
-	}
-	else
-	{
-	  for (int k=0; k<dim[2]; k++)
-	  {
-	    double val = input->GetValue(i, j, k);
-	    output->SetValue(i, j, k, val);
-	  }
-	}
+        if (dims == 2)
+        {
+          double val = input->GetValue(i,j);
+          output->SetValue(i, j, val);
+        }
+        else
+        {
+          for (int k=0; k<dim[2]; k++)
+          {
+            double val = input->GetValue(i, j, k);
+            output->SetValue(i, j, k, val);
+          }
+        }
       }
     }
   }
@@ -912,12 +880,9 @@ int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// InvertSystem
+// ----------------------
 int vtkSVNURBSUtils::InvertSystem(vtkTypedArray<double> *NP, vtkTypedArray<double> *NPinv)
 {
   int nr = NP->GetExtents()[0].GetSize();
@@ -976,12 +941,9 @@ int vtkSVNURBSUtils::InvertSystem(vtkTypedArray<double> *NP, vtkTypedArray<doubl
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// BasisEvaluation
+// ----------------------
 int vtkSVNURBSUtils::BasisEvaluation(vtkDoubleArray *knots, int p, int kEval, double uEval,
                                    vtkDoubleArray *Nu)
 {
@@ -1015,12 +977,9 @@ int vtkSVNURBSUtils::BasisEvaluation(vtkDoubleArray *knots, int p, int kEval, do
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// BasisEvaluationVec
+// ----------------------
 int vtkSVNURBSUtils::BasisEvaluationVec(vtkDoubleArray *knots, int p, int kEval, vtkDoubleArray *uEvals,
                                       vtkTypedArray<double> *Nus)
 {
@@ -1103,12 +1062,9 @@ int vtkSVNURBSUtils::BasisEvaluationVec(vtkDoubleArray *knots, int p, int kEval,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// FindSpan
+// ----------------------
 int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
 {
   int nKnot = knots->GetNumberOfTuples();
@@ -1126,25 +1082,18 @@ int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
   while (u < knots->GetTuple1(mid) || u >= knots->GetTuple1(mid+1))
   {
     if (u <knots->GetTuple1(mid))
-    {
       high = mid;
-    }
     else
-    {
       low = mid;
-    }
     mid = (low+high)/2;
   }
   span = mid;
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixPointsMultiply
+// ----------------------
 int vtkSVNURBSUtils::MatrixPointsMultiply(vtkTypedArray<double>* mat, vtkPoints *pointVec, vtkPoints *output)
 {
 
@@ -1183,12 +1132,9 @@ int vtkSVNURBSUtils::MatrixPointsMultiply(vtkTypedArray<double>* mat, vtkPoints 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixVecMultiply
+// ----------------------
 int vtkSVNURBSUtils::MatrixVecMultiply(vtkTypedArray<double>* mat, const int matIsPoints,
                                      vtkTypedArray<double> *vec, const int vecIsPoints,
                                      vtkTypedArray<double> *output)
@@ -1280,12 +1226,9 @@ int vtkSVNURBSUtils::MatrixVecMultiply(vtkTypedArray<double>* mat, const int mat
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixMatrixMultiply
+// ----------------------
 int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints,
                                         vtkTypedArray<double> *mat1, const int mat1IsPoints,
                                         vtkTypedArray<double> *output)
@@ -1344,12 +1287,9 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixMatrixForDGEMM
+// ----------------------
 int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                         vtkTypedArray<double> *mat1,
                                         vtkTypedArray<double> *output)
@@ -1389,12 +1329,9 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PointMatrixMatrixForDGEMM
+// ----------------------
 int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                              vtkTypedArray<double> *mat1,
                                              vtkTypedArray<double> *output)
@@ -1451,12 +1388,9 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PointMatrixMatrixForDGEMM
+// ----------------------
 int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                              vtkTypedArray<double> *mat1,
                                              vtkTypedArray<double> *output)
@@ -1513,12 +1447,9 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixPointMatrixForDGEMM
+// ----------------------
 int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
                                        vtkTypedArray<double> *output)
@@ -1575,12 +1506,9 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetMatrixComp
+// ----------------------
 int vtkSVNURBSUtils::GetMatrixComp(vtkTypedArray<double> *mat,  const int loc, const int comp, const int matIsPoints, vtkTypedArray<double> *vec)
 {
   int numVals = mat->GetExtents()[comp].GetSize();
@@ -1646,12 +1574,9 @@ int vtkSVNURBSUtils::GetMatrixComp(vtkTypedArray<double> *mat,  const int loc, c
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetMatrixComp
+// ----------------------
 int vtkSVNURBSUtils::SetMatrixComp(vtkTypedArray<double> *vec,  const int loc, const int comp, const int matIsPoints, vtkTypedArray<double> *mat)
 {
   int numVals = vec->GetExtents()[0].GetSize();
@@ -1677,53 +1602,38 @@ int vtkSVNURBSUtils::SetMatrixComp(vtkTypedArray<double> *vec,  const int loc, c
     if (matIsPoints)
     {
       for (int j=0 ;j<3; j++)
-      {
         val[j] = vec->GetValue(i, j);
-      }
     }
     else
-    {
       val[0] = vec->GetValue(i);
-    }
     if (comp == 0)
     {
       if (matIsPoints)
       {
         for (int j=0; j<3; j++)
-        {
           mat->SetValue(i, loc, j, val[j]);
-        }
       }
       else
-      {
         mat->SetValue(i, loc, val[0]);
-      }
     }
     else if (comp == 1)
     {
       if (matIsPoints)
       {
         for (int j=0; j<3; j++)
-        {
           mat->SetValue(loc, i, j, val[j]);
-        }
       }
       else
-      {
         mat->SetValue(loc, i, val[0]);
-      }
     }
   }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// StructuredGridToTypedArray
+// ----------------------
 int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkTypedArray<double> *output)
 {
   int dim[3];
@@ -1759,12 +1669,9 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PointsToTypedArray
+// ----------------------
 int vtkSVNURBSUtils::PointsToTypedArray(vtkPoints *points, vtkTypedArray<double> *output)
 {
   int numPoints = points->GetNumberOfPoints();
@@ -1785,12 +1692,9 @@ int vtkSVNURBSUtils::PointsToTypedArray(vtkPoints *points, vtkTypedArray<double>
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// DoubleArrayToTypedArray
+// ----------------------
 int vtkSVNURBSUtils::DoubleArrayToTypedArray(vtkDoubleArray *input, vtkTypedArray<double> *output)
 {
   int numVals  = input->GetNumberOfTuples();
@@ -1810,12 +1714,9 @@ int vtkSVNURBSUtils::DoubleArrayToTypedArray(vtkDoubleArray *input, vtkTypedArra
 }
 
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// TypedArrayToPoints
+// ----------------------
 int vtkSVNURBSUtils::TypedArrayToPoints(vtkTypedArray<double> *array, vtkPoints *output)
 {
   int numVals = array->GetExtents()[0].GetSize();
@@ -1834,12 +1735,9 @@ int vtkSVNURBSUtils::TypedArrayToPoints(vtkTypedArray<double> *array, vtkPoints 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// TypedArrayToStructuredGrid
+// ----------------------
 int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vtkStructuredGrid *output)
 {
   int dims = array->GetDimensions();
@@ -1884,12 +1782,9 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
     return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PolyDatasToStructuredGrid
+// ----------------------
 int vtkSVNURBSUtils::PolyDatasToStructuredGrid(vtkPolyData **inputs, const int numInputs, vtkStructuredGrid *points)
 {
   int numPoints = inputs[0]->GetNumberOfPoints();
@@ -1926,12 +1821,9 @@ int vtkSVNURBSUtils::PolyDatasToStructuredGrid(vtkPolyData **inputs, const int n
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Intersect1D
+// ----------------------
 int vtkSVNURBSUtils::Intersect1D(vtkIntArray *v0, vtkIntArray *v1, vtkIntArray *result)
 {
   int numVals0 = v0->GetNumberOfTuples();
@@ -1959,12 +1851,9 @@ int vtkSVNURBSUtils::Intersect1D(vtkIntArray *v0, vtkIntArray *v1, vtkIntArray *
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Add1D
+// ----------------------
 int vtkSVNURBSUtils::Add1D(vtkDoubleArray *v0, vtkDoubleArray *v1, double scalar, vtkDoubleArray *result)
 {
   int numVals0 = v0->GetNumberOfTuples();
@@ -1985,12 +1874,9 @@ int vtkSVNURBSUtils::Add1D(vtkDoubleArray *v0, vtkDoubleArray *v1, double scalar
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// AddVal1D
+// ----------------------
 int vtkSVNURBSUtils::AddVal1D(vtkDoubleArray *v0, double val, double scalar, vtkDoubleArray *result)
 {
   int numVals = v0->GetNumberOfTuples();
@@ -2004,12 +1890,9 @@ int vtkSVNURBSUtils::AddVal1D(vtkDoubleArray *v0, double val, double scalar, vtk
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// AddVal1D
+// ----------------------
 int vtkSVNURBSUtils::AddVal1D(double val, vtkDoubleArray *v0, double scalar, vtkDoubleArray *result)
 {
   int numVals = v0->GetNumberOfTuples();
@@ -2023,12 +1906,9 @@ int vtkSVNURBSUtils::AddVal1D(double val, vtkDoubleArray *v0, double scalar, vtk
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MultiplyVal1D
+// ----------------------
 int vtkSVNURBSUtils::MultiplyVal1D(vtkDoubleArray *v0, double val, vtkDoubleArray *result)
 {
   int numVals = v0->GetNumberOfTuples();
@@ -2042,12 +1922,9 @@ int vtkSVNURBSUtils::MultiplyVal1D(vtkDoubleArray *v0, double val, vtkDoubleArra
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WhereGreaterEqual
+// ----------------------
 int vtkSVNURBSUtils::WhereGreaterEqual(double val, vtkDoubleArray *in, vtkIntArray *out)
 {
   int numVals = in->GetNumberOfTuples();
@@ -2069,12 +1946,9 @@ int vtkSVNURBSUtils::WhereGreaterEqual(double val, vtkDoubleArray *in, vtkIntArr
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WhereGreater
+// ----------------------
 int vtkSVNURBSUtils::WhereGreater(double val, vtkDoubleArray *in, vtkIntArray *out)
 {
   int numVals = in->GetNumberOfTuples();
@@ -2096,12 +1970,9 @@ int vtkSVNURBSUtils::WhereGreater(double val, vtkDoubleArray *in, vtkIntArray *o
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WhereLessEqual
+// ----------------------
 int vtkSVNURBSUtils::WhereLessEqual(double val, vtkDoubleArray *in, vtkIntArray *out)
 {
   int numVals = in->GetNumberOfTuples();
@@ -2123,12 +1994,9 @@ int vtkSVNURBSUtils::WhereLessEqual(double val, vtkDoubleArray *in, vtkIntArray 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WhereLess
+// ----------------------
 int vtkSVNURBSUtils::WhereLess(double val, vtkDoubleArray *in, vtkIntArray *out)
 {
   int numVals = in->GetNumberOfTuples();
@@ -2150,12 +2018,9 @@ int vtkSVNURBSUtils::WhereLess(double val, vtkDoubleArray *in, vtkIntArray *out)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WhereEqual
+// ----------------------
 int vtkSVNURBSUtils::WhereEqual(double val, vtkDoubleArray *in, vtkIntArray *out)
 {
   int numVals = in->GetNumberOfTuples();
@@ -2177,12 +2042,9 @@ int vtkSVNURBSUtils::WhereEqual(double val, vtkDoubleArray *in, vtkIntArray *out
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WhereNotEqual
+// ----------------------
 int vtkSVNURBSUtils::WhereNotEqual(double val, vtkDoubleArray *in, vtkIntArray *out)
 {
   int numVals = in->GetNumberOfTuples();
@@ -2204,12 +2066,9 @@ int vtkSVNURBSUtils::WhereNotEqual(double val, vtkDoubleArray *in, vtkIntArray *
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintArray
+// ----------------------
 int vtkSVNURBSUtils::PrintArray(vtkIntArray *arr)
 {
   int num = arr->GetNumberOfTuples();
@@ -2225,12 +2084,9 @@ int vtkSVNURBSUtils::PrintArray(vtkIntArray *arr)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintArray
+// ----------------------
 int vtkSVNURBSUtils::PrintArray(vtkDoubleArray *arr)
 {
   int num = arr->GetNumberOfTuples();
@@ -2246,12 +2102,9 @@ int vtkSVNURBSUtils::PrintArray(vtkDoubleArray *arr)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintVector
+// ----------------------
 int vtkSVNURBSUtils::PrintVector(vtkTypedArray<double> *vec)
 {
   int dims = vec->GetDimensions();
@@ -2280,12 +2133,9 @@ int vtkSVNURBSUtils::PrintVector(vtkTypedArray<double> *vec)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintMatrix
+// ----------------------
 int vtkSVNURBSUtils::PrintMatrix(vtkTypedArray<double> *mat)
 {
   int dims = mat->GetDimensions();
@@ -2318,12 +2168,9 @@ int vtkSVNURBSUtils::PrintMatrix(vtkTypedArray<double> *mat)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintStructuredGrid
+// ----------------------
 int vtkSVNURBSUtils::PrintStructuredGrid(vtkStructuredGrid *mat)
 {
   int dim[3];
@@ -2347,12 +2194,9 @@ int vtkSVNURBSUtils::PrintStructuredGrid(vtkStructuredGrid *mat)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintPoints
+// ----------------------
 int vtkSVNURBSUtils::PrintPoints(vtkPoints *points)
 {
   int np = points->GetNumberOfPoints();
@@ -2374,12 +2218,9 @@ int vtkSVNURBSUtils::PrintPoints(vtkPoints *points)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// StructuredGridTranspose
+// ----------------------
 int vtkSVNURBSUtils::StructuredGridTranspose(vtkStructuredGrid *sg, vtkStructuredGrid *newSg)
 {
   int dim[3];
@@ -2412,12 +2253,9 @@ int vtkSVNURBSUtils::StructuredGridTranspose(vtkStructuredGrid *sg, vtkStructure
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixTranspose
+// ----------------------
 int vtkSVNURBSUtils::MatrixTranspose(vtkTypedArray<double> *mat, const int matIsPoints, vtkTypedArray<double> *newMat)
 {
   int nr = mat->GetExtents()[0].GetSize();
@@ -2461,12 +2299,9 @@ int vtkSVNURBSUtils::MatrixTranspose(vtkTypedArray<double> *mat, const int matIs
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MatrixToVector
+// ----------------------
 int vtkSVNURBSUtils::MatrixToVector(vtkTypedArray<double> *mat, double *matVec)
 {
   int nr = mat->GetExtents()[0].GetSize();
@@ -2483,12 +2318,9 @@ int vtkSVNURBSUtils::MatrixToVector(vtkTypedArray<double> *mat, double *matVec)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// VectorToMatrix
+// ----------------------
 int vtkSVNURBSUtils::VectorToMatrix(double *matVec, const int nr, const int nc, vtkTypedArray<double> *mat)
 {
   mat->Resize(nr, nc);
@@ -2505,12 +2337,9 @@ int vtkSVNURBSUtils::VectorToMatrix(double *matVec, const int nr, const int nc, 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PointMatrixToVectors
+// ----------------------
 int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *matVecs[3])
 {
   int nr = mat->GetExtents()[0].GetSize();
@@ -2536,12 +2365,9 @@ int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *ma
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// VectorsToPointMatrix
+// ----------------------
 int vtkSVNURBSUtils::VectorsToPointMatrix(double *matVecs[3], const int nr, const int nc, vtkTypedArray<double> *mat)
 {
   for (int i=0; i<nc; i++)
@@ -2559,12 +2385,9 @@ int vtkSVNURBSUtils::VectorsToPointMatrix(double *matVecs[3], const int nr, cons
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// DGEMM
+// ----------------------
 int vtkSVNURBSUtils::DGEMM(const double *A, const int nrA, const int ncA,
                          const double *B, const int nrB, const int ncB,
                          double *C)
@@ -2606,12 +2429,9 @@ int vtkSVNURBSUtils::DGEMM(const double *A, const int nrA, const int ncA,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Print2DArray
+// ----------------------
 int vtkSVNURBSUtils::Print2DArray(const double *arr, const int nr, const int nc)
 {
   fprintf(stdout,"Matrix: %d by %d\n", nr, nc);
