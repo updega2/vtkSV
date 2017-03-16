@@ -18,15 +18,20 @@ Version:   $Revision: 1.5 $
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
+
 #include "vtkSVPolyBallLine.h"
 #include "vtkPointData.h"
-#include "vtkPolyLine.h"
 #include "vtkObjectFactory.h"
 #include "vtkSVGlobals.h"
-#include "vtkVersion.h"
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVPolyBallLine);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPolyBallLine::vtkSVPolyBallLine()
 {
   this->Input = NULL;
@@ -41,6 +46,9 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->UseRadiusInformation = 1;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVPolyBallLine::~vtkSVPolyBallLine()
 {
   if (this->Input)
@@ -62,11 +70,17 @@ vtkSVPolyBallLine::~vtkSVPolyBallLine()
     }
 }
 
+// ----------------------
+// ComplexDot
+// ----------------------
 double vtkSVPolyBallLine::ComplexDot(double x[4], double y[4])
 {
   return x[0]*y[0] + x[1]*y[1] + x[2]*y[2] - x[3]*y[3];
 }
 
+// ----------------------
+// EvaluateFunction
+// ----------------------
 double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 {
   vtkIdType i, k;
@@ -239,14 +253,19 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
   return minPolyBallFunctionValue;
 }
 
+// ----------------------
+// EvaluateGradient
+// ----------------------
 void vtkSVPolyBallLine::EvaluateGradient(double x[3], double n[3])
 {
   vtkWarningMacro("Poly ball gradient computation not yet implemented!");
   // TODO
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVPolyBallLine::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-
 }

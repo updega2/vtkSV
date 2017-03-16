@@ -57,6 +57,7 @@ public:
   vtkGetVector3Macro(ZAxis, double);
   vtkSetVector3Macro(XAxis, double);
   vtkGetVector3Macro(XAxis, double);
+  //@}
 
   //@{
   // \brief Specify whether to use custom axis alignment.

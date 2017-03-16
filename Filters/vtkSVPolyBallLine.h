@@ -18,12 +18,13 @@ Version:   $Revision: 1.4 $
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
-  // .NAME vtkSVPolyBallLine -
-  // .SECTION Description
-  // ..
 
-#ifndef __vtkSVPolyBallLine_h
-#define __vtkSVPolyBallLine_h
+/**
+ *  \class vtkSVPolyBallLine
+ */
+
+#ifndef vtkSVPolyBallLine_h
+#define vtkSVPolyBallLine_h
 
 #include "vtkImplicitFunction.h"
 #include "vtkPolyData.h"
@@ -31,74 +32,86 @@ Version:   $Revision: 1.4 $
 
 class vtkSVPolyBallLine : public vtkImplicitFunction
 {
-  public:
+public:
 
   static vtkSVPolyBallLine *New();
   vtkTypeMacro(vtkSVPolyBallLine,vtkImplicitFunction);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description
-  // Evaluate polyball.
+  //@{
+  /// \brief Evaluate polyball.
   double EvaluateFunction(double x[3]);
   double EvaluateFunction(double x, double y, double z)
   {return this->vtkImplicitFunction::EvaluateFunction(x, y, z); } ;
+  //@}
 
-  // Description
-  // Evaluate polyball gradient.
+  //@{
+  /// \brief Evaluate polyball gradient.
   void EvaluateGradient(double x[3], double n[3]);
+  //@}
 
-  // Description:
-  // Set / get input poly data.
+  //@{
+  /// \brief Set / get input poly data.
   vtkSetObjectMacro(Input,vtkPolyData);
   vtkGetObjectMacro(Input,vtkPolyData);
+  //@}
 
-  // Description:
-  // Set / get input cell ids used for the function.
+  //@{
+  /// \brief Set / get input cell ids used for the function.
   vtkSetObjectMacro(InputCellIds,vtkIdList);
   vtkGetObjectMacro(InputCellIds,vtkIdList);
+  //@}
 
-  // Description:
-  // Set / get a single input cell id used for the function.
+  //@{
+  /// \brief Set / get a single input cell id used for the function.
   vtkSetMacro(InputCellId,vtkIdType);
   vtkGetMacro(InputCellId,vtkIdType);
+  //@}
 
-  // Description:
-  // Set / get poly ball radius array name.
+  //@{
+  /// \brief Set / get poly ball radius array name.
   vtkSetStringMacro(PolyBallRadiusArrayName);
   vtkGetStringMacro(PolyBallRadiusArrayName);
+  //@}
 
-  // Description:
-  // Get the id of the last nearest poly ball center.
+  //@{
+  /// \brief Get the id of the last nearest poly ball center.
   vtkGetMacro(LastPolyBallCellId,vtkIdType);
   vtkGetMacro(LastPolyBallCellSubId,vtkIdType);
   vtkGetMacro(LastPolyBallCellPCoord,double);
   vtkGetVectorMacro(LastPolyBallCenter,double,3);
   vtkGetMacro(LastPolyBallCenterRadius,double);
+  //@}
 
+  //@{
+  /// \brief Use radius information
   vtkSetMacro(UseRadiusInformation,int);
   vtkGetMacro(UseRadiusInformation,int);
   vtkBooleanMacro(UseRadiusInformation,int);
+  //@}
 
   static double ComplexDot(double x[4], double y[4]);
 
-  protected:
+protected:
   vtkSVPolyBallLine();
   ~vtkSVPolyBallLine();
+
+  char* PolyBallRadiusArrayName;
 
   vtkPolyData* Input;
   vtkIdList* InputCellIds;
   vtkIdType InputCellId;
 
-  char* PolyBallRadiusArrayName;
   vtkIdType LastPolyBallCellId;
   vtkIdType LastPolyBallCellSubId;
+
+  int UseRadiusInformation;
+
   double LastPolyBallCellPCoord;
   double LastPolyBallCenter[3];
   double LastPolyBallCenterRadius;
 
-  int UseRadiusInformation;
-
-  private:
+private:
   vtkSVPolyBallLine(const vtkSVPolyBallLine&);  // Not implemented.
   void operator=(const vtkSVPolyBallLine&);  // Not implemented.
 };

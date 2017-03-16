@@ -48,7 +48,7 @@
 
 class vtkSVGroupsClipper : public vtkPolyDataAlgorithm
 {
-  public:
+public:
   vtkTypeMacro(vtkSVGroupsClipper,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
@@ -107,7 +107,7 @@ class vtkSVGroupsClipper : public vtkPolyDataAlgorithm
   vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
-  protected:
+protected:
   vtkSVGroupsClipper();
   ~vtkSVGroupsClipper();
 
@@ -159,7 +159,7 @@ class vtkSVGroupsClipper : public vtkPolyDataAlgorithm
   double CutoffRadiusFactor;
   double ClipValue;
 
-  private:
+private:
   vtkSVGroupsClipper(const vtkSVGroupsClipper&);  // Not implemented.
   void operator=(const vtkSVGroupsClipper&);  // Not implemented.
 };
