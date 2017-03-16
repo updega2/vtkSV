@@ -1,46 +1,58 @@
 /*=========================================================================
+ *
+ * Copyright (c) 2014 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
-  Program:   Visualization Toolkit
-  Module:    vtkSVBoundaryMapper.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
 #include "vtkSVBoundaryMapper.h"
 
-#include "vtkCellIterator.h"
 #include "vtkCell.h"
-#include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
-#include "vtkEdgeTable.h"
 #include "vtkFeatureEdges.h"
 #include "vtkIdFilter.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkMath.h"
-#include "vtkMergePoints.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
 
 #include <sstream>
 #include <map>
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVBoundaryMapper::vtkSVBoundaryMapper()
 {
   this->RemoveInternalIds = 1;
@@ -60,7 +72,9 @@ vtkSVBoundaryMapper::vtkSVBoundaryMapper()
   this->SetObjectZAxis(0.0, 0.0, 1.0);
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVBoundaryMapper::~vtkSVBoundaryMapper()
 {
   if (this->InitialPd != NULL)
@@ -90,6 +104,9 @@ vtkSVBoundaryMapper::~vtkSVBoundaryMapper()
   }
 }
 
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVBoundaryMapper::RequestData(vtkInformation *vtkNotUsed(request),
                                    vtkInformationVector **inputVector,
                                    vtkInformationVector *outputVector)
@@ -125,12 +142,9 @@ int vtkSVBoundaryMapper::RequestData(vtkInformation *vtkNotUsed(request),
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrepFilter
+// ----------------------
 int vtkSVBoundaryMapper::PrepFilter()
 {
   vtkIdType numPolys = this->InitialPd->GetNumberOfPolys();
@@ -162,13 +176,7 @@ int vtkSVBoundaryMapper::PrepFilter()
     this->RemoveInternalIds = 0;
   }
   else
-  {
-    vtkNew(vtkIdFilter, ider);
-    ider->SetInputData(this->InitialPd);
-    ider->SetIdsArrayName(this->InternalIdsArrayName);
-    ider->Update();
-    this->InitialPd->DeepCopy(ider->GetOutput());
-  }
+    vtkSVGeneralUtils::GiveIds(this->InitialPd, this->InternalIdsArrayName);
 
   //Create the edge table for the input surface
   this->InitialPd->BuildLinks();
@@ -182,26 +190,26 @@ int vtkSVBoundaryMapper::PrepFilter()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// RunFilter
+// ----------------------
 int vtkSVBoundaryMapper::RunFilter()
 {
+  // Find all boundaries
   if (this->FindBoundaries() != SV_OK)
   {
     vtkErrorMacro("Could not find boundaries");
     return SV_ERROR;
   }
 
+  // Get the boundary loop to set
   if (this->GetBoundaryLoop() != SV_OK)
   {
     vtkErrorMacro("Error orienting boundary loop");
     return SV_ERROR;
   }
 
+  // Set the boundaries!
   if (this->SetBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error in mapping");
@@ -210,44 +218,53 @@ int vtkSVBoundaryMapper::RunFilter()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-//Determine type of intersection
+// ----------------------
+// GetBoundaryLoop
+// ----------------------
 int vtkSVBoundaryMapper::GetBoundaryLoop()
 {
+  // Initialize cell and cell ids
   vtkIdType nextCell;
   vtkNew(vtkIdList, cellIds);
+
+  // Get point ids of boundary loop
   vtkDataArray *pointIds = this->Boundaries->GetPointData()->GetArray(this->InternalIdsArrayName);
   vtkDataArray *oPointIds = this->InitialPd->GetPointData()->GetArray(this->InternalIdsArrayName);
+
+  // Get number of points and cells on boundary
   int numInterPts = this->Boundaries->GetNumberOfPoints();
   int numInterLines = this->Boundaries->GetNumberOfLines();
   this->Boundaries->BuildLinks();
 
+  // Get value of start point
   int count = 0;
   vtkIdType startPt = pointIds->LookupValue(
     oPointIds->GetTuple1(this->BoundaryIds->GetValue(0)));
-  fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
+  //fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
+
+  // Set the boundary loop points and point data and allocate space for cells
   this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
   this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());
   this->BoundaryLoop->Allocate(this->Boundaries->GetNumberOfCells(), 1000);
-  fprintf(stdout,"The value on this is!: %lld\n", startPt);
+  //fprintf(stdout,"The value on this is!: %lld\n", startPt);
   this->Boundaries->GetPointCells(startPt,cellIds);
 
+  // Get starting cell
   nextCell = cellIds->GetId(0);
 
+  // Get the list of boundary Ids
   vtkNew(vtkIdList, boundaryIds);
   boundaryIds->SetNumberOfIds(this->BoundaryIds->GetNumberOfTuples());
   for (int i=0; i<this->BoundaryIds->GetNumberOfTuples(); i++)
     boundaryIds->SetId(i, pointIds->LookupValue(this->BoundaryIds->GetTuple1(i)));
+
+  // Run loop find to get correct loop and see if actually correct
   if (vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop, boundaryIds) != SV_OK)
   {
-    fprintf(stdout,"Other direction!\n");
+    //fprintf(stdout,"Other direction!\n");
     nextCell = cellIds->GetId(1);
     this->BoundaryLoop->DeleteCells();
+    // If it failed, then try the other way!
     if (vtkSVGeneralUtils::RunLoopFind(this->Boundaries, startPt, nextCell, this->BoundaryLoop, boundaryIds) != SV_OK)
     {
       fprintf(stdout,"Both directions didn't work!!\n");
@@ -258,14 +275,12 @@ int vtkSVBoundaryMapper::GetBoundaryLoop()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// FindBoundaries
+// ----------------------
 int vtkSVBoundaryMapper::FindBoundaries()
 {
+  // Set up locators
   vtkIndent indenter;
   vtkNew(vtkPointLocator, locator);
   vtkNew(vtkFeatureEdges, finder);
@@ -276,16 +291,19 @@ int vtkSVBoundaryMapper::FindBoundaries()
   finder->BoundaryEdgesOn();
   finder->Update();
 
+  // Get all connected regions
   vtkNew(vtkConnectivityFilter, connector);
   connector->SetInputData(finder->GetOutput());
   connector->SetExtractionMode(VTK_EXTRACT_ALL_REGIONS);
   connector->ColorRegionsOn();
   connector->Update();
 
+  // Get polydata
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
 
+  // Copy to the boundaries data
   this->Boundaries->DeepCopy(surfacer->GetOutput());
 
   if (this->Boundaries->GetNumberOfCells() == 0)
@@ -297,11 +315,17 @@ int vtkSVBoundaryMapper::FindBoundaries()
   return SV_OK;
 }
 
-
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVBoundaryMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
-  //os << indent << "Number of subdivisions: "
-  //   << this->GetNumberOfSubdivisions() << endl;
+  if (this->InternalIdsArrayName != NULL)
+    os << indent << "Internal Ids array name: " << this->InternalIdsArrayName << "\n";
+  os << indent << "Z axis: " <<
+    this->ObjectZAxis[0] << " " << this->ObjectZAxis[1] << " " << this->ObjectZAxis[2] << "\n";
+  os << indent << "X axis: " <<
+    this->ObjectXAxis[0] << " " << this->ObjectXAxis[1] << " " << this->ObjectXAxis[2] << "\n";
 }
