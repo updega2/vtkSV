@@ -28,64 +28,42 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVPolyDataToNURBSFilter.cxx
- *  @brief This implements the vtkSVPolyDataToNURBSFilter filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVPolyDataToNURBSFilter.h"
 
 #include "vtkAppendPolyData.h"
-#include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkCenterOfMass.h"
-#include "vtkCleanPolyData.h"
-#include "vtkClipPolyData.h"
-#include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
-#include "vtkExtractGeometry.h"
 #include "vtkFloatArray.h"
-#include "vtkIdFilter.h"
 #include "vtkIntArray.h"
-#include "vtkGradientFilter.h"
-#include "vtkSVLoftNURBSSurface.h"
-#include "vtkSVMapInterpolator.h"
-#include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkPlane.h"
 #include "vtkPointData.h"
-#include "vtkPointDataToCellData.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVLoftNURBSSurface.h"
+#include "vtkSVMapInterpolator.h"
 #include "vtkSVPlanarMapper.h"
+#include "vtkSVPolyDataSliceAndDiceFilter.h"
 #include "vtkSVPullApartPolyData.h"
 #include "vtkSVSuperSquareBoundaryMapper.h"
-#include "vtkTextureMapToSphere.h"
 #include "vtkThreshold.h"
-#include "vtkTransform.h"
-#include "vtkTransformPolyDataFilter.h"
-#include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkXMLPolyDataWriter.h"
 
 #include <iostream>
 #include <cmath>
 
-//---------------------------------------------------------------------------
-//vtkCxxRevisionMacro(vtkSVPolyDataToNURBSFilter, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVPolyDataToNURBSFilter);
 
-
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPolyDataToNURBSFilter::vtkSVPolyDataToNURBSFilter()
 {
   this->AddTextureCoordinates = 1;
@@ -110,7 +88,9 @@ vtkSVPolyDataToNURBSFilter::vtkSVPolyDataToNURBSFilter()
   this->BooleanPathArrayName    = NULL;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVPolyDataToNURBSFilter::~vtkSVPolyDataToNURBSFilter()
 {
   if (this->InputPd != NULL)
@@ -200,17 +180,33 @@ vtkSVPolyDataToNURBSFilter::~vtkSVPolyDataToNURBSFilter()
   }
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVPolyDataToNURBSFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
+  if (this->BoundaryPointsArrayName != NULL)
+    os << indent << "Boundary points array name: " << this->BoundaryPointsArrayName << "\n";
+  if (this->GroupIdsArrayName != NULL)
+    os << indent << "Group Ids array name: " << this->GroupIdsArrayName << "\n";
+  if (this->SegmentIdsArrayName != NULL)
+    os << indent << "Segment Ids array name: " << this->SegmentIdsArrayName << "\n";
+  if (this->SliceIdsArrayName != NULL)
+    os << indent << "Slice Ids array name: " << this->SliceIdsArrayName << "\n";
+  if (this->SphereRadiusArrayName != NULL)
+    os << indent << "Sphere radius array name: " << this->SphereRadiusArrayName << "\n";
+  if (this->InternalIdsArrayName != NULL)
+    os << indent << "Internal Ids array name: " << this->InternalIdsArrayName << "\n";
+  if (this->DijkstraArrayName != NULL)
+    os << indent << "Dijkstra distance array name: " << this->DijkstraArrayName << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-//---------------------------------------------------------------------------
-int vtkSVPolyDataToNURBSFilter::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+// ----------------------
+// PrintSelf
+// ----------------------
+int vtkSVPolyDataToNURBSFilter::RequestData(vtkInformation *vtkNotUsed(request),
+                                            vtkInformationVector **inputVector,
+                                            vtkInformationVector *outputVector)
 {
   // get the input and output
   vtkPolyData *input1 = vtkPolyData::GetData(inputVector[0]);
@@ -219,22 +215,9 @@ int vtkSVPolyDataToNURBSFilter::RequestData(
   //Copy the input to operate on
   this->InputPd->DeepCopy(input1);
 
-  if (this->Centerlines == NULL)
+  if (this->RunFilter() != SV_OK)
   {
-    this->Centerlines = vtkPolyData::New();
-    this->ComputeCenterlines();
-    this->ExtractBranches();
-  }
-
-  if (this->SliceAndDice() != SV_OK)
-  {
-    vtkErrorMacro("Error in slicing polydata\n");
-    return SV_ERROR;
-  }
-
-  if (this->PerformMappings() != SV_OK)
-  {
-    vtkErrorMacro("Error in perform mappings\n");
+    vtkErrorMacro("Error when running main operation\n");
     return SV_ERROR;
   }
 
@@ -242,36 +225,34 @@ int vtkSVPolyDataToNURBSFilter::RequestData(
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataToNURBSFilter::ComputeCenterlines()
+// ----------------------
+// SliceAndDice
+// ----------------------
+int vtkSVPolyDataToNURBSFilter::RunFilter()
 {
-  return SV_ERROR;
+  // Slice it up
+  if (this->SliceAndDice() != SV_OK)
+  {
+    vtkErrorMacro("Error in slicing polydata\n");
+    return SV_ERROR;
+  }
+
+  // Now perform some mappings
+  if (this->PerformMappings() != SV_OK)
+  {
+    vtkErrorMacro("Error in perform mappings\n");
+    return SV_ERROR;
+  }
+
+  return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataToNURBSFilter::ExtractBranches()
-{
-  return SV_ERROR;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SliceAndDice
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::SliceAndDice()
 {
+  // Set up slice and dice filter
   vtkNew(vtkSVPolyDataSliceAndDiceFilter, slicer);
   slicer->SetInputData(this->InputPd);
   slicer->SetCenterlinesPd(this->Centerlines);
@@ -286,6 +267,7 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
   slicer->SetDijkstraArrayName(this->DijkstraArrayName);
   slicer->Update();
 
+  // Get the output, the polycube, and the surgerylines
   this->InputPd->DeepCopy(slicer->GetOutput());
   this->Polycube->DeepCopy(slicer->GetPolycube());
   this->SurgeryLines->DeepCopy(slicer->GetSurgeryLinesPd());
@@ -293,125 +275,95 @@ int vtkSVPolyDataToNURBSFilter::SliceAndDice()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PerformMapping
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::PerformMappings()
 {
+  // Get number of cubes in polycube
   int numCubes = this->Polycube->GetNumberOfGrids();
-  vtkNew(vtkIdFilter, ider);
-  ider->SetInputData(this->InputPd);
-  ider->SetIdsArrayName(this->InternalIdsArrayName);
-  ider->Update();
-  this->InputPd->DeepCopy(ider->GetOutput());
+  vtkSVGeneralUtils::GiveIds(this->InputPd, this->InternalIdsArrayName);
 
+  // Get the segment ids from the polycube
   vtkIntArray *segmentIds = vtkIntArray::SafeDownCast(
       this->Polycube->GetCellData()->GetArray(this->SegmentIdsArrayName));
+
+  // Get the cube types from the polycube
   vtkIntArray *cubeType = vtkIntArray::SafeDownCast(
     this->Polycube->GetCellData()->GetArray("CubeType"));
 
+  // Set up appenders
   vtkNew(vtkAppendPolyData, appender);
   vtkNew(vtkAppendPolyData, inputAppender);
   vtkNew(vtkAppendPolyData, loftAppender);
+
+  // Loop through number of cubes
   for (int i=0; i<numCubes; i++)
   {
+    // Get segment id
     int segmentId = segmentIds->GetValue(i);
+
+    // This is a branch, map it!
     if (cubeType->GetValue(i) == vtkSVGeneralizedPolycube::CUBE_BRANCH)
-    {
       this->MapBranch(segmentId, appender, inputAppender, loftAppender);
-    }
+
+    // This is a bifurcation, map it!
     else if (cubeType->GetValue(i) == vtkSVGeneralizedPolycube::CUBE_BIFURCATION)
-    {
       this->MapBifurcation(segmentId, appender, inputAppender, loftAppender);
-    }
   }
+  // Finalize appenders
   appender->Update();
   inputAppender->Update();
   loftAppender->Update();
+
+  // Copy appender output
   this->ParameterizedPd->DeepCopy(appender->GetOutput());
   this->TexturedPd->DeepCopy(inputAppender->GetOutput());
   this->LoftedPd->DeepCopy(loftAppender->GetOutput());
 
+  // Remove temporary ids
   this->InputPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   this->InputPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetSegment
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::GetSegment(const int segmentId, vtkPolyData *segmentPd,
-                                        vtkPolyData *surgeryLinePd)
+                                           vtkPolyData *surgeryLinePd)
 {
-  vtkNew(vtkThreshold, thresholder);
-  thresholder->SetInputData(this->InputPd);
-  //Set Input Array to 0 port,0 connection,1 for Cell Data, and Regions is the type name
-  thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->SegmentIdsArrayName);
-  thresholder->ThresholdBetween(segmentId, segmentId);
-  thresholder->Update();
+  // Threshold
+  vtkSVGeneralUtils::ThresholdPd(this->InputPd, segmentId, segmentId, 1, this->SegmentIdsArrayName, segmentPd);
+  vtkSVGeneralUtils::ThresholdPd(this->SurgeryLines, segmentId, segmentId, 1, this->SegmentIdsArrayName, surgeryLinePd);
 
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(thresholder->GetOutput());
-  surfacer->Update();
-
-  segmentPd->DeepCopy(surfacer->GetOutput());
-
-  thresholder->SetInputData(this->SurgeryLines);
-  thresholder->Update();
-
-  surfacer->SetInputData(thresholder->GetOutput());
-  surfacer->Update();
-
-  surgeryLinePd->DeepCopy(surfacer->GetOutput());
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetSlice
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd)
 {
-  vtkNew(vtkThreshold, thresholder);
-  thresholder->SetInputData(segmentPd);
-  //Set Input Array to 0 port,0 connection,1 for Cell Data, and Regions is the type name
-  thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->SliceIdsArrayName);
-  thresholder->ThresholdBetween(sliceId, sliceId);
-  thresholder->Update();
-
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(thresholder->GetOutput());
-  surfacer->Update();
-
-  slicePd->DeepCopy(surfacer->GetOutput());
-
+  vtkSVGeneralUtils::ThresholdPd(segmentPd, sliceId, sliceId, 1, this->SliceIdsArrayName, slicePd);
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MapBranch
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
                                         vtkAppendPolyData *appender,
                                         vtkAppendPolyData *inputAppender,
                                         vtkAppendPolyData *loftAppender)
 {
+  // Get segment of polydata
   vtkNew(vtkPolyData, branchPd);
   vtkNew(vtkPolyData, surgeryLinePd);
   this->GetSegment(branchId, branchPd, surgeryLinePd);
 
+  // Get all the information off of the polycube
   vtkIntArray *startPtIds =  vtkIntArray::SafeDownCast(
     this->Polycube->GetCellData()->GetArray("CornerPtIds"));
   vtkDoubleArray *sliceRightNormals = vtkDoubleArray::SafeDownCast(
@@ -422,24 +374,31 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
     "ParentDirection")->GetTuple1(branchId);
   int childDir = this->Polycube->GetCellData()->GetArray(
     "ChildDirection")->GetTuple1(branchId);
-  fprintf(stdout,"Parent dir is: %d and child dir is: %d\n", parentDir, childDir);
+  //fprintf(stdout,"Parent dir is: %d and child dir is: %d\n", parentDir, childDir);
+  // Get the rotation indices
   int cellIndices[8];
   for (int i=0; i<8; i++)
     cellIndices[i] = vtkSVPolyDataSliceAndDiceFilter::LookupIndex(parentDir, childDir, i);
 
+  // Get the slice ids
   double minmax[2];
   vtkIntArray *sliceIds = vtkIntArray::SafeDownCast(
     branchPd->GetCellData()->GetArray(this->SliceIdsArrayName));
   sliceIds->GetRange(minmax);
+
+  // Loop through the slice ids
   for (int i=minmax[0]; i<=minmax[1]; i++)
   {
+    // Get each slice
     vtkNew(vtkPolyData, slicePd);
     this->GetSlice(i, branchPd, slicePd);
     int numPoints = slicePd->GetNumberOfPoints();
     vtkDataArray *ptIds = slicePd->GetPointData()->GetArray(this->InternalIdsArrayName);
 
+    // If we have points, then we have a polydata to map
     if (numPoints != 0)
     {
+      // Get top, right normals and the boundary points
       double xvec[3], zvec[3];
       vtkNew(vtkIntArray, firstLoopPts);
       vtkNew(vtkIntArray, secondLoopPts);
@@ -450,40 +409,38 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
       }
       sliceRightNormals->GetTuple(branchId, xvec);
       sliceTopNormals->GetTuple(branchId, zvec);
-      vtkNew(vtkPolyData, sliceS2Pd);
-      vtkNew(vtkPolyData, mappedPd);
-      fprintf(stdout,"Mapping region %d...\n", branchId);
-      fprintf(stdout,"First start vals are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 0),
-                                                            startPtIds->GetComponent(branchId, 1),
-                                                            startPtIds->GetComponent(branchId, 2),
-                                                            startPtIds->GetComponent(branchId, 3));
-      fprintf(stdout,"Second start are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 4),
-                                                        startPtIds->GetComponent(branchId, 5),
-                                                        startPtIds->GetComponent(branchId, 6),
-                                                        startPtIds->GetComponent(branchId, 7));
 
-      this->MapSliceToS2(slicePd, surgeryLinePd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
+      fprintf(stdout,"Mapping region %d...\n", branchId);
+      //fprintf(stdout,"First start vals are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 0),
+      //                                                      startPtIds->GetComponent(branchId, 1),
+      //                                                      startPtIds->GetComponent(branchId, 2),
+      //                                                      startPtIds->GetComponent(branchId, 3));
+      //fprintf(stdout,"Second start are: %f %f %f %f\n", startPtIds->GetComponent(branchId, 4),
+      //                                                  startPtIds->GetComponent(branchId, 5),
+      //                                                  startPtIds->GetComponent(branchId, 6),
+      //                                                  startPtIds->GetComponent(branchId, 7));
+
+      // Map the slice to the base domain!
+      vtkNew(vtkPolyData, sliceBaseDomain);
+      vtkNew(vtkPolyData, mappedPd);
+      this->MapSliceToBaseDomain(slicePd, surgeryLinePd, sliceBaseDomain, firstLoopPts, secondLoopPts, xvec, zvec);
       //this->GetCorrespondingCube(cubeS2Pd, boundary);
-      this->InterpolateMapOntoTarget(this->CubeS2Pd, slicePd, sliceS2Pd, mappedPd);
+      this->InterpolateMapOntoTarget(this->CubeS2Pd, slicePd, sliceBaseDomain, mappedPd);
       fprintf(stdout,"Done with mapping...\n");
+
+      // Copy the mapped polydata
       appender->AddInputData(mappedPd);
+
+      // Add texture coordinates
       if (this->AddTextureCoordinates)
-      {
-        this->UseMapToAddTextureCoordinates(slicePd, sliceS2Pd, 1.0, 1.0);
-      }
+        this->UseMapToAddTextureCoordinates(slicePd, sliceBaseDomain, 1.0, 1.0);
       inputAppender->AddInputData(slicePd);
 
-      std::stringstream out;
-      out << branchId;
-
-      std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Slice_"+out.str()+".vtp";
-      vtkNew(vtkXMLPolyDataWriter, writer);
-      writer->SetInputData(sliceS2Pd);
-      writer->SetFileName(filename.c_str());
-      writer->Write();
-
-      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-      this->WriteToGroupsFile(mappedPd, groupfile);
+      //std::stringstream out;
+      //out << branchId;
+      //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+      //this->WriteToGroupsFile(mappedPd, groupfile);
+      // Loft this portion
       vtkNew(vtkPolyData, loftedPd);
       this->LoftNURBSSurface(mappedPd, loftedPd);
       loftAppender->AddInputData(loftedPd);
@@ -493,21 +450,20 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// MapBifurcation
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
-                                             vtkAppendPolyData *appender,
-                                             vtkAppendPolyData *inputAppender,
-                                             vtkAppendPolyData *loftAppender)
+                                               vtkAppendPolyData *appender,
+                                               vtkAppendPolyData *inputAppender,
+                                               vtkAppendPolyData *loftAppender)
 {
+  // Get segment of polydata
   vtkNew(vtkPolyData, bifurcationPd);
   vtkNew(vtkPolyData, surgeryLinePd);
   this->GetSegment(bifurcationId, bifurcationPd, surgeryLinePd);
 
+  // Get information from polycube
   vtkIntArray *startPtIds =  vtkIntArray::SafeDownCast(
     this->Polycube->GetCellData()->GetArray("CornerPtIds"));
   vtkDoubleArray *sliceRightNormals = vtkDoubleArray::SafeDownCast(
@@ -518,15 +474,20 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     "ParentDirection")->GetTuple1(bifurcationId);
   int childDir = this->Polycube->GetCellData()->GetArray(
     "ChildDirection")->GetTuple1(bifurcationId);
+
+  // Get the roation indices
   int cellIndices[8];
   for (int i=0; i<8; i++)
     cellIndices[i] = vtkSVPolyDataSliceAndDiceFilter::LookupIndex(parentDir, childDir, i);
 
+  // Get the full point ids
   int numPoints = bifurcationPd->GetNumberOfPoints();
   vtkDataArray *ptIds = bifurcationPd->GetPointData()->GetArray(this->InternalIdsArrayName);
 
+  // If we have points, then we have a polydata to map
   if (numPoints != 0)
   {
+    // Get top, right normals and the boundary points
     double xvec[3], zvec[3];
     vtkNew(vtkIntArray, firstLoopPts);
     vtkNew(vtkIntArray, secondLoopPts);
@@ -535,43 +496,40 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
       firstLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, cellIndices[j])));
       secondLoopPts->InsertNextValue(ptIds->LookupValue(startPtIds->GetComponent(bifurcationId, cellIndices[j+4])));
     }
-      fprintf(stdout,"First Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 0),
-                                                         startPtIds->GetComponent(bifurcationId, 1),
-                                                         startPtIds->GetComponent(bifurcationId, 2),
-                                                         startPtIds->GetComponent(bifurcationId, 3));
-      fprintf(stdout,"Second Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 4),
-                                                          startPtIds->GetComponent(bifurcationId, 5),
-                                                          startPtIds->GetComponent(bifurcationId, 6),
-                                                          startPtIds->GetComponent(bifurcationId, 7));
+    //fprintf(stdout,"First Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 0),
+    //                                                   startPtIds->GetComponent(bifurcationId, 1),
+    //                                                   startPtIds->GetComponent(bifurcationId, 2),
+    //                                                   startPtIds->GetComponent(bifurcationId, 3));
+    //fprintf(stdout,"Second Loop Points: %f %f %f %f\n", startPtIds->GetComponent(bifurcationId, 4),
+    //                                                    startPtIds->GetComponent(bifurcationId, 5),
+    //                                                    startPtIds->GetComponent(bifurcationId, 6),
+    //                                                    startPtIds->GetComponent(bifurcationId, 7));
     sliceRightNormals->GetTuple(bifurcationId, xvec);
     sliceTopNormals->GetTuple(bifurcationId, zvec);
-    vtkNew(vtkPolyData, sliceS2Pd);
-    vtkNew(vtkPolyData, mappedPd);
     fprintf(stdout,"Mapping region %d...\n", bifurcationId);
 
-    this->MapOpenSliceToS2(bifurcationPd, sliceS2Pd, firstLoopPts, secondLoopPts, xvec, zvec);
-    //this->GetCorrespondingCube(cubeS2Pd, boundary);
-    this->InterpolateMapOntoTarget(this->OpenCubeS2Pd, bifurcationPd, sliceS2Pd, mappedPd);
+    // Map the slice to the base domain
+    vtkNew(vtkPolyData, sliceBaseDomain);
+    vtkNew(vtkPolyData, mappedPd);
+    this->MapOpenSliceToBaseDomain(bifurcationPd, sliceBaseDomain, firstLoopPts, secondLoopPts, xvec, zvec);
+
+    // Call interpolator to map base domain to original surface
+    this->InterpolateMapOntoTarget(this->OpenCubeS2Pd, bifurcationPd, sliceBaseDomain, mappedPd);
     fprintf(stdout,"Done with mapping...\n");
+
+    // append output parameterization
     appender->AddInputData(mappedPd);
 
+    // Add the texture coordinates
     if (this->AddTextureCoordinates)
-    {
-      this->UseMapToAddTextureCoordinates(bifurcationPd, sliceS2Pd, 1.0, 1.0);
-    }
+      this->UseMapToAddTextureCoordinates(bifurcationPd, sliceBaseDomain, 1.0, 1.0);
     inputAppender->AddInputData(bifurcationPd);
 
-    std::stringstream out;
-    out << bifurcationId;
-
-    std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Slice_"+out.str()+".vtp";
-    vtkNew(vtkXMLPolyDataWriter, writer);
-    writer->SetInputData(sliceS2Pd);
-    writer->SetFileName(filename.c_str());
-    writer->Write();
-
-    std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
-    this->WriteToGroupsFile(mappedPd, groupfile);
+    //std::stringstream out;
+    //out << bifurcationId;
+    //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+    //this->WriteToGroupsFile(mappedPd, groupfile);
+    // Loft this portion now
     vtkNew(vtkPolyData, loftedPd);
     this->LoftNURBSSurface(mappedPd, loftedPd);
     loftAppender->AddInputData(loftedPd);
@@ -581,28 +539,25 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
-                                       vtkPolyData *surgeryLinePd,
-                                       vtkPolyData *sliceS2Pd,
-                                       vtkIntArray *firstCorners,
-                                       vtkIntArray *secondCorners,
-                                       double xvec[3],
-                                       double zvec[3])
+// ----------------------
+// MapSliceToBaseDomain
+// ----------------------
+int vtkSVPolyDataToNURBSFilter::MapSliceToBaseDomain(vtkPolyData *slicePd,
+                                                     vtkPolyData *surgeryLinePd,
+                                                     vtkPolyData *sliceBaseDomain,
+                                                     vtkIntArray *firstCorners,
+                                                     vtkIntArray *secondCorners,
+                                                     double xvec[3],
+                                                     double zvec[3])
 {
-  fprintf(stdout,"Four diff values are: %d %d %d %d\n", firstCorners->GetValue(0),
-                                                        firstCorners->GetValue(1),
-                                                        firstCorners->GetValue(2),
-                                                        firstCorners->GetValue(3));
-  fprintf(stdout,"Other values are: %d %d %d %d\n", secondCorners->GetValue(0),
-                                                    secondCorners->GetValue(1),
-                                                    secondCorners->GetValue(2),
-                                                    secondCorners->GetValue(3));
+  //fprintf(stdout,"Four diff values are: %d %d %d %d\n", firstCorners->GetValue(0),
+  //                                                      firstCorners->GetValue(1),
+  //                                                      firstCorners->GetValue(2),
+  //                                                      firstCorners->GetValue(3));
+  //fprintf(stdout,"Other values are: %d %d %d %d\n", secondCorners->GetValue(0),
+  //                                                  secondCorners->GetValue(1),
+  //                                                  secondCorners->GetValue(2),
+  //                                                  secondCorners->GetValue(3));
 
   vtkNew(vtkIntArray, ripIds);
   vtkIntArray *seamIds = vtkIntArray::SafeDownCast(surgeryLinePd->GetPointData()->GetArray(this->InternalIdsArrayName));
@@ -624,11 +579,6 @@ int vtkSVPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   ripper->SetCutPointsArrayName(this->BooleanPathArrayName);
   ripper->SetSeamPointIds(ripIds);
   ripper->Update();
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Totsally.vtp";
-  vtkNew(vtkXMLPolyDataWriter, writer);
-  writer->SetInputData(ripper->GetOutput());
-  writer->SetFileName(filename.c_str());
-  writer->Write();
   slicePd->DeepCopy(ripper->GetOutput());
 
   vtkNew(vtkIdList, replacedPoints);
@@ -640,17 +590,17 @@ int vtkSVPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   int loc1 = replacedPoints->IsId(secondCorners->GetValue(0));
   int new0 = newPoints->GetId(loc0);
   int new1 = newPoints->GetId(loc1);
-  fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d %d %d\n",
-    firstCorners->GetValue(0),
-    firstCorners->GetValue(1),
-    firstCorners->GetValue(2),
-    firstCorners->GetValue(3),
-    new0,
-    new1,
-    secondCorners->GetValue(3),
-    secondCorners->GetValue(2),
-    secondCorners->GetValue(1),
-    secondCorners->GetValue(0));
+  //fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d %d %d\n",
+  //  firstCorners->GetValue(0),
+  //  firstCorners->GetValue(1),
+  //  firstCorners->GetValue(2),
+  //  firstCorners->GetValue(3),
+  //  new0,
+  //  new1,
+  //  secondCorners->GetValue(3),
+  //  secondCorners->GetValue(2),
+  //  secondCorners->GetValue(1),
+  //  secondCorners->GetValue(0));
 
   vtkNew(vtkIntArray, boundaryCorners);
   boundaryCorners->SetNumberOfValues(10);
@@ -684,32 +634,29 @@ int vtkSVPolyDataToNURBSFilter::MapSliceToS2(vtkPolyData *slicePd,
   mapper->SetBoundaryMapper(boundaryMapper);
   mapper->Update();
 
-  sliceS2Pd->DeepCopy(mapper->GetOutput());
+  sliceBaseDomain->DeepCopy(mapper->GetOutput());
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
-                                               vtkPolyData *sliceS2Pd,
-                                               vtkIntArray *firstCorners,
-                                               vtkIntArray *secondCorners,
-                                               double xvec[3],
-                                               double zvec[3])
+// ----------------------
+// MapOpenSliceToBaseDomain
+// ----------------------
+int vtkSVPolyDataToNURBSFilter::MapOpenSliceToBaseDomain(vtkPolyData *slicePd,
+                                                         vtkPolyData *sliceBaseDomain,
+                                                         vtkIntArray *firstCorners,
+                                                         vtkIntArray *secondCorners,
+                                                         double xvec[3],
+                                                         double zvec[3])
 {
-  fprintf(stdout,"Four diff values are: %d %d %d %d\n", firstCorners->GetValue(0),
-                                                        firstCorners->GetValue(1),
-                                                        firstCorners->GetValue(2),
-                                                        firstCorners->GetValue(3));
-  fprintf(stdout,"Other values are: %d %d %d %d\n", secondCorners->GetValue(0),
-                                                    secondCorners->GetValue(1),
-                                                    secondCorners->GetValue(2),
-                                                    secondCorners->GetValue(3));
+  //fprintf(stdout,"Four diff values are: %d %d %d %d\n", firstCorners->GetValue(0),
+  //                                                      firstCorners->GetValue(1),
+  //                                                      firstCorners->GetValue(2),
+  //                                                      firstCorners->GetValue(3));
+  //fprintf(stdout,"Other values are: %d %d %d %d\n", secondCorners->GetValue(0),
+  //                                                  secondCorners->GetValue(1),
+  //                                                  secondCorners->GetValue(2),
+  //                                                  secondCorners->GetValue(3));
 
   vtkNew(vtkIntArray, boundaryCorners);
   boundaryCorners->SetNumberOfValues(8);
@@ -721,31 +668,26 @@ int vtkSVPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   boundaryCorners->SetValue(5, secondCorners->GetValue(2));
   boundaryCorners->SetValue(6, secondCorners->GetValue(3));
   boundaryCorners->SetValue(7, secondCorners->GetValue(0));
-  fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d\n",
-    firstCorners->GetValue(0),
-    firstCorners->GetValue(3),
-    firstCorners->GetValue(2),
-    firstCorners->GetValue(1),
-    secondCorners->GetValue(1),
-    secondCorners->GetValue(2),
-    secondCorners->GetValue(3),
-    secondCorners->GetValue(0));
+  //fprintf(stdout,"The final order of bpoints: %d %d %d %d %d %d %d %d\n",
+  //  firstCorners->GetValue(0),
+  //  firstCorners->GetValue(3),
+  //  firstCorners->GetValue(2),
+  //  firstCorners->GetValue(1),
+  //  secondCorners->GetValue(1),
+  //  secondCorners->GetValue(2),
+  //  secondCorners->GetValue(3),
+  //  secondCorners->GetValue(0));
   double boundaryLengths[4];
   boundaryLengths[0] = 3.0; boundaryLengths[1] = 1.0; boundaryLengths[2] = 3.0; boundaryLengths[3] = 1.0;
   int boundaryDivisions[4];
   boundaryDivisions[0] = 2; boundaryDivisions[1] = 0; boundaryDivisions[2] = 2; boundaryDivisions[3] = 0;
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Totsally.vtp";
-  vtkNew(vtkXMLPolyDataWriter, writer);
-  writer->SetInputData(slicePd);
-  writer->SetFileName(filename.c_str());
-  writer->Write();
 
   vtkNew(vtkSVSuperSquareBoundaryMapper, boundaryMapper);
   boundaryMapper->SetBoundaryIds(boundaryCorners);
   boundaryMapper->SetSuperBoundaryDivisions(boundaryDivisions);
   boundaryMapper->SetSuperBoundaryLengths(boundaryLengths);
-  fprintf(stdout,"XVec: %.4f %.4f %.4f\n", xvec[0], xvec[1], xvec[2]);
-  fprintf(stdout,"ZVec: %.4f %.4f %.4f\n", zvec[0], zvec[1], zvec[2]);
+  //fprintf(stdout,"XVec: %.4f %.4f %.4f\n", xvec[0], xvec[1], xvec[2]);
+  //fprintf(stdout,"ZVec: %.4f %.4f %.4f\n", zvec[0], zvec[1], zvec[2]);
   boundaryMapper->SetObjectXAxis(xvec);
   boundaryMapper->SetObjectZAxis(zvec);
 
@@ -757,17 +699,14 @@ int vtkSVPolyDataToNURBSFilter::MapOpenSliceToS2(vtkPolyData *slicePd,
   mapper->SetBoundaryMapper(boundaryMapper);
   mapper->Update();
 
-  sliceS2Pd->DeepCopy(mapper->GetOutput());
+  sliceBaseDomain->DeepCopy(mapper->GetOutput());
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// InterpolateMapOntoTarget
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::InterpolateMapOntoTarget(vtkPolyData *sourceS2Pd,
                                                             vtkPolyData *targetPd,
                                                             vtkPolyData *targetS2Pd,
@@ -785,12 +724,9 @@ int vtkSVPolyDataToNURBSFilter::InterpolateMapOntoTarget(vtkPolyData *sourceS2Pd
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// UseMapToAddTextureCoordinates
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::UseMapToAddTextureCoordinates(vtkPolyData *pd,
                                                             vtkPolyData *mappedPd,
                                                             const double xSize,
@@ -816,12 +752,9 @@ int vtkSVPolyDataToNURBSFilter::UseMapToAddTextureCoordinates(vtkPolyData *pd,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// LoftNURBSSurface
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *loftedPd)
 {
   vtkFloatArray *tCoords = vtkFloatArray::SafeDownCast(pd->GetPointData()->GetArray("TextureCoordinates"));
@@ -869,12 +802,9 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WriteToGroupsFile
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string fileName)
 {
   vtkFloatArray *tCoords = vtkFloatArray::SafeDownCast(pd->GetPointData()->GetArray("TextureCoordinates"));
@@ -914,12 +844,9 @@ int vtkSVPolyDataToNURBSFilter::WriteToGroupsFile(vtkPolyData *pd, std::string f
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetSpacingOfTCoords
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(vtkPolyData *pd, double &xSpacing, double &ySpacing)
 {
   vtkFloatArray *tCoords = vtkFloatArray::SafeDownCast(pd->GetPointData()->GetArray("TextureCoordinates"));
@@ -941,19 +868,16 @@ int vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(vtkPolyData *pd, double &xSp
     }
   }
 
-  fprintf(stdout,"xMin: %.4f\n", xMin);
-  fprintf(stdout,"yMin: %.4f\n", yMin);
+  //fprintf(stdout,"xMin: %.4f\n", xMin);
+  //fprintf(stdout,"yMin: %.4f\n", yMin);
   xSpacing = xMin;
   ySpacing = yMin;
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetNewPointOrder
+// ----------------------
 int vtkSVPolyDataToNURBSFilter::GetNewPointOrder(vtkPolyData *pd, double xSpacing, double ySpacing,
                                             vtkIntArray *newPointOrder)
 {

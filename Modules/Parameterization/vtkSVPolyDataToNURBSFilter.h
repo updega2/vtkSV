@@ -29,18 +29,19 @@
  *=========================================================================*/
 
 
-/** @file vtkSVPolyDataToNURBSFilter.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ *  \class vtkSVPolyDataToNURBSFilter
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \brief This filter takes a polydata, calls another filter to decompose
+ *  that geometry and obtain its polycube structure. Then using the polycube
+ *  structure, it maps each portion of the polycube to a planar domain to
+ *  form a full parameterization. Global interplation techniques are then
+ *  used to form the full nurbs surface.
+ *
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVPolyDataToNURBSFilter_h
@@ -58,16 +59,16 @@ class vtkSVPolyDataToNURBSFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPolyDataToNURBSFilter* New();
-  //vtkTypeRevisionMacro(vtkSVPolyDataToNURBSFilter, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Flag to indicate whether texture coordinates should be added to input
+  //@{
+  // \brief Flag to indicate whether texture coordinates should be added to input
   vtkGetMacro(AddTextureCoordinates, double);
   vtkSetMacro(AddTextureCoordinates, double);
+  //@}
 
-  // Description:
-  // Array names for the segment and group ids. Must exist on input
+  //@{
+  // \brief Array names for the segment and group ids. Must exist on input
   // pd if also providing centerlines. Otherwise, these are the names
   // that will be used to segment the polydata with the created centerlines
   vtkGetStringMacro(SliceIdsArrayName);
@@ -86,9 +87,10 @@ public:
   vtkSetStringMacro(DijkstraArrayName);
   vtkGetStringMacro(BooleanPathArrayName);
   vtkSetStringMacro(BooleanPathArrayName);
+  //@}
 
-  // Description:
-  // Macro to set object centerlines
+  //@{
+  // \brief Macro to Get/Set objects used by filter
   vtkGetObjectMacro(Centerlines, vtkPolyData);
   vtkSetObjectMacro(Centerlines, vtkPolyData);
   vtkGetObjectMacro(CubeS2Pd, vtkPolyData);
@@ -99,9 +101,16 @@ public:
   vtkSetObjectMacro(TexturedPd, vtkPolyData);
   vtkGetObjectMacro(LoftedPd, vtkPolyData);
   vtkSetObjectMacro(LoftedPd, vtkPolyData);
+  //@}
 
+  /** \brief Convenience function to write groups file read by simvascular. TODO: Move to IO. */
   static int WriteToGroupsFile(vtkPolyData *pd, std::string fileName);
+
+  /** \brief Function to get spacing of parameterization. */
   static int GetSpacingOfTCoords(vtkPolyData *pd, double &xSpacing, double &ySpacing);
+
+  /** \brief Gets a new point order based on node location rather than node number
+   *  ordering. */
   static int GetNewPointOrder(vtkPolyData *pd, double xSpacing, double ySpacing,
                               vtkIntArray *newPointOrder);
 
@@ -116,46 +125,75 @@ protected:
 
   int AddTextureCoordinates;
 
-  int PerformMappings();
-  int ComputeCenterlines();
-  int ExtractBranches();
-  int SliceAndDice();
+  int RunFilter(); // Perform operation
+  int PerformMappings(); // Perform all mappings
+  int SliceAndDice();  // Send to slice and dice filter
+
+  /** \brief Gets one individual segment given a segment id. Also returns the
+   *  associated surgery lines. */
   int GetSegment(const int segmentId, vtkPolyData *segmentPd, vtkPolyData *surgeryLinePd);
+
+  /** \brief Gets a single slice of the polydata given the slice id and the segment polydata. */
   int GetSlice(const int sliceId, vtkPolyData *segmentPd, vtkPolyData *slicePd);
+
+  /** \brief Performs the mapping of one branch.
+   *  \param branchId branch to map.
+   *  \param appender appender to attach the parameterization mapped to the input polydata.
+   *  \param inputAppender appender to attach the form given to mapping code with textures.
+   *  \param loftAppender appender to attach the lofted nurbs representation. */
   int MapBranch(const int branchId, vtkAppendPolyData *appender,
                 vtkAppendPolyData *inputAppender,
                 vtkAppendPolyData *loftAppender);
+
+  /** \brief Performs the mapping of one bifurcation.
+   *  \param branchId branch to map.
+   *  \param appender appender to attach the parameterization mapped to the input polydata.
+   *  \param inputAppender appender to attach the form given to mapping code with textures.
+   *  \param loftAppender appender to attach the lofted nurbs representation. */
   int MapBifurcation(const int bifurcationId, vtkAppendPolyData *appender,
                      vtkAppendPolyData *inputAppender,
                      vtkAppendPolyData *loftAppender);
-  int MapSliceToS2(vtkPolyData *slicePd, vtkPolyData *surgeryLinePd, vtkPolyData *sliceS2Pd,
+
+  /** \brief Maps a single slice to the given base domain..
+   *  \param slicePd The slice polydata.
+   *  \param surgeryLinePd Teh surgery lines for the mapping.
+   *  \param sliceBaseDomain Empty polydata to hold the paramterized slice.
+   *  \param firstCorners Set of 4 nodes that are top corner constraints.
+   *  \param secondCorners Set of 4 nodes that are bottom corner constraints. */
+  int MapSliceToBaseDomain(vtkPolyData *slicePd, vtkPolyData *surgeryLinePd, vtkPolyData *sliceBaseDomain,
                      vtkIntArray *firstCorners, vtkIntArray *secondCorners,
                      double xvec[3], double zvec[3]);
-  int MapOpenSliceToS2(vtkPolyData *slicePd, vtkPolyData *sliceS2Pd,
+
+  /** \brief Maps a single open slice to the given base domain.
+   *  \param slicePd The slice polydata.
+   *  \param sliceBaseDomain Empty polydata to hold the paramterized slice.
+   *  \param firstCorners Set of 4 nodes that are top corner constraints.
+   *  \param secondCorners Set of 4 nodes that are bottom corner constraints. */
+  int MapOpenSliceToBaseDomain(vtkPolyData *slicePd, vtkPolyData *sliceBaseDomain,
                        vtkIntArray *firstCorners, vtkIntArray *secondCorners,
                        double xvec[3], double zvec[3]);
+
+  /** \brief send the final paramterized portion to a mapping filter that
+   *  maps the base domain to the original surface. See vtkSVMapInterpolator.*/
   int InterpolateMapOntoTarget(vtkPolyData *sourceS2Pd,
                                vtkPolyData *targetPd,
                                vtkPolyData *targetS2Pd,
                                vtkPolyData *mappedPd);
+
+  /** \brief Use the parameterization to add texture coordinates to the
+   *  original surface. */
   int UseMapToAddTextureCoordinates(vtkPolyData *pd,
                                     vtkPolyData *mappedPd,
                                     const double xSize,
                                     const double ySize);
+
+  /** \brief Use the vtkSVNURBS code to loft a polydata surface for portion
+   *  pd. */
   int LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *loftedPd);
 
 private:
   vtkSVPolyDataToNURBSFilter(const vtkSVPolyDataToNURBSFilter&);  // Not implemented.
   void operator=(const vtkSVPolyDataToNURBSFilter&);  // Not implemented.
-
-  vtkPolyData *InputPd;
-  vtkPolyData *CubeS2Pd;
-  vtkPolyData *OpenCubeS2Pd;
-  vtkPolyData *ParameterizedPd;
-  vtkPolyData *TexturedPd;
-  vtkPolyData *LoftedPd;
-  vtkPolyData *Centerlines;
-  vtkPolyData *SurgeryLines;
 
   char *SliceIdsArrayName;
   char *GroupIdsArrayName;
@@ -165,6 +203,15 @@ private:
   char *BoundaryPointsArrayName;
   char *DijkstraArrayName;
   char *BooleanPathArrayName;
+
+  vtkPolyData *InputPd;
+  vtkPolyData *CubeS2Pd;
+  vtkPolyData *OpenCubeS2Pd;
+  vtkPolyData *ParameterizedPd;
+  vtkPolyData *TexturedPd;
+  vtkPolyData *LoftedPd;
+  vtkPolyData *Centerlines;
+  vtkPolyData *SurgeryLines;
 
   vtkSVGeneralizedPolycube *Polycube;
 

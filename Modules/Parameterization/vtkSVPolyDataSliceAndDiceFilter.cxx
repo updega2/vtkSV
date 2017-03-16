@@ -28,15 +28,6 @@
  *
  *=========================================================================*/
 
-/**
- *  \brief This implements the vtkSVPolyDataSliceAndDiceFilter
- *
- *  \author Adam Updegrove
- *  \author updega2@gmail.com
- *  \author UC Berkeley
- *  \author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
 
 #include "vtkAppendFilter.h"
