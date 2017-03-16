@@ -28,33 +28,22 @@
  *
  *=========================================================================*/
 
-// .NAME vtkSVPassDataArray - Get Boundary Faces from poldata and label them with integers
-// .SECTION Description
-// vtkSVPassDataArray is a filter to extract the boundary surfaces of a model, separate the surace into multiple regions and number each region.
-
-// .SECTION Caveats
-// To see the coloring of the lines you may have to set the ScalarMode
-// instance variable of the mapper to SetScalarModeToUseCellData(). (This
-// is only a problem if there are point data scalars.)
-
-// .SECTION See Also
-// vtkExtractEdges
-
-/** @file vtkSVPassDataArray.h
- *  @brief This filter passes data information from one vtkPolyData to another.
+/**
+ *  \class vtkSVPassDataArray
+ *  \brief This filter passes data information from one vtkPolyData to another.
  *  These polydatas do not need to be associated in any way. It uses
  *  vtkPointLocator and vtkCellLocators to find the closest points and pass
  *  the information. It passes the array set with PassArrayName. Will be modified
  *  in the future to pass all data arrays if specified.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVPassDataArray_h
-#define __vtkSVPassDataArray_h
+#ifndef vtkSVPassDataArray_h
+#define vtkSVPassDataArray_h
 
 #include "vtkPolyDataAlgorithm.h"
 
@@ -62,39 +51,64 @@ class vtkSVPassDataArray : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPassDataArray* New();
-  //vtkTypeRevisionMacro(vtkSVPassDataArray, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Set name for data array to be used to determine the in between sections
+  //@{
+  /// \brief Set name for data array to be used to determine the in between sections
   vtkGetStringMacro(PassArrayName);
   vtkSetStringMacro(PassArrayName);
+  //@}
 
-  // Description:
-  // Set/get macros for telling whether source is cell or point data
-  // and how the information should be transferred
+  //@{
+  /// \brief Set/get macros for telling whether source is cell or point data
+  /// and how the information should be transferred
   vtkGetMacro(PassDataIsCellData, int);
   vtkSetMacro(PassDataIsCellData, int);
+  vtkBooleanMacro(PassDataIsCellData, int);
   vtkGetMacro(PassDataToCellData, int);
   vtkSetMacro(PassDataToCellData, int);
+  vtkBooleanMacro(PassDataToCellData, int);
+  //@}
 
-
-  // Description:
-  // Set/get macros for whether to use cell centroid. Default is true
-  // As false, each point of the cell will be tested and the value returned
-  // the most times from the locator will be used. In the case that multiple
-  // values are returned the same amount, the first is used.
+  //@{
+  /// \brief Set/get macros for whether to use cell centroid. Default is true
+  /// As false, each point of the cell will be tested and the value returned
+  /// the most times from the locator will be used. In the case that multiple
+  /// values are returned the same amount, the first is used.
   vtkGetMacro(UseCellCentroid, int);
   vtkSetMacro(UseCellCentroid, int);
+  vtkBooleanMacro(UseCellCentroid, int);
+  //@}
 
 protected:
   vtkSVPassDataArray();
   ~vtkSVPassDataArray();
 
-  // Usual data generation method
+  /** \brief Usual filter update
+   *  \details Two inputs to filter:
+   *  1. The source polydata with the array of name provided.
+   *  2. The polydata to map the data array to. */
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
+
+  int PrepFilter(); // Prep work.
+  int RunFilter(); // Run filter operations.
+
+  /** \brief Naive implementation to get most reoccuring number in list. Okay
+   *  because list size is small. */
+  void GetMostOccuringId(vtkIdList *idList, vtkIdType &output);
+
+  /** \brief Used if passing a data array to the points of the target polydata. */
+  int PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData *targetPd,
+                              const int sourceIsCellData, vtkDataArray *sourceDataArray,
+                              vtkDataArray *targetDataArray);
+
+  /** \brief Used if passing a data array to the cells of the target polydata. */
+  int PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData *targetPd,
+                             const int sourceIsCellData, const int useCellCentroid,
+                             vtkDataArray *sourceDataArray,
+                             vtkDataArray *targetDataArray);
 
   char* PassArrayName;
 
@@ -108,18 +122,6 @@ protected:
   int PassDataToCellData;
   int UseCellCentroid;
 
-  int GetArrays(vtkPolyData *object,int type);
-  void GetMostOccuringId(vtkIdList *idList, vtkIdType &output);
-
-  int PassDataInformation();
-  int PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData *targetPd,
-                              const int sourceIsCellData, vtkDataArray *sourceDataArray,
-                              vtkDataArray *targetDataArray);
-
-  int PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData *targetPd,
-                             const int sourceIsCellData, const int useCellCentroid,
-                             vtkDataArray *sourceDataArray,
-                             vtkDataArray *targetDataArray);
 
 private:
   vtkSVPassDataArray(const vtkSVPassDataArray&);  // Not implemented.
@@ -127,5 +129,3 @@ private:
 };
 
 #endif
-
-

@@ -28,52 +28,34 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVPassDataArray.cxx
- *  @brief This implements the vtkSVPassDataArray filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVPassDataArray.h"
 
-#include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCellLocator.h"
-#include "vtkCharArray.h"
-#include "vtkDoubleArray.h"
-#include "vtkFloatArray.h"
 #include "vtkGenericCell.h"
+#include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkIntArray.h"
-#include "vtkLocator.h"
-#include "vtkLongArray.h"
-#include "vtkLongLongArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
-#include "vtkShortArray.h"
-#include "vtkSignedCharArray.h"
 #include "vtkSmartPointer.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkUnsignedCharArray.h"
-#include "vtkUnsignedIntArray.h"
-#include "vtkUnsignedLongArray.h"
-#include "vtkUnsignedLongLongArray.h"
-#include "vtkUnsignedShortArray.h"
 #include "vtkUnstructuredGrid.h"
 
 #include <iostream>
 
-//vtkCxxRevisionMacro(vtkSVPassDataArray, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVPassDataArray);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPassDataArray::vtkSVPassDataArray()
 {
   this->SetNumberOfInputPorts(2);
@@ -92,6 +74,9 @@ vtkSVPassDataArray::vtkSVPassDataArray()
   this->UseCellCentroid = 1;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVPassDataArray::~vtkSVPassDataArray()
 {
   if (this->SourcePd)
@@ -109,130 +94,117 @@ vtkSVPassDataArray::~vtkSVPassDataArray()
     this->NewDataArray->Delete();
     this->NewDataArray = NULL;
   }
+
+  if (this->PassArrayName != NULL)
+  {
+    delete [] this->PassArrayName;
+    this->PassArrayName = NULL;
+  }
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVPassDataArray::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os,indent);
+
+  os << indent << "Pass data is cell data: " << this->PassDataIsCellData << "\n";
+  os << indent << "Pass data to cell data: " << this->PassDataToCellData << "\n";
+  os << indent << "Use cell centroid: " << this->UseCellCentroid << "\n";
+  if (this->PassArrayName != NULL)
+    os << indent << "Pass array name: " << this->PassArrayName << "\n";
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-int vtkSVPassDataArray::RequestData(
-                                 vtkInformation *vtkNotUsed(request),
-                                 vtkInformationVector **inputVector,
-                                 vtkInformationVector *outputVector)
+// ----------------------
+// RequestData
+// ----------------------
+int vtkSVPassDataArray::RequestData(vtkInformation *vtkNotUsed(request),
+                                    vtkInformationVector **inputVector,
+                                    vtkInformationVector *outputVector)
 {
-    // get the input and output
-    vtkPolyData *input0 = vtkPolyData::GetData(inputVector[0]);
-    vtkPolyData *input1 = vtkPolyData::GetData(inputVector[1]);
-    vtkPolyData *output = vtkPolyData::GetData(outputVector);
+  // get the input and output
+  vtkPolyData *input0 = vtkPolyData::GetData(inputVector[0]);
+  vtkPolyData *input1 = vtkPolyData::GetData(inputVector[1]);
+  vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
-    //Get the number of Polys for scalar  allocation
-    int numPolys0 = input0->GetNumberOfPolys();
-    int numPolys1 = input1->GetNumberOfPolys();
-    int numPts0 = input0->GetNumberOfPoints();
-    int numPts1 = input1->GetNumberOfPoints();
+  this->SourcePd->DeepCopy(input0);
+  this->TargetPd->DeepCopy(input1);
 
-    //Check the input to make sure it is there
-    if (numPolys0 < 1 || numPolys1 < 1)
-    {
-       vtkDebugMacro("No input!");
-       return SV_ERROR;
-    }
-    this->SourcePd->DeepCopy(input0);
-    this->TargetPd->DeepCopy(input1);
+  // Prep work for filter
+  if (this->PrepFilter() != SV_OK)
+  {
+    vtkErrorMacro("Prep of filter failed");
+    output->DeepCopy(input0);
+    return SV_ERROR;
+  }
 
-    if (this->PassDataIsCellData == 0)
-    {
-      if (this->GetArrays(this->SourcePd,0) != SV_OK)
-      {
-        std::cout<<"No Point Array Named "<<this->PassArrayName<<" on surface"<<endl;
-        return SV_ERROR;
-      }
-    }
-    if (this->PassDataIsCellData == 1)
-    {
-      if (this->GetArrays(this->SourcePd,1) != SV_OK)
-      {
-        std::cout<<"No Cell Array Named "<<this->PassArrayName<<" on surface"<<endl;
-        return SV_ERROR;
-      }
-    }
+  // Run the filter
+  if (this->RunFilter() != SV_OK)
+  {
+    vtkErrorMacro("Could not pass information\n");
+    output->DeepCopy(input0);
+    return SV_ERROR;
+  }
 
-    if (this->PassDataInformation() != SV_OK)
+  output->DeepCopy(this->TargetPd);
+  return SV_OK;
+}
+
+// ----------------------
+// PrepFilter
+// ----------------------
+int vtkSVPassDataArray::PrepFilter()
+{
+  //Get the number of Polys for scalar  allocation
+  int numPolys0 = this->SourcePd->GetNumberOfPolys();
+  int numPolys1 = this->TargetPd->GetNumberOfPolys();
+  int numPts0 = this->SourcePd->GetNumberOfPoints();
+  int numPts1 = this->TargetPd->GetNumberOfPoints();
+
+  //Check the input to make sure it is there
+  if (numPolys0 < 1 || numPolys1 < 1)
+  {
+     vtkDebugMacro("No input!");
+     return SV_ERROR;
+  }
+
+  // Check if array exists on points
+  if (this->PassDataIsCellData == 0)
+  {
+    if (vtkSVGeneralUtils::CheckArrayExists(this->SourcePd, 0, this->PassArrayName) != SV_OK)
     {
-      vtkErrorMacro("Could not pass information\n");
+      std::cout<<"No Point Array Named "<<this->PassArrayName<<" on surface"<<endl;
       return SV_ERROR;
     }
+    // Get data array
+    this->PassDataArray = this->SourcePd->GetPointData()->GetArray(this->PassArrayName);
+    this->NewDataArray  = this->PassDataArray->NewInstance();
+  }
 
-    output->DeepCopy(this->TargetPd);
-    return SV_OK;
+  // Check if array exists on cells
+  if (this->PassDataIsCellData == 1)
+  {
+    if (vtkSVGeneralUtils::CheckArrayExists(this->SourcePd, 1, this->PassArrayName) != SV_OK)
+    {
+      std::cout<<"No Cell Array Named "<<this->PassArrayName<<" on surface"<<endl;
+      return SV_ERROR;
+    }
+    // Get data array
+    this->PassDataArray = this->SourcePd->GetCellData()->GetArray(this->PassArrayName);
+    this->NewDataArray  = this->PassDataArray->NewInstance();
+  }
+
+  return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPassDataArray::GetArrays(vtkPolyData *object,int type)
-{
-  vtkIdType i;
-  int exists = 0;
-  int numArrays;
-
-  if (type == 0)
-  {
-    numArrays = object->GetPointData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetPointData()->GetArrayName(i),
-	    this->PassArrayName))
-      {
-	exists = 1;
-      }
-    }
-  }
-  else
-  {
-    numArrays = object->GetCellData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetCellData()->GetArrayName(i),
-	    this->PassArrayName))
-      {
-	exists = 1;
-      }
-    }
-  }
-
-  if (exists)
-  {
-    if (type == 0)
-    {
-      this->PassDataArray = object->GetPointData()->GetArray(this->PassArrayName);
-      this->NewDataArray  = this->PassDataArray->NewInstance();
-    }
-    else
-    {
-      this->PassDataArray = object->GetCellData()->GetArray(this->PassArrayName);
-      this->NewDataArray  = this->PassDataArray->NewInstance();
-    }
-
-    this->NewDataArray->SetName(this->PassArrayName);
-  }
-
-  return exists;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
-int vtkSVPassDataArray::PassDataInformation()
+// ----------------------
+// RunFilter
+// ----------------------
+int vtkSVPassDataArray::RunFilter()
 {
 
+  // Pass data to point data
   if (this->PassDataToCellData == 0)
   {
     if (this->PassInformationToPoints(this->SourcePd, this->TargetPd,
@@ -243,6 +215,7 @@ int vtkSVPassDataArray::PassDataInformation()
     }
   }
 
+  // Pass data to point cells
   if (this->PassDataToCellData == 1)
   {
     if (this->PassInformationToCells(this->SourcePd, this->TargetPd,
@@ -258,22 +231,22 @@ int vtkSVPassDataArray::PassDataInformation()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PassInformationToPoints
+// ----------------------
 int vtkSVPassDataArray::PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyData *targetPd,
                                               const int sourceIsCellData, vtkDataArray *sourceDataArray,
                                               vtkDataArray *targetDataArray)
 {
+  // Number of points
   int numPts   = targetPd->GetNumberOfPoints();
   int numComps = sourceDataArray->GetNumberOfComponents();
 
+  // Set up target array
   targetDataArray->SetNumberOfComponents(numComps);
   targetDataArray->SetNumberOfTuples(numPts);
 
+  // Set up locators!
   vtkNew(vtkCellLocator, cellLocator);
   vtkNew(vtkPointLocator, pointLocator);
   if (sourceIsCellData)
@@ -289,56 +262,67 @@ int vtkSVPassDataArray::PassInformationToPoints(vtkPolyData *sourcePd, vtkPolyDa
     pointLocator->BuildLocator();
   }
 
+  // Loop through points
   vtkNew(vtkGenericCell, genericCell);
   for (int i=0; i<numPts; i++)
   {
+    // Get point
     double pt[3];
     targetPd->GetPoint(i, pt);
 
+    // If getting cell data
     if (sourceIsCellData)
     {
+      // Use cell locator to get closest cell
       double closestPt[3], distance;
       vtkIdType closestCellId; int subId;
       cellLocator->FindClosestPoint(pt,closestPt,genericCell,closestCellId,
 	subId,distance);
+      // Loop through comps of data array
       for (int j=0; j<numComps; j++)
       {
+        // Set new comp of data array to that of closest cell
         targetDataArray->SetComponent(
           i, j, sourceDataArray->GetComponent(closestCellId, j));
       }
     }
+    // If getting point data data
     else
     {
+      // Use point locator to get closest point
       int closestPtId = pointLocator->FindClosestPoint(pt);
+      // Loop through comps of data array
       for (int j=0; j<numComps; j++)
       {
+        // Set new comp of data array to that of closest point
         targetDataArray->SetComponent(
           i, j, sourceDataArray->GetComponent(closestPtId, j));
       }
     }
   }
 
+  // Get the point data and add the new array!
   targetPd->GetPointData()->AddArray(targetDataArray);
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PassInformationToCells
+// ----------------------
 int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyData *targetPd,
                                               const int sourceIsCellData, const int useCellCentroid, vtkDataArray *sourceDataArray,
                                               vtkDataArray *targetDataArray)
 {
+  // Number of points
   int numPolys = targetPd->GetNumberOfPolys();
   int numComps = sourceDataArray->GetNumberOfComponents();
 
+  // Set up target array
   targetDataArray->SetNumberOfComponents(numComps);
   targetDataArray->SetNumberOfTuples(numPolys);
 
+  // Set up locators!
   vtkNew(vtkCellLocator, cellLocator);
   vtkNew(vtkPointLocator, pointLocator);
   if (sourceIsCellData)
@@ -354,12 +338,15 @@ int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyDat
     pointLocator->BuildLocator();
   }
 
+  // Loop through cells
   vtkNew(vtkGenericCell, genericCell);
   for (int i=0; i<numPolys; i++)
   {
+    // Get cell points
     vtkIdType npts, *pts;
     targetPd->GetCellPoints(i, npts, pts);
 
+    // If using cell centroid, comput the centroid
     double centroid[3];
     vtkNew(vtkPoints, polyPts);
     vtkNew(vtkIdTypeArray, polyPtIds);
@@ -373,8 +360,10 @@ int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyDat
       vtkPolygon::ComputeCentroid(polyPtIds,polyPts,centroid);
     }
 
+    // If getting cell data
     if (sourceIsCellData)
     {
+      // If using cell centroid, ust the centroid
       double closestPt[3], distance;
       vtkIdType closestCellId; int subId;
       if (useCellCentroid)
@@ -382,60 +371,88 @@ int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyDat
         cellLocator->FindClosestPoint(centroid, closestPt, genericCell, closestCellId,
           subId,distance);
       }
+      // If not using cell centroid
       else
       {
+        // Set up list to hold ids, find closest for each cell point
         vtkNew(vtkIdList, closestIds);
         closestIds->SetNumberOfIds(npts);
         vtkIdType ptClosestCellId;
+        // Loop through cell points
         for (int j=0; j<npts; j++)
         {
+          // Get point
           double findPt[3];
           targetPd->GetPoint(pts[j], findPt);
+
+          // Use locator to get each closest cell
           cellLocator->FindClosestPoint(findPt, closestPt, genericCell, ptClosestCellId,
             subId,distance);
           closestIds->SetId(j, ptClosestCellId);
         }
+
+        // Get most occuring cell id
         this->GetMostOccuringId(closestIds, closestCellId);
       }
+
+      // Loop through comps and set
       for (int j=0; j<numComps; j++)
       {
+        // Set array value
         targetDataArray->SetComponent(
           i, j, sourceDataArray->GetComponent(closestCellId, j));
       }
     }
+    // If getting point data
     else
     {
       vtkIdType closestPtId;
+      // Use centroid
       if (useCellCentroid)
-      {
         closestPtId = pointLocator->FindClosestPoint(centroid);
-      }
+      // If not using centroid
       else
       {
+        // Do for each point of cell
         vtkNew(vtkIdList, closestIds);
         closestIds->SetNumberOfIds(npts);
+
+        // Loop through cell points
         for (int j=0; j<npts; j++)
         {
+          // Get point
           double findPt[3];
           targetPd->GetPoint(pts[j], findPt);
+
+          // Get closest point to cell point
           int ptClosestPtId = pointLocator->FindClosestPoint(findPt);
           closestIds->SetId(j, ptClosestPtId);
         }
+
+
+        // Get most occuring id
         this->GetMostOccuringId(closestIds, closestPtId);
       }
+
+      // Loop through array comps
       for (int j=0; j<numComps; j++)
       {
+        // Set Comp value
         targetDataArray->SetComponent(
           i, j, sourceDataArray->GetComponent(closestPtId, j));
       }
     }
   }
 
+  // Get cell data and add array!
   targetPd->GetCellData()->AddArray(targetDataArray);
 
   return SV_OK;
 }
 
+// ----------------------
+// GetMostOccuringId
+// ----------------------
 void vtkSVPassDataArray::GetMostOccuringId(vtkIdList *idList, vtkIdType &output)
 {
   int numIds = idList->GetNumberOfIds();
@@ -448,9 +465,7 @@ void vtkSVPassDataArray::GetMostOccuringId(vtkIdList *idList, vtkIdType &output)
     for (int j=0; j<numIds; j++)
     {
       if (idList->GetId(i) == idList->GetId(j))
-      {
         count++;
-      }
     }
     if (count > max_count)
     {
