@@ -37,6 +37,9 @@
 #include "vtkSparseArray.h"
 #include "vtkSVGlobals.h"
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVNURBSCurve);
 
 // ----------------------
