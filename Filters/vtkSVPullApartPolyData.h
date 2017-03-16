@@ -28,19 +28,13 @@
  *
  *=========================================================================*/
 
-
-/** @file vtkSVPullApartPolyData.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
- *  surface to a sphere. The first step is to compute the Tutte Energy, and
- *  the second step is to perform the conformal map. For more details, see
- *  Gu et al., Genus Zero Surface Conformal Mapping and Its
- *  Application to Brain Surface Mapping, 2004.
+/**
+ *  \class vtkSVPullApartPolyData
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVPullApartPolyData_h
@@ -49,7 +43,6 @@
 #include "vtkPolyDataAlgorithm.h"
 
 #include "vtkEdgeTable.h"
-#include "vtkDoubleArray.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
@@ -60,36 +53,42 @@ public:
   //vtkTypeRevisionMacro(vtkSVPullApartPolyData, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // String to separate the polydata at. 1 Indicates the points that are along
-  // separation line, everything else should be 0
+  //@{
+  /// \brief String to separate the polydata at. 1 Indicates the points that are along
+  /// separation line, everything else should be 0
   vtkGetStringMacro(CutPointsArrayName);
   vtkSetStringMacro(CutPointsArrayName);
+  //@}
 
-  // Description:
-  // The list of points that are to be replaced
+  //@{
+  /// \brief The list of points that are along seam
   vtkSetObjectMacro(SeamPointIds, vtkIntArray);
   vtkGetObjectMacro(SeamPointIds, vtkIntArray);
+  //@}
 
-  // Description:
-  // The list of points that are to be replaced
+  //@{
+  /// \brief The list of points that are to be replaced
   vtkGetObjectMacro(ReplacePointList, vtkIdList);
+  //@}
 
-  // Description:
-  // The list that will be the same length as replacepoint list with the ids
-  // corresponding to the new points
+  //@{
+  /// \brief The list that will be the same length as replacepoint list with the ids
+  /// corresponding to the new points
   vtkGetObjectMacro(NewPointList, vtkIdList);
+  //@}
 
-  // Description:
-  // Axis of the object to use on orientation with sphee map
+  //@{
+  /// \brief Axis of the object to use on orientation with sphee map
   vtkSetVector3Macro(ObjectXAxis, double);
   vtkSetVector3Macro(ObjectZAxis, double);
+  //@}
 
-  // Description:
-  // If start point is provided, it helps the algorithm go quicker because
+  //@{
+  // /\brief If start point is provided, it helps the algorithm go quicker because
   // a start point does not need to be found
   vtkGetMacro(StartPtId, int);
   vtkSetMacro(StartPtId, int);
+  //@}
 
 protected:
   vtkSVPullApartPolyData();
@@ -100,12 +99,24 @@ protected:
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
-  int PrepFilter();
-  int RunFilter();
-  int FindEdgeCells();
-  int PullApartCutEdges();
+  int PrepFilter(); // Prep work
+  int RunFilter(); // Run filter operations.
+  int FindEdgeCells(); // Find edge cells
+  int PullApartCutEdges();  // Pull edges apart!
+
+  /** \brief find the edge to rule them all.
+   *  \param p0 Empty point to return first edge point.
+   *  \param p1 Empty point to return second edge point.
+   *  \param p2 Empty point to return third edge point.
+   *  \param cellId Empty cell to return the id of starting cell. */
   int FindStartingEdge(int &p0, int &p1, int &p2, int &cellId);
+
+  /** \brief find next edge in sequence. Recursive function
+   *  \note adss to cellList. */
   int FindNextEdge(int p0, int p1, int p2, int cellId, std::vector<int> &cellList, int first);
+
+  /** \brief If a bad start cell is detected with give start point, fix the
+   *  cell. A bad cell is defined as a cell with threepoints on the boundary! */
   int FixTheBadStartCell(vtkPolyData *pd, const int pointId, const int cellId);
 
 private:

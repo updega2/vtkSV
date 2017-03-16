@@ -85,6 +85,8 @@ vtkSVPlacePointsOnS2::~vtkSVPlacePointsOnS2()
 // ----------------------
 void vtkSVPlacePointsOnS2::PrintSelf(ostream& os, vtkIndent indent)
 {
+  this->Superclass::PrintSelf(os, indent);
+
   os << indent << "Use custom axis align: " << this->UseCustomAxisAlign << "\n";
   os << indent << "Z axis: " <<
     this->ZAxis[0] << " " << this->ZAxis[1] << " " << this->ZAxis[2] << "\n";
