@@ -48,7 +48,11 @@ vtk_module(vtkSVParameterization
   vtkSVCommon
   ${EXTRA_DEPENDS}
   TEST_DEPENDS
+  vtkFiltersExtraction
   vtkTestingCore
+  vtkIOGeometry
+  vtkIOXML
+  vtkSVCommon
   TCL_NAME
   vtkSVParameterization
   )

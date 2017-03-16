@@ -36,7 +36,7 @@ vtk_module(vtkSVFilters
   vtkFiltersModeling
   vtkSVCommon
   TEST_DEPENDS
-  vtkInteractionStyle
+  vtkFiltersExtraction
   vtkIOXML
   vtkSVCommon
   vtkTestingCore

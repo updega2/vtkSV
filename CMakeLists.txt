@@ -51,12 +51,14 @@ include(vtkSVMacros)
 if(BUILD_TESTING)
   set(VTKSV_TEST_DIR                 "${CMAKE_BINARY_DIR}/Testing/Temporary")
   set(ExternalData_BINARY_ROOT       "${CMAKE_BINARY_DIR}/ExternalData")
-  set(VTKSV_TEST_DATA_DIR            "${CMAKE_CURRENT_SOURCE_DIR}/Testing/Data")
+  set(VTKSV_TEST_DATA_DIR            "${CMAKE_SOURCE_DIR}/Testing/Data")
+  set(ExternalData_OBJECT_STORES     "${ExternalData_OBJECT_STORES} ${VTKSV_TEST_DATA_DIR}")
   set(VTKSV_TEST_BASELINE_DIR        "${VTKSV_TEST_DATA_DIR}/Baseline")
   set(VTKSV_TEST_OUTPUT_DATA_DIR     "${ExternalData_BINARY_ROOT}/Testing/Data")
   set(VTKSV_TEST_OUTPUT_BASELINE_DIR "${VTKSV_TEST_OUTPUT_DATA_DIR}/Baseline")
   set(VTKSV_TEST_OUTPUT_DIR          "${CMAKE_BINARY_DIR}/Testing/Temporary")
   set(VTKSV_DATA_ROOT                "${VTKSV_TEST_OUTPUT_DATA_DIR}")
+  set(ExternalData_LINK_CONTENT      MD5)
   make_directory(${VTKSV_TEST_DIR})
   enable_testing()
   if(VTKSV_TEST_COVERAGE)
@@ -147,4 +149,11 @@ foreach(vtk-module ${VTK_MODULES_ALL})
   add_subdirectory(${${vtk-module}_SOURCE_DIR} ${${vtk-module}_BINARY_DIR})
   set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} ${vtk-module})
 endforeach()
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Add external data target
+if(BUILD_TESTING)
+  ExternalData_add_target(VTKSVData)
+endif()
 #-----------------------------------------------------------------------------

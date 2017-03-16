@@ -36,14 +36,14 @@
  *  \author UC Berkeley
  *  \author shaddenlab.berkeley.edu
  */
-#include <vtkSVHausdorffDistance.h>
+#include "vtkSVHausdorffDistance.h"
 
-#include <vtkPlaneSource.h>
-#include <vtkSmartPointer.h>
-#include <vtkSVGlobals.h>
-#include <vtkSVHausdorffDistance.h>
+#include "vtkPlaneSource.h"
+#include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVHausdorffDistance.h"
 
-int TestHausdorffDistance(int, char *[])
+int TestHausdorffDistance(int argc, char *argv[])
 {
   vtkNew(vtkPlaneSource, plane0);
   plane0->SetOrigin(0.0, 0.0, 0.0);

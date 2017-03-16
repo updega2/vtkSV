@@ -76,7 +76,7 @@ macro (_vtksv_override_vtk_dirs)
   set(VTK_TEST_DATA_DIR    ${VTKSV_TEST_OUTPUT_DATA_DIR})
   set(VTK_BASELINE_DIR     ${VTKSV_TEST_BASELINE_DIR})
   set(VTK_TEST_OUTPUT_DIR  ${VTKSV_TEST_OUTPUT_DIR})
-  set(VTK_TEST_DATA_TARGET VtkSvData)
+  set(VTK_TEST_DATA_TARGET VTKSVData)
 endmacro ()
 #------------------------------------------------------------------------------
 
