@@ -28,18 +28,17 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVLoftNURBSCurve.h
- *  @brief This is the filter to perform the intersection between multiple
- *  @brief vessels
+/**
+ *  \class vtkSVLoftNURBSCurve
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef __vtkSVLoftNURBSCurve_h
-#define __vtkSVLoftNURBSCurve_h
+#ifndef vtkSVLoftNURBSCurve_h
+#define vtkSVLoftNURBSCurve_h
 
 #include "vtkPolyDataAlgorithm.h"
 

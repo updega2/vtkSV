@@ -30,6 +30,8 @@
 
 /**
  *  \class vtkSVPullApartPolyData
+ *  \brief Given a list of points or an array defined on surface, pull
+ *  apart the polydata creating a seam along the geometry.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com

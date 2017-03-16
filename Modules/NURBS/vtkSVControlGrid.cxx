@@ -1,121 +1,108 @@
 /*=========================================================================
+ *
+ * Copyright (c) 2014-2015 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
-  Program:   Visualization Toolkit
-  Module:    vtkSVControlGrid.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
 #include "vtkSVControlGrid.h"
 
 #include "vtkDataArray.h"
+#include "vtkDoubleArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
+#include "vtkPoints.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVControlGrid);
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVControlGrid::vtkSVControlGrid()
 {
-  this->InternalPoints = vtkPoints::New();
-  this->SetPoints(InternalPoints);
+  vtkNew(vtkPoints, internalPoints);
+  this->SetPoints(internalPoints);
 
-  this->InternalWeights = vtkDoubleArray::New();
-  this->InternalWeights->SetName("Weights");
-  this->GetPointData()->AddArray(this->InternalWeights);
+  vtkNew(vtkDoubleArray, internalWeights);
+  internalWeights->SetName("Weights");
+  this->GetPointData()->AddArray(internalWeights);
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVControlGrid::~vtkSVControlGrid()
 {
-  if (this->InternalPoints != NULL)
-  {
-    this->InternalPoints->Delete();
-  }
-  if (this->InternalWeights != NULL)
-  {
-    this->InternalWeights->Delete();
-  }
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVControlGrid::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// CopyStructure
+// ----------------------
 void vtkSVControlGrid::CopyStructure(vtkDataSet *ds)
 {
   this->Superclass::CopyStructure(ds);
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// Initialize
+// ----------------------
 void vtkSVControlGrid::Initialize()
 {
   this->Superclass::Initialize();
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetData
+// ----------------------
 vtkSVControlGrid* vtkSVControlGrid::GetData(vtkInformation* info)
 {
   return info? vtkSVControlGrid::SafeDownCast(info->Get(DATA_OBJECT())) : 0;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetData
+// ----------------------
 vtkSVControlGrid* vtkSVControlGrid::GetData(vtkInformationVector* v, int i)
 {
   return vtkSVControlGrid::GetData(v->GetInformationObject(i));
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetControlPoint
+// ----------------------
 int vtkSVControlGrid::SetControlPoint(const int i, const int j, const int k, const double p[3], const double w)
 {
   int ptId;
@@ -126,12 +113,9 @@ int vtkSVControlGrid::SetControlPoint(const int i, const int j, const int k, con
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetControlPoint
+// ----------------------
 int vtkSVControlGrid::SetControlPoint(const int i, const int j, const int k, const double pw[4])
 {
   double onlyp[3];
@@ -146,12 +130,9 @@ int vtkSVControlGrid::SetControlPoint(const int i, const int j, const int k, con
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// InsertControlPoint
+// ----------------------
 int vtkSVControlGrid::InsertControlPoint(const int i, const int j, const int k, const double p[3], const double w)
 {
   int dim[3];
@@ -176,12 +157,9 @@ int vtkSVControlGrid::InsertControlPoint(const int i, const int j, const int k, 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// InsertControlPoint
+// ----------------------
 int vtkSVControlGrid::InsertControlPoint(const int i, const int j, const int k, const double pw[4])
 {
   double onlyp[3];
@@ -196,12 +174,9 @@ int vtkSVControlGrid::InsertControlPoint(const int i, const int j, const int k, 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetControlPoint
+// ----------------------
 int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double p[3], double &w)
 {
   int ptId;
@@ -216,12 +191,9 @@ int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, dou
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetControlPoint
+// ----------------------
 int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double pw[4])
 {
   double onlyp[3];
@@ -232,19 +204,14 @@ int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, dou
   double w = pw[3];
 
   if (this->GetControlPoint(i, j, k, onlyp, w) != SV_OK)
-  {
     vtkErrorMacro("Point not retrieved successfully");
-  }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetPointId
+// ----------------------
 int vtkSVControlGrid::GetPointId(const int i, const int j, const int k, int &ptId)
 {
   int extent[6];
