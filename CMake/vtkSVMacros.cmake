@@ -69,3 +69,24 @@ macro(vtksv_add_module MODULE_NAME)
 
 endmacro()
 #------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Override vtk_add_test_* variables for use with ParaView.
+macro (_vtksv_override_vtk_dirs)
+  set(VTK_TEST_DATA_DIR    ${VTKSV_TEST_OUTPUT_DATA_DIR})
+  set(VTK_BASELINE_DIR     ${VTKSV_TEST_BASELINE_DIR})
+  set(VTK_TEST_OUTPUT_DIR  ${VTKSV_TEST_OUTPUT_DIR})
+  set(VTK_TEST_DATA_TARGET VtkSvData)
+endmacro ()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Add test for cxx files
+function (vtksv_add_test_cxx exe var)
+  _vtksv_override_vtk_dirs()
+  vtk_add_test_cxx("${exe}" "${var}" ${ARGN})
+  set("${var}" ${${var}}
+    PARENT_SCOPE)
+endfunction ()
+#------------------------------------------------------------------------------
+
