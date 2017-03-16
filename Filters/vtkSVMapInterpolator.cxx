@@ -317,6 +317,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
   pd->BuildLinks();
 
   // Initialize to zero
+  isBoundary->SetNumberOfTuples(numPoints);
   isBoundary->FillComponent(0, 0);
 
   // Loop through cells
@@ -339,8 +340,8 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
       // If no neighbors, we have boundary!
       if (edgeNeighbor->GetNumberOfIds() == 0)
       {
-        isBoundary->InsertValue(p0, 1);
-        isBoundary->InsertValue(p1, 1);
+        isBoundary->SetValue(p0, 1);
+        isBoundary->SetValue(p1, 1);
         this->HasBoundary = 1;
       }
     }
