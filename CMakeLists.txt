@@ -130,6 +130,9 @@ endif()
 if(VTKSV_BUILD_MODULE_PARAMETERIZATION)
   set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Parameterization")
 endif()
+if(VTKSV_BUILD_MODULE_GEOMETRY)
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Geometry")
+endif()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------

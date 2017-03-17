@@ -32,9 +32,7 @@ set(SRCS
   vtkSVBoundaryMapper.cxx
   vtkSVSquareBoundaryMapper.cxx
   vtkSVSuperSquareBoundaryMapper.cxx
-  vtkSVSphericalMapper.cxx
-  sparse_matrix.cxx
-  svMath.cxx)
+  vtkSVSphericalMapper.cxx)
 
 set(HDRS
   vtkSVGeneralizedPolycube.h
@@ -42,9 +40,7 @@ set(HDRS
   vtkSVBoundaryMapper.h
   vtkSVSquareBoundaryMapper.h
   vtkSVSuperSquareBoundaryMapper.h
-  vtkSVSphericalMapper.h
-  sparse_matrix.h
-  svMath.h)
+  vtkSVSphericalMapper.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -63,7 +59,7 @@ endif()
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# FindGeodesicPath
+# Parameterization
 vtksv_add_module(vtkSVParameterization
   SRCS ${SRCS}
   HDRS ${HDRS}

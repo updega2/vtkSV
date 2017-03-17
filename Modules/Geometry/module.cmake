@@ -24,38 +24,22 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#------------------------------------------------------------------------------
-# Core SRCS and HDRS
-set(SRCS vtkSVFindGeodesicPath.cxx vtkSVFindSeparateRegions.cxx vtkSVGetBoundaryFaces.cxx
-  vtkSVGroupsClipper.cxx vtkSVPolyBallLine.cxx vtkSVHausdorffDistance.cxx
-  vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx
-  vtkSVPlacePointsOnS2.cxx vtkSVCheckRotation.cxx vtkSVGetSphereRegions.cxx
-  vtkSVFillHolesFilterWithIds.cxx)
-set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundaryFaces.h
-  vtkSVGroupsClipper.h   vtkSVPolyBallLine.h   vtkSVHausdorffDistance.h
-  vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h
-  vtkSVPlacePointsOnS2.h vtkSVCheckRotation.h vtkSVGetSphereRegions.h
-  vtkSVFillHolesFilterWithIds.h)
-#------------------------------------------------------------------------------
+set(DOCUMENTATION "A module containing code to perform a variety of smoothing,
+  decimation, and subdivision locally")
 
 #------------------------------------------------------------------------------
-# Filters module
-vtksv_add_module(vtkSVFilters
-  SRCS ${SRCS}
-  HDRS ${HDRS}
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# Executables
-if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST FindGeodesicPath GroupsClipper HausdorffDistance
-    PassDataArray PullApartPolyData PlacePointsOnS2 CheckRotation)
-  foreach(exe ${EXE_LIST})
-    add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters vtkSVCommon)
-    install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT FilterExecutables)
-  endforeach()
-endif()
+# Module depends
+vtk_module(vtkSVGeometry
+  DESCRIPTION
+  "${DOCUMENTATION}"
+  DEPENDS
+  vtkCommonDataModel
+  vtkFiltersCore
+  vtkFiltersGeometry
+  vtkFiltersModeling
+  vtkSVCommon
+  TEST_DEPENDS
+  TCL_NAME
+  vtkSVGeometry
+  )
 #------------------------------------------------------------------------------

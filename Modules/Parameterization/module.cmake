@@ -37,6 +37,8 @@ if(VTKSV_BUILD_FILTERS)
 endif()
 #------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# Module depends
 vtk_module(vtkSVParameterization
   DESCRIPTION
   "${DOCUMENTATION}"
@@ -56,3 +58,4 @@ vtk_module(vtkSVParameterization
   TCL_NAME
   vtkSVParameterization
   )
+#------------------------------------------------------------------------------
