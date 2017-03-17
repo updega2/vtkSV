@@ -71,9 +71,9 @@ int main(int argc, char *argv[])
   std::string tmpstr;
 
   //Filenames
-  std::string sourceFileName;
-  std::string targetFileName;
-  std::string outputFileName;
+  std::string sourceFilename;
+  std::string targetFilename;
+  std::string outputFilename;
 
   /* argc is the number of strings on the command-line */
   /*  starting with the program name */
@@ -82,9 +82,9 @@ int main(int argc, char *argv[])
       /* replace 0..arglength-1 with argv[iarg] */
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
       if(tmpstr=="-h") {RequestedHelp = true;}
-      else if(tmpstr=="-source") {SourceProvided = true; sourceFileName = argv[++iarg];}
-      else if(tmpstr=="-target") {TargetProvided = true; targetFileName = argv[++iarg];}
-      else if(tmpstr=="-output") {OutputProvided = true; outputFileName = argv[++iarg];}
+      else if(tmpstr=="-source") {SourceProvided = true; sourceFilename = argv[++iarg];}
+      else if(tmpstr=="-target") {TargetProvided = true; targetFilename = argv[++iarg];}
+      else if(tmpstr=="-output") {OutputProvided = true; outputFilename = argv[++iarg];}
       else {BogusCmdLine = true;}
       /* reset tmpstr for next argument */
       tmpstr.erase(0,arglength);
@@ -107,18 +107,18 @@ int main(int argc, char *argv[])
   if (!OutputProvided)
   {
     cout << "WARNING: Output Filename not provided, setting output name based on the source and target filenames" <<endl;
-    std::string newDirName = vtkSVIOUtils::GetPath(targetFileName)+"/"+vtkSVIOUtils::GetRawName(targetFileName);
+    std::string newDirName = vtkSVIOUtils::GetPath(targetFilename)+"/"+vtkSVIOUtils::GetRawName(targetFilename);
     //Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
-    outputFileName = vtkSVIOUtils::GetPath(targetFileName)+"/"+vtkSVIOUtils::GetRawName(targetFileName)+"/"+vtkSVIOUtils::GetRawName(targetFileName)+"_Distanced.vtp";
+    outputFilename = vtkSVIOUtils::GetPath(targetFilename)+"/"+vtkSVIOUtils::GetRawName(targetFilename)+"/"+vtkSVIOUtils::GetRawName(targetFilename)+"_Distanced.vtp";
   }
 
   //Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, sourcePd);
-  vtkSVIOUtils::ReadInputFile(sourceFileName,sourcePd);
+  vtkSVIOUtils::ReadInputFile(sourceFilename,sourcePd);
   vtkNew(vtkPolyData, targetPd);
-  vtkSVIOUtils::ReadInputFile(targetFileName,targetPd);
+  vtkSVIOUtils::ReadInputFile(targetFilename,targetPd);
 
   //Filter
   vtkNew(vtkSVHausdorffDistance, Distancer);
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
   std::cout<<"Average Distance:   "<<Distancer->GetAverageDistance()<<endl;
   //Write Files
   std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFileName,Distancer->GetOutput(0));
+  vtkSVIOUtils::WriteVTPFile(outputFilename,Distancer->GetOutput(0));
   std::cout<<"Done"<<endl;
 
   //Exit the program without errors

@@ -28,13 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file SliceAndDice.cxx
- *  @brief This implements the vtkSVPolyDataSliceAndDiceFilter filter as a class
+/**
+ *  \file SliceAndDice.cxx
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #include "vtkSVPolyDataSliceAndDiceFilter.h"
@@ -51,7 +51,6 @@
  * \brief This creates an executable to process, segment, and create a
  * polycube of an arbitrary vascular model using its centerlines.
  */
-
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
@@ -68,9 +67,9 @@ int main(int argc, char *argv[])
   std::string tmpstr;
 
   // Filenames
-  std::string inputFileName;
-  std::string centerlinesFileName;
-  std::string outputFileName;
+  std::string inputFilename;
+  std::string centerlinesFilename;
+  std::string outputFilename;
 
   // Default values for options
   double sliceLength    = 1.0;
@@ -93,9 +92,9 @@ int main(int argc, char *argv[])
       // replace 0..arglength-1 with argv[iarg]
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
       if(tmpstr=="-h")                      {RequestedHelp = true;}
-      else if(tmpstr=="-input")             {InputProvided = true; inputFileName = argv[++iarg];}
-      else if(tmpstr=="-centerlines")       {CenterlinesProvided = true; centerlinesFileName = argv[++iarg];}
-      else if(tmpstr=="-output")            {OutputProvided = true; outputFileName = argv[++iarg];}
+      else if(tmpstr=="-input")             {InputProvided = true; inputFilename = argv[++iarg];}
+      else if(tmpstr=="-centerlines")       {CenterlinesProvided = true; centerlinesFilename = argv[++iarg];}
+      else if(tmpstr=="-output")            {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-boundarypoints")    {boundaryPointsArrayName = argv[++iarg];}
       else if(tmpstr=="-groupids")          {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-segmentids")        {segmentIdsArrayName = argv[++iarg];}
@@ -140,18 +139,18 @@ int main(int argc, char *argv[])
   if (!OutputProvided)
   {
     cout << "WARNING: Output Filename not provided, setting output name based on the input filename" <<endl;
-    std::string newDirName = vtkSVIOUtils::GetPath(inputFileName)+"/"+vtkSVIOUtils::GetRawName(inputFileName);
+    std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
     // Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
-    outputFileName = vtkSVIOUtils::GetPath(inputFileName)+"/"+vtkSVIOUtils::GetRawName(inputFileName)+"/"+vtkSVIOUtils::GetRawName(inputFileName)+"_Segmented.vtp";
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Segmented.vtp";
   }
 
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
-  vtkSVIOUtils::ReadInputFile(inputFileName,inputPd);
+  vtkSVIOUtils::ReadInputFile(inputFilename,inputPd);
   vtkNew(vtkPolyData, centerlinesPd);
-  vtkSVIOUtils::ReadInputFile(centerlinesFileName,centerlinesPd);
+  vtkSVIOUtils::ReadInputFile(centerlinesFilename,centerlinesPd);
 
   // Filter
   vtkNew(vtkSVPolyDataSliceAndDiceFilter, Slicer);
@@ -177,13 +176,13 @@ int main(int argc, char *argv[])
 
   // Write Files
   std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFileName, output);
+  vtkSVIOUtils::WriteVTPFile(outputFilename, output);
   if (constructPolycube && writePolycube)
-    vtkSVIOUtils::WriteVTUFile(outputFileName, Slicer->GetPolycube(), "_Polycube");
+    vtkSVIOUtils::WriteVTUFile(outputFilename, Slicer->GetPolycube(), "_Polycube");
   if (writeSurgeryLines)
-    vtkSVIOUtils::WriteVTPFile(outputFileName, Slicer->GetSurgeryLinesPd(), "_SurgeryLines");
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Slicer->GetSurgeryLinesPd(), "_SurgeryLines");
   if (writeGraph)
-    vtkSVIOUtils::WriteVTPFile(outputFileName, Slicer->GetGraphPd(), "_Graph");
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Slicer->GetGraphPd(), "_Graph");
   std::cout<<"Done"<<endl;
 
   // Exit the program without errors

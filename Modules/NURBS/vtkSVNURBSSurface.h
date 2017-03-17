@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVNURBSCurve
+ *  \class vtkSVNURBSSurface
  *  \brief This is a class to represent a NURBS surface
  *
  *  \author Adam Updegrove

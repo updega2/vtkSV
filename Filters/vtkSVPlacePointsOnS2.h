@@ -30,6 +30,8 @@
 
 /**
  *  \class vtkSVPlacePointsOnS2
+ *  \brief Place points of an arbitrary surface on the unit sphere by
+ *  translating, rotating, scaling, and projecting the points.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
