@@ -1,36 +1,42 @@
 /*=========================================================================
-
-  Program:   Visualization Toolkit
-  Module:    vtkSVLoopBooleanPolyDataFilter.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
-/** @file vtkSVLoopBooleanPolyDataFilter.cxx
- *  @brief This is the filter to perform boolean operations
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- */
+ *
+ * Copyright (c) 2014 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
 #include "vtkSVLoopBooleanPolyDataFilter.h"
 
 #include "vtkAppendPolyData.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
-#include "vtkCleanPolyData.h"
-#include "vtkDoubleArray.h"
-#include "vtkFloatArray.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
-#include "vtkMergeCells.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
@@ -52,24 +58,32 @@
 // Helper typedefs and data structures.
 namespace {
 
+// ----------------------
+// simLine
+// ----------------------
 struct simLine
 {
-  vtkIdType id;
-  vtkIdType pt1;
-  vtkIdType pt2;
+  vtkIdType id;  // id of cell
+  vtkIdType pt1; // id of front point
+  vtkIdType pt2; // id of back point
 };
 
+// ----------------------
+// simLoop
+// ----------------------
 struct simLoop
 {
-  std::list<simLine> cells;
-  vtkIdType startPt;
-  vtkIdType endPt;
-  int loopType;
+  std::list<simLine> cells; // list of cells in loop
+  vtkIdType startPt; // starting point id
+  vtkIdType endPt; // ending point id
+  int loopType; // closed, open
 };
 
 }
 
-//Implementation function
+// ----------------------
+// Impl
+// ----------------------
 class vtkSVLoopBooleanPolyDataFilter::Impl
 {
 public:
@@ -126,6 +140,9 @@ public:
   vtkSVLoopBooleanPolyDataFilter *ParentFilter;
 };
 
+// ----------------------
+// Impl Constructor
+// ----------------------
 vtkSVLoopBooleanPolyDataFilter::Impl::Impl() :
   CheckCells(0), CheckCells2(0), CheckCellsCareful(0),
   CheckCellsCareful2(0)
@@ -157,6 +174,9 @@ vtkSVLoopBooleanPolyDataFilter::Impl::Impl() :
   this->IntersectionCase = 0;
 }
 
+// ----------------------
+// Impl Destructor
+// ----------------------
 vtkSVLoopBooleanPolyDataFilter::Impl::~Impl()
 {
   for (int i = 0;i<2;i++)
@@ -191,7 +211,10 @@ vtkSVLoopBooleanPolyDataFilter::Impl::~Impl()
   this->CheckCellsCareful2->Delete();
 }
 
-//Flood fill algorithm to find region of mesh separated by intersection lines
+// ----------------------
+// Impl::FindRegion
+// ----------------------
+/// \brief Flood fill algorithm to find region of mesh separated by intersection lines
 int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegion(int inputIndex,
     int fillnumber, int start, int fill)
 {
@@ -202,9 +225,9 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegion(int inputIndex,
   vtkNew(vtkIdList, neighbors);
   vtkNew(vtkIdList, tmp);
 
-  vtkIdType numCheckCells;
   //Get neighboring cell for each pair of points in current cell
   //While there are still cells to be checked, find neighbor cells
+  vtkIdType numCheckCells;
   while ((numCheckCells = this->CheckCells->GetNumberOfIds()) > 0)
     {
     for (int c=0;c<numCheckCells;c++)
@@ -290,8 +313,11 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegion(int inputIndex,
   return SV_OK;
 }
 
-//This is the slow version of the flood fill algorithm that is initiated
-//when we get close to a boundary to ensure we don't cross the line
+// ----------------------
+// Impl::FindRegionTipToe
+// ----------------------
+/// \brief This is the slow version of the flood fill algorithm that is initiated
+/// when we get close to a boundary to ensure we don't cross the line
 int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegionTipToe(
     int inputIndex, int fillnumber, int fill)
 {
@@ -299,9 +325,9 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegionTipToe(
   vtkNew(vtkIdList, tmp);
   vtkNew(vtkIdList, neighborIds);
 
-  vtkIdType numCheckCells;
   //Get neighboring cell for each pair of points in current cell
   //While there are still cells to be checked
+  vtkIdType numCheckCells;
   while ((numCheckCells = this->CheckCellsCareful->GetNumberOfIds()) > 0)
     {
     for (int c=0;c<numCheckCells;c++)
@@ -428,6 +454,9 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::FindRegionTipToe(
   return SV_OK;
 }
 
+// ----------------------
+// Impl::Initialize
+// ----------------------
 void vtkSVLoopBooleanPolyDataFilter::Impl::Initialize()
 {
   for (int i =0;i<2;i++)
@@ -498,8 +527,9 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::Initialize()
   this->Mesh[1]->GetPointData()->SetActiveScalars("BoundaryPoints");
 }
 
-//Function to find the regions on each input separated by the intersection
-//lines
+// ----------------------
+// Impl::GetBooleanRegions
+// ----------------------
 void vtkSVLoopBooleanPolyDataFilter::Impl::GetBooleanRegions(
     int inputIndex, std::vector<simLoop> *loops)
 {
@@ -569,21 +599,29 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::GetBooleanRegions(
     }
 }
 
-//Get Cell orientation so we know which value to flood fill a region with
+// ----------------------
+// Impl::GetCellOrientation
+// ----------------------
 int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
     vtkPolyData *pd, vtkIdType cellId, vtkIdType p0, vtkIdType p1, int index)
 {
+  // Debug pring cell
   vtkDebugWithObjectMacro(this->ParentFilter,<<"CellId: "<<cellId);
+
+  // Get cell points
   vtkIdType npts;
   vtkIdType *pts;
   pd->BuildLinks();
   pd->GetCellPoints(cellId,npts,pts);
+
   //pt0Id and pt1Id are from intersectionLines PolyData and I am trying
   //to compare these to the point ids in pd.
   vtkIdType cellPtId0 = this->ReversePointMapper[index][p0];
   vtkIdType cellPtId1 = this->ReversePointMapper[index][p1];
   double points[3][3];
   vtkIdType cellPtId2=0;
+
+  // Loop through cell points getting third point
   for (int j=0;j<npts;j++)
     {
     pd->GetPoint(pts[j], points[j]);
@@ -592,14 +630,18 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
       cellPtId2 = pts[j];
       }
     }
+
+  // Set group of points in own point set
   vtkNew(vtkPoints, cellPts);
   cellPts->InsertNextPoint(pd->GetPoint(cellPtId0));
   cellPts->InsertNextPoint(pd->GetPoint(cellPtId1));
   cellPts->InsertNextPoint(pd->GetPoint(cellPtId2));
 
+  // Create polydata of points
   vtkNew(vtkPolyData, cellPD);
   cellPD->SetPoints(cellPts);
 
+  // Set lines of cells
   vtkNew(vtkCellArray, cellLines);
   for (int j=0;j<npts;j++)
     {
@@ -646,27 +688,33 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
       vtkMath::DegreesFromRadians(acos(vtkMath::Dot(zaxis, normal)));
     }
 
+  // transform to plane
   transform->PreMultiply();
   transform->Identity();
 
+  // Debug print angle
   vtkDebugWithObjectMacro(this->ParentFilter, <<"ROTATION ANGLE "<<rotationAngle);
   transform->RotateWXYZ(rotationAngle,
                         rotationAxis[0],
                         rotationAxis[1],
                         rotationAxis[2]);
 
+  // Get triangle center and move to origin
   vtkTriangle::TriangleCenter(points[0], points[1], points[2], center);
   transform->Translate(-center[0], -center[1], -center[2]);
 
+  // transform
   vtkNew(vtkTransformPolyDataFilter, transformer);
   transformer->SetInputData(cellPD);
   transformer->SetTransform(transform);
   transformer->Update();
 
+  // trasformed polydata
   vtkNew(vtkPolyData, transPD);
   transPD = transformer->GetOutput();
   transPD->BuildLinks();
 
+  // Calculate area
   double area = 0;
   double tedgept1[3];
   double tedgept2[3];
@@ -681,16 +729,13 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
   transPD->GetPoint(0, tedgept2);
   area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
 
+  // Check with tolerance
   int value=0;
   double tolerance = 1e-6;
   if (area < 0 && fabs(area) > tolerance)
-    {
     value = -1;
-    }
   else if (area > 0 && fabs(area) > tolerance)
-    {
     value = 1;
-    }
   else
     {
     vtkDebugWithObjectMacro(this->ParentFilter, <<"Line pts are "<<p0<<" and "<<p1);
@@ -701,7 +746,10 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
   return value;
 }
 
-//Reset the find region arrays to test another region
+// ----------------------
+// ResetCheckArrays
+// ----------------------
+/// \brief Reset the find region arrays to test another region
 void vtkSVLoopBooleanPolyDataFilter::Impl::ResetCheckArrays()
 {
   for (int i=0;i<2;i++)
@@ -723,7 +771,10 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::ResetCheckArrays()
     }
 }
 
-//Set the boundary arrays on the mesh
+// ----------------------
+// SetBoundary Arrays
+// ----------------------
+/// \brief Set the boundary arrays on the mesh
 void vtkSVLoopBooleanPolyDataFilter::Impl::SetBoundaryArrays()
 {
   //Variables used in the function
@@ -742,13 +793,17 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::SetBoundaryArrays()
     {
     double pt[3];
     this->IntersectionLines->GetPoint(pointId, pt);
+
     //Find point on mesh
     vtkIdType bp1 = pointLocator1->FindClosestPoint(pt);
     this->PointMapper[0][bp1] = pointId;
     this->ReversePointMapper[0][pointId] = bp1;
     this->BoundaryPointArray[0]->InsertValue(bp1, 1);
+
+    // Get point cells
     vtkNew(vtkIdList, bpCellIds1);
     this->Mesh[0]->GetPointCells(bp1, bpCellIds1);
+
     //Set the point mapping array
     //Assign each cell attached to this point as a boundary cell
     for (int i = 0;i < bpCellIds1->GetNumberOfIds();i++)
@@ -757,12 +812,16 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::SetBoundaryArrays()
       this->Checked[0][bpCellIds1->GetId(i)] = 1;
       }
 
+    // Find closest point
     vtkIdType bp2 = pointLocator2->FindClosestPoint(pt);
     this->PointMapper[1][bp2] = pointId;
     this->ReversePointMapper[1][pointId] = bp2;
     this->BoundaryPointArray[1]->InsertValue(bp2, 1);
+
+    // Get point cells
     vtkNew(vtkIdList, bpCellIds2);
     this->Mesh[1]->GetPointCells(bp2, bpCellIds2);
+
     //Set the point mapping array
     //Assign each cell attached to this point as a boundary cell
     for (int i = 0;i < bpCellIds2->GetNumberOfIds();i++)
@@ -773,7 +832,10 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::SetBoundaryArrays()
     }
 }
 
-//Set the original finding region check arrays
+// ----------------------
+// SetCheckArrays
+// ----------------------
+/// \brieff Set the original finding region check arrays
 void vtkSVLoopBooleanPolyDataFilter::Impl::SetCheckArrays()
 {
   for (int i =0;i<2;i++)
@@ -784,21 +846,21 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::SetCheckArrays()
     for (int j=0;j < numPolys;j++)
       {
       if (this->Checked[i][j] == 0)
-        {
         this->CheckedCarefully[i][j] = 1;
-        }
       else
-        {
         this->CheckedCarefully[i][j] = 0;
-        }
       }
     }
 }
-//---------------------------------------------------------------------------
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVLoopBooleanPolyDataFilter);
 
-//-----------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVLoopBooleanPolyDataFilter::vtkSVLoopBooleanPolyDataFilter() :
   vtkPolyDataAlgorithm()
 {
@@ -815,12 +877,16 @@ vtkSVLoopBooleanPolyDataFilter::vtkSVLoopBooleanPolyDataFilter() :
   this->Tolerance = 1e-6;
 }
 
-//-----------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVLoopBooleanPolyDataFilter::~vtkSVLoopBooleanPolyDataFilter()
 {
 }
 
-//-----------------------------------------------------------------------------
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVLoopBooleanPolyDataFilter::RequestData(
     vtkInformation*        vtkNotUsed(request),
     vtkInformationVector** inputVector,
@@ -1013,7 +1079,9 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   return SV_OK;
 }
 
-//-----------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVLoopBooleanPolyDataFilter::PrintSelf(
     ostream& os, vtkIndent indent)
 {
@@ -1045,7 +1113,9 @@ void vtkSVLoopBooleanPolyDataFilter::PrintSelf(
           this->NumberOfIntersectionLines << "\n";
 }
 
-//-----------------------------------------------------------------------------
+// ----------------------
+// FillInputPortInformation
+// ----------------------
 int vtkSVLoopBooleanPolyDataFilter::FillInputPortInformation(
     int port, vtkInformation *info)
 {
@@ -1065,9 +1135,10 @@ int vtkSVLoopBooleanPolyDataFilter::FillInputPortInformation(
   return SV_OK;
 }
 
-//-----------------------------------------------------------------------------
-
-//Determine type of intersection
+// ----------------------
+// Impl::DetermineIntersection
+// ----------------------
+/// \brief Determine type of intersection
 void vtkSVLoopBooleanPolyDataFilter::Impl::DetermineIntersection(
     std::vector<simLoop> *loops)
 {
@@ -1131,7 +1202,10 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::DetermineIntersection(
   delete [] usedPt;
 }
 
-//Function for if the intersection is soft closed or open
+// ----------------------
+// Impl::RunLoopFind
+// ----------------------
+/// \brief Function for if the intersection is soft closed or open
 int vtkSVLoopBooleanPolyDataFilter::Impl::RunLoopFind(
     vtkIdType interPt, vtkIdType nextCell, bool *usedPt, simLoop *loop)
 {
@@ -1236,7 +1310,10 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::RunLoopFind(
   return -1;
 }
 
-//Tests an orientation in a specified region
+// ----------------------
+// Impl::RunLoopTest
+// ----------------------
+/// \brief Tests an orientation in a specified region
 int vtkSVLoopBooleanPolyDataFilter::Impl::RunLoopTest(
     vtkIdType interPt, vtkIdType nextCell, simLoop *loop, bool *usedPt)
 {
@@ -1356,13 +1433,14 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::RunLoopTest(
   return -1;
 }
 
-//Combine the correct regions for output boolean
+// ----------------------
+// Impl::PerformBoolean
+// ----------------------
+/// \brief Combine the correct regions for output boolean
 void vtkSVLoopBooleanPolyDataFilter::Impl::PerformBoolean(
     vtkPolyData *output, int booleanOperation)
 {
-  //vtkNew(vtkThreshold, thresholder);
-  //vtkNew(vtkDataSetSurfaceFilter, surfacer);
-
+  // Four surfaces
   vtkPolyData *surfaces[4];
   for (int i=0;i<4;i++)
     {
@@ -1370,37 +1448,6 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::PerformBoolean(
     }
 
   this->ThresholdRegions(surfaces);
-  //thresholder->SetInputData(this->Mesh[0]);
-  //thresholder->SetInputArrayToProcess(0, 0, 0, 1, "BooleanRegion");
-  //thresholder->ThresholdBetween(-1, -1);
-  //thresholder->Update();
-  //surfacer->SetInputData(thresholder->GetOutput());
-  //surfacer->Update();
-  //surfaces[0]->DeepCopy(surfacer->GetOutput());
-
-  //thresholder->SetInputData(this->Mesh[0]);
-  //thresholder->SetInputArrayToProcess(0, 0, 0, 1, "BooleanRegion");
-  //thresholder->ThresholdBetween(1, 1);
-  //thresholder->Update();
-  //surfacer->SetInputData(thresholder->GetOutput());
-  //surfacer->Update();
-  //surfaces[1]->DeepCopy(surfacer->GetOutput());
-
-  //thresholder->SetInputData(this->Mesh[1]);
-  //thresholder->SetInputArrayToProcess(0, 0, 0, 1, "BooleanRegion");
-  //thresholder->ThresholdBetween(1, 1);
-  //thresholder->Update();
-  //surfacer->SetInputData(thresholder->GetOutput());
-  //surfacer->Update();
-  //surfaces[2]->DeepCopy(surfacer->GetOutput());
-
-  //thresholder->SetInputData(this->Mesh[1]);
-  //thresholder->SetInputArrayToProcess(0, 0, 0, 1, "BooleanRegion");
-  //thresholder->ThresholdBetween(-1, -1);
-  //thresholder->Update();
-  //surfacer->SetInputData(thresholder->GetOutput());
-  //surfacer->Update();
-  //surfaces[3]->DeepCopy(surfacer->GetOutput());
 
   vtkNew(vtkAppendPolyData, appender);
 
@@ -1459,6 +1506,9 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::PerformBoolean(
     }
 }
 
+// ----------------------
+// Impl::ThresholdRegions
+// ----------------------
 void vtkSVLoopBooleanPolyDataFilter::Impl::ThresholdRegions(vtkPolyData **surfaces)
 {
   vtkPoints    *points[4];

@@ -137,7 +137,17 @@ FILE_PATTERNS          = *.c \
                          *.dox \
                          *.py
 RECURSIVE              = YES
-EXCLUDE                = .svn:OneDSolver
+EXCLUDE                = .svn:OneDSolver \
+                          triangle.h \
+                          triangle.c \
+                          predicates.h \
+                          predicates.c \
+                          showme.c \
+                          tricall.c \
+                          vtkDelaunay2D_60.h \
+                          vtkDelaunay2D_60.cxx \
+                          vtkDelaunayTriangleDelaunay2D.h \
+                          vtkDelaunayTriangleDelaunay2D.cxx \
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */.svn/* */IritSolidModel/* */OneDSolver/* */.git/*
 EXAMPLE_PATH           =

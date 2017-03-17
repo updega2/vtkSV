@@ -1,17 +1,33 @@
 /*=========================================================================
+ *
+ * Copyright (c) 2014 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
-  Program:   Visualization Toolkit
-  Module:    vtkSVLoopIntersectionPolyDataFilter.cxx
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
 #define OLD 0
 #define TRIANGLE 1
 #define CURRENT 2
@@ -33,7 +49,6 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkLine.h"
-#include "vtkLongArray.h"
 #include "vtkOBBTree.h"
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
@@ -58,29 +73,44 @@
 // Helper typedefs and data structures.
 namespace {
 
+// ----------------------
+// simPoint
+// ----------------------
 struct simPoint
 {
-  vtkIdType id;
-  double pt[3];
+  vtkIdType id; // id of point
+  double pt[3]; // location
 };
 
+// ----------------------
+// simPolygon
+// ----------------------
 struct simPolygon
 {
-  std::list<simPoint> points;
-  int orientation;
+  std::list<simPoint> points; // list of points
+  int orientation; // their orientation
 };
 
 }
 
+// ----------------------
+// IntersectionMapType
+// ----------------------
 typedef std::multimap< vtkIdType, vtkIdType >    IntersectionMapType;
 typedef IntersectionMapType::iterator            IntersectionMapIteratorType;
 
+// ----------------------
+// CellEdgeLine
+// ----------------------
 typedef struct _CellEdgeLine {
   vtkIdType CellId;
   vtkIdType EdgeId;
   vtkIdType LineId;
 } CellEdgeLineType;
 
+// ----------------------
+// PointEdgeMapType
+// ----------------------
 typedef std::multimap< vtkIdType, CellEdgeLineType > PointEdgeMapType;
 typedef PointEdgeMapType::iterator                   PointEdgeMapIteratorType;
 
@@ -94,64 +124,64 @@ public:
   Impl();
   virtual ~Impl();
 
-  //Finds all triangle triangle intersections between two input OOBTrees
+  /// \brief Finds all triangle triangle intersections between two input OOBTrees
   static int FindTriangleIntersections(vtkOBBNode *node0, vtkOBBNode *node1,
                                        vtkMatrix4x4 *transform, void *arg);
 
-  //Runs the split mesh for the designated input surface
+  /// \brief Runs the split mesh for the designated input surface
   int SplitMesh(int inputIndex, vtkPolyData *output,
                 vtkPolyData *intersectionLines);
 
 protected:
 
-  //Split cells into polygons created by intersection lines
+  /// \brief Split cells into polygons created by intersection lines
   vtkCellArray* SplitCell(vtkPolyData *input, vtkIdType cellId,
                           vtkIdType *cellPts,
                           IntersectionMapType *map,
                           vtkPolyData *interLines, int inputIndex,
                           int numCurrCells);
 
-  //Function to add point to check edge list for remeshing step
+  /// \brief Function to add point to check edge list for remeshing step
   int AddToPointEdgeMap(int index, vtkIdType ptId, double x[3],
                         vtkPolyData *mesh, vtkIdType cellId,
                         vtkIdType edgeId, vtkIdType lineId,
                         vtkIdType triPts[3]);
 
-  //Function to add information about the new cell data
+  /// \brief Function to add information about the new cell data
   void AddToNewCellMap(int inputIndex, int interPtCount, int interPts[3],
                        vtkPolyData *interLines,int numCurrCells);
 
-  //Function inside SplitCell to get the smaller triangle loops
+  /// \brief Function inside SplitCell to get the smaller triangle loops
   int GetLoops(vtkPolyData *pd, std::vector<simPolygon> *loops);
 
-  //Get individual polygon loop of splitting cell
+  /// \brief Get individual polygon loop of splitting cell
   int GetSingleLoop(vtkPolyData *pd,simPolygon *loop, vtkIdType nextCell,
                     bool *interPtBool, bool *lineBool);
 
-  //Follow a loop orienation to iterate around a split polygon
+  /// \brief Follow a loop orienation to iterate around a split polygon
   int FollowLoopOrientation(vtkPolyData *pd, simPolygon *loop,
                             vtkIdType *nextCell,
                             vtkIdType nextPt, vtkIdType prevPt,
                             vtkIdList *pointCells);
 
-  //Set the loop orientation based on CW CCW geometric test
+  /// \brief Set the loop orientation based on CW CCW geometric test
   void SetLoopOrientation(vtkPolyData *pd, simPolygon *loop,
                           vtkIdType *nextCell, vtkIdType nextPt,
                           vtkIdType prevPt, vtkIdList *pointCells);
 
-  //Get the loop orienation is already given
+  /// \brief Get the loop orienation is already given
   int GetLoopOrientation(vtkPolyData *pd, vtkIdType cell, vtkIdType ptId1,
                          vtkIdType ptId2);
 
-  //Orient the triangle based on the transform for remeshing
+  /// \brief Orient the triangle based on the transform for remeshing
   void Orient(vtkPolyData *pd, vtkTransform *transform, vtkPolyData *boundary,
               vtkPolygon *boundarypoly);
 
-  //Checks to make sure multiple lines are not added to the same triangle
-  //that needs to re-triangulated
+  /// \brief Checks to make sure multiple lines are not added to the same triangle
+  /// that needs to re-triangulated
   int CheckLine(vtkPolyData *pd, vtkIdType ptId1, vtkIdType ptId2);
 
-  //Gets a transform to the XY plane for three points comprising a triangle
+  /// \brief Gets a transform to the XY plane for three points comprising a triangle
   int GetTransform(vtkTransform *transform, vtkPoints *points);
 
 public:
@@ -164,39 +194,39 @@ public:
   vtkIdTypeArray      *SurfaceId;
   vtkIdTypeArray      *NewCellIds[2];
 
-  // Cell data that indicates in which cell each intersection
-  // lies. One array for each output surface.
+  /// \brief  Cell data that indicates in which cell each intersection
+  /// lies. One array for each output surface.
   vtkIdTypeArray      *CellIds[2];
 
-  // Cell data that indicates on which surface the intersection point lies.
+  /// \brief Cell data that indicates on which surface the intersection point lies.
 
-  // Map from points to the cells that contain them. Used for point
-  // data interpolation. For points on the edge between two cells, it
-  // does not matter which cell is recorded bcause the interpolation
-  // will be the same.  One array for each output surface.
+  /// Map from points to the cells that contain them. Used for point
+  /// data interpolation. For points on the edge between two cells, it
+  /// does not matter which cell is recorded bcause the interpolation
+  /// will be the same.  One array for each output surface.
   vtkIdTypeArray      *PointCellIds[2];
   vtkIntArray         *BoundaryPoints[2];
 
-  // Merging filter used to convert intersection lines from "line
-  // soup" to connected polylines.
+  /// \brief Merging filter used to convert intersection lines from "line
+  /// soup" to connected polylines.
   vtkPointLocator     *PointMerger;
 
-  // Map from cell ID to intersection line.
+  /// \brief Map from cell ID to intersection line.
   IntersectionMapType *IntersectionMap[2];
   IntersectionMapType *IntersectionPtsMap[2];
   IntersectionMapType *PointMapper;
 
-  // Map from point to an edge on which it resides, the ID of the
-  // cell, and the ID of the line.
+  /// \brief Map from point to an edge on which it resides, the ID of the
+  /// cell, and the ID of the line.
   PointEdgeMapType    *PointEdgeMap[2];
 
-  //vtkPolyData to hold current splitting cell. Used to double check area
-  //of small area cells
+  /// \brief vtkPolyData to hold current splitting cell. Used to double check area
+  /// of small area cells
   vtkPolyData *SplittingPD;
   int         TransformSign;
   double      Tolerance;
 
-  // Pointer to overarching filter
+  /// \brief Pointer to overarching filter
   vtkSVLoopIntersectionPolyDataFilter *ParentFilter;
 
 protected:
@@ -205,7 +235,9 @@ protected:
 
 };
 
-//----------------------------------------------------------------------------
+// ----------------------
+// Impl Constructor
+// ----------------------
 vtkSVLoopIntersectionPolyDataFilter::Impl::Impl() :
   OBBTree1(0), IntersectionLines(0), SurfaceId(0), PointMerger(0)
 {
@@ -223,7 +255,9 @@ vtkSVLoopIntersectionPolyDataFilter::Impl::Impl() :
   this->Tolerance = 1e-6;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// Impl Destructor
+// ----------------------
 vtkSVLoopIntersectionPolyDataFilter::Impl::~Impl()
 {
   for (int i = 0; i < 2; i++)
@@ -236,8 +270,9 @@ vtkSVLoopIntersectionPolyDataFilter::Impl::~Impl()
   this->SplittingPD->Delete();
 }
 
-
-//----------------------------------------------------------------------------
+// ----------------------
+// Impl::FindTriangleIntersections
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl
 ::FindTriangleIntersections(vtkOBBNode *node0, vtkOBBNode *node1,
                             vtkMatrix4x4 *transform, void *arg)
@@ -496,8 +531,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   return SV_OK;
 }
 
-
-//----------------------------------------------------------------------------
+// ----------------------
+// Impl::SplitMesh
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl
 ::SplitMesh(int inputIndex, vtkPolyData *output, vtkPolyData *intersectionLines)
 {
@@ -682,6 +718,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   return SV_OK;
 }
 
+// ----------------------
+// Impl::SplitCell
+// ----------------------
 vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 ::SplitCell(vtkPolyData *input, vtkIdType cellId, vtkIdType *cellPts,
             IntersectionMapType *map,
@@ -1277,7 +1316,9 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
   return splitCells;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// Impl::AddToPointEdgeMap
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl
 ::AddToPointEdgeMap(int index, vtkIdType ptId, double x[3], vtkPolyData *mesh,
                     vtkIdType cellId, vtkIdType edgeId, vtkIdType lineId,
@@ -1320,9 +1361,10 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   return value;
 }
 
-//----------------------------------------------------------------------------
-
-//Add new cells to the mapping data array attached to the intersection lines
+// ----------------------
+// Impl::AddToNewCellMap
+// ----------------------
+/// \brief Add new cells to the mapping data array attached to the intersection lines
 void vtkSVLoopIntersectionPolyDataFilter::Impl::AddToNewCellMap(
     int inputIndex, int interPtCount, int interPts[3],
     vtkPolyData *interLines, int numCurrCells)
@@ -1391,6 +1433,9 @@ void vtkSVLoopIntersectionPolyDataFilter::Impl::AddToNewCellMap(
   delete [] cellIds;
 }
 
+// ----------------------
+// Impl::GetLoops
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl
 ::GetLoops(vtkPolyData *pd, std::vector<simPolygon> *loops)
 {
@@ -1477,8 +1522,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   return SV_OK;
 }
 
-//----------------------------------------------------------------------------
-
+// ----------------------
+// Impl::GetSingleLoop
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl
 ::GetSingleLoop(vtkPolyData *pd, simPolygon *loop, vtkIdType nextCell,
     bool *interPtBool, bool *lineBool)
@@ -1607,8 +1653,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   return SV_OK;
 }
 
-//----------------------------------------------------------------------------
-
+// ----------------------
+// Impl::FollowLoopOrientation
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl
 ::FollowLoopOrientation(vtkPolyData *pd, simPolygon *loop, vtkIdType *nextCell,
     vtkIdType nextPt, vtkIdType prevPt, vtkIdList *pointCells)
@@ -1679,8 +1726,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-
+// ----------------------
+// Impl::SetLoopOrientation
+// ----------------------
 void vtkSVLoopIntersectionPolyDataFilter::Impl
 ::SetLoopOrientation(vtkPolyData *pd, simPolygon *loop, vtkIdType *nextCell,
     vtkIdType nextPt, vtkIdType prevPt, vtkIdList *pointCells)
@@ -1736,8 +1784,9 @@ void vtkSVLoopIntersectionPolyDataFilter::Impl
   loop->orientation = this->GetLoopOrientation(pd, *nextCell, prevPt, nextPt);
 }
 
-//---------------------------------------------------------------------------
-
+// ----------------------
+// Impl::GetLoopOrientation
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl::GetLoopOrientation(
     vtkPolyData *pd, vtkIdType cell, vtkIdType ptId1, vtkIdType ptId2)
 {
@@ -1830,8 +1879,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::GetLoopOrientation(
   return orientation;
 }
 
-//---------------------------------------------------------------------------
-
+// ----------------------
+// Impl::Orient
+// ----------------------
 void vtkSVLoopIntersectionPolyDataFilter::Impl
 ::Orient(vtkPolyData *pd, vtkTransform *transform, vtkPolyData *boundary,
                 vtkPolygon *boundarypoly)
@@ -1881,9 +1931,10 @@ void vtkSVLoopIntersectionPolyDataFilter::Impl
   boundary->SetPolys(cellarray);
 }
 
-//---------------------------------------------------------------------------
-
-//Check to make sure the line is unique
+// ----------------------
+// Impl::CheckLine
+// ----------------------
+/// \brief Check to make sure the line is unique
 int vtkSVLoopIntersectionPolyDataFilter::Impl::CheckLine(
     vtkPolyData *pd, vtkIdType ptId1, vtkIdType ptId2)
 {
@@ -1904,6 +1955,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::CheckLine(
   return unique;
 }
 
+// ----------------------
+// Impl::GetTransform
+// ----------------------
 int vtkSVLoopIntersectionPolyDataFilter::Impl::GetTransform(
     vtkTransform *transform, vtkPoints *points)
 {
