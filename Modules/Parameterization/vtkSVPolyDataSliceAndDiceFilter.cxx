@@ -618,7 +618,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranches()
     if (numPoints != 0)
     {
       this->SliceBranch(branchPd, branchCenterline, gCell, sliceIds, 0);
-      this-surgeryCellData->InsertNextValue(branchId);
+      surgeryCellData->InsertNextValue(branchId);
     }
   }
 

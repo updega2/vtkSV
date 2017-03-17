@@ -24,23 +24,13 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A module that contains code to perform a boolean operation between two input polydata surfaces.")
+vtksv_add_test_cxx(${vtk-module}CxxTests tests
+  TestLoopBooleanPolyDataFilter.cxx,NO_DATA)
 
-vtk_module(vtkSVBoolean
-  DESCRIPTION
-  "${DOCUMENTATION}"
-  DEPENDS
-  vtkCommonDataModel
-  vtkFiltersCore
-  vtkFiltersGeometry
-  vtkFiltersModeling
-  vtkSVCommon
-  TEST_DEPENDS
-  vtkInteractionStyle
-  vtkRendering${VTK_RENDERING_BACKEND}
-  vtkRenderingLabel
-  vtkTestingCore
-  vtkTestingRendering
-  TCL_NAME
-  vtkSVBoolean
-  )
+if(NOT vtkTestingRendering_SOURCE_DIR)
+  set(vtkTestingRendering_SOURCE_DIR "${VTK_SOURCE_DIR}/Testing/Rendering")
+endif()
+
+vtk_test_cxx_executable(${vtk-module}CxxTests tests
+  RENDERING_FACTORY)
+

@@ -178,6 +178,8 @@ int vtkSVGroupsClipper::RequestData(
   }
 
   output->DeepCopy(this->WorkPd);
+
+  return SV_OK;
 }
 
 // ----------------------

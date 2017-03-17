@@ -298,4 +298,5 @@ int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writ
 #endif
 
   writer->Write();
+  return SV_OK;
 }

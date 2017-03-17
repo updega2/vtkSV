@@ -64,6 +64,8 @@ public:
 
   /// \brief Construct object that computes the boolean surface.
   static vtkSVLoopBooleanPolyDataFilter *New();
+  vtkTypeMacro(vtkSVLoopBooleanPolyDataFilter,
+               vtkPolyDataAlgorithm);
 
   // PrintSelf
   void PrintSelf(ostream& os, vtkIndent indent);
