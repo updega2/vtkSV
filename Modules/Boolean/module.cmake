@@ -37,6 +37,7 @@ vtk_module(vtkSVBoolean
   vtkSVCommon
   TEST_DEPENDS
   vtkInteractionStyle
+  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkTestingCore

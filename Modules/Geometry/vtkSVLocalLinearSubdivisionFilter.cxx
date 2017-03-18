@@ -46,6 +46,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVLocalLinearSubdivisionFilter);

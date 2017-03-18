@@ -33,6 +33,7 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCellLocator.h"
+#include "vtkExecutive.h"
 #include "vtkFloatArray.h"
 #include "vtkMath.h"
 #include "vtkInformation.h"
@@ -41,7 +42,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkTriangleFilter.h"
 

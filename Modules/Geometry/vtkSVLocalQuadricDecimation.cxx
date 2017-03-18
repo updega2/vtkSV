@@ -53,6 +53,7 @@
 #include "vtkPointData.h"
 #include "vtkPriorityQueue.h"
 #include "vtkTriangle.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVLocalQuadricDecimation);

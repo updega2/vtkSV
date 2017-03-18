@@ -58,6 +58,7 @@
 #include "vtkThreshold.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkPolygon.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 
 #include <iostream>

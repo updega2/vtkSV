@@ -22,6 +22,7 @@
 #include "vtkPointData.h"
 #include "vtkCellData.h"
 #include "vtkPolyData.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVLocalButterflySubdivisionFilter);

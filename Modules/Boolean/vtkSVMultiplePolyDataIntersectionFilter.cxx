@@ -44,6 +44,7 @@
 #include "vtkTrivialProducer.h"
 #include "vtkSmartPointer.h"
 #include "vtkBoundingBox.h"
+#include "vtkIdList.h"
 #include "vtkIntArray.h"
 #include "vtkAppendPolyData.h"
 

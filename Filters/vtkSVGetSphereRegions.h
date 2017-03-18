@@ -55,8 +55,8 @@
  *  @note Most functions in class call functions in cv_polydatasolid_utils.
  */
 
-#ifndef __vtkSVGetSphereRegions_h
-#define __vtkSVGetSphereRegions_h
+#ifndef vtkSVGetSphereRegions_h
+#define vtkSVGetSphereRegions_h
 
 #include "vtkPolyDataAlgorithm.h"
 
