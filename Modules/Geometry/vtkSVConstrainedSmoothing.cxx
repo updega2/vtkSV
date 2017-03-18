@@ -52,6 +52,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSmoothPolyDataFilter.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVSparseMatrix.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkCellLocator.h"
@@ -59,7 +60,6 @@
 #include "vtkMath.h"
 
 #include "svMath.h"
-#include "sparse_matrix.h"
 
 #include <iostream>
 
@@ -201,18 +201,19 @@ void vtkSVConstrainedSmoothing::Test() {
   printf("conjugate_gradient_test {\n");
 
   // Test Case 1
-  SparseMatrix a(4, 2);
-  a.set_element(0, 0, 1.0);
-  a.set_element(0, 1, 2.0);
+  vtkNew(vtkSVSparseMatrix, a);
+  a->SetMatrixSize(4, 2);
+  a->SetElement(0, 0, 1.0);
+  a->SetElement(0, 1, 2.0);
 
-  a.set_element(1, 0, 2.0);
-  a.set_element(1, 1, -3.0);
+  a->SetElement(1, 0, 2.0);
+  a->SetElement(1, 1, -3.0);
 
-  a.set_element(2, 0, 4.0);
-  a.set_element(2, 1, -1.0);
+  a->SetElement(2, 0, 4.0);
+  a->SetElement(2, 1, -1.0);
 
-  a.set_element(3, 0, -5.0);
-  a.set_element(3, 1, 2.0);
+  a->SetElement(3, 0, -5.0);
+  a->SetElement(3, 1, 2.0);
 
   // Suppose solution is (2, 3).
   std::vector<double> b(4);
@@ -227,7 +228,7 @@ void vtkSVConstrainedSmoothing::Test() {
   svMath::conjugate_gradient(a, &b[0], 1000, &x[0]);
 
   std::vector<double> c(4);
-  a.multiply_column(&x[0], &c[0]);
+  a->MultiplyColumn(&x[0], &c[0]);
 
   printf("x: %lf %lf\n", x[0], x[1]);
 
@@ -237,9 +238,9 @@ void vtkSVConstrainedSmoothing::Test() {
   printf("\n");
 
   // Test Case 2
-  a = SparseMatrix(1, 2);
-  a.set_element(0, 0, 1.0);
-  a.set_element(0, 1, 2.0);
+  a->SetMatrixSize(1, 2);
+  a->SetElement(0, 0, 1.0);
+  a->SetElement(0, 1, 2.0);
 
   b.resize(1);
   b[0] = 3.0;
@@ -251,7 +252,7 @@ void vtkSVConstrainedSmoothing::Test() {
   svMath::conjugate_gradient(a, &b[0], 1, &x[0]);
 
   c.resize(1);
-  a.multiply_column(&x[0], &c[0]);
+  a->MultiplyColumn(&x[0], &c[0]);
 
   printf("x: %lf %lf\n", x[0], x[1]);
 
@@ -343,7 +344,8 @@ int vtkSVConstrainedSmoothing::CGSmooth(vtkPolyData *original,vtkPolyData *curre
 
   int totalEqs = numPoints*6 - this->NumFixedPoints;
   //Set up spartse matrix for conjugate gradient solve
-  SparseMatrix A(numPoints*6,numPoints*3);
+  vtkNew(vtkSVSparseMatrix, A);
+  A->SetMatrixSize(numPoints*6, numPoints*3);
   std::vector<double> b(numPoints*6);
   std::vector<double> x(numPoints*3);
 
@@ -378,7 +380,7 @@ int vtkSVConstrainedSmoothing::CGSmooth(vtkPolyData *original,vtkPolyData *curre
       weighting = weighting*(dist);
 
       int x_loc = ((int) pointId)*3 + i;
-      A.set_element(x_loc,x_loc,1);
+      A->SetElement(x_loc,x_loc,1);
       b[x_loc] = pt[i]  + weighting;
       x[x_loc] = pt[i];
     }
@@ -393,7 +395,7 @@ int vtkSVConstrainedSmoothing::CGSmooth(vtkPolyData *original,vtkPolyData *curre
       {
 	int x_row = numPoints*3 + ((int) pointId)*3 + i;
 	int x_column = ((int) pointId)*3 + i;
-	A.set_element(x_row,x_column,1);
+	A->SetElement(x_row,x_column,1);
 	b[x_row] = 0.0;
       }
 
@@ -410,7 +412,7 @@ int vtkSVConstrainedSmoothing::CGSmooth(vtkPolyData *original,vtkPolyData *curre
 	  int x_row = numPoints*3 + ((int) pointId)*3 + i;
 	  int x_column = ((int) *it)*3 + i;
 	  double value = -1.0/numNeighborPts;
-	  A.set_element(x_row,x_column,value);
+	  A->SetElement(x_row,x_column,value);
 	}
 	++it;
       }
@@ -420,7 +422,7 @@ int vtkSVConstrainedSmoothing::CGSmooth(vtkPolyData *original,vtkPolyData *curre
   svMath::conjugate_gradient(A,&b[0],this->NumGradientSolves,&x[0]);
   //Not necessary, just to check how well satisfied
   //std::vector<double> c(totalEqs);
-  //A.multiply_column(&x[0],&c[0]);
+  //A->MultiplyColumn(&x[0],&c[0]);
 
   vtkNew(vtkPoints, newPoints);
 

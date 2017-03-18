@@ -70,6 +70,8 @@ vtkSVPlanarMapper::vtkSVPlanarMapper()
   this->IsBoundary    = vtkIntArray::New();
   this->Boundaries    = vtkPolyData::New();
   this->BoundaryLoop  = vtkPolyData::New();
+  this->ATutte        = vtkSVSparseMatrix::New();
+  this->AHarm         = vtkSVSparseMatrix::New();
 
   this->BoundaryMapper = NULL;
 
@@ -78,8 +80,6 @@ vtkSVPlanarMapper::vtkSVPlanarMapper()
   this->Lambda = 0.5;
   this->Mu     = 0.5;
 
-  this->ATutte = NULL;
-  this->AHarm  = NULL;
 }
 
 // ----------------------
@@ -89,39 +89,48 @@ vtkSVPlanarMapper::~vtkSVPlanarMapper()
 {
   if (this->InitialPd != NULL)
   {
-    InitialPd->Delete();
+    this->InitialPd->Delete();
+    this->InitialPd = NULL;
   }
   if (this->WorkPd != NULL)
   {
-    WorkPd->Delete();
+    this->WorkPd->Delete();
+    this->WorkPd = NULL;
   }
   if (this->PlanarPd != NULL)
   {
-    PlanarPd->Delete();
+    this->PlanarPd->Delete();
+    this->PlanarPd = NULL;
   }
   if (this->EdgeTable != NULL)
   {
     this->EdgeTable->Delete();
+    this->EdgeTable = NULL;
   }
   if (this->EdgeWeights != NULL)
   {
     this->EdgeWeights->Delete();
+    this->EdgeWeights = NULL;
   }
   if (this->EdgeNeighbors != NULL)
   {
     this->EdgeNeighbors->Delete();
+    this->EdgeNeighbors = NULL;
   }
   if (this->IsBoundary != NULL)
   {
     this->IsBoundary->Delete();
+    this->IsBoundary = NULL;
   }
   if (this->Boundaries != NULL)
   {
     this->Boundaries->Delete();
+    this->Boundaries = NULL;
   }
   if (this->BoundaryLoop != NULL)
   {
     this->BoundaryLoop->Delete();
+    this->BoundaryLoop = NULL;
   }
 
   if (this->InternalIdsArrayName)
@@ -132,11 +141,13 @@ vtkSVPlanarMapper::~vtkSVPlanarMapper()
 
   if (this->ATutte != NULL)
   {
-    delete this->ATutte;
+    this->ATutte->Delete();
+    this->ATutte = NULL;
   }
   if (this->AHarm != NULL)
   {
-    delete this->AHarm;
+    this->AHarm->Delete();
+    this->AHarm = NULL;
   }
 }
 
@@ -245,8 +256,8 @@ int vtkSVPlanarMapper::PrepFilter()
   }
 
   // Set the size of the matrices
-  this->ATutte = new SparseMatrix(numPoints, numPoints);
-  this->AHarm = new SparseMatrix(numPoints, numPoints);
+  this->ATutte->SetMatrixSize(numPoints, numPoints);
+  this->AHarm->SetMatrixSize(numPoints, numPoints);
   this->Xu.resize(numPoints, 0.0);
   this->Xv.resize(numPoints, 0.0);
   this->Bu.resize(numPoints, 0.0);
@@ -319,8 +330,8 @@ int vtkSVPlanarMapper::SetBoundaries()
     boundaryPd->GetPoint(i, pt);
 
     // Set diagonal to be 1 for boundary points
-    this->AHarm->set_element(id, id, 1.0);
-    this->ATutte->set_element(id, id, 1.0);
+    this->AHarm->SetElement(id, id, 1.0);
+    this->ATutte->SetElement(id, id, 1.0);
 
     // Set right hand side to be point on boundary
     this->Bu[id] = pt[0];
@@ -369,8 +380,8 @@ int vtkSVPlanarMapper::SetInternalNodes()
           continue;
 
         // Set the harmonic weight and tutte weight for i,j
-        this->AHarm->set_element(i,p1, weight);
-        this->ATutte->set_element(i, p1, 1.0);
+        this->AHarm->SetElement(i,p1, weight);
+        this->ATutte->SetElement(i, p1, 1.0);
 
         // Update the total harmonic and tutte weight for point i
         tot_weight -= weight;
@@ -380,8 +391,8 @@ int vtkSVPlanarMapper::SetInternalNodes()
       // Set the total harmonic and tutte weight for i,i
       double pt[3];
       this->WorkPd->GetPoint(i, pt);
-      this->AHarm->set_element(i, i, tot_weight);
-      this->ATutte->set_element(i, i, tot_tutte_weight);
+      this->AHarm->SetElement(i, i, tot_weight);
+      this->ATutte->SetElement(i, i, tot_tutte_weight);
 
       // Set initial values for solution vector
       this->Xu[i] = pt[0];
@@ -399,10 +410,10 @@ int vtkSVPlanarMapper::SolveSystem()
 {
   int numPoints = this->WorkPd->GetNumberOfPoints();
 
-  svMath::conjugate_gradient(*this->ATutte, &this->Bu[0], numPoints, &this->Xu[0]);
-  svMath::conjugate_gradient(*this->AHarm, &this->Bu[0], numPoints, &this->Xu[0]);
-  svMath::conjugate_gradient(*this->ATutte, &this->Bv[0], numPoints, &this->Xv[0]);
-  svMath::conjugate_gradient(*this->AHarm, &this->Bv[0], numPoints, &this->Xv[0]);
+  svMath::conjugate_gradient(this->ATutte, &this->Bu[0], numPoints, &this->Xu[0]);
+  svMath::conjugate_gradient(this->AHarm, &this->Bu[0], numPoints, &this->Xu[0]);
+  svMath::conjugate_gradient(this->ATutte, &this->Bv[0], numPoints, &this->Xv[0]);
+  svMath::conjugate_gradient(this->AHarm, &this->Bv[0], numPoints, &this->Xv[0]);
 
   for (int i=0; i<numPoints; i++)
   {

@@ -32,12 +32,12 @@
 #ifndef SVMATH_H_
 #define SVMATH_H_
 
-class SparseMatrix;
+#include "vtkSVSparseMatrix.h"
 
 class svMath {
  public:
   static void conjugate_gradient(
-      const SparseMatrix &a, const double *b, int num_iterations, double *x);
+      vtkSVSparseMatrix *a, const double *b, int num_iterations, double *x);
 };
 
 #endif  // MATH_H_

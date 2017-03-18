@@ -49,9 +49,9 @@
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
+#include "vtkSVSparseMatrix.h"
 
 #include "svMath.h"
-#include "sparse_matrix.h"
 
 class vtkSVPlanarMapper : public vtkPolyDataAlgorithm
 {
@@ -124,8 +124,8 @@ private:
   // Filter to set the boundary!
   vtkSVBoundaryMapper *BoundaryMapper;
 
-  SparseMatrix *ATutte;
-  SparseMatrix *AHarm;
+  vtkSVSparseMatrix *ATutte;
+  vtkSVSparseMatrix *AHarm;
   std::vector<double> Xu;
   std::vector<double> Xv;
   std::vector<double> Bu;

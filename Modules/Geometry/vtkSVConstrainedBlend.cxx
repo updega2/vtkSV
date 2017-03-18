@@ -62,9 +62,6 @@
 #include "vtkGenericCell.h"
 #include "vtkMath.h"
 
-#include "math.h"
-#include "sparse_matrix.h"
-
 #include <iostream>
 
 vtkStandardNewMacro(vtkSVConstrainedBlend);

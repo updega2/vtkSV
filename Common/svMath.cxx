@@ -31,8 +31,10 @@
 
 #include "svMath.h"
 
-#include "sparse_matrix.h"
+#include "vtkSVSparseMatrix.h"
 
+#include "vtkSmartPointer.h"
+#include "vtkSVGlobals.h"
 #include <cmath>
 #include <cstdio>
 
@@ -44,12 +46,12 @@ const double kEpsilon = 1e-8;
 
 // Multiply A^tA with b.
 void multiply_ata_b(
-    const SparseMatrix &a_trans, const SparseMatrix &a,
+    vtkSVSparseMatrix *a_trans, vtkSVSparseMatrix *a,
     const double *b, double *c) {
-  double *temp = new double[a.get_num_rows()];
+  double *temp = new double[a->GetNumberOfRows()];
 
-  a.multiply_column(b, temp);
-  a_trans.multiply_column(temp, c);
+  a->MultiplyColumn(b, temp);
+  a_trans->MultiplyColumn(temp, c);
 
   delete [] temp;
 }
@@ -71,29 +73,30 @@ void add(const double *a, const double *b, double beta, int n, double *c) {
 }
 
 void svMath::conjugate_gradient(
-    const SparseMatrix &a, const double *b, int num_iterations, double *x) {
-  SparseMatrix a_trans = a.transpose();
+    vtkSVSparseMatrix *a, const double *b, int num_iterations, double *x) {
+  vtkNew(vtkSVSparseMatrix, a_trans);
+  a->Transpose(a_trans);
 
-  double *a_trans_b = new double[a_trans.get_num_rows()];
-  a_trans.multiply_column(b, a_trans_b);
+  double *a_trans_b = new double[a_trans->GetNumberOfRows()];
+  a_trans->MultiplyColumn(b, a_trans_b);
 
   // Solve a_trans * a * x = a_trans_b.
-  double *r = new double[a_trans.get_num_rows()];
-  double *p = new double[a_trans.get_num_rows()];
+  double *r = new double[a_trans->GetNumberOfRows()];
+  double *p = new double[a_trans->GetNumberOfRows()];
 
-  double *temp = new double[a_trans.get_num_rows()];
+  double *temp = new double[a_trans->GetNumberOfRows()];
 
   // temp = A'A * x
   multiply_ata_b(a_trans, a, x, temp);
 
   // r = A'b - temp
-  add(a_trans_b, temp, -1.0, a_trans.get_num_rows(), r);
+  add(a_trans_b, temp, -1.0, a_trans->GetNumberOfRows(), r);
 
   // p = r
-  std::copy(r, r + a_trans.get_num_rows(), p);
+  std::copy(r, r + a_trans->GetNumberOfRows(), p);
 
   // rs_old = r' * r
-  double rs_old = inner_product(r, r, a_trans.get_num_rows());
+  double rs_old = inner_product(r, r, a_trans->GetNumberOfRows());
 
   if (sqrt(rs_old) < kEpsilon) {
     printf("The initial solution is good.\n");
@@ -102,22 +105,22 @@ void svMath::conjugate_gradient(
 
   int iteration = 0;
   for (iteration = 0;
-       iteration < num_iterations && iteration < a_trans.get_num_rows();
+       iteration < num_iterations && iteration < a_trans->GetNumberOfRows();
        iteration++) {
     // temp = A'A * p
     multiply_ata_b(a_trans, a, p, temp);
 
     // alpha = rs_old / (p' * temp)
-    double alpha = rs_old / inner_product(p, temp, a_trans.get_num_rows());
+    double alpha = rs_old / inner_product(p, temp, a_trans->GetNumberOfRows());
 
     // x = x + alpha * p
-    add(x, p, alpha, a_trans.get_num_rows(), x);
+    add(x, p, alpha, a_trans->GetNumberOfRows(), x);
 
     // r = r - alpha * temp
-    add(r, temp, -alpha, a_trans.get_num_rows(), r);
+    add(r, temp, -alpha, a_trans->GetNumberOfRows(), r);
 
     // rs_new = r' * r
-    double rs_new = inner_product(r, r, a_trans.get_num_rows());
+    double rs_new = inner_product(r, r, a_trans->GetNumberOfRows());
 
     // Traditionally, if norm(rs_new) is small enough, the iteration can stop.
     if (sqrt(rs_new) < kEpsilon) {
@@ -128,7 +131,7 @@ void svMath::conjugate_gradient(
     }
 
     // p = r + (rs_new / rs_old) * p
-    add(r, p, rs_new / rs_old, a_trans.get_num_rows(), p);
+    add(r, p, rs_new / rs_old, a_trans->GetNumberOfRows(), p);
 
     // rs_old = rs_new
     rs_old = rs_new;

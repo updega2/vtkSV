@@ -26,8 +26,8 @@
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx sparse_matrix.cxx svMath.cxx)
-set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   sparse_matrix.h svMath.h vtkSVGlobals.h)
+set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx vtkSVSparseMatrix.cxx svMath.cxx)
+set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   vtkSVSparseMatrix.h svMath.h vtkSVGlobals.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
