@@ -40,6 +40,7 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
+#include "vtkSVMathUtils.h"
 #include "vtkSVGlobals.h"
 
 #include <iostream>
@@ -193,7 +194,7 @@ int vtkSVHausdorffDistance::RunFilter()
     vtkNew(vtkGenericCell, genericCell);
     locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
                               dist2);
-    double distance = vtkSVGeneralUtils::Distance(closestPt, pt);
+    double distance = vtkSVMathUtils::Distance(closestPt, pt);
 
     distances->SetTuple1(i, distance);
     if (distance > maxDistance)

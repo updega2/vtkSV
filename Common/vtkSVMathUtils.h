@@ -43,12 +43,14 @@
 
 #include "vtkSVSparseMatrix.h"
 
+#include "vtkFloatArray.h"
+
 class vtkSVMathUtils : public vtkObject
 {
 public:
   vtkTypeMacro(vtkSVMathUtils,vtkObject);
 
-  static void ConjugateGradient(vtkSVSparseMatrix *a,
+  static int ConjugateGradient(vtkSVSparseMatrix *a,
                                 const double *b, int num_iterations,
                                 double *x, double epsilon);
 
@@ -59,6 +61,23 @@ public:
   static double InnerProduct(const double *a, const double *b, int n);
 
   static void Add(const double *a, const double *b, double beta, int n, double *c);
+
+  /** \brief Compute the signed area of a triangle given the three vertices.
+   *  \return the signed area. */
+  static double ComputeTriangleArea(double pt0[3], double pt1[3], double pt2[3]);
+
+  /** \brief Get distance between two 3D points, very simple
+   *  \return the unsigned distance */
+  static double Distance(double pt0[3], double pt1[3]);
+
+  /** \brief Dot product between each tuple of two data arrays. */
+  static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps);
+
+  /** \brief Addition between each tuple of two data arrays. */
+  static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);
+
+
+
 
 protected:
   vtkSVMathUtils();

@@ -43,6 +43,8 @@
 #include "vtkCellData.h"
 #include "vtkCenterOfMass.h"
 #include "vtkClipPolyData.h"
+#include "vtkCubeSource.h"
+#include "vtkCylinderSource.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkExtractGeometry.h"
@@ -56,6 +58,7 @@
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 #include "vtkThreshold.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
@@ -64,7 +67,7 @@
 #include "vtkUnstructuredGrid.h"
 
 // ----------------------
-// CheckArrayExists
+// MakePlane
 // ----------------------
 int vtkSVGeneralUtils::MakePlane(double pt0[3], double pt1[3], double pt2[3],
                                  int res0, int res1, int triangulate, vtkPolyData *pd)
@@ -89,6 +92,85 @@ int vtkSVGeneralUtils::MakePlane(double pt0[3], double pt1[3], double pt2[3],
   }
   else
     pd->DeepCopy(makePlane->GetOutput());
+
+  return SV_OK;
+}
+
+// ----------------------
+// MakeCylinder
+// ----------------------
+int vtkSVGeneralUtils::MakeCylinder(double r, double length,
+                                    double resolution, double center[3],
+                                    double axis[3], int triangulate,
+                                    vtkPolyData *pd)
+{
+  // Set up cylinder source
+  vtkNew(vtkCylinderSource, cylinder);
+  cylinder->SetCenter(0.0,0.0,0.0);
+  cylinder->SetHeight(length);
+  cylinder->SetRadius(r);
+  cylinder->SetResolution(resolution);
+  cylinder->Update();
+
+  // Set up transofrm to rotate given axis
+  double vec[3]; vec[0] = 0.0; vec[1] = 1.0; vec[2] = 0.0;
+  double rotateaxis[3]; vtkMath::Cross(axis,vec,rotateaxis);
+
+  // Temporary vector
+  double tmpcross[3];
+  vtkMath::Cross(axis,vec,tmpcross);
+
+  // Compute angle in radians and degrees
+  double radangle = atan2(vtkMath::Norm(tmpcross), vtkMath::Dot(axis,vec));
+  double degangle = vtkMath::DegreesFromRadians(radangle);
+
+  // Transform
+  vtkNew(vtkTransform, transformer);
+  transformer->RotateWXYZ(degangle,rotateaxis);
+  transformer->Translate(center[0],center[1],center[2]);
+
+  // Transformer
+  vtkNew(vtkTransformPolyDataFilter, polyDataTransformer);
+  polyDataTransformer->SetInputData(cylinder->GetOutput());
+  polyDataTransformer->SetTransform(transformer);
+  polyDataTransformer->Update();
+
+  // Triangulate
+  if (triangulate)
+  {
+    vtkNew(vtkTriangleFilter, triangulator);
+    triangulator->SetInputData(polyDataTransformer->GetOutput());
+    triangulator->Update();
+    pd->DeepCopy(triangulator->GetOutput());
+  }
+  else
+    pd->DeepCopy(polyDataTransformer->GetOutput());
+
+  return SV_OK;
+}
+
+// ----------------------
+// MakeCube
+// ----------------------
+int vtkSVGeneralUtils::MakeCube(double dims[3], double center[3],
+                                int triangulate, vtkPolyData *pd)
+{
+  vtkNew(vtkCubeSource, cube);
+  cube->SetCenter(center[0], center[1], center[2]);
+  cube->SetXLength(dims[0]);
+  cube->SetYLength(dims[1]);
+  cube->SetZLength(dims[2]);
+  cube->Update();
+
+  if (triangulate)
+  {
+    vtkNew(vtkTriangleFilter, triangulator);
+    triangulator->SetInputData(cube->GetOutput());
+    triangulator->Update();
+    pd->DeepCopy(triangulator->GetOutput());
+  }
+  else
+    pd->DeepCopy(cube->GetOutput());
 
   return SV_OK;
 }
@@ -447,16 +529,6 @@ int vtkSVGeneralUtils::ClipCut(vtkPolyData *inPd, vtkImplicitFunction *cutFuncti
 }
 
 // ----------------------
-// Distance
-// ----------------------
-double vtkSVGeneralUtils::Distance(double pt0[3], double pt1[3])
-{
-  return sqrt(pow(pt1[0] - pt0[0], 2.0) +
-              pow(pt1[1] - pt0[1], 2.0) +
-              pow(pt1[2] - pt0[2], 2.0));
-}
-
-// ----------------------
 // GetPointsLength
 // ----------------------
 double vtkSVGeneralUtils::GetPointsLength(vtkPolyData *pd)
@@ -471,7 +543,7 @@ double vtkSVGeneralUtils::GetPointsLength(vtkPolyData *pd)
     pd->GetPoint(i-1, pt0);
     pd->GetPoint(i, pt1);
 
-    length += vtkSVGeneralUtils::Distance(pt0, pt1);
+    length += vtkSVMathUtils::Distance(pt0, pt1);
   }
 
   return length;
@@ -554,22 +626,6 @@ int vtkSVGeneralUtils::GetCutPlane(double endPt[3], double startPt[3],
 
   return SV_OK;
 }
-
-// ----------------------
-// ComputeTriangleArea
-// ----------------------
-double vtkSVGeneralUtils::ComputeTriangleArea(double pt0[3], double pt1[3],
-                                           double pt2[3])
-{
-  double area = 0.0;
-  area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
-  area += (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
-  area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
-  area *= 0.5;
-
-  return area;
-}
-
 
 // ----------------------
 // ComputeMassCenter
@@ -664,7 +720,7 @@ int vtkSVGeneralUtils::GetEdgeCotangentAngle(double pt0[3], double pt1[3],
                                            double pt2[3], double &angle)
 {
   // Get the area of the three points
-  double area = vtkSVGeneralUtils::ComputeTriangleArea(pt0, pt1, pt2);
+  double area = vtkSVMathUtils::ComputeTriangleArea(pt0, pt1, pt2);
 
   // If the area is negative, we switch the edge points so that they are in
   // CCW order
@@ -1197,53 +1253,6 @@ int vtkSVGeneralUtils::SeparateLoops(vtkPolyData *pd,
     //Run through intersection lines to get loops!
     vtkSVGeneralUtils::RunLoopFind(pd, startPt, nextCell, newloop, NULL);
     loops[count++] = newloop;
-  }
-
-  return SV_OK;
-}
-
-// ----------------------
-// VectorDotProduct
-// ----------------------
-int vtkSVGeneralUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps)
-{
-  // Initialize product to zero
-  for (int i=0; i<numComps; i++)
-    product[i] = 0.0;
-
-  // Loop through all tuples
-  for (int i=0; i<numVals; i++)
-  {
-    // Loop through all components
-    for (int j=0; j<numComps; j++)
-    {
-      double val0, val1;
-      val0 = v0->GetComponent(i, j);
-      val1 = v1->GetComponent(i, j);
-      product[j] += val0 * val1;
-    }
-  }
-
-  return SV_OK;
-}
-
-// ----------------------
-// VectorAdd
-// ----------------------
-int vtkSVGeneralUtils::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps)
-{
-  // Loop through all tuples
-  for (int i=0; i<numVals; i++)
-  {
-    // Loop through all components
-    for (int j=0; j<numComps; j++)
-    {
-      double val0, val1;
-      val0 = v0->GetComponent(i, j);
-      val1 = v1->GetComponent(i, j);
-      double sum = val0 + scalar * val1;
-      result->SetComponent(i, j, sum);
-    }
   }
 
   return SV_OK;

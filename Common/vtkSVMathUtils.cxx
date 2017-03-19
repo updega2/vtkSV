@@ -1,4 +1,3 @@
-// Author: Mingcheng Chen (linyufly@gmail.com)
 /*=========================================================================
  *
  * Copyright (c) 2014-2015 The Regents of the University of California.
@@ -79,7 +78,7 @@ void vtkSVMathUtils::Add(const double *a, const double *b, double beta, int n, d
 // ----------------------
 // ConjugateGradient
 // ----------------------
-void vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
+int vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
                                        const double *b,
                                        int num_iterations,
                                        double *x, double epsilon)
@@ -110,7 +109,11 @@ void vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
 
   if (sqrt(rs_old) < epsilon) {
     printf("The initial solution is good.\n");
-    return;
+    delete [] r;
+    delete [] p;
+    delete [] temp;
+    delete [] a_trans_b;
+    return rs_old;
   }
 
   int iteration = 0;
@@ -160,5 +163,79 @@ void vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
   delete [] p;
   delete [] temp;
   delete [] a_trans_b;
+
+  return rs_old;
+}
+
+// ----------------------
+// ComputeTriangleArea
+// ----------------------
+double vtkSVMathUtils::ComputeTriangleArea(double pt0[3], double pt1[3],
+                                           double pt2[3])
+{
+  double area = 0.0;
+  area += (pt0[0]*pt1[1])-(pt1[0]*pt0[1]);
+  area += (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
+  area += (pt2[0]*pt0[1])-(pt0[0]*pt2[1]);
+  area *= 0.5;
+
+  return area;
+}
+
+// ----------------------
+// Distance
+// ----------------------
+double vtkSVMathUtils::Distance(double pt0[3], double pt1[3])
+{
+  return sqrt(pow(pt1[0] - pt0[0], 2.0) +
+              pow(pt1[1] - pt0[1], 2.0) +
+              pow(pt1[2] - pt0[2], 2.0));
+}
+
+// ----------------------
+// VectorDotProduct
+// ----------------------
+int vtkSVMathUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps)
+{
+  // Initialize product to zero
+  for (int i=0; i<numComps; i++)
+    product[i] = 0.0;
+
+  // Loop through all tuples
+  for (int i=0; i<numVals; i++)
+  {
+    // Loop through all components
+    for (int j=0; j<numComps; j++)
+    {
+      double val0, val1;
+      val0 = v0->GetComponent(i, j);
+      val1 = v1->GetComponent(i, j);
+      product[j] += val0 * val1;
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// VectorAdd
+// ----------------------
+int vtkSVMathUtils::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps)
+{
+  // Loop through all tuples
+  for (int i=0; i<numVals; i++)
+  {
+    // Loop through all components
+    for (int j=0; j<numComps; j++)
+    {
+      double val0, val1;
+      val0 = v0->GetComponent(i, j);
+      val1 = v1->GetComponent(i, j);
+      double sum = val0 + scalar * val1;
+      result->SetComponent(i, j, sum);
+    }
+  }
+
+  return SV_OK;
 }
 

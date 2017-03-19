@@ -44,6 +44,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleStrip.h"
 #include "vtkUnsignedCharArray.h"
@@ -590,6 +591,6 @@ int vtkSVGetBoundaryFaces::AddCellArea(const int cellId, double &area)
   this->WorkPd->GetPoint(pts[2], pt2);
 
   // Calculate are of triangle
-  area += std::abs(vtkSVGeneralUtils::ComputeTriangleArea(pt0, pt1, pt2));
+  area += std::abs(vtkSVMathUtils::ComputeTriangleArea(pt0, pt1, pt2));
   return SV_OK;
 }

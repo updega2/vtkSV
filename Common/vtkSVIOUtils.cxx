@@ -41,6 +41,34 @@
 #include "vtkXMLStructuredGridWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+struct stat info;
+// ----------------------
+// CheckDirectoryExists
+// ----------------------
+int vtkSVIOUtils::CheckDirectoryExists(std::string dirname)
+{
+  if (stat(dirname.c_str(), &info) == 0 && S_ISDIR(info.st_mode))
+    return SV_OK;
+
+  fprintf(stderr,"Directory %s does not exists\n", dirname.c_str());
+  return SV_ERROR;
+}
+
+// ----------------------
+// CheckFileExists
+// ----------------------
+int vtkSVIOUtils::CheckFileExists(std::string filename)
+{
+  if (stat(filename.c_str(), &info) == 0)
+    return SV_OK;
+
+  fprintf(stderr,"File %s does not exists\n", filename.c_str());
+  return SV_ERROR;
+}
+
 // ----------------------
 // IntToString
 // ----------------------
@@ -98,6 +126,10 @@ std::string vtkSVIOUtils::GetExt(std::string fullName)
  * Poly Data information */
 int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
 {
+  // Check file exists
+  if (vtkSVIOUtils::CheckFileExists(inputFilename) != SV_OK)
+    return SV_ERROR;
+
   //Create an STL reader for reading the file
   vtkNew(vtkSTLReader, reader);
   reader->SetFileName(inputFilename.c_str());
@@ -116,6 +148,10 @@ int vtkSVIOUtils::ReadSTLFile(std::string inputFilename, vtkPolyData *polydata)
 // ----------------------
 int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
 {
+  // Check file exists
+  if (vtkSVIOUtils::CheckFileExists(inputFilename) != SV_OK)
+    return SV_ERROR;
+
   //Create an STL reader for reading the file
   vtkNew(vtkXMLPolyDataReader, reader);
   reader->SetFileName(inputFilename.c_str());
@@ -162,6 +198,13 @@ int vtkSVIOUtils::ReadInputFile(std::string inputFilename, vtkPolyData *polydata
 // ----------------------
 int vtkSVIOUtils::WriteVTPFile(std::string outputFilename,vtkPolyData *writePolyData)
 {
+  // Get directory
+  std::string dirName = vtkSVIOUtils::GetPath(outputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(dirName) != SV_OK)
+    return SV_ERROR;
+
   vtkNew(vtkXMLPolyDataWriter, writer);
   writer->SetFileName(outputFilename.c_str());
 #if VTK_MAJOR_VERSION <= 5
@@ -189,6 +232,10 @@ int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyD
   pathName = vtkSVIOUtils::GetPath(inputFilename);
   rawName = vtkSVIOUtils::GetRawName(inputFilename);
 
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(pathName) != SV_OK)
+    return SV_ERROR;
+
   outputFilename = pathName+"/"+rawName+attachName+".vtp";
 
   writer->SetFileName(outputFilename.c_str());
@@ -207,6 +254,13 @@ int vtkSVIOUtils::WriteVTPFile(std::string inputFilename,vtkPolyData *writePolyD
 // ----------------------
 int vtkSVIOUtils::WriteVTUFile(std::string outputFilename,vtkUnstructuredGrid *writeUnstructuredGrid)
 {
+  // Get directory
+  std::string dirName = vtkSVIOUtils::GetPath(outputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(dirName) != SV_OK)
+    return SV_ERROR;
+
   vtkNew(vtkXMLUnstructuredGridWriter, writer);
   writer->SetFileName(outputFilename.c_str());
 #if VTK_MAJOR_VERSION <= 5
@@ -234,6 +288,10 @@ int vtkSVIOUtils::WriteVTUFile(std::string inputFilename,vtkUnstructuredGrid *wr
   pathName = vtkSVIOUtils::GetPath(inputFilename);
   rawName = vtkSVIOUtils::GetRawName(inputFilename);
 
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(pathName) != SV_OK)
+    return SV_ERROR;
+
   outputFilename = pathName+"/"+rawName+attachName+".vtu";
 
   writer->SetFileName(outputFilename.c_str());
@@ -252,6 +310,13 @@ int vtkSVIOUtils::WriteVTUFile(std::string inputFilename,vtkUnstructuredGrid *wr
 // ----------------------
 int vtkSVIOUtils::WriteVTSFile(std::string outputFilename,vtkStructuredGrid *writeStructuredGrid)
 {
+  // Get directory
+  std::string dirName = vtkSVIOUtils::GetPath(outputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(dirName) != SV_OK)
+    return SV_ERROR;
+
   vtkNew(vtkXMLStructuredGridWriter, writer);
   writer->SetFileName(outputFilename.c_str());
 #if VTK_MAJOR_VERSION <= 5
@@ -278,6 +343,10 @@ int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writ
 
   pathName = vtkSVIOUtils::GetPath(inputFilename);
   rawName = vtkSVIOUtils::GetRawName(inputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(pathName) != SV_OK)
+    return SV_ERROR;
 
   outputFilename = pathName+"/"+rawName+attachName+".vts";
 

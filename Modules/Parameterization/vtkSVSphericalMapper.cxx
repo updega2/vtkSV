@@ -59,6 +59,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 #include "vtkTransform.h"
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
@@ -542,8 +543,8 @@ int vtkSVSphericalMapper::WolfeLineSearch(int map)
 
   double numerator[3];
   double denominator[3];
-  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, this->CurrDescent, numerator, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, conjLaplacian, denominator, numPts, 3);
+  vtkSVMathUtils::VectorDotProduct(this->ConjugateDir, this->CurrDescent, numerator, numPts, 3);
+  vtkSVMathUtils::VectorDotProduct(this->ConjugateDir, conjLaplacian, denominator, numPts, 3);
 
   double maxstep = 100.0;
   for (int i=0; i<3; i++)
@@ -938,7 +939,7 @@ int vtkSVSphericalMapper::ComputeResidual(double &residual)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
   double newRes[3];
-  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, this->ConjugateDir, newRes,
+  vtkSVMathUtils::VectorDotProduct(this->ConjugateDir, this->ConjugateDir, newRes,
                          numPts, 3);
 
   residual = 0.0;
@@ -1059,9 +1060,9 @@ int vtkSVSphericalMapper::FRUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
   double numerator[3], denominator[3];
-  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, this->CurrDescent,
+  vtkSVMathUtils::VectorDotProduct(this->CurrDescent, this->CurrDescent,
                          numerator, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->PrevDescent, this->PrevDescent,
+  vtkSVMathUtils::VectorDotProduct(this->PrevDescent, this->PrevDescent,
                          denominator, numPts, 3);
 
   double beta[3];
@@ -1089,11 +1090,11 @@ int vtkSVSphericalMapper::PRUpdateMap(int map)
   difference->SetNumberOfComponents(3);
   difference->Allocate(numPts, 10000);
   difference->SetNumberOfTuples(numPts);
-  vtkSVGeneralUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
+  vtkSVMathUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
                                difference, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, difference,
+  vtkSVMathUtils::VectorDotProduct(this->CurrDescent, difference,
                                       numerator, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->PrevDescent, this->PrevDescent,
+  vtkSVMathUtils::VectorDotProduct(this->PrevDescent, this->PrevDescent,
                                       denominator, numPts, 3);
 
   double beta[3];
@@ -1121,11 +1122,11 @@ int vtkSVSphericalMapper::HSUpdateMap(int map)
   difference->SetNumberOfComponents(3);
   difference->Allocate(numPts, 10000);
   difference->SetNumberOfTuples(numPts);
-  vtkSVGeneralUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
+  vtkSVMathUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
                                difference, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, difference,
+  vtkSVMathUtils::VectorDotProduct(this->CurrDescent, difference,
                                       numerator, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, difference,
+  vtkSVMathUtils::VectorDotProduct(this->ConjugateDir, difference,
                                       denominator, numPts, 3);
 
   double beta[3];
@@ -1153,11 +1154,11 @@ int vtkSVSphericalMapper::DYUpdateMap(int map)
   difference->SetNumberOfComponents(3);
   difference->Allocate(numPts, 10000);
   difference->SetNumberOfTuples(numPts);
-  vtkSVGeneralUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
+  vtkSVMathUtils::VectorAdd(this->CurrDescent, this->PrevDescent, -1.0,
                   difference, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, this->CurrDescent,
+  vtkSVMathUtils::VectorDotProduct(this->CurrDescent, this->CurrDescent,
                                       numerator, numPts, 3);
-  vtkSVGeneralUtils::VectorDotProduct(this->ConjugateDir, difference,
+  vtkSVMathUtils::VectorDotProduct(this->ConjugateDir, difference,
                                       denominator, numPts, 3);
 
   double beta[3];
@@ -1182,7 +1183,7 @@ int vtkSVSphericalMapper::CGUpdateMap(int map, double beta[])
   int numPts = this->InitialPd->GetNumberOfPoints();
 
   double descCond[3];
-  vtkSVGeneralUtils::VectorDotProduct(this->CurrDescent, this->ConjugateDir, descCond,
+  vtkSVMathUtils::VectorDotProduct(this->CurrDescent, this->ConjugateDir, descCond,
                          numPts, 3);
 
   //If descent condition isn't satisfied, restart from new steepest descent dir

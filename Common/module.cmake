@@ -33,7 +33,12 @@ vtk_module(vtkSVCommon
   vtkCommonDataModel
   vtkIOXML
   TEST_DEPENDS
+  vtkInteractionStyle
+  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingLabel
   vtkTestingCore
+  vtkTestingRendering
   TCL_NAME
   vtkSVCommon
   )

@@ -57,11 +57,19 @@ class vtkSVIOUtils : public vtkObject
 public:
   vtkTypeMacro(vtkSVIOUtils,vtkObject);
 
-  //String processing function
+
+  /// \brief Check directory exists
+  static int CheckDirectoryExists(std::string dirname);
+
+  /// \brief Check file exists
+  static int CheckFileExists(std::string filename);
+
+  // String processing functions
   static std::string IntToString(int i); /**< \brief Converts integer to string. */
   static std::string GetPath(std::string fullName); /**< \brief Gets filename path. */
   static std::string GetRawName(std::string fullName); /**< \brief Gets filename raw name without extension. */
   static std::string GetExt(std::string fullName); /**< \brief Gets filename extension (e.g. vtp). */
+
 
   //Read Write functions for stl, vtp
   /** \brief read an stl file. */

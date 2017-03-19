@@ -77,6 +77,26 @@ public:
   static int MakePlane(double pt0[3], double pt1[3], double pt2[3],
                        int res0, int res1, int triangulate, vtkPolyData *pd);
 
+ /** \brief Function to make a polydata of a cylinder.
+  *  \param r Radius of cylinder.
+  *  \param length Total length of cylinder.
+  *  \param resolution resolution of cylinder in the circumferential direction..
+  *  \param center center of the cylinder.
+  *  \param axis axis of the cylinder.
+  *  \param triangulate indicate whether cylinder should be triangulated.
+  *  \param pd empty polydata to return cylinder in. */
+  static int MakeCylinder(double r, double length, double resolution,
+                          double ctr[3], double axis[3], int triangulate,
+                          vtkPolyData *pd);
+
+ /** \brief Function to make a polydata of a cube.
+  *  \param dims dimensions of cube.
+  *  \param center center of the cube.
+  *  \param triangulate indicate whether cube should be triangulated.
+  *  \param pd empty polydata to return cube in. */
+  static int MakeCube(double dims[3], double ctr[3], int triangulate,
+                      vtkPolyData *pd);
+
   //Checking functions
 
   /** \brief Function to check is array with name exists in cell or point data
@@ -190,10 +210,6 @@ public:
                      vtkPolyData *outPd,
                      vtkPolyData *clippedOutPd);
 
-  /** \brief Get distance between two 3D points, very simple
-   *  \return the unsigned distance */
-  static double Distance(double pt0[3], double pt1[3]);
-
   /** \brief For a polydata with cells of VTK_LINE of VTK_POLY_LINE, will calculate
    *  the total distance of that line.
    *  \param pd The polydata.
@@ -226,10 +242,6 @@ public:
    *  \return SV_OK. */
   static int GetCutPlane(double endPt[3], double startPt[3],
                          vtkPlane *cutPlane);
-
-  /** \brief Compute the signed area of a triangle given the three vertices.
-   *  \return the signed area. */
-  static double ComputeTriangleArea(double pt0[3], double pt1[3], double pt2[3]);
 
   /** \brief Computes the mass center of points use vtkCenterOfMass.
    *  \return SV_OK.  */
@@ -341,12 +353,6 @@ public:
 
   /** \brief Function separate multiple boundary loops. */
   static int SeparateLoops(vtkPolyData *pd, vtkPolyData **loops, int numBoundaries, const double xvec[3], const double zvec[3], const int boundaryStart[2]);
-
-  /** \brief Dot product between each tuple of two data arrays. */
-  static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps);
-
-  /** \brief Addition between each tuple of two data arrays. */
-  static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);
 
   //@{
   /** \brief Get rotation matrix to align two vectors.

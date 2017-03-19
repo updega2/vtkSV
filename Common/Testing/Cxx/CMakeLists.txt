@@ -25,8 +25,9 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
-  TestLoopBooleanPolyDataFilter.cxx,NO_DATA,NO_OUTPUT)
+  TestSparseMatrix.cxx,NO_DATA,NO_VALID,NO_OUTPUT,
+  TestConjugateGradient.cxx,NO_DATA,NO_VALID,NO_OUTPUT,
+  TestRotationMatrix.cxx,NO_DATA,NO_OUTPUT)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)
-

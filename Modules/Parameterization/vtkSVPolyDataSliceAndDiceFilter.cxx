@@ -51,6 +51,7 @@
 #include "vtkSVFindGeodesicPath.h"
 #include "vtkSVFindSeparateRegions.h"
 #include "vtkSVGeneralUtils.h"
+#include "vtkSVMathUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLUnstructuredGridWriter.h"
@@ -901,7 +902,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
-    length += vtkSVGeneralUtils::Distance(pt0, pt1);
+    length += vtkSVMathUtils::Distance(pt0, pt1);
   }
 
   //Finding the surgery points which separate each half of the boundary into
@@ -916,7 +917,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetHalfSurgeryPoints(vtkPolyData *pd,
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
-    currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
+    currLength += vtkSVMathUtils::Distance(pt0, pt1);
     if (currLength > length*(surgeryCount/3.0))
     {
       surgeryPoints->InsertNextId(pointIds->GetTuple1(pointId));
@@ -1069,7 +1070,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBranch(vtkPolyData *branchPd,
       branchCenterline->GetPoint(linePtId, pt0);
       this->UpdatePtId(linePtId);
       branchCenterline->GetPoint(linePtId, pt1);
-      centerlineLength += vtkSVGeneralUtils::Distance(pt0, pt1);
+      centerlineLength += vtkSVMathUtils::Distance(pt0, pt1);
     }
 
     // Update the current length we are at
@@ -1458,7 +1459,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   //{
   //  double testPt[3];
   //  getClose0->GetOutput()->GetPoint(i, testPt);
-  //  double dist = vtkSVGeneralUtils::Distance(adjSlicePt0, testPt);
+  //  double dist = vtkSVMathUtils::Distance(adjSlicePt0, testPt);
   //  if (dist > maxDist)
   //    maxDist = dist;
 
@@ -1501,7 +1502,7 @@ int vtkSVPolyDataSliceAndDiceFilter::SliceBifurcation(vtkPolyData *pd,
   //{
   //  double testPt[3];
   //  getClose1->GetOutput()->GetPoint(i, testPt);
-  //  double dist = vtkSVGeneralUtils::Distance(adjSlicePt1, testPt);
+  //  double dist = vtkSVMathUtils::Distance(adjSlicePt1, testPt);
   //  if (dist > maxDist)
   //    maxDist = dist;
 
@@ -2057,7 +2058,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, doubl
     boundary->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(boundary, pointId, cellId);
     boundary->GetPoint(pointId, pt1);
-    length += vtkSVGeneralUtils::Distance(pt0, pt1);
+    length += vtkSVMathUtils::Distance(pt0, pt1);
     iter++;
   }
 
@@ -2073,7 +2074,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetNextSurgeryPoints(vtkPolyData *pd, doubl
     boundary->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(boundary, pointId, prevCellId);
     boundary->GetPoint(pointId, pt1);
-    currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
+    currLength += vtkSVMathUtils::Distance(pt0, pt1);
     if (currLength > length*(surgeryCount/4.0))
     {
       if (surgeryCount < 4)
@@ -2170,7 +2171,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCel
           this->InternalIdsArrayName)->LookupValue(endSurgeryIds[cellIndices[i+4]]);
         double pt[3];
         boundary->GetPoint(testId, pt);
-        double testDist = vtkSVGeneralUtils::Distance(closePt, pt);
+        double testDist = vtkSVMathUtils::Distance(closePt, pt);
         if (testDist < dist)
         {
           dist = testDist;
@@ -2245,7 +2246,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCel
       boundary->GetPoint(pointId, pt0);
       vtkSVGeneralUtils::IteratePoint(boundary, pointId, cellId);
       boundary->GetPoint(pointId, pt1);
-      length += vtkSVGeneralUtils::Distance(pt0, pt1);
+      length += vtkSVMathUtils::Distance(pt0, pt1);
       iter++;
     }
 
@@ -2261,7 +2262,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetEndSurgeryPoints(vtkPolyData *pd, svGCel
       boundary->GetPoint(pointId, pt0);
       vtkSVGeneralUtils::IteratePoint(boundary, pointId, prevCellId);
       boundary->GetPoint(pointId, pt1);
-      currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
+      currLength += vtkSVMathUtils::Distance(pt0, pt1);
       if (currLength > length*(surgeryCount/4.0))
       {
         if (surgeryCount < 4)
@@ -2424,7 +2425,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, cellId);
     pd->GetPoint(pointId, pt1);
-    length += vtkSVGeneralUtils::Distance(pt0, pt1);
+    length += vtkSVMathUtils::Distance(pt0, pt1);
     iter++;
   }
 
@@ -2443,7 +2444,7 @@ int vtkSVPolyDataSliceAndDiceFilter::GetFirstSurgeryPoints(vtkPolyData *pd, int 
     pd->GetPoint(pointId, pt0);
     vtkSVGeneralUtils::IteratePoint(pd, pointId, prevCellId);
     pd->GetPoint(pointId, pt1);
-    currLength += vtkSVGeneralUtils::Distance(pt0, pt1);
+    currLength += vtkSVMathUtils::Distance(pt0, pt1);
     if (currLength > length*(surgeryCount/4.0))
     {
       if (surgeryCount < 4)

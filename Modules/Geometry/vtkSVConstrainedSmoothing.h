@@ -93,7 +93,6 @@ protected:
   int UseCellArray;
 
   int GetArrays(vtkPolyData *object,int type);
-  void Test();
   int CGSmooth(vtkPolyData *original,vtkPolyData *current);
   int GetAttachedPoints(vtkPolyData *pd, vtkIdType nodeId, std::set<vtkIdType> *attachedPts);
   int SetFixedPoints(vtkPolyData *pd);
