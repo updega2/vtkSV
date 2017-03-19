@@ -52,6 +52,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSmoothPolyDataFilter.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 #include "vtkSVSparseMatrix.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyDataNormals.h"
@@ -59,7 +60,6 @@
 #include "vtkGenericCell.h"
 #include "vtkMath.h"
 
-#include "svMath.h"
 
 #include <iostream>
 
@@ -225,7 +225,7 @@ void vtkSVConstrainedSmoothing::Test() {
   std::vector<double> x(2);
   x[0] = x[1] = 0.0;
 
-  svMath::conjugate_gradient(a, &b[0], 1000, &x[0]);
+  vtkSVMathUtils::ConjugateGradient(a, &b[0], 1000, &x[0], 1.0e-8);
 
   std::vector<double> c(4);
   a->MultiplyColumn(&x[0], &c[0]);
@@ -249,7 +249,7 @@ void vtkSVConstrainedSmoothing::Test() {
   x[0] = 7.0;
   x[1] = -3.0;
 
-  svMath::conjugate_gradient(a, &b[0], 1, &x[0]);
+  vtkSVMathUtils::ConjugateGradient(a, &b[0], 1, &x[0], 1.0e-8);
 
   c.resize(1);
   a->MultiplyColumn(&x[0], &c[0]);
@@ -419,7 +419,7 @@ int vtkSVConstrainedSmoothing::CGSmooth(vtkPolyData *original,vtkPolyData *curre
     }
   }
 
-  svMath::conjugate_gradient(A,&b[0],this->NumGradientSolves,&x[0]);
+  vtkSVMathUtils::ConjugateGradient(A,&b[0],this->NumGradientSolves,&x[0], 1.0e-8);
   //Not necessary, just to check how well satisfied
   //std::vector<double> c(totalEqs);
   //A->MultiplyColumn(&x[0],&c[0]);

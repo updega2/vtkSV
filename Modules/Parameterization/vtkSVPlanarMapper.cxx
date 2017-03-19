@@ -40,6 +40,7 @@
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVBoundaryMapper.h"
+#include "vtkSVMathUtils.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkUnstructuredGrid.h"
@@ -410,10 +411,14 @@ int vtkSVPlanarMapper::SolveSystem()
 {
   int numPoints = this->WorkPd->GetNumberOfPoints();
 
-  svMath::conjugate_gradient(this->ATutte, &this->Bu[0], numPoints, &this->Xu[0]);
-  svMath::conjugate_gradient(this->AHarm, &this->Bu[0], numPoints, &this->Xu[0]);
-  svMath::conjugate_gradient(this->ATutte, &this->Bv[0], numPoints, &this->Xv[0]);
-  svMath::conjugate_gradient(this->AHarm, &this->Bv[0], numPoints, &this->Xv[0]);
+  vtkSVMathUtils::ConjugateGradient(this->ATutte, &this->Bu[0], numPoints,
+                                    &this->Xu[0], 1.0e-8);
+  vtkSVMathUtils::ConjugateGradient(this->AHarm,  &this->Bu[0], numPoints,
+                                    &this->Xu[0], 1.0e-8);
+  vtkSVMathUtils::ConjugateGradient(this->ATutte, &this->Bv[0], numPoints,
+                                    &this->Xv[0], 1.0e-8);
+  vtkSVMathUtils::ConjugateGradient(this->AHarm,  &this->Bv[0], numPoints,
+                                    &this->Xv[0], 1.0e-8);
 
   for (int i=0; i<numPoints; i++)
   {

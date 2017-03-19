@@ -63,9 +63,7 @@
 class vtkSVGeneralUtils : public vtkObject
 {
 public:
-  static vtkSVGeneralUtils *New();
   vtkTypeMacro(vtkSVGeneralUtils,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
 
   // Source functions
  /** \brief Function to make a polydata of a plane.

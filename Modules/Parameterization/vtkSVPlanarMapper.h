@@ -51,8 +51,6 @@
 #include "vtkPolyData.h"
 #include "vtkSVSparseMatrix.h"
 
-#include "svMath.h"
-
 class vtkSVPlanarMapper : public vtkPolyDataAlgorithm
 {
 public:

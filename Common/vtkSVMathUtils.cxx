@@ -29,7 +29,7 @@
  *
  *=========================================================================*/
 
-#include "svMath.h"
+#include "vtkSVMathUtils.h"
 
 #include "vtkSVSparseMatrix.h"
 
@@ -40,14 +40,14 @@
 
 #include <algorithm>
 
-namespace {
-
-const double kEpsilon = 1e-8;
-
-// Multiply A^tA with b.
-void multiply_ata_b(
-    vtkSVSparseMatrix *a_trans, vtkSVSparseMatrix *a,
-    const double *b, double *c) {
+// ----------------------
+// Multiply_ATA_b
+// ----------------------
+/// \details Multiply A^tA with b.
+void vtkSVMathUtils::Multiply_ATA_b(vtkSVSparseMatrix *a_trans,
+                                    vtkSVSparseMatrix *a,
+                                    const double *b, double *c)
+{
   double *temp = new double[a->GetNumberOfRows()];
 
   a->MultiplyColumn(b, temp);
@@ -56,24 +56,34 @@ void multiply_ata_b(
   delete [] temp;
 }
 
-double inner_product(const double *a, const double *b, int n) {
+// ----------------------
+// InnerProduct
+// ----------------------
+double vtkSVMathUtils::InnerProduct(const double *a, const double *b, int n)
+{
   double result = 0.0;
-  for (int c = 0; c < n; c++) {
+  for (int c = 0; c < n; c++)
     result += a[c] * b[c];
-  }
   return result;
 }
 
-void add(const double *a, const double *b, double beta, int n, double *c) {
-  for (int i = 0; i < n; i++) {
+// ----------------------
+// Add
+// ----------------------
+void vtkSVMathUtils::Add(const double *a, const double *b, double beta, int n, double *c)
+{
+  for (int i = 0; i < n; i++)
     c[i] = a[i] + b[i] * beta;
-  }
 }
 
-}
-
-void svMath::conjugate_gradient(
-    vtkSVSparseMatrix *a, const double *b, int num_iterations, double *x) {
+// ----------------------
+// ConjugateGradient
+// ----------------------
+void vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
+                                       const double *b,
+                                       int num_iterations,
+                                       double *x, double epsilon)
+{
   vtkNew(vtkSVSparseMatrix, a_trans);
   a->Transpose(a_trans);
 
@@ -87,18 +97,18 @@ void svMath::conjugate_gradient(
   double *temp = new double[a_trans->GetNumberOfRows()];
 
   // temp = A'A * x
-  multiply_ata_b(a_trans, a, x, temp);
+  vtkSVMathUtils::Multiply_ATA_b(a_trans, a, x, temp);
 
   // r = A'b - temp
-  add(a_trans_b, temp, -1.0, a_trans->GetNumberOfRows(), r);
+  vtkSVMathUtils::Add(a_trans_b, temp, -1.0, a_trans->GetNumberOfRows(), r);
 
   // p = r
   std::copy(r, r + a_trans->GetNumberOfRows(), p);
 
   // rs_old = r' * r
-  double rs_old = inner_product(r, r, a_trans->GetNumberOfRows());
+  double rs_old = vtkSVMathUtils::InnerProduct(r, r, a_trans->GetNumberOfRows());
 
-  if (sqrt(rs_old) < kEpsilon) {
+  if (sqrt(rs_old) < epsilon) {
     printf("The initial solution is good.\n");
     return;
   }
@@ -106,24 +116,26 @@ void svMath::conjugate_gradient(
   int iteration = 0;
   for (iteration = 0;
        iteration < num_iterations && iteration < a_trans->GetNumberOfRows();
-       iteration++) {
+       iteration++)
+  {
     // temp = A'A * p
-    multiply_ata_b(a_trans, a, p, temp);
+    vtkSVMathUtils::Multiply_ATA_b(a_trans, a, p, temp);
 
     // alpha = rs_old / (p' * temp)
-    double alpha = rs_old / inner_product(p, temp, a_trans->GetNumberOfRows());
+    double alpha = rs_old / vtkSVMathUtils::InnerProduct(p, temp, a_trans->GetNumberOfRows());
 
     // x = x + alpha * p
-    add(x, p, alpha, a_trans->GetNumberOfRows(), x);
+    vtkSVMathUtils::Add(x, p, alpha, a_trans->GetNumberOfRows(), x);
 
     // r = r - alpha * temp
-    add(r, temp, -alpha, a_trans->GetNumberOfRows(), r);
+    vtkSVMathUtils::Add(r, temp, -alpha, a_trans->GetNumberOfRows(), r);
 
     // rs_new = r' * r
-    double rs_new = inner_product(r, r, a_trans->GetNumberOfRows());
+    double rs_new = vtkSVMathUtils::InnerProduct(r, r, a_trans->GetNumberOfRows());
 
     // Traditionally, if norm(rs_new) is small enough, the iteration can stop.
-    if (sqrt(rs_new) < kEpsilon) {
+    if (sqrt(rs_new) < epsilon)
+    {
       /// DEBUG ///
       printf("rs_new = %.20lf\n", rs_new);
 
@@ -131,7 +143,7 @@ void svMath::conjugate_gradient(
     }
 
     // p = r + (rs_new / rs_old) * p
-    add(r, p, rs_new / rs_old, a_trans->GetNumberOfRows(), p);
+    vtkSVMathUtils::Add(r, p, rs_new / rs_old, a_trans->GetNumberOfRows(), p);
 
     // rs_old = rs_new
     rs_old = rs_new;

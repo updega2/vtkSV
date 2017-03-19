@@ -55,9 +55,7 @@
 class vtkSVIOUtils : public vtkObject
 {
 public:
-  static vtkSVIOUtils *New();
   vtkTypeMacro(vtkSVIOUtils,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
 
   //String processing function
   static std::string IntToString(int i); /**< \brief Converts integer to string. */

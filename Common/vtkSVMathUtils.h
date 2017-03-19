@@ -28,16 +28,45 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
+/**
+ *  \class  vtkSVMathUtils
+ *  \brief This is class of useful functions for doing specialized math operation.
+ *
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
+ */
 
-#ifndef SVMATH_H_
-#define SVMATH_H_
+#ifndef vtkSVMathUtils_h
+#define vtkSVMathUtils_h
 
 #include "vtkSVSparseMatrix.h"
 
-class svMath {
- public:
-  static void conjugate_gradient(
-      vtkSVSparseMatrix *a, const double *b, int num_iterations, double *x);
+class vtkSVMathUtils : public vtkObject
+{
+public:
+  vtkTypeMacro(vtkSVMathUtils,vtkObject);
+
+  static void ConjugateGradient(vtkSVSparseMatrix *a,
+                                const double *b, int num_iterations,
+                                double *x, double epsilon);
+
+  static void Multiply_ATA_b(vtkSVSparseMatrix *a_trans,
+                             vtkSVSparseMatrix *a,
+                             const double *b, double *c);
+
+  static double InnerProduct(const double *a, const double *b, int n);
+
+  static void Add(const double *a, const double *b, double beta, int n, double *c);
+
+protected:
+  vtkSVMathUtils();
+  ~vtkSVMathUtils();
+
+private:
+  vtkSVMathUtils(const vtkSVMathUtils&);  // Not implemented.
+  void operator=(const vtkSVMathUtils&);  // Not implemented.
 };
 
-#endif  // MATH_H_
+#endif  // vtkSVMathUtils_h
