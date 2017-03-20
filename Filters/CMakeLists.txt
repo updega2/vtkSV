@@ -50,7 +50,7 @@ vtksv_add_module(vtkSVFilters
 # Executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXE_LIST FindGeodesicPath FindSeparateRegions GetBoundaryFaces GroupsClipper
-    HausdorffDistance PassDataArray PullApartPolyData PlacePointsOnS2 CheckRotation)
+    HausdorffDistance PassDataArray)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
     target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters vtkSVCommon)

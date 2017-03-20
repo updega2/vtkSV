@@ -32,7 +32,9 @@ vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestFindGeodesicPath.cxx,NO_OUTPUT
   TestFindSeparateRegions.cxx,NO_OUTPUT
   TestGroupsClipper.cxx,NO_OUTPUT
-  TestGetBoundaryFaces.cxx,NO_OUTPUT)
+  TestGetBoundaryFaces.cxx,NO_OUTPUT
+  TestPassDataArray.cxx,NO_OUTPUT
+  TestPullApartPolyData.cxx,NO_OUTPUT)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)

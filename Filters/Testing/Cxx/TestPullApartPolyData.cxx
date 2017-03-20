@@ -29,28 +29,32 @@
  *=========================================================================*/
 
 /**
- *  \file TestGetBoundaryFaces.cxx
+ *  \file TestPullApartPolyData.cxx
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
  *  \author UC Berkeley
  *  \author shaddenlab.berkeley.edu
  */
-#include "vtkSVGetBoundaryFaces.h"
+#include "vtkSVPullApartPolyData.h"
 
 #include <vtkCamera.h>
 #include <vtkCellData.h>
+#include <vtkDataSetSurfaceFilter.h>
+#include <vtkConnectivityFilter.h>
+#include <vtkFeatureEdges.h>
 #include <vtkPointData.h>
 #include <vtkPolyDataMapper.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include "vtkSmartPointer.h"
+#include "vtkSVFindGeodesicPath.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkTestUtilities.h"
 
-int TestGetBoundaryFaces(int argc, char *argv[])
+int TestPullApartPolyData(int argc, char *argv[])
 {
   // Read the surface
   vtkNew(vtkPolyData, surfacePd);
@@ -59,49 +63,97 @@ int TestGetBoundaryFaces(int argc, char *argv[])
   vtkSVIOUtils::ReadVTPFile(surface_filename, surfacePd);
 
   // Set up vars
-  double featureAngle = 10.0;
-  std::string regionIdsArrayName = "SurfaceRegionId";
+  int startPtId = 953;
+  int endPtId   = 13012;
+  std::string dijkstraArrayName = "DijkstraDistance";
+  std::string internalIdsArrayName = "TmpInternalIds";
+  std::string pathBooleanArrayName = "IsPath";
 
-  // Set up filter
-  vtkNew(vtkSVGetBoundaryFaces, boundaryFinder);
-  boundaryFinder->SetInputData(surfacePd);
-  boundaryFinder->SetFeatureAngle(featureAngle);
-  boundaryFinder->SetRegionIdsArrayName(regionIdsArrayName.c_str());
-  boundaryFinder->Update();
+  // Set up path finder
+  vtkNew(vtkSVFindGeodesicPath, finder);
+  finder->SetInputData(surfacePd);
+  finder->SetStartPtId(startPtId); // Specific to given data set
+  finder->SetEndPtId(endPtId); // Specific to given data set
+  finder->SetDijkstraArrayName(dijkstraArrayName.c_str());
+  finder->SetInternalIdsArrayName(internalIdsArrayName.c_str());
+  finder->SetPathBooleanArrayName(pathBooleanArrayName.c_str());
+  finder->SetRepelCloseBoundaryPoints(1);
+  finder->SetAddPathBooleanArray(1);
+  finder->Update();
 
-  int expectedRegions = 70;
-  if (boundaryFinder->GetNumberOfRegions() != expectedRegions)
-  {
-    fprintf(stderr,"The boundary face separator did not find the correct number of regions: %d\n", boundaryFinder->GetNumberOfRegions());
-    fprintf(stderr,"Expected: %d\n", expectedRegions);
-    return EXIT_FAILURE;
-  }
+  // Set up pull aparter
+  vtkNew(vtkSVPullApartPolyData, ripper);
+  ripper->SetInputData(finder->GetOutput());
+  ripper->SetCutPointsArrayName(pathBooleanArrayName.c_str());
+  ripper->SetStartPtId(startPtId);
+  ripper->Update();
 
   // Get output
   vtkNew(vtkPolyData, output);
-  output = boundaryFinder->GetOutput();
-  output->GetCellData()->SetActiveScalars(regionIdsArrayName.c_str());
+  output = ripper->GetOutput();
+  output->GetPointData()->SetActiveScalars(pathBooleanArrayName.c_str());
+
+  // Get boundary edges
+  vtkNew(vtkFeatureEdges, boundaryFinder);
+  boundaryFinder->SetInputData(output);
+  boundaryFinder->BoundaryEdgesOn();
+  boundaryFinder->FeatureEdgesOff();
+  boundaryFinder->ManifoldEdgesOff();
+  boundaryFinder->NonManifoldEdgesOff();
+  boundaryFinder->Update();
+
+  // Extractor
+  vtkNew(vtkConnectivityFilter, connector);
+  connector->SetInputData(boundaryFinder->GetOutput());
+  connector->SetExtractionModeToAllRegions();
+  connector->ColorRegionsOn();
+  connector->Update();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(connector->GetOutput());
+  surfacer->Update();
+
+  surfacer->GetOutput()->GetCellData()->SetActiveScalars("RegionId");
+
+  int expectedRegions = 2;
+  if (connector->GetNumberOfExtractedRegions() != expectedRegions)
+  {
+    fprintf(stderr, "Incorrect number of boundaries on final surface: %d\n", connector->GetNumberOfExtractedRegions());
+    fprintf(stderr, "Expected: %d\n", expectedRegions);
+    return EXIT_FAILURE;
+  }
 
   // Get scalar range
   double range[2];
-  output->GetCellData()->GetArray(regionIdsArrayName.c_str())->GetRange(range);
+  output->GetPointData()->GetArray(pathBooleanArrayName.c_str())->GetRange(range);
 
   // Set up mapper
   vtkNew(vtkPolyDataMapper, mapper);
   mapper->SetInputData(output);
   mapper->SetScalarRange(range);
-  mapper->SetScalarModeToUseCellData();
+  mapper->SetScalarModeToUsePointData();
   mapper->ScalarVisibilityOn();
 
   // Set up actor
   vtkNew(vtkActor, actor);
   actor->SetMapper(mapper);
 
+  // Set up ripped lines mapper
+  vtkNew(vtkPolyDataMapper, linesMapper);
+  linesMapper->SetInputData(surfacer->GetOutput());
+  linesMapper->SetScalarRange(0, expectedRegions);
+  linesMapper->SetScalarModeToUseCellData();
+  linesMapper->ScalarVisibilityOn();
+
+  // Set up ripped lines actor
+  vtkNew(vtkActor, linesActor);
+  linesActor->SetMapper(linesMapper);
+
   // Set up renderer window
   vtkNew(vtkRenderer, renderer);
   vtkNew(vtkRenderWindow, renWin);
   renWin->AddRenderer( renderer );
   renderer->AddActor(actor);
+  renderer->AddActor(linesActor);
 
   // Set up interactor
   vtkNew(vtkRenderWindowInteractor, renWinInteractor);

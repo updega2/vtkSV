@@ -29,14 +29,14 @@
  *=========================================================================*/
 
 /**
- *  \file TestGetBoundaryFaces.cxx
+ *  \file TestPassDataArray.cxx
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
  *  \author UC Berkeley
  *  \author shaddenlab.berkeley.edu
  */
-#include "vtkSVGetBoundaryFaces.h"
+#include "vtkSVPassDataArray.h"
 
 #include <vtkCamera.h>
 #include <vtkCellData.h>
@@ -50,41 +50,38 @@
 #include "vtkSVIOUtils.h"
 #include "vtkTestUtilities.h"
 
-int TestGetBoundaryFaces(int argc, char *argv[])
+int TestPassDataArray(int argc, char *argv[])
 {
   // Read the surface
-  vtkNew(vtkPolyData, surfacePd);
-  char *surface_filename = vtkTestUtilities::ExpandDataFileName(
+  vtkNew(vtkPolyData, sourcePd);
+  char *source_filename = vtkTestUtilities::ExpandDataFileName(
+    argc, argv, "0141_1001_Renal_Branch_Centerlines.vtp");
+  vtkSVIOUtils::ReadVTPFile(source_filename, sourcePd);
+  vtkNew(vtkPolyData, targetPd);
+  char *target_filename = vtkTestUtilities::ExpandDataFileName(
     argc, argv, "0141_1001_Renal_Branch_Surface.vtp");
-  vtkSVIOUtils::ReadVTPFile(surface_filename, surfacePd);
+  vtkSVIOUtils::ReadVTPFile(target_filename, targetPd);
 
-  // Set up vars
-  double featureAngle = 10.0;
-  std::string regionIdsArrayName = "SurfaceRegionId";
+  // Set up vars for separator
+  std::string passArrayName = "GroupIds";
 
-  // Set up filter
-  vtkNew(vtkSVGetBoundaryFaces, boundaryFinder);
-  boundaryFinder->SetInputData(surfacePd);
-  boundaryFinder->SetFeatureAngle(featureAngle);
-  boundaryFinder->SetRegionIdsArrayName(regionIdsArrayName.c_str());
-  boundaryFinder->Update();
-
-  int expectedRegions = 70;
-  if (boundaryFinder->GetNumberOfRegions() != expectedRegions)
-  {
-    fprintf(stderr,"The boundary face separator did not find the correct number of regions: %d\n", boundaryFinder->GetNumberOfRegions());
-    fprintf(stderr,"Expected: %d\n", expectedRegions);
-    return EXIT_FAILURE;
-  }
+  // Set up path passer
+  vtkNew(vtkSVPassDataArray, passer);
+  passer->SetInputData(0, sourcePd);
+  passer->SetInputData(1, targetPd);
+  passer->SetPassArrayName(passArrayName.c_str());
+  passer->SetPassDataIsCellData(1);
+  passer->SetPassDataToCellData(1);
+  passer->Update();
 
   // Get output
   vtkNew(vtkPolyData, output);
-  output = boundaryFinder->GetOutput();
-  output->GetCellData()->SetActiveScalars(regionIdsArrayName.c_str());
+  output = passer->GetOutput();
+  output->GetCellData()->SetActiveScalars(passArrayName.c_str());
 
   // Get scalar range
   double range[2];
-  output->GetCellData()->GetArray(regionIdsArrayName.c_str())->GetRange(range);
+  output->GetCellData()->GetArray(passArrayName.c_str())->GetRange(range);
 
   // Set up mapper
   vtkNew(vtkPolyDataMapper, mapper);
@@ -97,7 +94,7 @@ int TestGetBoundaryFaces(int argc, char *argv[])
   vtkNew(vtkActor, actor);
   actor->SetMapper(mapper);
 
-  // Set up renderer window
+  // Set up renderer and window
   vtkNew(vtkRenderer, renderer);
   vtkNew(vtkRenderWindow, renWin);
   renWin->AddRenderer( renderer );

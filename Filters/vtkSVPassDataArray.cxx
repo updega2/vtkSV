@@ -156,14 +156,14 @@ int vtkSVPassDataArray::RequestData(vtkInformation *vtkNotUsed(request),
 // ----------------------
 int vtkSVPassDataArray::PrepFilter()
 {
-  //Get the number of Polys for scalar  allocation
-  int numPolys0 = this->SourcePd->GetNumberOfPolys();
-  int numPolys1 = this->TargetPd->GetNumberOfPolys();
+  //Get the number of Cells for scalar  allocation
+  int numCells0 = this->SourcePd->GetNumberOfCells();
+  int numCells1 = this->TargetPd->GetNumberOfCells();
   int numPts0 = this->SourcePd->GetNumberOfPoints();
   int numPts1 = this->TargetPd->GetNumberOfPoints();
 
   //Check the input to make sure it is there
-  if (numPolys0 < 1 || numPolys1 < 1)
+  if (numCells0 < 1 || numCells1 < 1)
   {
      vtkDebugMacro("No input!");
      return SV_ERROR;
@@ -179,7 +179,6 @@ int vtkSVPassDataArray::PrepFilter()
     }
     // Get data array
     this->PassDataArray = this->SourcePd->GetPointData()->GetArray(this->PassArrayName);
-    this->NewDataArray  = this->PassDataArray->NewInstance();
   }
 
   // Check if array exists on cells
@@ -192,8 +191,9 @@ int vtkSVPassDataArray::PrepFilter()
     }
     // Get data array
     this->PassDataArray = this->SourcePd->GetCellData()->GetArray(this->PassArrayName);
-    this->NewDataArray  = this->PassDataArray->NewInstance();
   }
+  this->NewDataArray  = this->PassDataArray->NewInstance();
+  this->NewDataArray->SetName(this->PassArrayName);
 
   return SV_OK;
 }
@@ -315,12 +315,12 @@ int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyDat
                                               vtkDataArray *targetDataArray)
 {
   // Number of points
-  int numPolys = targetPd->GetNumberOfPolys();
+  int numCells = targetPd->GetNumberOfCells();
   int numComps = sourceDataArray->GetNumberOfComponents();
 
   // Set up target array
   targetDataArray->SetNumberOfComponents(numComps);
-  targetDataArray->SetNumberOfTuples(numPolys);
+  targetDataArray->SetNumberOfTuples(numCells);
 
   // Set up locators!
   vtkNew(vtkCellLocator, cellLocator);
@@ -340,7 +340,7 @@ int vtkSVPassDataArray::PassInformationToCells(vtkPolyData *sourcePd, vtkPolyDat
 
   // Loop through cells
   vtkNew(vtkGenericCell, genericCell);
-  for (int i=0; i<numPolys; i++)
+  for (int i=0; i<numCells; i++)
   {
     // Get cell points
     vtkIdType npts, *pts;
