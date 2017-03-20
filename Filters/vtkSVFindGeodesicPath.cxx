@@ -315,6 +315,7 @@ int vtkSVFindGeodesicPath::RunFilter()
     // If we are asked to add an array, do this with the path ids
     if (this->AddPathBooleanArray)
     {
+      fprintf(stdout,"Plau!!\n");
       // Set up data array
       int numPoints = this->WorkPd->GetNumberOfPoints();
       this->PathBoolean->SetNumberOfTuples(numPoints);
@@ -322,7 +323,10 @@ int vtkSVFindGeodesicPath::RunFilter()
 
       // Loop through path ids and set value to one on data array
       for (int i=0; i<this->PathIds->GetNumberOfIds(); i++)
+      {
+        fprintf(stdout,"Working!\n");
         this->PathBoolean->SetValue(this->PathIds->GetId(i), 1);
+      }
 
       // Attach array to surface
       this->PathBoolean->SetName(this->PathBooleanArrayName);
@@ -382,6 +386,7 @@ int vtkSVFindGeodesicPath::FindClosestBoundaryPoint()
 
   // Set end pt id to the point with the minimum distance
   this->EndPtId = minId;
+  fprintf(stdout, "What is closest: %d\n", minId);
 
   return SV_OK;
 }

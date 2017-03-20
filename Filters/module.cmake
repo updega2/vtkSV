@@ -38,8 +38,13 @@ vtk_module(vtkSVFilters
   TEST_DEPENDS
   vtkFiltersExtraction
   vtkIOXML
+  vtkInteractionStyle
+  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingLabel
   vtkSVCommon
   vtkTestingCore
+  vtkTestingRendering
   TCL_NAME
   vtkSVFilters
   )
