@@ -38,7 +38,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVFindGeodesicPath.h"
+#include "vtkSVFindSeparateRegions.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkTriangle.h"
@@ -53,12 +53,10 @@ int main(int argc, char *argv[])
   // Assume the command line is okay
   bool BogusCmdLine = false;
   // Assume no options specified at command line
-  bool RequestedHelp     = false;
-  bool InputProvided     = false;
-  bool StartPtIdProvided = false;
-  bool EndPtIdProvided   = false;
-  bool ClosePtProvided   = false;
-  bool OutputProvided    = false;
+  bool RequestedHelp         = false;
+  bool InputProvided         = false;
+  bool OutputProvided        = false;
+  bool CellArrayNameProvided = false;
 
   // Variables used in processing the commandline
   int iarg, arglength;
@@ -69,13 +67,8 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
-  int startPtId        = -1;
-  int endPtId          = -1;
-  int repelBoundaryPts = 0;
-  double closePt[3]; closePt[0] = 0.0; closePt[1] = 0.0; closePt[2] = 0.0;
-  std::string dijkstraArrayName    = "DijkstraDistance";
-  std::string internalIdsArrayName = "TmpInternalIds";
-  std::string pathBooleanArrayName = "IsPath";
+  std::string cellArrayName     = "CellArray";
+  std::string outPointArrayName = "PointArray";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -86,45 +79,27 @@ int main(int argc, char *argv[])
       if(tmpstr=="-h")                      {RequestedHelp = true;}
       else if(tmpstr=="-input")             {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-output")            {OutputProvided = true; outputFilename = argv[++iarg];}
-      else if(tmpstr=="-startptid")         {StartPtIdProvided = true; startPtId = atoi(argv[++iarg]);}
-      else if(tmpstr=="-endptid")           {EndPtIdProvided = true; endPtId = atoi(argv[++iarg]);}
-      else if(tmpstr=="-closept")           {ClosePtProvided = true; closePt[0] = atof(argv[++iarg]); closePt[1] = atof(argv[++iarg]); closePt[2] = atof(argv[++iarg]);}
-      else if(tmpstr=="-internalids")       {internalIdsArrayName = argv[++iarg];}
-      else if(tmpstr=="-dijkstra")          {dijkstraArrayName = argv[++iarg];}
-      else if(tmpstr=="-pathboolean")       {pathBooleanArrayName = argv[++iarg];}
-      else if(tmpstr=="-repelboundarypts")  {repelBoundaryPts = atoi(argv[++iarg]);}
+      else if(tmpstr=="-cellarray")         {CellArrayNameProvided = true; cellArrayName = argv[++iarg];}
+      else if(tmpstr=="-outpointarray")     {outPointArrayName = argv[++iarg];}
       else {BogusCmdLine = true;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
   }
 
-  if (RequestedHelp || !InputProvided || !StartPtIdProvided)
+  if (RequestedHelp || !InputProvided || !CellArrayNameProvided)
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  FindGeodesicPath -input [Input Filename] -output [Output Filename] -startptid [Start Pt Id] ..." << endl;
+    cout << "  FindSeparateRegions -input [Input Filename] -output [Output Filename] -cellarray [Cell Array Name] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -ouptut             : Output file name"<< endl;
-    cout << "  -startptid          : Point Id to start from [default 0]"<< endl;
-    cout << "  -endptid            : Point Id to end at [default not used]"<< endl;
-    cout << "  -closept            : If end pt id, is not provided, this 3d point location can be used to get the boundary closest to the point to use as the ending location of the shortes distance calculation [default not used, usage [-closept 0.0 0.0 0.0]"<< endl;
-    cout << "  -internalids        : Name to be used for ids used internal to filter [default TmpInternalIds]"<< endl;
-    cout << "  -dijkstra           : Name to be used for distance calculated from dijkstra filter [default DijkstraDistance]"<< endl;
-    cout << "  -pathboolean        : Name to be used for point data indicating wheterh point is on shortes distance path [default IsPath]"<< endl;
-    cout << "  -repelboundarypts   : Will ask the shortest distance algorithm to stay away from all other points on a boundary near the start and end point ids [default 0]"<< endl;
+    cout << "  -cellarray          : Name of cell data array that must be defined on the input. What we want to find separating points of [default CellArray]"<< endl;
+    cout << "  -outpointarray      : Name of point data array that will be given to indicate whether point separates a cell region [default PointArray]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
-  }
-  if (!EndPtIdProvided && !ClosePtProvided)
-  {
-    cout << "WARNING: No end point id, '-endpointid',  and no point close to the ending boundary, '-closept', were provided, which means no path will be found. Output will contain array indicating distance of every point from the input point but that is it." <<endl;
-  }
-  if (EndPtIdProvided && ClosePtProvided)
-  {
-    cout << "WARNING: An end point id, '-endpointid',  and a point close to the ending boundary, '-closept', were provided, which is impossible to do. Ending point id will be used" <<endl;
   }
   if (!OutputProvided)
   {
@@ -132,7 +107,7 @@ int main(int argc, char *argv[])
     std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
     // Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
-    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Geodescized.vtp";
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Seperated.vtp";
   }
 
   // Call Function to Read File
@@ -141,21 +116,13 @@ int main(int argc, char *argv[])
   vtkSVIOUtils::ReadInputFile(inputFilename,inputPd);
 
   // Filter
-  vtkNew(vtkSVFindGeodesicPath, Finder);
+  vtkNew(vtkSVFindSeparateRegions, Finder);
 
   //OPERATION
   std::cout<<"Performing Operation..."<<endl;
   Finder->SetInputData(0, inputPd);
-  Finder->SetStartPtId(startPtId);
-  Finder->SetEndPtId(endPtId);
-  Finder->SetClosePt(closePt);
-  if (ClosePtProvided || EndPtIdProvided)
-    Finder->SetAddPathBooleanArray(1);
-  Finder->SetDijkstraArrayName(dijkstraArrayName.c_str());
-  Finder->SetInternalIdsArrayName(internalIdsArrayName.c_str());
-  Finder->SetPathBooleanArrayName(pathBooleanArrayName.c_str());
-  if (repelBoundaryPts)
-    Finder->SetRepelCloseBoundaryPoints(1);
+  Finder->SetCellArrayName(cellArrayName.c_str());
+  Finder->SetOutPointArrayName(outPointArrayName.c_str());
   Finder->Update();
   std::cout<<"Done"<<endl;
 

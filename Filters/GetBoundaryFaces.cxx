@@ -38,7 +38,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
-#include "vtkSVGroupsClipper.h"
+#include "vtkSVGetBoundaryFaces.h"
 
 int main(int argc, char *argv[])
 {
@@ -46,10 +46,9 @@ int main(int argc, char *argv[])
   // Assume the command line is okay
   bool BogusCmdLine = false;
   // Assume no options specified at command line
-  bool RequestedHelp       = false;
-  bool InputProvided       = false;
-  bool OutputProvided      = false;
-  bool CenterlinesProvided = false;
+  bool RequestedHelp          = false;
+  bool InputProvided          = false;
+  bool OutputProvided         = false;
 
   // Variables used in processing the commandline
   int iarg, arglength;
@@ -58,15 +57,15 @@ int main(int argc, char *argv[])
   // Filenames
   std::string inputFilename;
   std::string outputFilename;
-  std::string centerlinesFilename;
 
   // Default values for options
-  int useRadiusInfo = 1;
-  double clipValue = 0.0;
-  double cutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
-  std::string groupIdsArrayName = "GroupIds";
-  std::string radiusArrayName   = "MaximumInscribedSphereRadius";
-  std::string blankingArrayName = "Blanking";
+  double featureAngle          = 50.0;
+  int separateBoundaryEdges    = 0;
+  int separateManifoldEdges    = 0;
+  int separateNonManifoldEdges = 0;
+  int separateFeatureEdges     = 1;
+  int extractLargestRegion     = 0;
+  std::string regionIdsArrayName = "RegionId";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -74,38 +73,38 @@ int main(int argc, char *argv[])
       arglength = strlen(argv[iarg]);
       // replace 0..arglength-1 with argv[iarg]
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
-      if(tmpstr=="-h")                  {RequestedHelp = true;}
-      else if(tmpstr=="-input")         {InputProvided = true; inputFilename = argv[++iarg];}
-      else if(tmpstr=="-centerlines")   {CenterlinesProvided = true; centerlinesFilename = argv[++iarg];}
-      else if(tmpstr=="-output")        {OutputProvided = true; outputFilename = argv[++iarg];}
-      else if(tmpstr=="-groupids")      {groupIdsArrayName = argv[++iarg];}
-      else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
-      else if(tmpstr=="-blanking")      {blankingArrayName = argv[++iarg];}
-      else if(tmpstr=="-cutoffradius")  {cutoffRadiusFactor = atof(argv[++iarg]);}
-      else if(tmpstr=="-clipvalue")     {clipValue = atof(argv[++iarg]);}
-      else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
+      if(tmpstr=="-h")                         {RequestedHelp = true;}
+      else if(tmpstr=="-input")                {InputProvided = true; inputFilename = argv[++iarg];}
+      else if(tmpstr=="-output")               {OutputProvided = true; outputFilename = argv[++iarg];}
+      else if(tmpstr=="-featureangle")         {featureAngle = atof(argv[++iarg]);}
+      else if(tmpstr=="-regionids")            {regionIdsArrayName = argv[++iarg];}
+      else if(tmpstr=="-featureedges")         {separateFeatureEdges = atoi(argv[++iarg]);}
+      else if(tmpstr=="-boundaryedges")        {separateBoundaryEdges = atoi(argv[++iarg]);}
+      else if(tmpstr=="-manifoldedges")        {separateManifoldEdges = atoi(argv[++iarg]);}
+      else if(tmpstr=="-nonmanifoldedges")     {separateNonManifoldEdges = atoi(argv[++iarg]);}
+      else if(tmpstr=="-extractlargestregion") {extractLargestRegion = atoi(argv[++iarg]);}
       else {BogusCmdLine = true;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
   }
 
-  if (RequestedHelp || !InputProvided || !CenterlinesProvided)
+  if (RequestedHelp || !InputProvided)
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  Grouper -input [Input Filename] -output [Output Filename] -cellarray [Cell Array Name] ..." << endl;
+    cout << "  GetBoundaryFaces -input [Input Filename] -featureangle [Feature Angle] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
-    cout << "  -h                  : Display usage and command-line argument summary"<< endl;
-    cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -centerlines        : Centerlines file name (.vtp)"<< endl;
-    cout << "  -ouptut             : Output file name"<< endl;
-    cout << "  -groupids           : Name to be used for group ids [default GroupIds]"<< endl;
-    cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-    cout << "  -blanking           : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
-    cout << "  -cutoffradius       : Value at which a certain distance away from the centerline the function that is used for clipping is set to a large value, essentially clipping everything outside that radius [default 1.0e32]"<< endl;
-    cout << "  -clipvalue          : Value to use for clipping function [default 0.0]"<< endl;
-    cout << "  -useradiusinfo      : Use radius to help in clipping operation [default 1]"<< endl;
+    cout << "  -h                    : Display usage and command-line argument summary"<< endl;
+    cout << "  -input                : Input file name (.vtp or .stl)"<< endl;
+    cout << "  -ouptut               : Output file name"<< endl;
+    cout << "  -featureangle         : Angle to be used to find features of the surface [default 50.0]"<< endl;
+    cout << "  -regionids            : Name of cell data array to be given to the different regions found on the geometry [default RegionId]"<< endl;
+    cout << "  -featuresedges        : Use features to define the boundaries separating regions [default 1]"<< endl;
+    cout << "  -boundaryedges        : Use free edges of the surface to define the boundaries separating regions [default 0]"<< endl;
+    cout << "  -manifoldedges        : Use manifold edges to define the boundaries separating regions [default 0]"<< endl;
+    cout << "  -nonmanifoldedges     : Use non-manifold edges to define the boundaries separating regions [default 0]"<< endl;
+    cout << "  -extractlargestregion : After filter has completed, return only the region with the largest area"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -115,37 +114,32 @@ int main(int argc, char *argv[])
     std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
     // Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
-    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Grouped.vtp";
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Separated.vtp";
   }
 
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
   vtkSVIOUtils::ReadInputFile(inputFilename,inputPd);
-  vtkNew(vtkPolyData, centerlinesPd);
-  vtkSVIOUtils::ReadInputFile(centerlinesFilename,centerlinesPd);
 
   // Filter
-  vtkNew(vtkSVGroupsClipper, Grouper);
+  vtkNew(vtkSVGetBoundaryFaces, boundaryFaceFinder);
 
   //OPERATION
   std::cout<<"Performing Operation..."<<endl;
-  Grouper->SetInputData(inputPd);
-  Grouper->SetCenterlines(centerlinesPd);
-  Grouper->SetCenterlineGroupIdsArrayName(groupIdsArrayName.c_str());
-  Grouper->SetGroupIdsArrayName(groupIdsArrayName.c_str());
-  Grouper->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
-  Grouper->SetBlankingArrayName(blankingArrayName.c_str());
-  Grouper->SetCutoffRadiusFactor(cutoffRadiusFactor);
-  Grouper->SetClipValue(clipValue);
-  Grouper->ClipAllCenterlineGroupIdsOn();
-  Grouper->SetUseRadiusInformation(useRadiusInfo);
-  Grouper->Update();
-  std::cout<<"Done"<<endl;
+  boundaryFaceFinder->SetInputData(inputPd);
+  boundaryFaceFinder->SetFeatureAngle(featureAngle);
+  boundaryFaceFinder->SetRegionIdsArrayName(regionIdsArrayName.c_str());
+  boundaryFaceFinder->SetFeatureEdges(separateFeatureEdges);
+  boundaryFaceFinder->SetBoundaryEdges(separateBoundaryEdges);
+  boundaryFaceFinder->SetManifoldEdges(separateManifoldEdges);
+  boundaryFaceFinder->SetNonManifoldEdges(separateNonManifoldEdges);
+  boundaryFaceFinder->SetExtractLargestRegion(extractLargestRegion);
+  boundaryFaceFinder->Update();
 
   //Write Files
   std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetOutput(0));
+  vtkSVIOUtils::WriteVTPFile(outputFilename, boundaryFaceFinder->GetOutput(0));
 
   //Exit the program without errors
   return EXIT_SUCCESS;

@@ -50,10 +50,11 @@ struct stat info;
 // ----------------------
 int vtkSVIOUtils::CheckDirectoryExists(std::string dirname)
 {
+  if (dirname.empty() || dirname == "" || dirname == "/0")
+    return SV_OK;
   if (stat(dirname.c_str(), &info) == 0 && S_ISDIR(info.st_mode))
     return SV_OK;
 
-  fprintf(stderr,"Directory %s does not exists\n", dirname.c_str());
   return SV_ERROR;
 }
 
@@ -65,7 +66,7 @@ int vtkSVIOUtils::CheckFileExists(std::string filename)
   if (stat(filename.c_str(), &info) == 0)
     return SV_OK;
 
-  fprintf(stderr,"File %s does not exists\n", filename.c_str());
+  fprintf(stderr,"File %s does not exist\n", filename.c_str());
   return SV_ERROR;
 }
 

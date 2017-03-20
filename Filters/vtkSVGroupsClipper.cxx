@@ -81,7 +81,7 @@ vtkSVGroupsClipper::vtkSVGroupsClipper()
   this->BlankingArrayName = NULL;
   this->CenterlineGroupIds = NULL;
 
-  this->ClipAllCenterlineGroupIds = 0;
+  this->ClipAllCenterlineGroupIds = 1;
   this->CutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   this->ClipValue = 0.0;
   this->UseRadiusInformation = 1;
