@@ -27,7 +27,7 @@
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestSparseMatrix.cxx,NO_DATA,NO_VALID,NO_OUTPUT,
   TestConjugateGradient.cxx,NO_DATA,NO_VALID,NO_OUTPUT,
-  TestRotationMatrix.cxx,NO_DATA,NO_OUTPUT)
+  TestRotationMatrix.cxx,NO_DATA)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)

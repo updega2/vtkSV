@@ -33,7 +33,7 @@ vtkSVLocalApproximatingSubdivisionFilter::vtkSVLocalApproximatingSubdivisionFilt
   this->SubdivideCellArrayName = 0;
   this->SubdividePointArrayName = 0;
   this->NumberOfSubdivisions = 1;
-  this->UseCellArray = 1;
+  this->UseCellArray = 0;
   this->UsePointArray = 0;
 }
 

@@ -80,6 +80,7 @@ int TestRotationMatrix(int argc, char *argv[])
   vtkNew(vtkRenderWindow, renWin);
   renWin->AddRenderer( renderer );
   renderer->AddActor(actor);
+  renderer->SetBackground(.1, .2, .3);
 
   // Set up interactor
   vtkNew(vtkRenderWindowInteractor, renWinInteractor);

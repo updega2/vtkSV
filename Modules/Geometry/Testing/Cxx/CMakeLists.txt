@@ -24,18 +24,8 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#------------------------------------------------------------------------------
-# Core SRCS and HDRS
-set(SRCS vtkSVNURBSUtils.cxx vtkSVControlGrid.cxx vtkSVNURBSCurve.cxx vtkSVNURBSSurface.cxx
-  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx)
-set(HDRS vtkSVNURBSUtils.h   vtkSVControlGrid.h   vtkSVNURBSCurve.h   vtkSVNURBSSurface.h
-  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h)
-#------------------------------------------------------------------------------
+vtksv_add_test_cxx(${vtk-module}CxxTests tests
+  TestConstrainedSmoothing.cxx,NO_VALID,NO_OUTPUT
+  TestConstrainedBlend.cxx,NO_VALID,NO_OUTPUT)
 
-#------------------------------------------------------------------------------
-# FindGeodesicPath
-vtksv_add_module(vtkSVNURBS
-  SRCS ${SRCS}
-  HDRS ${HDRS}
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
-#------------------------------------------------------------------------------
+vtk_test_cxx_executable(${vtk-module}CxxTests tests)

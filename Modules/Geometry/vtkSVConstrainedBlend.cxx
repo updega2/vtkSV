@@ -77,7 +77,7 @@ vtkSVConstrainedBlend::vtkSVConstrainedBlend()
 
     this->NumBlendOperations = 2;
     this->NumSubBlendOperations = 2;
-    this->NumCGSmoothOperations = 3;
+    this->NumConstrainedSmoothOperations = 3;
     this->NumLapSmoothOperations = 50;
     this->RelaxationFactor = 0.01;
     this->NumGradientSolves = 20;
@@ -147,8 +147,8 @@ int vtkSVConstrainedBlend::RequestData(
     {
       for (int j=0;j<this->NumSubBlendOperations;j++)
       {
-        std::cout<<"CGSmooth!"<<endl;
-	this->CGSmooth(tmp);
+        std::cout<<"ConstrainedSmooth!"<<endl;
+	this->ConstrainedSmooth(tmp);
 
         std::cout<<"LapSmooth!"<<endl;
 	this->LaplacianSmooth(tmp);
@@ -287,12 +287,12 @@ int vtkSVConstrainedBlend::Subdivide(vtkPolyData *pd) {
   return 1;
 }
 
-int vtkSVConstrainedBlend::CGSmooth(vtkPolyData *pd)
+int vtkSVConstrainedBlend::ConstrainedSmooth(vtkPolyData *pd)
 {
   vtkNew(vtkSVConstrainedSmoothing, smoother);
   smoother->SetInputData(pd);
   smoother->SetNumGradientSolves(this->NumGradientSolves);
-  smoother->SetNumSmoothOperations(this->NumCGSmoothOperations);
+  smoother->SetNumSmoothOperations(this->NumConstrainedSmoothOperations);
   if (this->UsePointArray)
   {
     smoother->SetPointArrayName(this->PointArrayName);

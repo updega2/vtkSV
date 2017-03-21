@@ -29,12 +29,12 @@ ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0141_
 
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestHausdorffDistance.cxx,NO_DATA,NO_VALID,NO_OUTPUT
-  TestFindGeodesicPath.cxx,NO_OUTPUT
-  TestFindSeparateRegions.cxx,NO_OUTPUT
-  TestGroupsClipper.cxx,NO_OUTPUT
-  TestGetBoundaryFaces.cxx,NO_OUTPUT
-  TestPassDataArray.cxx,NO_OUTPUT
-  TestPullApartPolyData.cxx,NO_OUTPUT)
+  TestFindGeodesicPath.cxx
+  TestFindSeparateRegions.cxx
+  TestGroupsClipper.cxx
+  TestGetBoundaryFaces.cxx
+  TestPassDataArray.cxx
+  TestPullApartPolyData.cxx)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)

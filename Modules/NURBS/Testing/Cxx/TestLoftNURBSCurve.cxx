@@ -28,18 +28,10 @@
  *
  *=========================================================================*/
 
-/**
- *  \file TestFindGeodesicPath.cxx
- *
- *  \author Adam Updegrove
- *  \author updega2@gmail.com
- *  \author UC Berkeley
- *  \author shaddenlab.berkeley.edu
- */
-#include "vtkSVFindGeodesicPath.h"
-
-#include <vtkCellData.h>
-#include <vtkPointData.h>
+#include <vtkCamera.h>
+#include "vtkSVControlGrid.h"
+#include "vtkDataObject.h"
+#include "vtkPoints.h"
 #include <vtkPolyDataMapper.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
@@ -47,60 +39,91 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
-#include "vtkTestUtilities.h"
+#include "vtkSVLoftNURBSCurve.h"
+#include "vtkSVNURBSUtils.h"
+#include "vtkStructuredGridGeometryFilter.h"
 
-int TestFindGeodesicPath(int argc, char *argv[])
+#include <string>
+#include <sstream>
+#include <iostream>
+
+#include <unistd.h>
+
+int TestLoftNURBSCurve(int argc, char *argv[])
 {
-  // Read the surface
-  vtkNew(vtkPolyData, surfacePd);
-  char *surface_filename = vtkTestUtilities::ExpandDataFileName(
-    argc, argv, "0110_0001_Iliac_Branch_Surface.vtp");
-  vtkSVIOUtils::ReadVTPFile(surface_filename, surfacePd);
+  // Set number of initial data points
+  int nc = 11;
 
-  // Set up vars for path finder
-  double closePt[3]; closePt[0] = -3.4; closePt[1] = -4.4; closePt[2] = -15.3;
-  std::string dijkstraArrayName = "DijkstraDistance";
-  std::string internalIdsArrayName = "TmpInternalIds";
-  std::string pathBooleanArrayName = "IsPath";
+  // Set up input data
+  vtkNew(vtkDoubleArray, x_data);
+  x_data->SetNumberOfTuples(nc);
+  vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nc, x_data);
 
-  // Set up path finder
-  vtkNew(vtkSVFindGeodesicPath, finder);
-  finder->SetInputData(surfacePd);
-  finder->SetStartPtId(1581); // Specific to given data set
-  finder->SetClosePt(closePt); // Specific to given data set
-  finder->SetDijkstraArrayName(dijkstraArrayName.c_str());
-  finder->SetInternalIdsArrayName(internalIdsArrayName.c_str());
-  finder->SetPathBooleanArrayName(pathBooleanArrayName.c_str());
-  finder->SetRepelCloseBoundaryPoints(1);
-  finder->SetAddPathBooleanArray(1);
-  finder->Update();
+  vtkNew(vtkPoints, inputPoints);
+  inputPoints->Reset();
+  for (int i=0; i<nc; i++)
+  {
+    double xval = x_data->GetTuple1(i);
+    double yval = sin(xval - M_PI/2.0);
+    double zval = 0.0;
 
-  // Get output
-  vtkNew(vtkPolyData, output);
-  output = finder->GetOutput();
-  output->GetPointData()->SetActiveScalars(pathBooleanArrayName.c_str());
+    inputPoints->InsertNextPoint(xval, yval, zval);
+  }
+
+  // Create data
+  vtkNew(vtkPolyData, inputPoly);
+  inputPoly->SetPoints(inputPoints);
+
+  // Lofter
+  vtkNew(vtkSVLoftNURBSCurve, lofter);
+  lofter->SetInputData(inputPoly);
+  lofter->SetDegree(3);
+  lofter->SetPolyDataSpacing(0.05);
+  lofter->SetKnotSpanType("derivative");
+  lofter->SetParametricSpanType("chord");
+  lofter->Update();
+
+  // Get outputs
+  vtkNew(vtkPolyData, curvePd);
+  curvePd->DeepCopy(lofter->GetOutput());
+  vtkNew(vtkStructuredGridGeometryFilter, converter);
+  converter->SetInputData(lofter->GetCurve()->GetControlPointGrid());
+  converter->Update();
+  vtkNew(vtkPolyData, controlGridPd);
+  controlGridPd->DeepCopy(converter->GetOutput());
 
   // Set up mapper
   vtkNew(vtkPolyDataMapper, mapper);
-  mapper->SetInputData(output);
-  mapper->SetScalarRange(0,1);
-  mapper->SetScalarModeToUsePointData();
-  mapper->ScalarVisibilityOn();
+  mapper->SetInputData(curvePd);
+
+  vtkNew(vtkPolyDataMapper, gridMapper);
+  gridMapper->SetInputData(controlGridPd);
 
   // Set up actor
   vtkNew(vtkActor, actor);
   actor->SetMapper(mapper);
+
+  // Set up grid actor
+  vtkNew(vtkActor, gridActor);
+  gridActor->SetMapper(gridMapper);
 
   // Set up renderer and window
   vtkNew(vtkRenderer, renderer);
   vtkNew(vtkRenderWindow, renWin);
   renWin->AddRenderer( renderer );
   renderer->AddActor(actor);
+  renderer->AddActor(gridActor);
   renderer->SetBackground(.1, .2, .3);
 
   // Set up interactor
   vtkNew(vtkRenderWindowInteractor, renWinInteractor);
   renWinInteractor->SetRenderWindow( renWin );
+
+  // TODO: Camera and bettering coloring for test
+  // Camera change
+  //vtkCamera *camera = renderer->GetActiveCamera();
+  //renderer->ResetCamera();
+  //camera->Elevation(60);
 
   // Render
   renWin->Render();

@@ -39,6 +39,13 @@ vtk_module(vtkSVGeometry
   vtkFiltersModeling
   vtkSVCommon
   TEST_DEPENDS
+  vtkInteractionStyle
+  #vtkRenderingFreeType${VTK_RENDERING_BACKEND}
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingLabel
+  vtkSVCommon
+  vtkTestingCore
+  vtkTestingRendering
   TCL_NAME
   vtkSVGeometry
   )

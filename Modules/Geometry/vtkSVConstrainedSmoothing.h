@@ -28,16 +28,16 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVConstrainedSmoothing.h
- *  @brief Smoothes a surface using a constrained method solving the
+/** \file vtkSVConstrainedSmoothing.h
+ *  \brief Smoothes a surface using a constrained method solving the
  *  minimization between the original surface and a laplacian smoothed
  *  surface
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- *  @note Most functions in class call functions in cv_polydatasolid_utils.
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
+ *  \note Most functions in class call functions in cv_polydatasolid_utils.
  */
 
 #ifndef vtkSVConstrainedSmoothing_h

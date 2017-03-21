@@ -97,7 +97,7 @@ int vtkSVLocalLinearSubdivisionFilter::GenerateSubdivisionPoints (vtkPolyData *i
       {
       isLocalBoundary=0;
       inputDS->GetCellEdgeNeighbors (cellId, p1, p2, edgeNeighbor);
-      if (edgeNeighbor->GetNumberOfIds() != 1)
+      if (edgeNeighbor->GetNumberOfIds() > 1)
         {
         vtkErrorMacro ("Dataset is non-manifold and cannot be subdivided.");
         delete [] noSubdivideCell;

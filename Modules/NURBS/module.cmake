@@ -35,7 +35,14 @@ vtk_module(vtkSVNURBS
   vtkFiltersGeometry
   vtkFiltersModeling
   TEST_DEPENDS
+  vtkFiltersExtraction
+  vtkInteractionStyle
+  #vtkRenderingFreeType${VTK_RENDERING_BACKEND}
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingLabel
+  vtkSVCommon
   vtkTestingCore
+  vtkTestingRendering
   TCL_NAME
   vtkSVNURBS
   )

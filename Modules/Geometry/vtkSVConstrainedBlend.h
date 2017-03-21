@@ -73,8 +73,8 @@ public:
   vtkSetMacro(NumBlendOperations,int);
   vtkGetMacro(NumSubBlendOperations,int);
   vtkSetMacro(NumSubBlendOperations,int);
-  vtkGetMacro(NumCGSmoothOperations,int);
-  vtkSetMacro(NumCGSmoothOperations,int);
+  vtkGetMacro(NumConstrainedSmoothOperations,int);
+  vtkSetMacro(NumConstrainedSmoothOperations,int);
   vtkGetMacro(NumLapSmoothOperations,int);
   vtkSetMacro(NumLapSmoothOperations,int);
   vtkGetMacro(NumGradientSolves,int);
@@ -104,13 +104,13 @@ protected:
   int Decimate(vtkPolyData *pd);
   int Subdivide(vtkPolyData *pd);
   int LaplacianSmooth(vtkPolyData *pd);
-  int CGSmooth(vtkPolyData *pd);
+  int ConstrainedSmooth(vtkPolyData *pd);
 
   int UsePointArray;
   int UseCellArray;
   int NumBlendOperations;
   int NumSubBlendOperations;
-  int NumCGSmoothOperations;
+  int NumConstrainedSmoothOperations;
   int NumLapSmoothOperations;
   int NumGradientSolves;
   int NumSubdivisionIterations;

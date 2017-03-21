@@ -83,13 +83,13 @@ int vtkSVLocalButterflySubdivisionFilter::GenerateSubdivisionPoints(
       {
       isLocalBoundary = 0;
       inputDS->GetCellEdgeNeighbors (cellId, p1, p2, edgeNeighbor);
-      if (edgeNeighbor->GetNumberOfIds() != 1)
-	{
-	delete [] weights; delete [] weights1; delete [] weights2;
-	delete [] noSubdivideCell;
-	vtkErrorMacro ("Dataset is non-manifold and cannot be subdivided.");
-	return 0;
-	}
+      if (edgeNeighbor->GetNumberOfIds() > 1)
+        {
+        delete [] weights; delete [] weights1; delete [] weights2;
+        delete [] noSubdivideCell;
+        vtkErrorMacro ("Dataset is non-manifold and cannot be subdivided.");
+        return 0;
+        }
       if (noSubdivideCell[edgeNeighbor->GetId(0)] ||
 	  noSubdivideCell[cellId])
 	isLocalBoundary = 1;

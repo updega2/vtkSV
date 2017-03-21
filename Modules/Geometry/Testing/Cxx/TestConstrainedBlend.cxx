@@ -28,76 +28,46 @@
  *
  *=========================================================================*/
 
-/**
- *  \file TestFindSeparateRegions.cxx
- *
- *  \author Adam Updegrove
- *  \author updega2@gmail.com
- *  \author UC Berkeley
- *  \author shaddenlab.berkeley.edu
- */
-#include "vtkSVFindSeparateRegions.h"
+#include "vtkSVConstrainedBlend.h"
 
-#include <vtkCellData.h>
-#include <vtkPointData.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
-#include "vtkSmartPointer.h"
+#include <vtkCamera.h>
+#include <vtkPolyData.h>
+#include <vtkSmartPointer.h>
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkTestUtilities.h"
 
-int TestFindSeparateRegions(int argc, char *argv[])
+int TestConstrainedBlend(int argc, char *argv[])
 {
   // Read the surface
   vtkNew(vtkPolyData, surfacePd);
   char *surface_filename = vtkTestUtilities::ExpandDataFileName(
-    argc, argv, "0110_0001_Iliac_Branch_Surface.vtp");
+    argc, argv, "0141_1001_Renal_Branch_Surface.vtp");
   vtkSVIOUtils::ReadVTPFile(surface_filename, surfacePd);
 
-  // Set up vars for separator
-  std::string cellArrayName = "GroupIds";
-  std::string outPointArrayName = "BoundaryPoints";
+  // set up vars
+  int numBlendOperations    = 1;
+  int numSubBlendOperations = 2;
+  int numLapSmoothOperations         = 1;
+  int numConstrainedSmoothOperations = 2;
+  int numSubdivisionIterations       = 1;
+  double weight = 0.2;
 
-  // Set up path finder
-  vtkNew(vtkSVFindSeparateRegions, finder);
-  finder->SetInputData(surfacePd);
-  finder->SetCellArrayName(cellArrayName.c_str());
-  finder->SetOutPointArrayName(outPointArrayName.c_str());
-  finder->Update();
+  // Set up filter
+  vtkNew(vtkSVConstrainedBlend, smoother);
+  smoother->SetInputData(surfacePd);
+  smoother->SetNumBlendOperations(numBlendOperations);
+  smoother->SetNumSubBlendOperations(numSubBlendOperations);
+  smoother->SetNumLapSmoothOperations(numLapSmoothOperations);
+  smoother->SetNumConstrainedSmoothOperations(numConstrainedSmoothOperations);
+  smoother->SetNumSubdivisionIterations(numSubdivisionIterations);
+  smoother->Update();
 
   // Get output
   vtkNew(vtkPolyData, output);
-  output = finder->GetOutput();
-  output->GetPointData()->SetActiveScalars(outPointArrayName.c_str());
+  output = smoother->GetOutput();
 
-  // Set up mapper
-  vtkNew(vtkPolyDataMapper, mapper);
-  mapper->SetInputData(output);
-  mapper->SetScalarRange(0,1);
-  mapper->SetScalarModeToUsePointData();
-  mapper->ScalarVisibilityOn();
-
-  // Set up actor
-  vtkNew(vtkActor, actor);
-  actor->SetMapper(mapper);
-
-  // Set up renderer and window
-  vtkNew(vtkRenderer, renderer);
-  vtkNew(vtkRenderWindow, renWin);
-  renWin->AddRenderer( renderer );
-  renderer->AddActor(actor);
-  renderer->SetBackground(.1, .2, .3);
-
-  // Set up interactor
-  vtkNew(vtkRenderWindowInteractor, renWinInteractor);
-  renWinInteractor->SetRenderWindow( renWin );
-
-  // Render
-  renWin->Render();
-  renWinInteractor->Start();
+  // TODO: make an actual test, just making sure filter runs
 
   return EXIT_SUCCESS;
 }

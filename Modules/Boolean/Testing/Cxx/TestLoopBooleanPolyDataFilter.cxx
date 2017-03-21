@@ -242,13 +242,14 @@ static vtkActor* GetCylinderBooleanOperationActor( double x, int operation )
   return actor;
 }
 
-int TestLoopBooleanPolyDataFilter(int, char *[])
+int TestLoopBooleanPolyDataFilter(int argc, char *argv[])
 {
   vtkSmartPointer<vtkRenderer> renderer =
     vtkSmartPointer<vtkRenderer>::New();
   vtkSmartPointer<vtkRenderWindow> renWin =
     vtkSmartPointer<vtkRenderWindow>::New();
   renWin->AddRenderer( renderer );
+  renderer->SetBackground(.1, .2, .3);
 
   vtkSmartPointer<vtkRenderWindowInteractor> renWinInteractor =
     vtkSmartPointer<vtkRenderWindowInteractor>::New();

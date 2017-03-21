@@ -154,6 +154,7 @@ int TestPullApartPolyData(int argc, char *argv[])
   renWin->AddRenderer( renderer );
   renderer->AddActor(actor);
   renderer->AddActor(linesActor);
+  renderer->SetBackground(.1, .2, .3);
 
   // Set up interactor
   vtkNew(vtkRenderWindowInteractor, renWinInteractor);

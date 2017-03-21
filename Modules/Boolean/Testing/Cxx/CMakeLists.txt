@@ -25,7 +25,10 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
-  TestLoopBooleanPolyDataFilter.cxx,NO_DATA,NO_OUTPUT)
+  TestLoopBooleanPolyDataFilter.cxx,NO_DATA
+  TestLoopIntersectionPolyDataFilter.cxx,NO_DATA
+  TestLoopIntersectionPolyDataFilter2.cxx,NO_DATA,NO_VALID,NO_OUTPUT
+  TestLoopIntersectionPolyDataFilter3.cxx,NO_DATA)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)

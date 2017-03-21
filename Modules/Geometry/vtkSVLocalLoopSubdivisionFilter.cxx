@@ -69,10 +69,10 @@ int vtkSVLocalLoopSubdivisionFilter::GenerateSubdivisionPoints (vtkPolyData *inp
     int numSubCells=0;
     for (int i=0;i<pointCells->GetNumberOfIds();i++)
       {
-      if (SubdivideCellArray->GetValue(pointCells->GetId(i)))
-	{
-	numSubCells++;
-	}
+      if (noSubdivideCell[pointCells->GetId(i)] == 0)
+        {
+        numSubCells++;
+        }
       }
     if (numSubCells == pointCells->GetNumberOfIds())
       {
@@ -107,7 +107,7 @@ int vtkSVLocalLoopSubdivisionFilter::GenerateSubdivisionPoints (vtkPolyData *inp
       {
       isLocalBoundary = 0;
       inputDS->GetCellEdgeNeighbors (cellId, p1, p2, edgeNeighbor);
-      if (edgeNeighbor->GetNumberOfIds() != 1)
+      if (edgeNeighbor->GetNumberOfIds() > 1)
         {
         delete [] weights;
 	delete [] noSubdivideCell;
