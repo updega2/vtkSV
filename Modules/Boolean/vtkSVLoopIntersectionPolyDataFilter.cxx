@@ -40,6 +40,7 @@
 #if VTKSV_DELAUNAY_TYPE == OLD
 #include "vtkDelaunay2D_60.h"
 #elif VTKSV_DELAUNAY_TYPE == TRIANGLE
+#include "triangle.h"
 #include "vtkTriangleDelaunay2D.h"
 #else
 #include "vtkDelaunay2D.h"
@@ -128,6 +129,10 @@ public:
   static int FindTriangleIntersections(vtkOBBNode *node0, vtkOBBNode *node1,
                                        vtkMatrix4x4 *transform, void *arg);
 
+  /// \brief Temporarily moving here to try some stuff out
+  static int IntersectPlaneWithLine(double p1[3], double p2[3], double n[3],
+                                    double p0[3], double& t, double x[3]);
+
   /// \brief Runs the split mesh for the designated input surface
   int SplitMesh(int inputIndex, vtkPolyData *output,
                 vtkPolyData *intersectionLines);
@@ -183,6 +188,7 @@ protected:
 
   /// \brief Gets a transform to the XY plane for three points comprising a triangle
   int GetTransform(vtkTransform *transform, vtkPoints *points);
+
 
 public:
   vtkPolyData         *Mesh[2];
@@ -2144,7 +2150,8 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
     int id1 = i, id2 = (i+1) % 3;
 
     // Find t coordinate on line of intersection between two planes.
-    double val1 = vtkPlane::IntersectWithLine(pts1[id1], pts1[id2], n2, p2, t, x);
+    double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
+        pts1[id1], pts1[id2], n2, p2, t, x);
     if (val1 == 1 ||
         (t > (0-tolerance) && t < (1+tolerance)))
       {
@@ -2156,7 +2163,8 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
          t1[index1++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
       }
 
-    double val2 = vtkPlane::IntersectWithLine(pts2[id1], pts2[id2], n1, p1, t, x);
+    double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
+        pts2[id1], pts2[id2], n1, p1, t, x);
     if (val2 == 1 ||
         (t > (0-tolerance) && t < (1+tolerance)))
       {
@@ -2675,3 +2683,71 @@ int vtkSVLoopIntersectionPolyDataFilter::FillInputPortInformation(int port,
 }
 
 //----------------------------------------------------------------------------
+//
+
+// Given a line defined by the two points p1,p2; and a plane defined by the
+// normal n and point p0, compute an intersection. The parametric
+// coordinate along the line is returned in t, and the coordinates of
+// intersection are returned in x. A zero is returned if the plane and line
+// do not intersect between (0<=t<=1). If the plane and line are parallel,
+// zero is returned and t is set to VTK_LARGE_DOUBLE.
+int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[3], double p2[3], double n[3],
+                                                                      double p0[3], double& t, double x[3])
+{
+  double num, den, p21[3];
+  double fabsden, fabstolerance;
+
+  // Compute line vector
+  //
+  p21[0] = p2[0] - p1[0];
+  p21[1] = p2[1] - p1[1];
+  p21[2] = p2[2] - p1[2];
+
+  // Compute denominator.  If ~0, line and plane are parallel.
+  //
+  num = vtkMath::Dot(n,p0) - ( n[0]*p1[0] + n[1]*p1[1] + n[2]*p1[2] ) ;
+  den = n[0]*p21[0] + n[1]*p21[1] + n[2]*p21[2];
+  //
+  // If denominator with respect to numerator is "zero", then the line and
+  // plane are considered parallel.
+  //
+
+  // trying to avoid an expensive call to fabs()
+  if (den < 0.0)
+    {
+    fabsden = -den;
+    }
+  else
+    {
+    fabsden = den;
+    }
+  if (num < 0.0)
+    {
+    fabstolerance = -num*1.0e-6;
+    }
+  else
+    {
+    fabstolerance = num*1.0e-6;
+    }
+  if ( fabsden <= fabstolerance )
+    {
+    t = VTK_DOUBLE_MAX;
+    return 0;
+    }
+
+  // valid intersection
+  t = num / den;
+
+  x[0] = p1[0] + t*p21[0];
+  x[1] = p1[1] + t*p21[1];
+  x[2] = p1[2] + t*p21[2];
+
+  if ( t >= 0.0 && t <= 1.0 )
+    {
+    return 1;
+    }
+  else
+    {
+    return 0;
+    }
+}
