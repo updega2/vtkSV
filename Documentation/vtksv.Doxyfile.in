@@ -149,7 +149,17 @@ EXCLUDE                = .svn:OneDSolver \
                           vtkDelaunayTriangleDelaunay2D.h \
                           vtkDelaunayTriangleDelaunay2D.cxx \
 EXCLUDE_SYMLINKS       = NO
-EXCLUDE_PATTERNS       = */.svn/* */IritSolidModel/* */OneDSolver/* */.git/*
+EXCLUDE_PATTERNS       = */.svn/* */IritSolidModel/* */OneDSolver/* */.git/* \
+                          triangle.h \
+                          triangle.c \
+                          predicates.h \
+                          predicates.c \
+                          showme.c \
+                          tricall.c \
+                          vtkDelaunay2D_60.h \
+                          vtkDelaunay2D_60.cxx \
+                          vtkDelaunayTriangleDelaunay2D.h \
+                          vtkDelaunayTriangleDelaunay2D.cxx \
 EXAMPLE_PATH           =
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO

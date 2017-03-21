@@ -28,13 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file svGCell.h
- *  @brief a node of Graphs
+/**
+ *  \brief a node of Graphs
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef svGCell_h
