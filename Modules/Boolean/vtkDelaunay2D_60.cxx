@@ -17,6 +17,7 @@
 #include "vtkAbstractTransform.h"
 #include "vtkCellArray.h"
 #include "vtkDoubleArray.h"
+#include "vtkExecutive.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
@@ -25,7 +26,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGlobals.h"
 #include "vtkTriangle.h"
 #include "vtkTransform.h"
 

@@ -40,7 +40,18 @@
 #if VTKSV_DELAUNAY_TYPE == OLD
 #include "vtkDelaunay2D_60.h"
 #elif VTKSV_DELAUNAY_TYPE == TRIANGLE
+extern "C"
+{
+#define ANSI_DECLARATORS
+#ifndef VOID
+# define VOID void
+#endif
+#ifndef REAL
+# define REAL double
+#endif
 #include "triangle.h"
+}
+#include "predicates.h"
 #include "vtkTriangleDelaunay2D.h"
 #else
 #include "vtkDelaunay2D.h"
@@ -130,8 +141,8 @@ public:
                                        vtkMatrix4x4 *transform, void *arg);
 
   /// \brief Temporarily moving here to try some stuff out
-  static int IntersectPlaneWithLine(double p1[3], double p2[3], double n[3],
-                                    double p0[3], double& t, double x[3]);
+  static int IntersectPlaneWithLine(double p1[3], double p2[3], double *ppts[3],
+                                    double& t, double x[3]);
 
   /// \brief Runs the split mesh for the designated input surface
   int SplitMesh(int inputIndex, vtkPolyData *output,
@@ -1142,7 +1153,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #if VTKSV_DELAUNAY_TYPE == OLD
       vtkNew( vtkDelaunay2D_60 , del2D);
 #elif VTKSV_DELAUNAY_TYPE == TRIANGLE
-      vtknew( vtktriangledelaunay2d , del2d);
+      vtkNew( vtkTriangleDelaunay2D , del2D);
 #else
       vtkNew( vtkDelaunay2D , del2D);
 #endif
@@ -2077,6 +2088,204 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
                                         double pt2[3], double surfaceid[2],
                                         double tolerance)
 {
+#if VTKSV_DELAUNAY_TYPE == TRIANGLE
+  double n1[3], n2[3];
+
+  // Compute supporting plane normals.
+  vtkTriangle::ComputeNormal(p1, q1, r1, n1);
+  vtkTriangle::ComputeNormal(p2, q2, r2, n2);
+  double s1 = -vtkMath::Dot(n1, p1);
+  double s2 = -vtkMath::Dot(n2, p2);
+
+  // Compute signed distances of points p1, q1, r1 from supporting
+  // plane of second triangle.
+  double dist1[3];
+  dist1[0] = orient3d(p2, q2, r2, p1);
+  dist1[1] = orient3d(p2, q2, r2, q1);
+  dist1[2] = orient3d(p2, q2, r2, r1);
+
+  if ((dist1[0] > 0 && dist1[1] > 0 && dist1[2] > 0) ||
+      (dist1[0] < 0 && dist1[1] < 0 && dist1[2] < 0))
+    {
+    //vtkDebugMacro(<<"Same side supporting plane 1!");
+    return SV_ERROR;
+    }
+
+  // Do the same for p2, q2, r2 and supporting plane of first
+  // triangle.
+  double dist2[3];
+  dist2[0] = orient3d(p1, q1, r1, p2);
+  dist2[1] = orient3d(p1, q1, r1, q2);
+  dist2[2] = orient3d(p1, q1, r1, r2);
+
+  // If signs of all points are the same, all the points lie on the
+  // same side of the supporting plane, and we can exit early.
+  if ((dist2[0] > 0 && dist2[1] > 0 && dist2[2] > 0) ||
+      (dist2[0] < 0 && dist2[1] < 0 && dist2[2] < 0))
+    {
+    //vtkDebugMacro(<<"Same side supporting plane 2!");
+    return SV_ERROR;
+    }
+
+  // Check for coplanarity of the supporting planes.
+  if(dist1[0] == 0 && dist1[1] == 0 && dist1[2] == 0 &&
+     dist2[0] == 0 && dist2[1] == 0 && dist2[2] == 0)
+    {
+    coplanar = 1;
+    //vtkDebugMacro(<<"Coplanar!");
+    return SV_ERROR;
+    }
+
+  coplanar = 0;
+
+  // There are more efficient ways to find the intersection line (if
+  // it exists), but this is clear enough.
+  double *pts1[3] = {p1, q1, r1}, *pts2[3] = {p2, q2, r2};
+
+  // Find line of intersection (L = p + t*v) between two planes.
+  double n1n2 = vtkMath::Dot(n1, n2);
+  double a = (s1 - s2*n1n2) / (n1n2*n1n2 - 1.0);
+  double b = (s2 - s1*n1n2) / (n1n2*n1n2 - 1.0);
+  double p[3], v[3];
+  p[0] = a*n1[0] + b*n2[0];
+  p[1] = a*n1[1] + b*n2[1];
+  p[2] = a*n1[2] + b*n2[2];
+  vtkMath::Cross(n1, n2, v);
+  vtkMath::Normalize(v);
+
+
+  int index1 = 0, index2 = 0;
+  double t1[3], t2[3];
+  int ts1=50, ts2=50;
+  for (int i = 0; i < 3; i++)
+    {
+    double t, x[3];
+    int id1 = i, id2 = (i+1) % 3;
+
+    // Find t coordinate on line of intersection between two planes.
+    double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
+        pts1[id1], pts1[id2], pts2, t, x);
+    if (val1 == 1)
+      {
+         if (t == 1)
+           {
+           ts1 = index1;
+           }
+
+         t1[index1++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
+      }
+
+    double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
+        pts2[id1], pts2[id2], pts1, t, x);
+    if (val2 == 1)
+      {
+        if (t == 1)
+          {
+          ts2 = index2;
+          }
+
+        t2[index2++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
+      }
+    }
+
+  //If the value of the index is greater than 2, the intersecting point
+  //actually is intersected by all three edges. In this case, set the two
+  //edges to the two edges where the intersecting point is not the end point
+  if (index1 > 2)
+    {
+    index1--;
+    std::swap(t1[ts1], t1[2]);
+    }
+  if (index2 > 2)
+    {
+    index2--;
+    std::swap(t2[ts2], t2[2]);
+    }
+  // Check if only one edge or all edges intersect the supporting
+  // planes intersection.
+  if (index1 != 2 || index2 != 2)
+    {
+    fprintf(stdout,"CODE SAYS ONLY ONE INTERSECTING EDGE\n");
+    //vtkDebugMacro(<<"Only one edge intersecting!");
+    return SV_ERROR;
+    }
+
+  // Check for NaNs
+  if (vtkMath::IsNan(t1[0]) || vtkMath::IsNan(t1[1]) ||
+      vtkMath::IsNan(t2[0]) || vtkMath::IsNan(t2[1]))
+    {
+    fprintf(stdout,"CODE SAYS NANS\n");
+    //vtkWarningMacro(<<"NaNs!");
+    return SV_ERROR;
+    }
+
+  if (t1[0] > t1[1])
+    {
+    std::swap(t1[0], t1[1]);
+    }
+  if (t2[0] > t2[1])
+    {
+    std::swap(t2[0], t2[1]);
+    }
+  // Handle the different interval configuration cases.
+  double tt1, tt2;
+  if (t1[1] < t2[0] || t2[1] < t1[0])
+    {
+    fprintf(stdout,"CODE SAYS NO NO NO OVERLAP\n");
+    //vtkDebugMacro(<<"No Overlap!");
+    return SV_ERROR; // No overlap
+    }
+  else if (t1[0] < t2[0])
+    {
+    if (t1[1] < t2[1])
+      {
+      //First point on surface 2, second point on surface 1
+      surfaceid[0] = 2;
+      surfaceid[1] = 1;
+      tt1 = t2[0];
+      tt2 = t1[1];
+      }
+    else
+      {
+      //Both points belong to lines on surface 2
+      surfaceid[0] = 2;
+      surfaceid[1] = 2;
+      tt1 = t2[0];
+      tt2 = t2[1];
+      }
+    }
+  else // t1[0] >= t2[0]
+    {
+    if (t1[1] < t2[1])
+      {
+      //Both points belong to lines on surface 1
+      surfaceid[0] = 1;
+      surfaceid[1] = 1;
+      tt1 = t1[0];
+      tt2 = t1[1];
+      }
+    else
+      {
+      //First point on surface 1, second point on surface 2
+      surfaceid[0] = 1;
+      surfaceid[1] = 2;
+      tt1 = t1[0];
+      tt2 = t2[1];
+      }
+    }
+  fprintf(stdout,"CODE SAYS INTERSECTION\n");
+
+  // Create actual intersection points.
+  pt1[0] = p[0] + tt1*v[0];
+  pt1[1] = p[1] + tt1*v[1];
+  pt1[2] = p[2] + tt1*v[2];
+
+  pt2[0] = p[0] + tt2*v[0];
+  pt2[1] = p[1] + tt2*v[1];
+  pt2[2] = p[2] + tt2*v[2];
+
+  return SV_OK;
+#else
   double n1[3], n2[3];
 
   // Compute supporting plane normals.
@@ -2099,6 +2308,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
     //vtkDebugMacro(<<"Same side supporting plane 1!");
     return SV_ERROR;
     }
+
   // Do the same for p2, q2, r2 and supporting plane of first
   // triangle.
   double dist2[3];
@@ -2113,6 +2323,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
     //vtkDebugMacro(<<"Same side supporting plane 2!");
     return SV_ERROR;
     }
+
   // Check for coplanarity of the supporting planes.
   if (fabs(n1[0] - n2[0]) < 1e-9 &&
        fabs(n1[1] - n2[1]) < 1e-9 &&
@@ -2151,7 +2362,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
 
     // Find t coordinate on line of intersection between two planes.
     double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
-        pts1[id1], pts1[id2], n2, p2, t, x);
+        pts1[id1], pts1[id2], pts2, t, x);
     if (val1 == 1 ||
         (t > (0-tolerance) && t < (1+tolerance)))
       {
@@ -2164,7 +2375,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
       }
 
     double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
-        pts2[id1], pts2[id2], n1, p1, t, x);
+        pts2[id1], pts2[id2], pts1, t, x);
     if (val2 == 1 ||
         (t > (0-tolerance) && t < (1+tolerance)))
       {
@@ -2270,6 +2481,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   pt2[2] = p[2] + tt2*v[2];
 
   return SV_OK;
+#endif
 }
 
 void vtkSVLoopIntersectionPolyDataFilter::CleanAndCheckSurface(vtkPolyData *pd,
@@ -2685,14 +2897,14 @@ int vtkSVLoopIntersectionPolyDataFilter::FillInputPortInformation(int port,
 //----------------------------------------------------------------------------
 //
 
-// Given a line defined by the two points p1,p2; and a plane defined by the
-// normal n and point p0, compute an intersection. The parametric
+// Given a line defined by the two points p1,p2; and a plane defined by the three
+// points pts, compute an intersection. The parametric
 // coordinate along the line is returned in t, and the coordinates of
 // intersection are returned in x. A zero is returned if the plane and line
 // do not intersect between (0<=t<=1). If the plane and line are parallel,
 // zero is returned and t is set to VTK_LARGE_DOUBLE.
-int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[3], double p2[3], double n[3],
-                                                                      double p0[3], double& t, double x[3])
+int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[3], double p2[3], double *ppts[3],
+                                                                      double& t, double x[3])
 {
   double num, den, p21[3];
   double fabsden, fabstolerance;
@@ -2703,14 +2915,38 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[
   p21[1] = p2[1] - p1[1];
   p21[2] = p2[2] - p1[2];
 
+  double n[3];
+  vtkTriangle::ComputeNormal(ppts[0], ppts[1], ppts[2], n);
+
   // Compute denominator.  If ~0, line and plane are parallel.
   //
-  num = vtkMath::Dot(n,p0) - ( n[0]*p1[0] + n[1]*p1[1] + n[2]*p1[2] ) ;
+  num = vtkMath::Dot(n,ppts[0]) - ( n[0]*p1[0] + n[1]*p1[1] + n[2]*p1[2] ) ;
   den = n[0]*p21[0] + n[1]*p21[1] + n[2]*p21[2];
   //
   // If denominator with respect to numerator is "zero", then the line and
   // plane are considered parallel.
-  //
+
+#if VTKSV_DELAUNAY_TYPE == TRIANGLE
+  fprintf(stdout,"Need Opposited %.6f\n", orient3d(ppts[0], ppts[1], ppts[2], p1));
+  fprintf(stdout,"Need Opposited %.6f\n", orient3d(ppts[0], ppts[1], ppts[2], p2));
+  double vals[3];
+  for (int i=0; i<3; i++)
+  {
+    int id1 = i, id2 = (i+1) % 3;
+    vals[i] = orient3d(p1, ppts[id1], ppts[id2], p2);
+  }
+  if ((vals[0] > 0 && vals[1] > 0 && vals[2] > 0) ||
+      (vals[0] < 0 && vals[1] < 0 && vals[2] < 0))
+  {
+    fprintf(stdout,"TRIANGLE SAYS INTERSECTION, JUST NEED ONE\n");
+  }
+  if ((vals[0] == 0 && vals[1] == 0 && vals[2] == 0))
+  {
+    fprintf(stdout,"TRIANGLE SAYS SPECIAL\n");
+  }
+  fprintf(stdout,"What are vals: %.6f %.6f %.6f\n", vals[0], vals[1], vals[2]);
+
+#endif
 
   // trying to avoid an expensive call to fabs()
   if (den < 0.0)
@@ -2737,6 +2973,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[
 
   // valid intersection
   t = num / den;
+  fprintf(stdout,"What is t: %.8f\n", t);
 
   x[0] = p1[0] + t*p21[0];
   x[1] = p1[1] + t*p21[1];
