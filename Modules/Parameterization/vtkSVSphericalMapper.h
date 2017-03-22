@@ -29,30 +29,32 @@
  *=========================================================================*/
 
 
-/** @file vtkSVSphericalMapper.h
- *  @brief This is a vtk filter to map a triangulated surface to a sphere.
- *  @details This filter uses the heat flow method to map a triangulated
+/**
+ *  \class vtkSVSphericalMapper
+ *  \brief This is a vtk filter to map a triangulated surface to a sphere.
+ *  \details This filter uses the heat flow method to map a triangulated
  *  surface to a sphere. The first step is to compute the Tutte Energy, and
  *  the second step is to perform the conformal map. For more details, see
  *  Gu et al., Genus Zero Surface Conformal Mapping and Its
  *  Application to Brain Surface Mapping, 2004.
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #ifndef vtkSVSphericalMapper_h
 #define vtkSVSphericalMapper_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
 
-class vtkSVSphericalMapper : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVSphericalMapper : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVSphericalMapper* New();

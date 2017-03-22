@@ -44,13 +44,14 @@
 #define vtkSVLocalLoopSubdivisionFilter_h
 
 #include "vtkSVLocalApproximatingSubdivisionFilter.h"
+#include "vtkSVGeometryModule.h" // for export
 
 class vtkPolyData;
 class vtkIntArray;
 class vtkPoints;
 class vtkIdList;
 
-class vtkSVLocalLoopSubdivisionFilter : public vtkSVLocalApproximatingSubdivisionFilter
+class VTKSVGEOMETRY_EXPORT vtkSVLocalLoopSubdivisionFilter : public vtkSVLocalApproximatingSubdivisionFilter
 {
 public:
   // Description:

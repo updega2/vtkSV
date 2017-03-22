@@ -43,10 +43,11 @@
 #define vtkSVPlacePointsOnS2_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
 #include "vtkPolyData.h"
 
-class vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPlacePointsOnS2* New();

@@ -44,6 +44,7 @@
 #define vtkSVPlanarMapper_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkSVBoundaryMapper.h"
 #include "vtkEdgeTable.h"
@@ -51,7 +52,7 @@
 #include "vtkPolyData.h"
 #include "vtkSVSparseMatrix.h"
 
-class vtkSVPlanarMapper : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVPlanarMapper : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPlanarMapper* New();

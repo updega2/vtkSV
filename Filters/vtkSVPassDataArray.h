@@ -46,8 +46,9 @@
 #define vtkSVPassDataArray_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
-class vtkSVPassDataArray : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVPassDataArray : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPassDataArray* New();

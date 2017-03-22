@@ -48,6 +48,7 @@
 #define vtkSVPolyDataToNURBSFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkAppendPolyData.h"
 #include "vtkEdgeTable.h"
@@ -55,7 +56,7 @@
 #include "vtkSVGeneralizedPolycube.h"
 #include "vtkPolyData.h"
 
-class vtkSVPolyDataToNURBSFilter : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVPolyDataToNURBSFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPolyDataToNURBSFilter* New();

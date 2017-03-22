@@ -42,10 +42,11 @@
 #define vtkSVFillHolesFilterWithIds_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
 class vtkAbstractTransform;
 
-class vtkSVFillHolesFilterWithIds : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVFillHolesFilterWithIds : public vtkPolyDataAlgorithm
 {
 public:
   // Description:

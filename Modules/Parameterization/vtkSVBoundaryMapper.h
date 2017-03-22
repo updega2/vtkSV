@@ -45,11 +45,12 @@
 #define vtkSVBoundaryMapper_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkEdgeTable.h"
 #include "vtkIntArray.h"
 
-class vtkSVBoundaryMapper : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVBoundaryMapper : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVBoundaryMapper,vtkPolyDataAlgorithm);

@@ -39,6 +39,22 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake"
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
+# RPATH handling
+if(NOT DEFINED CMAKE_MACOSX_RPATH)
+  set(CMAKE_MACOSX_RPATH 0)
+endif()
+# Don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+# Don't use the install RPATH
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+# The RPATH that will be used when installing
+set(CMAKE_INSTALL_RPATH "")
+# Don't automatically add determined parts of the RPATH which point to
+# directories outside the build tree to the install tree
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
 # vtkSV Includes
 include(vtkSVSystemCheck)
 include(vtkSVSetup)
@@ -89,6 +105,7 @@ else()
   set(_test_languages "")
 endif()
 #-----------------------------------------------------------------------------
+
 
 #-----------------------------------------------------------------------------
 # Set build dirs

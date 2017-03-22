@@ -42,10 +42,11 @@
 #define vtkSVSparseMatrix_h
 
 #include "vtkObject.h"
+#include "vtkSVCommonModule.h" // For export
 
 #include <vector>
 
-class vtkSVSparseMatrix : public vtkObject
+class VTKSVCOMMON_EXPORT vtkSVSparseMatrix : public vtkObject
 {
 public:
   static vtkSVSparseMatrix *New();

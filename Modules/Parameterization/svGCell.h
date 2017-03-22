@@ -41,8 +41,9 @@
 #define svGCell_h
 
 #include "vtkPolyData.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
-class svGCell
+class VTKSVPARAMETERIZATION_EXPORT svGCell
 {
 public:
   //Constructors

@@ -46,13 +46,13 @@
 #ifndef vtkSVSuperSquareBoundaryMapper_h
 #define vtkSVSuperSquareBoundaryMapper_h
 
-#include "vtkFiltersGeneralModule.h" // For export macro
 #include "vtkSVBoundaryMapper.h"
+#include "vtkSVParameterizationModule.h" // For export macro
 
 #include "vtkIntArray.h"
 #include "vtkDoubleArray.h"
 
-class vtkSVSuperSquareBoundaryMapper : public vtkSVBoundaryMapper
+class VTKSVPARAMETERIZATION_EXPORT vtkSVSuperSquareBoundaryMapper : public vtkSVBoundaryMapper
 {
 public:
   static vtkSVSuperSquareBoundaryMapper* New();

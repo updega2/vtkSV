@@ -43,10 +43,11 @@
 #define vtkSVMultiplePolyDataIntersectionFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVBooleanModule.h" // For export macro
 
 #include "vtkPolyData.h"
 
-class vtkSVMultiplePolyDataIntersectionFilter : public vtkPolyDataAlgorithm
+class VTKSVBOOLEAN_EXPORT vtkSVMultiplePolyDataIntersectionFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVMultiplePolyDataIntersectionFilter *New();

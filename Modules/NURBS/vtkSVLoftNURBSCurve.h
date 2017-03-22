@@ -43,10 +43,11 @@
 #define vtkSVLoftNURBSCurve_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVNURBSModule.h"
 
 #include "vtkSVNURBSCurve.h"
 
-class vtkSVLoftNURBSCurve : public vtkPolyDataAlgorithm
+class VTKSVNURBS_EXPORT vtkSVLoftNURBSCurve : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVLoftNURBSCurve *New();

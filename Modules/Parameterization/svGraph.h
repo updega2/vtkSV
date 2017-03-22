@@ -42,11 +42,12 @@
 
 #include "vtkPolyData.h"
 #include "svGCell.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include <map>
 #include <list>
 
-class svGraph
+class VTKSVPARAMETERIZATION_EXPORT svGraph
 {
 public:
   //Constructors

@@ -53,13 +53,14 @@
 #define vtkSVMapInterpolator_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
 #include "vtkPolyData.h"
 
 #include <complex>
 #include <vector>
 
-class vtkSVMapInterpolator : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVMapInterpolator : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVMapInterpolator* New();

@@ -34,7 +34,9 @@ vtk_module(vtkSVFilters
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling
+  vtkFiltersTexture
   vtkSVCommon
+  vtkRenderingCore
   TEST_DEPENDS
   vtkFiltersExtraction
   vtkIOXML

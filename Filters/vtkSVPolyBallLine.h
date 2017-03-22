@@ -27,10 +27,11 @@ Version:   $Revision: 1.4 $
 #define vtkSVPolyBallLine_h
 
 #include "vtkImplicitFunction.h"
+#include "vtkSVFiltersModule.h" // For export
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtkSVPolyBallLine : public vtkImplicitFunction
+class VTKSVFILTERS_EXPORT vtkSVPolyBallLine : public vtkImplicitFunction
 {
 public:
 

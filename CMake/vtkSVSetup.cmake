@@ -131,3 +131,25 @@ set(VTKSV_TEST_OUTPUT_BASELINE_DIR "${PARAVIEW_TEST_OUTPUT_DATA_DIR}/Baseline")
 set(VTKSV_TEST_OUTPUT_DIR          "${CMAKE_BINARY_DIR}/Testing/Temporary")
 set(VTKSV_DATA_ROOT                "${VTKSV_TEST_OUTPUT_DATA_DIR}")
 #------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Runtime setup
+# Set up our directory structure for output libraries and binaries
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${VTKSV_BINARY_DIR}/bin")
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+  if(UNIX)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${VTKSV_BINARY_DIR}/lib")
+  else()
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${VTKSV_BINARY_DIR}/bin")
+  endif()
+endif()
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${VTKSV_BINARY_DIR}/lib")
+endif()
+mark_as_advanced(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+  CMAKE_LIBRARY_OUTPUT_DIRECTORY
+  CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+  )
+#------------------------------------------------------------------------------

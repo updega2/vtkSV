@@ -41,6 +41,7 @@
 #define vtkSVLocalQuadricDecimation_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVGeometryModule.h" // for export
 
 class vtkEdgeTable;
 class vtkIdList;
@@ -48,7 +49,7 @@ class vtkPointData;
 class vtkPriorityQueue;
 class vtkDoubleArray;
 
-class vtkSVLocalQuadricDecimation : public vtkPolyDataAlgorithm
+class VTKSVGEOMETRY_EXPORT vtkSVLocalQuadricDecimation : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVLocalQuadricDecimation, vtkPolyDataAlgorithm);

@@ -19,8 +19,9 @@
 #define __vtkTriangleDelaunay2D_h
 
 #include <vtkDelaunay2D.h>
+#include "vtkSVBooleanModule.h" // For export macro
 
-class vtkTriangleDelaunay2D : public vtkDelaunay2D
+class VTKSVBOOLEAN_EXPORT vtkTriangleDelaunay2D : public vtkDelaunay2D
 {
 public:
   vtkTypeMacro(vtkTriangleDelaunay2D, vtkPolyDataAlgorithm);

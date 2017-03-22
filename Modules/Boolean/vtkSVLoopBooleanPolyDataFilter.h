@@ -56,8 +56,9 @@
 #define vtkSVLoopBooleanPolyDataFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVBooleanModule.h" // For export macro
 
-class vtkSVLoopBooleanPolyDataFilter :
+class VTKSVBOOLEAN_EXPORT vtkSVLoopBooleanPolyDataFilter :
         public vtkPolyDataAlgorithm
 {
 public:

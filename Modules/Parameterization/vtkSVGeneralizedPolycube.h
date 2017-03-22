@@ -65,6 +65,7 @@
 #define vtkSVGeneralizedPolycube_h
 
 #include "vtkUnstructuredGrid.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkStructuredGrid.h"
 #include "vtkDenseArray.h"
@@ -72,7 +73,7 @@
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
 
-class vtkSVGeneralizedPolycube : public vtkUnstructuredGrid
+class VTKSVPARAMETERIZATION_EXPORT vtkSVGeneralizedPolycube : public vtkUnstructuredGrid
 {
 public:
   static vtkSVGeneralizedPolycube *New();

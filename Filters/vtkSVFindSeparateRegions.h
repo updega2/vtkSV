@@ -43,9 +43,10 @@
 #define vtkSVFindSeparateRegions_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 #include "vtkIdList.h"
 
-class vtkSVFindSeparateRegions : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVFindSeparateRegions : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVFindSeparateRegions* New();

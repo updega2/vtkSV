@@ -42,6 +42,7 @@
 #define vtkSVNURBSCurve_h
 
 #include "vtkDataObject.h"
+#include "vtkSVNURBSModule.h"
 
 #include "vtkCellArray.h"
 #include "vtkSVControlGrid.h"
@@ -50,7 +51,7 @@
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
 
-class vtkSVNURBSCurve : public vtkDataObject
+class VTKSVNURBS_EXPORT vtkSVNURBSCurve : public vtkDataObject
 {
 public:
   static vtkSVNURBSCurve *New();

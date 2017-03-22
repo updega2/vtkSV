@@ -45,10 +45,11 @@
 #define vtkSVCheckRotation_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
 #include "vtkPolyData.h"
 
-class vtkSVCheckRotation : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVCheckRotation : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVCheckRotation* New();

@@ -43,9 +43,10 @@
 #define vtkSVConstrainedBlend_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVGeometryModule.h" // for export
 #include <set>
 
-class vtkSVConstrainedBlend : public vtkPolyDataAlgorithm
+class VTKSVGEOMETRY_EXPORT vtkSVConstrainedBlend : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVConstrainedBlend* New();

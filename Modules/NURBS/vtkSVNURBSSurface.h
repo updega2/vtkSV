@@ -42,6 +42,7 @@
 #define vtkSVNURBSSurface_h
 
 #include "vtkDataObject.h"
+#include "vtkSVNURBSModule.h"
 
 #include "vtkSVControlGrid.h"
 #include "vtkDenseArray.h"
@@ -49,7 +50,7 @@
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
 
-class vtkSVNURBSSurface : public vtkDataObject
+class VTKSVNURBS_EXPORT vtkSVNURBSSurface : public vtkDataObject
 {
 public:
   static vtkSVNURBSSurface *New();

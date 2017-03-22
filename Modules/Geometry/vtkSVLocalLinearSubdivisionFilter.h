@@ -42,13 +42,14 @@
 #define vtkSVLocalLinearSubdivisionFilter_h
 
 #include "vtkSVLocalInterpolatingSubdivisionFilter.h"
+#include "vtkSVGeometryModule.h" // for export
 
 class vtkIntArray;
 class vtkPointData;
 class vtkPoints;
 class vtkPolyData;
 
-class vtkSVLocalLinearSubdivisionFilter : public vtkSVLocalInterpolatingSubdivisionFilter
+class VTKSVGEOMETRY_EXPORT vtkSVLocalLinearSubdivisionFilter : public vtkSVLocalInterpolatingSubdivisionFilter
 {
 public:
   // Description:

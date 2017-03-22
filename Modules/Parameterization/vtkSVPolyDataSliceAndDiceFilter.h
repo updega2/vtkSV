@@ -50,6 +50,7 @@
 #define vtkSVPolyDataSliceAndDiceFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
@@ -61,7 +62,7 @@
 #include <map>
 #include <list>
 
-class vtkSVPolyDataSliceAndDiceFilter : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVPolyDataSliceAndDiceFilter : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPolyDataSliceAndDiceFilter* New();

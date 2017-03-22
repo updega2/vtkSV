@@ -44,9 +44,10 @@
 #define vtkSVConstrainedSmoothing_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVGeometryModule.h" // for export
 #include <set>
 
-class vtkSVConstrainedSmoothing : public vtkPolyDataAlgorithm
+class VTKSVGEOMETRY_EXPORT vtkSVConstrainedSmoothing : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVConstrainedSmoothing* New();

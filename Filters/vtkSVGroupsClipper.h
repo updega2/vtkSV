@@ -45,8 +45,9 @@
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
+#include "vtkSVFiltersModule.h" // For export
 
-class vtkSVGroupsClipper : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVGroupsClipper : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVGroupsClipper,vtkPolyDataAlgorithm);

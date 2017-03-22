@@ -44,10 +44,11 @@
 #define vtkSVSquareBoundaryMapper_h
 
 #include "vtkSVBoundaryMapper.h"
+#include "vtkSVParameterizationModule.h" // For exports
 
 #include "vtkIntArray.h"
 
-class vtkSVSquareBoundaryMapper : public vtkSVBoundaryMapper
+class VTKSVPARAMETERIZATION_EXPORT vtkSVSquareBoundaryMapper : public vtkSVBoundaryMapper
 {
 public:
   static vtkSVSquareBoundaryMapper* New();

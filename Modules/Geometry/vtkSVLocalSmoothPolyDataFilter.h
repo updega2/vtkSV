@@ -106,10 +106,11 @@
 #define vtkSVLocalSmoothPolyDataFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVGeometryModule.h" // for export
 
 class vtkSVLocalSmoothPoints;
 
-class vtkSVLocalSmoothPolyDataFilter : public vtkPolyDataAlgorithm
+class VTKSVGEOMETRY_EXPORT vtkSVLocalSmoothPolyDataFilter : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVLocalSmoothPolyDataFilter,vtkPolyDataAlgorithm);

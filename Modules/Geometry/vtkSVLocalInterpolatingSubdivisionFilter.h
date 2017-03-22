@@ -41,6 +41,7 @@
 #define vtkSVLocalInterpolatingSubdivisionFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVGeometryModule.h" // for export
 
 class vtkCellArray;
 class vtkCellData;
@@ -50,7 +51,7 @@ class vtkPointData;
 class vtkPoints;
 class vtkPolyData;
 
-class vtkSVLocalInterpolatingSubdivisionFilter : public vtkPolyDataAlgorithm
+class VTKSVGEOMETRY_EXPORT vtkSVLocalInterpolatingSubdivisionFilter : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVLocalInterpolatingSubdivisionFilter,vtkPolyDataAlgorithm);

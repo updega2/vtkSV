@@ -32,6 +32,10 @@ vtk_module(vtkSVCommon
   DEPENDS
   vtkCommonDataModel
   vtkIOXML
+  vtkFiltersCore
+  vtkFiltersExtraction
+  vtkFiltersGeometry
+  vtkFiltersSources
   TEST_DEPENDS
   vtkInteractionStyle
   #vtkRenderingFreeType${VTK_RENDERING_BACKEND}

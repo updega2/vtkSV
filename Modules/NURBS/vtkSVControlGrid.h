@@ -43,11 +43,12 @@
 #define vtkSVControlGrid_h
 
 #include "vtkStructuredGrid.h"
+#include "vtkSVNURBSModule.h"
 
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 
-class vtkSVControlGrid : public vtkStructuredGrid
+class VTKSVNURBS_EXPORT vtkSVControlGrid : public vtkStructuredGrid
 {
 public:
   static vtkSVControlGrid *New();

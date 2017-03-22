@@ -42,10 +42,11 @@
 #define vtkSVMathUtils_h
 
 #include "vtkSVSparseMatrix.h"
+#include "vtkSVCommonModule.h" // For export
 
 #include "vtkFloatArray.h"
 
-class vtkSVMathUtils : public vtkObject
+class VTKSVCOMMON_EXPORT vtkSVMathUtils : public vtkObject
 {
 public:
   vtkTypeMacro(vtkSVMathUtils,vtkObject);

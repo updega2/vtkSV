@@ -43,10 +43,11 @@
 #define vtkSVLoftNURBSSurface_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVNURBSModule.h"
 
 #include "vtkSVNURBSSurface.h"
 
-class vtkSVLoftNURBSSurface : public vtkPolyDataAlgorithm
+class VTKSVNURBS_EXPORT vtkSVLoftNURBSSurface : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVLoftNURBSSurface *New();

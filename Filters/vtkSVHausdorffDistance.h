@@ -47,8 +47,9 @@
 #define vtkSVHausdorffDistance_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
-class vtkSVHausdorffDistance : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVHausdorffDistance : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVHausdorffDistance* New();

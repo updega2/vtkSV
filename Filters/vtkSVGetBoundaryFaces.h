@@ -54,8 +54,9 @@
 #include "vtkFeatureEdges.h"
 #include "vtkDoubleArray.h"
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
-class vtkSVGetBoundaryFaces : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVGetBoundaryFaces : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVGetBoundaryFaces* New();

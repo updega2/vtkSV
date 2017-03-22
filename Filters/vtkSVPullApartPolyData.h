@@ -43,12 +43,13 @@
 #define vtkSVPullApartPolyData_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
 #include "vtkEdgeTable.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class vtkSVPullApartPolyData : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVPullApartPolyData : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPullApartPolyData* New();

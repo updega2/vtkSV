@@ -44,6 +44,7 @@
 #define vtkSVGeneralUtils_h
 
 #include "vtkObject.h"
+#include "vtkSVCommonModule.h" // For export
 
 #include "vtkDataSet.h"
 #include "vtkEdgeTable.h"
@@ -60,7 +61,7 @@
 #include <map>
 #include <list>
 
-class vtkSVGeneralUtils : public vtkObject
+class VTKSVCOMMON_EXPORT vtkSVGeneralUtils : public vtkObject
 {
 public:
   vtkTypeMacro(vtkSVGeneralUtils,vtkObject);

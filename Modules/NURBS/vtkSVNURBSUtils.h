@@ -43,6 +43,7 @@
 #define vtkSVNURBSUtils_h
 
 #include "vtkObject.h"
+#include "vtkSVNURBSModule.h"
 
 #include "vtkDenseArray.h"
 #include "vtkIntArray.h"
@@ -54,7 +55,7 @@
 
 #include <cassert> // assert() in inline implementations.
 
-class vtkSVNURBSUtils : public vtkObject
+class VTKSVNURBS_EXPORT vtkSVNURBSUtils : public vtkObject
 {
 public:
   static vtkSVNURBSUtils *New();

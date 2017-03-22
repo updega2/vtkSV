@@ -43,12 +43,13 @@
 #define vtkSVLocalButterflySubdivisionFilter_h
 
 #include "vtkSVLocalInterpolatingSubdivisionFilter.h"
+#include "vtkSVGeometryModule.h" // for export
 
 class vtkCellArray;
 class vtkIdList;
 class vtkIntArray;
 
-class vtkSVLocalButterflySubdivisionFilter : public vtkSVLocalInterpolatingSubdivisionFilter
+class VTKSVGEOMETRY_EXPORT vtkSVLocalButterflySubdivisionFilter : public vtkSVLocalInterpolatingSubdivisionFilter
 {
 public:
   // Description:

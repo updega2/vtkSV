@@ -40,7 +40,6 @@ vtk_module(vtkSVNURBS
   #vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
-  vtkSVCommon
   vtkTestingCore
   vtkTestingRendering
   TCL_NAME

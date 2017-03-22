@@ -59,8 +59,9 @@
 #define vtkSVGetSphereRegions_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVFiltersModule.h" // For export
 
-class vtkSVGetSphereRegions : public vtkPolyDataAlgorithm
+class VTKSVFILTERS_EXPORT vtkSVGetSphereRegions : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVGetSphereRegions* New();
