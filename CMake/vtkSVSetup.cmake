@@ -67,12 +67,18 @@ endif()
 if(NOT VTKSV_INSTALL_DOXYGEN_DIR)
   set(VTKSV_INSTALL_DOXYGEN_DIR ${VTKSV_INSTALL_DOC_DIR}/doxygen)
 endif()
+
+if(NOT VTKSV_CMAKE_DIR)
+  set(VTKSV_CMAKE_DIR "${VTKSV_SOURCE_DIR}/CMake")
+endif()
 #-----------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 # Setup install directories (we use names with VTK_ prefix, since vtkSV
 # is built as a custom "VTK" library.
-set(VTKSV_VERSION "1.0")
+set(VTKSV_MAJOR_VERSION "1")
+set(VTKSV_MINOR_VERSION "0")
+set(VTKSV_VERSION "${VTKSV_MAJOR_VERSION}.${VTKSV_MINOR_VERSION}")
 if(NOT VTK_INSTALL_RUNTIME_DIR)
   set(VTK_INSTALL_RUNTIME_DIR bin)
 endif()
@@ -112,7 +118,9 @@ if(NOT VTK_MODULES_DIR)
   set(VTK_MODULES_DIR "${VTKSV_BINARY_DIR}/${VTK_INSTALL_PACKAGE_DIR}/Modules")
 endif()
 set(VTKSV_MODULES_DIR ${VTK_MODULES_DIR})
+#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 # Handle the target export file, this is used if building against a build tree.
 if(NOT VTK_EXPORTS_FILE)
   set(VTK_EXPORTS_FILE "${vtkSV_BINARY_DIR}/VTK/${VTK_INSTALL_EXPORT_NAME}.cmake")

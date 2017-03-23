@@ -142,7 +142,7 @@ public:
   int MakePeriodic(const int continuity) {return 0;} /**< \brief Unimplemented */
 
   /** \brief get the knot vector multiplicity. */
-  int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
+  int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots) {return 0;} /**< \brief Unimplemented */
 
   // Description:
   // Retrieve an instance of this class from an information object.

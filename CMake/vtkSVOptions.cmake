@@ -49,9 +49,9 @@ set(VTKSV_LIBRARY_TYPE "STATIC" CACHE STRING "Options are STATIC or SHARED" FORC
 set_property(CACHE VTKSV_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED)
 mark_as_advanced(VTKSV_LIBRARY_TYPE)
 if(BUILD_SHARED_LIBS)
-	set(SV_LIBRARY_TYPE "SHARED" CACHE STRING "Shared cache" FORCE)
+	set(VTKSV_LIBRARY_TYPE "SHARED" CACHE STRING "Shared cache" FORCE)
 else()
-  set(SV_LIBRARY_TYPE "STATIC" CACHE STRING "Static cache" FORCE)
+  set(VTKSV_LIBRARY_TYPE "STATIC" CACHE STRING "Static cache" FORCE)
 endif()
 #----------------------------------------------------------------------------
 

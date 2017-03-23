@@ -134,7 +134,7 @@ public:
   int MakePeriodic(const int continuity, const int dim) {return 0;} /**< \brief Unimplemented */
 
   /** \brief get the knot vector multiplicity. */
-  int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
+  int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots) {return 0;} /**< \brief Unimplemented */
 
   /** \brief Get structured grid connectivity.
    *  \param connectivity empty cell array to be filled with a structured grid connectivity. */

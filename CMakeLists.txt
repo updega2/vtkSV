@@ -82,30 +82,8 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Find VTK, only major dependency
-if(NOT VTK_LIBRARIES)
-  find_package(VTK REQUIRED)
-  include(${VTK_USE_FILE})
-endif()
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${VTK_CMAKE_DIR}")
-include(vtkExternalModuleMacros)
-if(BUILD_TESTING)
-  set(_test_languages "Cxx")
-  include(ExternalData)
-  include(vtkTestingMacros RESULT_VARIABLE VTK_TESTING_MACROS)
-  if ("${VTK_TESTING_MACROS}" STREQUAL "NOTFOUND")
-    message(FATAL_ERROR "${VTK_TESTING_FOUND} Must inlcude VTK from the Build directory to enable testing")
-  endif()
-  if (NOT VTK_SOURCE_DIR)
-    set(VTK_SOURCE_DIR "${VTK_CMAKE_DIR}/..")
-  endif()
-  if(NOT vtkTestingRendering_SOURCE_DIR)
-    set(vtkTestingRendering_SOURCE_DIR "${VTK_SOURCE_DIR}/Testing/Rendering")
-  endif()
-else()
-  set(_test_languages "")
-endif()
+include(vtkSVFindVTK)
 #-----------------------------------------------------------------------------
-
 
 #-----------------------------------------------------------------------------
 # Set build dirs
@@ -129,9 +107,12 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Include for headers
+set(VTKSV_INCLUDE_DIRS "")
 foreach(vtk-module ${VTKSV_BUILD_DIRS})
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${vtk-module})
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/${vtk-module})
+  set(VTKSV_INCLUDE_DIRS ${VTKSV_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/${vtk-module} ${CMAKE_CURRENT_BINARY_DIR}/${vtk-module})
   vtk_add_module(
     "${CMAKE_CURRENT_SOURCE_DIR}/${vtk-module}"
     module.cmake
@@ -142,11 +123,13 @@ endforeach()
 
 #-----------------------------------------------------------------------------
 # Add each subdirectory
-message(STATUS "Modules:")
+set(VTKSV_LIBRARIES "")
+message(STATUS "vtkSV Modules:")
 foreach(vtk-module ${VTK_MODULES_ALL})
-  message(STATUS "  ${vtk-module}")
+  message(STATUS "     ${vtk-module}")
   add_subdirectory(${${vtk-module}_SOURCE_DIR} ${${vtk-module}_BINARY_DIR})
   set(VTK_MODULES_ENABLED ${VTK_MODULES_ENABLED} ${vtk-module})
+  set(VTKSV_LIBRARIES ${VTKSV_LIBRARIES} ${vtk-module})
 endforeach()
 #-----------------------------------------------------------------------------
 
@@ -155,4 +138,42 @@ endforeach()
 if(BUILD_TESTING)
   ExternalData_add_target(VTKSVData)
 endif()
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Export targets
+export(TARGETS ${VTK_MODULES_ALL}
+  FILE "${VTKSV_BINARY_DIR}/vtkSVTargets.cmake")
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# ... for the build tree
+configure_file("${VTKSV_SOURCE_DIR}/CMake/vtkSVConfig.cmake.in"
+  "${VTKSV_BINARY_DIR}/vtkSVConfig.cmake" @ONLY)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# ... for the install tree
+configure_file("${VTKSV_SOURCE_DIR}/CMake/vtkSVConfig.cmake.in"
+  "${VTKSV_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkSVConfig.cmake" @ONLY)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# ... for both
+configure_file("${VTKSV_SOURCE_DIR}/CMake/vtkSVConfigVersion.cmake.in"
+ "${VTKSV_BINARY_DIR}/vtkSVConfigVersion.cmake" @ONLY)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Install the vtkSVConfig.cmake and vtkSVConfigVersion.cmake
+install(FILES
+  "${VTKSV_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/vtkSVConfig.cmake"
+  "${VTKSV_BINARY_DIR}/vtkSVConfigVersion.cmake"
+  DESTINATION "${VTK_INSTALL_PACKAGE_DIR}" COMPONENT dev)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Install the export set for use with the install-tree
+install(EXPORT vtkSVTargets DESTINATION
+  "${VTK_INSTALL_PACKAGE_DIR}" COMPONENT dev)
 #-----------------------------------------------------------------------------

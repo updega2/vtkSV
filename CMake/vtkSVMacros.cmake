@@ -73,9 +73,9 @@ endmacro()
 #------------------------------------------------------------------------------
 # Override vtk_add_test_* variables for use with ParaView.
 macro (_vtksv_override_vtk_dirs)
-  set(VTK_TEST_DATA_DIR    ${VTKSV_TEST_OUTPUT_DATA_DIR})
-  set(VTK_BASELINE_DIR     ${VTKSV_TEST_BASELINE_DIR})
-  set(VTK_TEST_OUTPUT_DIR  ${VTKSV_TEST_OUTPUT_DIR})
+  set(VTK_TEST_DATA_DIR         ${VTKSV_TEST_OUTPUT_DATA_DIR})
+  set(VTK_BASELINE_DIR          ${VTKSV_TEST_BASELINE_DIR})
+  set(VTK_TEST_OUTPUT_DIR       ${VTKSV_TEST_OUTPUT_DIR})
   set(VTK_TEST_DATA_TARGET VTKSVData)
 endmacro ()
 #------------------------------------------------------------------------------

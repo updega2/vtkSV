@@ -52,6 +52,7 @@ class VTKSVFILTERS_EXPORT vtkSVFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVFindGeodesicPath* New();
+  vtkTypeMacro(vtkSVFindGeodesicPath,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
@@ -136,10 +137,6 @@ protected:
   int GetNeighborBoundaryPoints(const int ptId,vtkPolyData *pd,
                                 vtkPoints *repelPoints);
 
-private:
-  vtkSVFindGeodesicPath(const vtkSVFindGeodesicPath&);  // Not implemented.
-  void operator=(const vtkSVFindGeodesicPath&);  // Not implemented.
-
   char *InternalIdsArrayName;
   char *DijkstraArrayName;
   char *PathBooleanArrayName;
@@ -156,6 +153,11 @@ private:
   int RepelCloseBoundaryPoints;
 
   double ClosePt[3];
+
+private:
+  vtkSVFindGeodesicPath(const vtkSVFindGeodesicPath&);  // Not implemented.
+  void operator=(const vtkSVFindGeodesicPath&);  // Not implemented.
+
 };
 
 #endif

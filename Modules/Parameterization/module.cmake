@@ -44,6 +44,7 @@ vtk_module(vtkSVParameterization
   "${DOCUMENTATION}"
   DEPENDS
   vtkCommonDataModel
+  vtkCommonExecutionModel
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling

@@ -31,6 +31,7 @@ vtk_module(vtkSVBoolean
   "${DOCUMENTATION}"
   DEPENDS
   vtkCommonDataModel
+  vtkCommonExecutionModel
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling
