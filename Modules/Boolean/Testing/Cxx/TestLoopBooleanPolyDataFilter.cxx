@@ -30,7 +30,6 @@
 
 #include "vtkActor.h"
 #include "vtkSVLoopBooleanPolyDataFilter.h"
-#include "vtkIntersectionPolyDataFilter.h"
 #include <vtkPolyDataMapper.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>

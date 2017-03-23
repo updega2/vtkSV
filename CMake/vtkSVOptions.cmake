@@ -45,13 +45,13 @@ set(VTKSV_DOCS_DIR ${VTKSV_BINARY_DIR}/Doxygen CACHE PATH "Location to put doxyg
 # Libs options
 option(BUILD_SHARED_LIBS "Build ${PROJECT_NAME} as shared libraries." OFF)
 
-set(VTKSV_LIBRARY_TYPE "STATIC" CACHE STRING "Options are STATIC or SHARED" FORCE)
-set_property(CACHE VTKSV_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED)
-mark_as_advanced(VTKSV_LIBRARY_TYPE)
+set(SV_LIBRARY_TYPE "STATIC" CACHE STRING "Options are STATIC or SHARED" FORCE)
+set_property(CACHE SV_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED)
+mark_as_advanced(SV_LIBRARY_TYPE)
 if(BUILD_SHARED_LIBS)
-	set(VTKSV_LIBRARY_TYPE "SHARED" CACHE STRING "Shared cache" FORCE)
+	set(SV_LIBRARY_TYPE "SHARED" CACHE STRING "Shared cache" FORCE)
 else()
-  set(VTKSV_LIBRARY_TYPE "STATIC" CACHE STRING "Static cache" FORCE)
+  set(SV_LIBRARY_TYPE "STATIC" CACHE STRING "Static cache" FORCE)
 endif()
 #----------------------------------------------------------------------------
 
@@ -71,5 +71,5 @@ option(VTKSV_BUILD_MODULE_GEOMETRY         "Option to build the Geometry code"  
 
 #-----------------------------------------------------------------------------
 # Specify to install libs/headers
-option(VTKSV_INSTALL_HEADERS "Option to install vtkSV headers" ON)
-option(VTKSV_INSTALL_LIBS    "Option to install vtkSV libs"    ON)
+option(SV_INSTALL_HEADERS "Option to install vtkSV headers" ON)
+option(SV_INSTALL_LIBS    "Option to install vtkSV libs"    ON)

@@ -43,7 +43,6 @@ if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
   foreach(lib ${VTKSV_LIBS})
     string(TOUPPER ${lib} _cap_lib_name)
     set(SV_LIB_${_cap_lib_name}_NAME ${lib})
-    message("SV_LIB_${_cap_lib_name}_NAME: ${SV_LIB_${_cap_lib_name}_NAME}")
   endforeach()
 else()
 

@@ -33,6 +33,7 @@
 #include "vtkAppendPolyData.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
+#include "vtkDataSetSurfaceFilter.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -46,6 +47,7 @@
 #include "vtkSVLoopIntersectionPolyDataFilter.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
+#include "vtkThreshold.h"
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
 
@@ -555,7 +557,7 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::GetBooleanRegions(
       vtkIdType outputCellId0 = this->NewCellIds[inputIndex]->GetComponent(nextCell,0);
       vtkIdType outputCellId1 = this->NewCellIds[inputIndex]->GetComponent(nextCell,1);
       //If the cell has not been given an orientation from the flood fill
-      //algorithm and it has an id from vtkIntersectionPolyDataFilter
+      //algorithm and it has an id from vtkSVLoopIntersectionPolyDataFilter
       if (outputCellId0 != -1)
         {
         //If the cell hasn't been touched
@@ -1440,70 +1442,136 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::RunLoopTest(
 void vtkSVLoopBooleanPolyDataFilter::Impl::PerformBoolean(
     vtkPolyData *output, int booleanOperation)
 {
-  // Four surfaces
-  vtkPolyData *surfaces[4];
-  for (int i=0;i<4;i++)
-    {
-    surfaces[i] = vtkPolyData::New();;
-    }
+  //// Four surfaces
+  //vtkPolyData *surfaces[4];
+  //for (int i=0;i<4;i++)
+  //  {
+  //  surfaces[i] = vtkPolyData::New();;
+  //  }
 
-  this->ThresholdRegions(surfaces);
+  //this->ThresholdRegions(surfaces);
 
-  vtkNew(vtkAppendPolyData, appender);
+  //vtkNew(vtkAppendPolyData, appender);
 
-  //If open intersection case, make sure correct region is taken
-  if (this->IntersectionCase == 2)
-    {
-    vtkNew(vtkPolyData, tmp);
-    int numCells[4];
-    std::list<vtkIdType> nocellregion;
-    for (int i=0;i<4;i++)
-      {
-      numCells[i] = surfaces[i]->GetNumberOfCells();
-      if (numCells[i] == 0)
-        {
-        nocellregion.push_back(i);
-        }
-      }
-    if (nocellregion.size() > 0)
-      {
-      if (nocellregion.front() == 0)
-        {
-        tmp->DeepCopy(surfaces[1]);
-        surfaces[1]->DeepCopy(surfaces[0]);
-        surfaces[0]->DeepCopy(tmp);
-        }
-      if (nocellregion.back() == 2)
-        {
-        tmp->DeepCopy(surfaces[3]);
-        surfaces[3]->DeepCopy(surfaces[2]);
-        surfaces[2]->DeepCopy(tmp);
-        }
-      }
-    }
+  ////If open intersection case, make sure correct region is taken
+  //if (this->IntersectionCase == 2)
+  //  {
+  //  vtkNew(vtkPolyData, tmp);
+  //  int numCells[4];
+  //  std::list<vtkIdType> nocellregion;
+  //  for (int i=0;i<4;i++)
+  //    {
+  //    numCells[i] = surfaces[i]->GetNumberOfCells();
+  //    if (numCells[i] == 0)
+  //      {
+  //      nocellregion.push_back(i);
+  //      }
+  //    }
+  //  if (nocellregion.size() > 0)
+  //    {
+  //    if (nocellregion.front() == 0)
+  //      {
+  //      tmp->DeepCopy(surfaces[1]);
+  //      surfaces[1]->DeepCopy(surfaces[0]);
+  //      surfaces[0]->DeepCopy(tmp);
+  //      }
+  //    if (nocellregion.back() == 2)
+  //      {
+  //      tmp->DeepCopy(surfaces[3]);
+  //      surfaces[3]->DeepCopy(surfaces[2]);
+  //      surfaces[2]->DeepCopy(tmp);
+  //      }
+  //    }
+  //  }
+  //if (booleanOperation == 0)
+  //  {
+  //  appender->AddInputData(surfaces[0]);
+  //  appender->AddInputData(surfaces[2]);
+  //  }
+  //if (booleanOperation == 1)
+  //  {
+  //  appender->AddInputData(surfaces[1]);
+  //  appender->AddInputData(surfaces[3]);
+  //  }
+  //if (booleanOperation == 2)
+  //  {
+  //  appender->AddInputData(surfaces[0]);
+  //  appender->AddInputData(surfaces[3]);
+  //  }
+  //appender->Update();
+
+  //output->DeepCopy(appender->GetOutput());
+
+  //for (int i =0;i < 4;i++)
+  //  {
+  //  surfaces[i]->Delete();
+  //  }
+  vtkSmartPointer<vtkThreshold> thresholder =
+    vtkSmartPointer<vtkThreshold>::New();
+  vtkSmartPointer<vtkDataSetSurfaceFilter> surfacer =
+    vtkSmartPointer<vtkDataSetSurfaceFilter>::New();
+
+  vtkSmartPointer<vtkPolyData> surface1_A =
+	  vtkSmartPointer<vtkPolyData>::New();
+  thresholder->SetInputData(this->Mesh[0]);
+  thresholder->SetInputArrayToProcess(0,0,0,1,"BooleanRegion");
+  thresholder->ThresholdBetween(-1,-1);
+  thresholder->Update();
+  surfacer->SetInputData(thresholder->GetOutput());
+  surfacer->Update();
+  surface1_A->DeepCopy(surfacer->GetOutput());
+
+  vtkSmartPointer<vtkPolyData> surface1_B =
+	  vtkSmartPointer<vtkPolyData>::New();
+  thresholder->SetInputData(this->Mesh[0]);
+  thresholder->SetInputArrayToProcess(0,0,0,1,"BooleanRegion");
+  thresholder->ThresholdBetween(1,1);
+  thresholder->Update();
+  surfacer->SetInputData(thresholder->GetOutput());
+  surfacer->Update();
+  surface1_B->DeepCopy(surfacer->GetOutput());
+
+  vtkSmartPointer<vtkPolyData> surface2_A =
+	  vtkSmartPointer<vtkPolyData>::New();
+  thresholder->SetInputData(this->Mesh[1]);
+  thresholder->SetInputArrayToProcess(0,0,0,1,"BooleanRegion");
+  thresholder->ThresholdBetween(1,1);
+  thresholder->Update();
+  surfacer->SetInputData(thresholder->GetOutput());
+  surfacer->Update();
+  surface2_A->DeepCopy(surfacer->GetOutput());
+
+  vtkSmartPointer<vtkPolyData> surface2_B =
+	  vtkSmartPointer<vtkPolyData>::New();
+  thresholder->SetInputData(this->Mesh[1]);
+  thresholder->SetInputArrayToProcess(0,0,0,1,"BooleanRegion");
+  thresholder->ThresholdBetween(-1,-1);
+  thresholder->Update();
+  surfacer->SetInputData(thresholder->GetOutput());
+  surfacer->Update();
+  surface2_B->DeepCopy(surfacer->GetOutput());
+
+  vtkSmartPointer<vtkAppendPolyData> appender =
+    vtkSmartPointer<vtkAppendPolyData>::New();
+
   if (booleanOperation == 0)
-    {
-    appender->AddInputData(surfaces[0]);
-    appender->AddInputData(surfaces[2]);
-    }
+  {
+    appender->AddInputData(surface1_A);
+    appender->AddInputData(surface2_A);
+  }
   if (booleanOperation == 1)
-    {
-    appender->AddInputData(surfaces[1]);
-    appender->AddInputData(surfaces[3]);
-    }
+  {
+    appender->AddInputData(surface1_B);
+    appender->AddInputData(surface2_B);
+  }
   if (booleanOperation == 2)
-    {
-    appender->AddInputData(surfaces[0]);
-    appender->AddInputData(surfaces[3]);
-    }
+  {
+    appender->AddInputData(surface1_A);
+    appender->AddInputData(surface2_B);
+  }
   appender->Update();
 
   output->DeepCopy(appender->GetOutput());
-
-  for (int i =0;i < 4;i++)
-    {
-    surfaces[i]->Delete();
-    }
 }
 
 // ----------------------

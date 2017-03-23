@@ -95,11 +95,11 @@ int vtkDelaunay2D_60::InCircle (double x[3], double x1[3], double x2[3],
 
   if ( dist2 < (0.999999999999*radius2) )
     {
-    return SV_OK;
+    return 1;
     }
   else
     {
-    return SV_ERROR;
+    return 0;
     }
 }
 
@@ -336,13 +336,13 @@ int vtkDelaunay2D_60::RequestData(
   if ( (inPoints=input->GetPoints()) == NULL )
     {
     vtkDebugMacro("Cannot triangulate; no input points");
-    return SV_OK;
+    return 1;
     }
 
   if ( (numPoints=inPoints->GetNumberOfPoints()) <= 2 )
     {
     vtkDebugMacro("Cannot triangulate; need at least 3 input points");
-    return SV_OK;
+    return 1;
     }
 
   neighbors = vtkIdList::New(); neighbors->Allocate(2);
@@ -810,11 +810,11 @@ int vtkDelaunay2D_60::RequestData(
         // the neighbor triangle should exist.
         // If more than one neighbor triangle exist,
         // the edge is non-manifold.
-        if( neighbors->GetNumberOfIds() != SV_OK )
+        if( neighbors->GetNumberOfIds() != 1 )
           {
           vtkErrorMacro("ERROR: Edge [" << p1 << " " << p2
               << "] is non-manifold!!!");
-          return SV_ERROR;
+          return 0;
           }
 
         tri2 = neighbors->GetId(0);
@@ -953,7 +953,7 @@ int vtkDelaunay2D_60::RequestData(
 
   output->Squeeze();
 
-  return SV_OK;
+  return 1;
 }
 
 // Methods used to recover edges. Uses lines and polygons to determine boundary
@@ -1133,7 +1133,7 @@ int vtkDelaunay2D_60::RecoverEdge(vtkIdType p1, vtkIdType p2)
   while ( v1 != p2 )
     {
     this->Mesh->GetCellEdgeNeighbors(cellId, v1, v2, neis);
-    if ( neis->GetNumberOfIds() != SV_OK )
+    if ( neis->GetNumberOfIds() != 1 )
       {//Mesh is folded or degenerate
       goto FAILURE;
       }
@@ -1349,7 +1349,7 @@ int vtkDelaunay2D_60::FillInputPortInformation(int port, vtkInformation* info)
     info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
     info->Set(vtkAlgorithm::INPUT_IS_OPTIONAL(), 1);
     }
-  return SV_OK;
+  return 1;
 }
 
 //----------------------------------------------------------------------------

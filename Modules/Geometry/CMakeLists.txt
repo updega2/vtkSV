@@ -71,7 +71,7 @@ if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
 else()
 
   # Regular lib
-  add_library(${lib} ${VTKSV_LIBRARY_TYPE} ${SRCS})
+  add_library(${lib} ${SV_LIBRARY_TYPE} ${SRCS})
 
   target_link_libraries(${lib}
     ${VTK_LIBRARIES}
@@ -93,15 +93,15 @@ else()
     EXPORT_FILE_NAME ${module}Module.h)
 
   # Install of libs and headers
-  if(VTKSV_INSTALL_LIBS)
+  if(SV_INSTALL_LIBS)
     install(TARGETS ${lib}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables
       LIBRARY DESTINATION ${VTKSV_INSTALL_LIBRARY_DIR} COMPONENT CoreLibraries
       ARCHIVE DESTINATION ${VTKSV_INSTALL_ARCHIVE_DIR} COMPONENT CoreLibraries
       )
   endif()
-  if(VTKSV_INSTALL_HEADERS)
-    install(FILES ${HDRS}
+  if(SV_INSTALL_HEADERS)
+    install(FILES ${HDRS} ${CMAKE_CURRENT_BINARY_DIR}/${module}Module.h
       DESTINATION ${VTKSV_INSTALL_INCLUDE_DIR}/core COMPONENT CoreHeaders
       )
   endif()

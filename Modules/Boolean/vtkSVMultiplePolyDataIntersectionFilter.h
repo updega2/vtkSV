@@ -190,7 +190,6 @@ protected:
   void AddInputData(vtkDataObject *)
     { vtkErrorMacro( << "AddInput() must be called with a vtkPolyData not a vtkDataObject."); };
 
-private:
   vtkSVMultiplePolyDataIntersectionFilter(const vtkSVMultiplePolyDataIntersectionFilter&);  // Not implemented.
   void operator=(const vtkSVMultiplePolyDataIntersectionFilter&);  // Not implemented.
 };
