@@ -28,14 +28,13 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVGlobals.h
- *  @brief
- *  @brief
+/**
+ *  \brief Global defines
  *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
  */
 
 #define vtkNew(type,name) \

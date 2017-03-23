@@ -25,14 +25,14 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #-----------------------------------------------------------------------------
-# Build single library instead of typical build system
-option(VTKSV_BUILD_SINGLE_LIBRARY "Option to override default build system and just build a single library containing all of vtksv" OFF)
+# Build regular libraries instead of typical build system
+option(VTKSV_BUILD_LIBS_AS_VTK_MODULES "Option to build the vtkSV libs as vtk modules" ON)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Enable Testing
-option(BUILD_TESTING "Build ${PROJECT_NAME} testing" OFF)
-option(VTKSV_TEST_COVERAGE "Add test coverage" OFF)
+option(BUILD_TESTING       "Build ${PROJECT_NAME} testing" OFF)
+option(VTKSV_TEST_COVERAGE "Add test coverage"             OFF)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
@@ -57,14 +57,19 @@ endif()
 
 #-----------------------------------------------------------------------------
 # Specify which filters to build
-option(VTKSV_BUILD_FILTERS "Option to build the filters" ON)
+option(VTKSV_BUILD_FILTERS     "Option to build the filters"                     ON)
 option(VTKSV_BUILD_FILTER_EXES "Option to build the executables for each filter" OFF)
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------
 # Specify which modules to build
-option(VTKSV_BUILD_MODULE_NURBS "Option to build the NURBS code" ON)
-option(VTKSV_BUILD_MODULE_BOOLEAN "Option to build the Boolean code" ON)
+option(VTKSV_BUILD_MODULE_NURBS            "Option to build the NURBS code"            ON)
+option(VTKSV_BUILD_MODULE_BOOLEAN          "Option to build the Boolean code"          ON)
 option(VTKSV_BUILD_MODULE_PARAMETERIZATION "Option to build the Parameterization code" ON)
-option(VTKSV_BUILD_MODULE_GEOMETRY "Option to build the Geometry code" ON)
+option(VTKSV_BUILD_MODULE_GEOMETRY         "Option to build the Geometry code"         ON)
 #-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Specify to install libs/headers
+option(VTKSV_INSTALL_HEADERS "Option to install vtkSV headers" ON)
+option(VTKSV_INSTALL_LIBS    "Option to install vtkSV libs"    ON)

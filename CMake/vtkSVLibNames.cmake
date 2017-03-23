@@ -24,25 +24,37 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A module that contains code to perform a boolean operation between two input polydata surfaces.")
-
-vtk_module(vtkSVBoolean
-  DESCRIPTION
-  "${DOCUMENTATION}"
-  DEPENDS
-  vtkCommonDataModel
-  vtkCommonExecutionModel
-  vtkFiltersCore
-  vtkFiltersGeometry
-  vtkFiltersModeling
-  vtkSVCommon
-  TEST_DEPENDS
-  vtkInteractionStyle
-  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
-  vtkRendering${VTK_RENDERING_BACKEND}
-  vtkRenderingLabel
-  vtkTestingCore
-  vtkTestingRendering
-  TCL_NAME
+#-----------------------------------------------------------------------------
+# vtkSV Libraries
+set(VTKSV_LIBS
   vtkSVBoolean
-  )
+  vtkSVCommon
+  vtkSVFilters
+  vtkSVGeometry
+  vtkSVNURBS
+  vtkSVParameterization)
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Make library names
+if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
+
+  # Set the lib name as module name
+  foreach(lib ${VTKSV_LIBS})
+    string(TOUPPER ${lib} _cap_lib_name)
+    set(SV_LIB_${_cap_lib_name}_NAME ${lib})
+    message("SV_LIB_${_cap_lib_name}_NAME: ${SV_LIB_${_cap_lib_name}_NAME}")
+  endforeach()
+else()
+
+  # Add the simvascular_ because most likely being built as simvascular lib
+  foreach(lib ${VTKSV_LIBS})
+    string(TOUPPER ${lib} _cap_lib_name)
+    if(WIN32)
+      string(TOLOWER "lib_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
+    else()
+      string(TOLOWER "_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
+    endif()
+  endforeach()
+endif()
+#-----------------------------------------------------------------------------

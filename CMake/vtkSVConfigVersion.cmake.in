@@ -24,25 +24,19 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A module that contains code to perform a boolean operation between two input polydata surfaces.")
+#-----------------------------------------------------------------------------
+# VTKSV Version
+set(PACKAGE_VERSION "@VTKSV_VERSION@")
+#-----------------------------------------------------------------------------
 
-vtk_module(vtkSVBoolean
-  DESCRIPTION
-  "${DOCUMENTATION}"
-  DEPENDS
-  vtkCommonDataModel
-  vtkCommonExecutionModel
-  vtkFiltersCore
-  vtkFiltersGeometry
-  vtkFiltersModeling
-  vtkSVCommon
-  TEST_DEPENDS
-  vtkInteractionStyle
-  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
-  vtkRendering${VTK_RENDERING_BACKEND}
-  vtkRenderingLabel
-  vtkTestingCore
-  vtkTestingRendering
-  TCL_NAME
-  vtkSVBoolean
-  )
+#-----------------------------------------------------------------------------
+# Check whether the requested PACKAGE_FIND_VERSION is compatible
+if("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
+  set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+  set(PACKAGE_VERSION_COMPATIBLE TRUE)
+  if ("${PACKAGE_VERSION}" VERSION_EQUAL "${PACKAGE_FIND_VERSION}")
+    set(PACKAGE_VERSION_EXACT TRUE)
+  endif()
+endif()
+#-----------------------------------------------------------------------------

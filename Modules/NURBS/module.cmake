@@ -38,7 +38,7 @@ vtk_module(vtkSVNURBS
   TEST_DEPENDS
   vtkFiltersExtraction
   vtkInteractionStyle
-  #vtkRenderingFreeType${VTK_RENDERING_BACKEND}
+  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkTestingCore

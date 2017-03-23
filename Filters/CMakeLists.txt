@@ -25,6 +25,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #------------------------------------------------------------------------------
+# Lib/module name
+set(lib ${SV_LIB_VTKSVFILTERS_NAME})
+set(module vtkSVFilters)
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS vtkSVFindGeodesicPath.cxx vtkSVFindSeparateRegions.cxx vtkSVGetBoundaryFaces.cxx
   vtkSVGroupsClipper.cxx vtkSVPolyBallLine.cxx vtkSVHausdorffDistance.cxx
@@ -39,11 +45,57 @@ set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundary
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# Filters module
-vtksv_add_module(vtkSVFilters
-  SRCS ${SRCS}
-  HDRS ${HDRS}
-  PACKAGE_DEPENDS ${VTK_LIBRARIES})
+# Build lib either as vtk module or as a regular lib
+if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
+  if(NOT "${lib}" STREQUAL "${module}")
+    message(FATAL_ERROR "Error: lib and module name should be equal; Lib is ${lib} and Module is ${module}")
+  endif()
+
+  # Filters vtk module
+  vtksv_add_module(${lib}
+    SRCS ${SRCS}
+    HDRS ${HDRS}
+    PACKAGE_DEPENDS ${VTK_LIBRARIES})
+
+else()
+
+  # Regular lib
+  add_library(${lib} ${VTKSV_LIBRARY_TYPE} ${SRCS})
+
+  target_link_libraries(${lib}
+    ${VTK_LIBRARIES}
+    ${SV_LIB_VTKSVCOMMON_NAME}
+    )
+
+  # Set up for exports
+  string(TOUPPER ${module} EXPORT_NAME)
+  set(_export_macro_names
+    EXPORT_MACRO_NAME ${EXPORT_NAME}_EXPORT
+    NO_EXPORT_MACRO_NAME ${EXPORT_NAME}_NO_EXPORT
+    DEPRECATED_MACRO_NAME ${EXPORT_NAME}_DEPRECATED
+    NO_DEPRECATED_MACRO_NAME ${EXPORT_NAME}_NO_DEPRECATED
+    )
+
+  # Generate export headers
+  generate_export_header(${lib}
+    ${_export_macro_names}
+    EXPORT_FILE_NAME ${module}Module.h)
+
+  # Install of libs and headers
+  if(VTKSV_INSTALL_LIBS)
+    install(TARGETS ${lib}
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables
+      LIBRARY DESTINATION ${VTKSV_INSTALL_LIBRARY_DIR} COMPONENT CoreLibraries
+      ARCHIVE DESTINATION ${VTKSV_INSTALL_ARCHIVE_DIR} COMPONENT CoreLibraries
+      )
+  endif()
+  if(VTKSV_INSTALL_HEADERS)
+    install(FILES ${HDRS}
+      DESTINATION ${VTKSV_INSTALL_INCLUDE_DIR}/core COMPONENT CoreHeaders
+      )
+  endif()
+
+endif()
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -53,9 +105,9 @@ if(VTKSV_BUILD_FILTER_EXES)
     HausdorffDistance PassDataArray)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} vtkSVFilters vtkSVCommon)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME} ${SV_LIB_VTKSVCOMMON_NAME})
     install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT FilterExecutables)
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()
 endif()
 #------------------------------------------------------------------------------
