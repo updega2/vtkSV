@@ -49,8 +49,6 @@
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
-  // Assume the command line is okay
-  bool BogusCmdLine = false;
   // Assume no options specified at command line
   bool RequestedHelp         = false;
   bool SourceProvided        = false;
@@ -85,7 +83,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-passarray")   {PassArrayNameProvided = true; passArrayName = argv[++iarg];}
       else if(tmpstr=="-iscelldata")  {passDataIsCellData = atoi(argv[++iarg]);}
       else if(tmpstr=="-passtocells") {passDataToCellData = atoi(argv[++iarg]);}
-      else {BogusCmdLine = true;}
+      else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
   }
@@ -100,7 +98,7 @@ int main(int argc, char *argv[])
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -source             : Source file name (.vtp or .stl)"<< endl;
     cout << "  -target             : Target file name (.vtp or .stl)"<< endl;
-    cout << "  -ouptut             : Output file name"<< endl;
+    cout << "  -output             : Output file name"<< endl;
     cout << "  -passarray          : Name of data array that must be defined on the source surface [default PassArray]"<< endl;
     cout << "  -iscelldata         : Indicates whether the provided data array is cell data or point data on the source surface [default 1]"<< endl;
     cout << "  -passtocells        : Indicates whether the data should be passed to the cells or points of the target surface [default 1]"<< endl;
@@ -118,9 +116,11 @@ int main(int argc, char *argv[])
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, sourcePd);
-  vtkSVIOUtils::ReadInputFile(sourceFilename,sourcePd);
+  if (vtkSVIOUtils::ReadInputFile(sourceFilename,sourcePd) != 1)
+    return EXIT_FAILURE;
   vtkNew(vtkPolyData, targetPd);
-  vtkSVIOUtils::ReadInputFile(targetFilename,targetPd);
+  if (vtkSVIOUtils::ReadInputFile(targetFilename,targetPd) != 1)
+    return EXIT_FAILURE;
 
   // Filter
   vtkNew(vtkSVPassDataArray, Passer);

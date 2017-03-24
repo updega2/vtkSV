@@ -43,8 +43,6 @@
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
-  // Assume the command line is okay
-  bool BogusCmdLine = false;
   // Assume no options specified at command line
   bool RequestedHelp          = false;
   bool InputProvided          = false;
@@ -83,7 +81,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-manifoldedges")        {separateManifoldEdges = atoi(argv[++iarg]);}
       else if(tmpstr=="-nonmanifoldedges")     {separateNonManifoldEdges = atoi(argv[++iarg]);}
       else if(tmpstr=="-extractlargestregion") {extractLargestRegion = atoi(argv[++iarg]);}
-      else {BogusCmdLine = true;}
+      else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
   }
@@ -97,7 +95,7 @@ int main(int argc, char *argv[])
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                    : Display usage and command-line argument summary"<< endl;
     cout << "  -input                : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -ouptut               : Output file name"<< endl;
+    cout << "  -output               : Output file name"<< endl;
     cout << "  -featureangle         : Angle to be used to find features of the surface [default 50.0]"<< endl;
     cout << "  -regionids            : Name of cell data array to be given to the different regions found on the geometry [default RegionId]"<< endl;
     cout << "  -featuresedges        : Use features to define the boundaries separating regions [default 1]"<< endl;
@@ -120,7 +118,8 @@ int main(int argc, char *argv[])
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
-  vtkSVIOUtils::ReadInputFile(inputFilename,inputPd);
+  if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
+    return EXIT_FAILURE;
 
   // Filter
   vtkNew(vtkSVGetBoundaryFaces, boundaryFaceFinder);

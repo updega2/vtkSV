@@ -50,8 +50,6 @@
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
-  // Assume the command line is okay
-  bool BogusCmdLine = false;
   // Assume no options specified at command line
   bool RequestedHelp         = false;
   bool InputProvided         = false;
@@ -81,7 +79,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-output")            {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-cellarray")         {CellArrayNameProvided = true; cellArrayName = argv[++iarg];}
       else if(tmpstr=="-outpointarray")     {outPointArrayName = argv[++iarg];}
-      else {BogusCmdLine = true;}
+      else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
   }
@@ -95,7 +93,7 @@ int main(int argc, char *argv[])
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -ouptut             : Output file name"<< endl;
+    cout << "  -output             : Output file name"<< endl;
     cout << "  -cellarray          : Name of cell data array that must be defined on the input. What we want to find separating points of [default CellArray]"<< endl;
     cout << "  -outpointarray      : Name of point data array that will be given to indicate whether point separates a cell region [default PointArray]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
@@ -113,7 +111,8 @@ int main(int argc, char *argv[])
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
-  vtkSVIOUtils::ReadInputFile(inputFilename,inputPd);
+  if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
+    return EXIT_FAILURE;
 
   // Filter
   vtkNew(vtkSVFindSeparateRegions, Finder);

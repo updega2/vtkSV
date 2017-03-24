@@ -43,8 +43,6 @@
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
-  // Assume the command line is okay
-  bool BogusCmdLine = false;
   // Assume no options specified at command line
   bool RequestedHelp       = false;
   bool InputProvided       = false;
@@ -84,7 +82,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-cutoffradius")  {cutoffRadiusFactor = atof(argv[++iarg]);}
       else if(tmpstr=="-clipvalue")     {clipValue = atof(argv[++iarg]);}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
-      else {BogusCmdLine = true;}
+      else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
   }
@@ -99,7 +97,7 @@ int main(int argc, char *argv[])
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -centerlines        : Centerlines file name (.vtp)"<< endl;
-    cout << "  -ouptut             : Output file name"<< endl;
+    cout << "  -output             : Output file name"<< endl;
     cout << "  -groupids           : Name to be used for group ids [default GroupIds]"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -blanking           : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
@@ -121,9 +119,11 @@ int main(int argc, char *argv[])
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
-  vtkSVIOUtils::ReadInputFile(inputFilename,inputPd);
+  if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
+    return EXIT_FAILURE;
   vtkNew(vtkPolyData, centerlinesPd);
-  vtkSVIOUtils::ReadInputFile(centerlinesFilename,centerlinesPd);
+  if (vtkSVIOUtils::ReadInputFile(centerlinesFilename,centerlinesPd) != 1)
+    return EXIT_FAILURE;
 
   // Filter
   vtkNew(vtkSVGroupsClipper, Grouper);
