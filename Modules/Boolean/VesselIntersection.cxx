@@ -30,7 +30,6 @@
 #include "vtkPointData.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkDataSetSurfaceFilter.h"
-#include "vtkFillHolesFilter.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkCleanPolyData.h"
 #include "vtkSVLoopBooleanPolyDataFilter.h"
