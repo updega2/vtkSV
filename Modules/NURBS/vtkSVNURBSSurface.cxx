@@ -250,6 +250,12 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
 		                                                  const double vSpacing)
 {
   // Get number of control points and knots
+  int dim[3];
+  this->ControlPointGrid->GetDimensions(dim);
+  this->NumberOfUControlPoints = dim[0];
+  this->NumberOfVControlPoints = dim[1];
+  this->NumberOfUKnotPoints = this->UKnotVector->GetNumberOfTuples();
+  this->NumberOfVKnotPoints = this->VKnotVector->GetNumberOfTuples();
   int nUCon  = this->NumberOfUControlPoints;
   int nVCon  = this->NumberOfVControlPoints;
   int nUKnot = this->NumberOfUKnotPoints;

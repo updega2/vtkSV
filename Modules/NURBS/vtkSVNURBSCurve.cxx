@@ -173,6 +173,8 @@ void vtkSVNURBSCurve::SetControlPoints(vtkPoints *points1d)
 int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
 {
   // Get number of control points and knots
+  this->NumberOfControlPoints = this->ControlPointGrid->GetNumberOfPoints();
+  this->NumberOfKnotPoints = this->KnotVector->GetNumberOfTuples();
   int nCon  = this->NumberOfControlPoints;
   int nKnot = this->NumberOfKnotPoints;
   if (nCon == 0)

@@ -28,6 +28,14 @@ set(DOCUMENTATION "A module containing code to perform a variety of smoothing,
   decimation, and subdivision locally")
 
 #------------------------------------------------------------------------------
+# Extra depends
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+endif()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
 # Module depends
 vtk_module(vtkSVGeometry
   DESCRIPTION
@@ -41,12 +49,12 @@ vtk_module(vtkSVGeometry
   vtkSVCommon
   TEST_DEPENDS
   vtkInteractionStyle
-  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkSVCommon
   vtkTestingCore
   vtkTestingRendering
+  ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVGeometry
   )

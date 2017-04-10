@@ -26,23 +26,35 @@
 
 set(DOCUMENTATION "Globals and common functions.")
 
+#------------------------------------------------------------------------------
+# Extra depends
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+endif()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Module depends
 vtk_module(vtkSVCommon
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
   vtkCommonDataModel
   vtkIOXML
+  vtkIOGeometry
   vtkFiltersCore
   vtkFiltersExtraction
   vtkFiltersGeometry
   vtkFiltersSources
   TEST_DEPENDS
   vtkInteractionStyle
-  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkTestingCore
   vtkTestingRendering
+  ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVCommon
   )
+#------------------------------------------------------------------------------

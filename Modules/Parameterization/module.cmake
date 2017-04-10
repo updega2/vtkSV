@@ -35,6 +35,10 @@ if(VTKSV_BUILD_FILTERS)
     set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVNURBS)
   endif()
 endif()
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+endif()
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -56,6 +60,7 @@ vtk_module(vtkSVParameterization
   vtkIOGeometry
   vtkIOXML
   vtkSVCommon
+  ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVParameterization
   )

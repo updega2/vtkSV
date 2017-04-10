@@ -26,6 +26,16 @@
 
 set(DOCUMENTATION "A module containing code with NURBS classes and lofting filters.")
 
+#------------------------------------------------------------------------------
+# Extra depends
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+endif()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Module depends
 vtk_module(vtkSVNURBS
   DESCRIPTION
   "${DOCUMENTATION}"
@@ -38,11 +48,12 @@ vtk_module(vtkSVNURBS
   TEST_DEPENDS
   vtkFiltersExtraction
   vtkInteractionStyle
-  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkTestingCore
   vtkTestingRendering
+  ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVNURBS
   )
+#------------------------------------------------------------------------------

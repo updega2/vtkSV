@@ -26,10 +26,21 @@
 
 set(DOCUMENTATION "A variety of filters performing geometric operations, data operations, and prep operations.")
 
+#------------------------------------------------------------------------------
+# Extra depends
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+endif()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Module depends
 vtk_module(vtkSVFilters
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
+  vtkCommonComputationalGeometry
   vtkCommonDataModel
   vtkCommonExecutionModel
   vtkFiltersCore
@@ -42,12 +53,13 @@ vtk_module(vtkSVFilters
   vtkFiltersExtraction
   vtkIOXML
   vtkInteractionStyle
-  vtkRenderingFreeType${VTK_RENDERING_BACKEND}
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkSVCommon
   vtkTestingCore
   vtkTestingRendering
+  ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVFilters
   )
+#------------------------------------------------------------------------------
