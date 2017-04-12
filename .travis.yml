@@ -1,16 +1,11 @@
 os:
   - linux
-  - osx
 
 compiler:
   - gcc
-  - clang
 
 dist:
   - trusty
-
-osx_image:
-  - xcode7.3
 
 language: cpp
 
@@ -21,17 +16,6 @@ env:
   - VTK_VERSION=6.0
   - VTK_VERSION=6.2
   - VTK_VERSION=7.0
-
-matrix:
-  allow_failures:
-    - os: osx
-    - env: VTK_VERSION=6.0
-    - env: VTK_VERSION=7.0
-  exclude:
-    - os: linux
-      compiler: clang
-    - os: osx
-      compiler: gcc
 
 addons:
   apt:
