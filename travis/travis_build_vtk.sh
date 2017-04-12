@@ -20,6 +20,7 @@ if [ -d $VTK_SOURCE_DIR ]; then
     fi
 fi
 if [ ! -d "$VTK_SOURCE_DIR" ]; then
+    echo "Using git to clone source"
     git clone $vtk_repo_str $VTK_SOURCE_DIR
 fi
 mkdir -p $VTK_DIR
