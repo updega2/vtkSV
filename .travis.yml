@@ -6,18 +6,23 @@ compiler:
   - gcc
   - clang
 
-dist: trusty
+dist:
+  - trusty
 
-osx_image: xcode7.3
+osx_image:
+  - xcode7.3
 
-language: cpp
+language:
+  - cpp
 
-sudo: false
+sudo:
+  - required
 
 env:
   - VTK_VERSION=6.0
   - VTK_VERSION=6.2
   - VTK_VERSION=7.0
+
 matrix:
   allow_failures:
     - os: osx
@@ -58,6 +63,5 @@ cache:
 
 before_script:
   - $SCRIPTS/travis_build_vtk.sh
-  #- if ! $WITH_CMAKE; then $ fi
 
 script: $SCRIPTS/travis_build_and_test.sh
