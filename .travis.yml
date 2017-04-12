@@ -1,0 +1,63 @@
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+dist: trusty
+
+osx_image: xcode7.3
+
+language: cpp
+
+sudo: false
+
+env:
+  - VTK_VERSION=6.0
+  - VTK_VERSION=6.2
+  - VTK_VERSION=7.0
+matrix:
+  allow_failures:
+    - os: osx
+    - env: VTK_VERSION=6.0
+    - env: VTK_VERSION=7.0
+  exclude:
+    - os: linux
+      compiler: clang
+    - os: osx
+      compiler: gcc
+
+addons:
+  apt:
+    packages:
+    - curl
+    - cmake
+
+git:
+  submodules: false
+
+before_install:
+  - export NUM_THREADS=4
+  - export cwd=$(pwd)
+  - export SCRIPTS=$cwd/travis
+  - export EXTERNALS_DIR=/home/travis/external
+  - export VTK_SOURCE_DIR=$EXTERNALS_DIR/vtk-$VTK_VERSION
+  - export VTK_DIR=$EXTERNALS_DIR/vtk-$VTK_VERSION-build
+  - export BUILD_DIR=$cwd/build
+
+cache:
+  directories:
+  - /home/travis/external/vtk-6.0
+  - /home/travis/external/vtk-6.0-build
+  - /home/travis/external/vtk-6.2
+  - /home/travis/external/vtk-6.2-build
+  - /home/travis/external/vtk-7.0
+  - /home/travis/external/vtk-7.0-build
+
+before_script:
+  - $SCRIPTS/travis_build_vtk.sh
+  #- if ! $WITH_CMAKE; then $ fi
+
+script: $SCRIPTS/travis_build_and_test.sh
