@@ -38,7 +38,7 @@ git:
 before_install:
   - export NUM_THREADS=4
   - export cwd=$(pwd)
-  - export SCRIPTS=$cwd/travis
+  - export SCRIPTS=$cwd/Travis
   - export EXTERNALS_DIR=~/travis/external
   - export VTK_SOURCE_DIR=$EXTERNALS_DIR/vtk-$VTK_VERSION
   - export VTK_DIR=$EXTERNALS_DIR/vtk-$VTK_VERSION-build
