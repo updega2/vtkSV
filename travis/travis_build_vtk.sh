@@ -23,7 +23,7 @@ if [ ! -d "$VTK_SOURCE_DIR" ]; then
     git clone $vtk_repo_str $VTK_SOURCE_DIR
 fi
 sudo mkdir -p $VTK_DIR
-sudo chmod -R 755 $VTK_DIR
+sudo chmod -R 777 $VTK_DIR
 cd $VTK_DIR
 cmake $cmake_arg_str $VTK_SOURCE_DIR
 $MAKE
