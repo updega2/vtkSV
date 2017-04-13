@@ -39,17 +39,17 @@ before_install:
   - export NUM_THREADS=4
   - export cwd=$(pwd)
   - export SCRIPTS=$cwd/travis
-  - export EXTERNALS_DIR=/usr/local/travis/external
+  - export EXTERNALS_DIR=~/travis/external
   - export VTK_SOURCE_DIR=$EXTERNALS_DIR/vtk-$VTK_VERSION
   - export VTK_DIR=$EXTERNALS_DIR/vtk-$VTK_VERSION-build
   - export BUILD_DIR=$cwd/build
 
 cache:
   directories:
-  - /usr/local/travis/external/vtk-6.2
-  - /usr/local/travis/external/vtk-6.2-build
-  - /usr/local/travis/external/vtk-7.0
-  - /usr/local/travis/external/vtk-7.0-build
+  - ~/travis/external/vtk-6.2
+  - ~/travis/external/vtk-6.2-build
+  - ~/travis/external/vtk-7.0
+  - ~/travis/external/vtk-7.0-build
 
 before_script:
   - $SCRIPTS/travis_build_vtk.sh
