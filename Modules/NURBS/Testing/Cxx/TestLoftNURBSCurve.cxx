@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include <vtkCamera.h>
+#include "vtkCamera.h"
 #include "vtkSVControlGrid.h"
 #include "vtkDataObject.h"
 #include "vtkPoints.h"
@@ -38,7 +38,6 @@
 #include <vtkRenderWindowInteractor.h>
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
-#include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSCurve.h"
 #include "vtkSVNURBSUtils.h"
 #include "vtkStructuredGridGeometryFilter.h"

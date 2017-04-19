@@ -131,9 +131,11 @@ public:
 
 protected:
   vtkSVControlGrid();
-  ~vtkSVControlGrid();
+  ~vtkSVControlGrid() VTK_OVERRIDE;
 
   virtual void ComputeScalarRange() {vtkStructuredGrid::GetScalarRange();}
+
+  vtkPoints *InternalPoints;
 
 private:
   vtkSVControlGrid(const vtkSVControlGrid&);  // Not implemented.

@@ -45,6 +45,7 @@ vtk_module(vtkSVNURBS
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling
+  vtkSVCommon
   TEST_DEPENDS
   vtkFiltersExtraction
   vtkInteractionStyle

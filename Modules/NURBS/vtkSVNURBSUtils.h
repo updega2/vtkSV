@@ -51,6 +51,7 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
+#include "vtkSVControlGrid.h"
 #include "vtkTypedArray.h"
 
 #include <cassert> // assert() in inline implementations.
@@ -77,12 +78,26 @@ public:
   static int GetPBasisFunctions(vtkDoubleArray *u, vtkDoubleArray *knots,
                                 const int p,
                                 vtkTypedArray<double> *N);
+
+  // Curve functions
   static int GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U,
                                      vtkDoubleArray *weights, vtkDoubleArray *knots,
                                      const int p,
                                      std::string ktype,
                                      const double D0[3], const double DN[3],
                                      vtkPoints *cPoints);
+  static int SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
+		                                const int p, const double D0[3], const double DN[3],
+                                    vtkDoubleArray *U, vtkDoubleArray *knots,
+                                    vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints);
+  static int CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                             const int degree,
+                             const double insertValue, const int span,
+                             const int currentMultiplicity,
+                             const int numberOfInserts,
+                             vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
+
+  // Surface functions
   static int GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
                                        vtkDoubleArray *V, vtkDoubleArray *uWeights,
                                        vtkDoubleArray *vWeights, vtkDoubleArray *uKnots,
@@ -91,10 +106,6 @@ public:
                                        vtkDoubleArray *DU0, vtkDoubleArray *DUN,
                                        vtkDoubleArray *DV0, vtkDoubleArray *DVN,
                                        vtkStructuredGrid *cPoints);
-  static int SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
-		                                const int p, const double D0[3], const double DN[3],
-                                    vtkDoubleArray *U, vtkDoubleArray *knots,
-                                    vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints);
   static int SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTypedArray<double> *NPV,
                                       vtkTypedArray<double> *points,
 		                                  const int p, const int q,
@@ -105,6 +116,16 @@ public:
                                       vtkDoubleArray *uKnots, vtkDoubleArray *vKnots,
                                       vtkTypedArray<double> *newNPU, vtkTypedArray<double> *newNPV,
                                       vtkTypedArray<double> *newPoints);
+  static int SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
+                               vtkDoubleArray *uKnots, const int uDegree,
+                               vtkDoubleArray *vKnots, const int vDegree,
+                               const int insertDirection,
+                               const double insertValue, const int span,
+                               const int currentMultiplicity,
+                               const int numberOfInserts,
+                               vtkSVControlGrid *newControlPoints,
+                               vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
+
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
   static int AddDerivativePoints(vtkTypedArray<double> *points,

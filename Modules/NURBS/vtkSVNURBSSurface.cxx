@@ -168,6 +168,98 @@ vtkSVNURBSSurface* vtkSVNURBSSurface::GetData(vtkInformationVector* v, int i)
 }
 
 // ----------------------
+// InsertKnot
+// ----------------------
+int vtkSVNURBSSurface::InsertKnot(const double newKnot, const int dim, const int numberOfInserts)
+{
+  int p;
+  if (dim == 0)
+    p = this->UDegree;
+  else if(dim == 1)
+    p = this->VDegree;
+
+  // Get the location of the knot
+  int span=0;
+  vtkSVNURBSUtils::FindSpan(p, newKnot, this->UVKnotVectors[dim], span);
+
+  // If the value at the location is our value, we need to get current mult
+  int mult=0;
+  if(this->UVKnotVectors[dim]->GetTuple1(span) == newKnot)
+  {
+    int i=span;
+    int count = 1;
+    while(this->UVKnotVectors[dim]->GetTuple1(i+1) == this->UVKnotVectors[dim]->GetTuple1(i) &&
+          i < this->UVKnotVectors[dim]->GetNumberOfTuples())
+    {
+      count++;
+      i++;
+    }
+    mult = count;
+  }
+
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newUKnots);
+  vtkNew(vtkDoubleArray, newVKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  if (vtkSVNURBSUtils::SurfaceInsertKnot(this->ControlPointGrid,
+                                         this->UKnotVector,
+                                         this->UDegree,
+                                         this->VKnotVector,
+                                         this->VDegree,
+                                         dim, newKnot, span,
+                                         mult, numberOfInserts,
+                                         newControlPoints,
+                                         newUKnots, newVKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error on knot insertion");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetUKnotVector(newUKnots);
+  this->SetVKnotVector(newVKnots);
+
+  return SV_OK;
+}
+
+// ----------------------
+// SetUKnotVector
+// ----------------------
+int vtkSVNURBSSurface::SetUKnotVector(vtkDoubleArray *knots)
+{
+  this->UKnotVector->DeepCopy(knots);
+  this->NumberOfUKnotPoints = this->UKnotVector->GetNumberOfTuples();
+  return SV_OK;
+}
+
+// ----------------------
+// SetVKnotVector
+// ----------------------
+int vtkSVNURBSSurface::SetVKnotVector(vtkDoubleArray *knots)
+{
+  this->VKnotVector->DeepCopy(knots);
+  this->NumberOfUKnotPoints = this->VKnotVector->GetNumberOfTuples();
+  return SV_OK;
+}
+
+// ----------------------
+// SetControlPointGrid
+// ----------------------
+int vtkSVNURBSSurface::SetControlPointGrid(vtkSVControlGrid *controlPoints)
+{
+  this->ControlPointGrid->DeepCopy(controlPoints);
+  int dim[3];
+  controlPoints->GetDimensions(dim);
+  this->ControlPointGrid->GetDimensions(dim);
+  this->NumberOfUControlPoints = dim[0];
+  this->NumberOfVControlPoints = dim[1];
+
+  return SV_OK;
+}
+
+// ----------------------
 // SetControlPoints
 // ----------------------
 void vtkSVNURBSSurface::SetControlPoints(vtkStructuredGrid *points2d)

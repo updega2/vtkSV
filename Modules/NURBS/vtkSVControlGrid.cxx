@@ -196,15 +196,14 @@ int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, dou
 // ----------------------
 int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double pw[4])
 {
-  double onlyp[3];
-  for (int l=0; l<3; l++)
-  {
-    onlyp[l] = pw[l];
-  }
-  double w = pw[3];
+  double onlyp[3], w;
 
   if (this->GetControlPoint(i, j, k, onlyp, w) != SV_OK)
     vtkErrorMacro("Point not retrieved successfully");
+
+  for (int l=0; l<3; l++)
+    pw[l] = onlyp[l];
+  pw[3] = w;
 
   return SV_OK;
 }

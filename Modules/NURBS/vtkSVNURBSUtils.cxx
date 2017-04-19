@@ -37,6 +37,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 #include "vtkStructuredData.h"
 
 #include <cassert>
@@ -440,7 +441,7 @@ int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots
 }
 
 // ----------------------
-// GetControlPointOfCurve
+// GetControlPointsOfCurve
 // ----------------------
 int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U, vtkDoubleArray *weights,
                                           vtkDoubleArray *knots,
@@ -490,6 +491,139 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   if (vtkSVNURBSUtils::TypedArrayToPoints(cPointArray, cPoints) != SV_OK)
   {
     return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetCurveEndDerivatives
+// ----------------------
+int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
+		                          const int p, const double D0[3],
+                                          const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
+                                          vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints)
+{
+  vtkSVNURBSUtils::AddDerivativeRows(NP, newNP, p, knots);
+
+  vtkSVNURBSUtils::AddDerivativePoints(points, p, D0, DN, U, knots, newPoints);
+
+  return SV_OK;
+}
+
+// ----------------------
+// CurveInsertKnot
+// ----------------------
+int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                     const int degree,
+                                     const double insertValue, const int span,
+                                     const int currentMultiplicity,
+                                     const int numberOfInserts,
+                                     vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Set values used by alg to more concise vars
+  int np   = dims[0] - 1;
+  int p    = degree;
+  double u = insertValue;
+  int k    = span;
+  int s    = currentMultiplicity;
+  int r    = numberOfInserts;
+
+  // Can't possibly add more knots at location than the degree of the curve
+  if ( (r+s) > p)
+  {
+    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
+  }
+
+  // number of knots
+  int mp = np+p+1;
+  int nq = np+r;
+
+  // Set output number of points and knots
+  newControlPoints->GetPoints()->SetNumberOfPoints(nq+1);
+  newControlPoints->SetDimensions(nq+1, 1, 1);
+  newKnots->SetNumberOfTuples(mp+r+1);
+
+  // Double check to see if correct vals were given
+  if (knots->GetNumberOfTuples() != mp+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with knot span\n");
+    return SV_ERROR;
+  }
+
+  vtkNew(vtkDoubleArray, tmpPoints);
+  tmpPoints->SetNumberOfComponents(4);
+  tmpPoints->SetNumberOfTuples(p+1);
+  // Set unchanging knots
+  for (int i=0; i<=k; i++)
+    newKnots->SetTuple1(i, knots->GetTuple1(i));
+
+  // Set the new knot r times
+  for (int i=1; i<=r; i++)
+    newKnots->SetTuple1(k+i, u);
+
+  // Set the rest of the new knot span
+  for (int i=k+1; i<=mp; i++)
+  {
+    newKnots->SetTuple1(i+r, knots->GetTuple1(i));
+  }
+
+  // Set unchanging control points before knot
+  for (int i=0; i<=k-p; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(i, 0, 0, pw);
+    newControlPoints->SetControlPoint(i, 0, 0, pw);
+  }
+  for (int i=k-s; i<=np; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(i, 0, 0, pw);
+    newControlPoints->SetControlPoint(i+r, 0, 0, pw);
+  }
+
+  // Load tmp points
+  for (int i=0; i<=p-s; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(k-p+i, 0, 0, pw);
+    tmpPoints->SetTuple(i, pw);
+  }
+
+  // Insert the knot multiplicity r
+  for (int i=1; i<=r; i++)
+  {
+    int L = k-p+i;
+    for (int j=0; j<=p-i-s; j++)
+    {
+      double alpha = (u - knots->GetTuple1(L+j))/(knots->GetTuple1(j+k+1)-knots->GetTuple1(L+j));
+      double pt0[4], pt1[4], newPoint[4];
+      tmpPoints->GetTuple(j+1, pt0);
+      tmpPoints->GetTuple(j, pt1);
+      vtkSVMathUtils::MultiplyScalar(pt0, alpha, 4);
+
+      vtkSVMathUtils::MultiplyScalar(pt1, 1-alpha, 4);
+      vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+      tmpPoints->SetTuple(j, newPoint);
+    }
+
+    // Set the newly calculated points for this insert
+    double tmp[4];
+    tmpPoints->GetTuple(0, tmp);
+    newControlPoints->SetControlPoint(L, 0, 0, tmp);
+    tmpPoints->GetTuple(p-i-s, tmp);
+    newControlPoints->SetControlPoint(k+r-i-s, 0, 0, tmp);
+
+    // Place the tmp points in the output points
+    for (int j=L+1; j<k-s; j++)
+    {
+      tmpPoints->GetTuple(j-L, tmp);
+      newControlPoints->SetControlPoint(j, 0, 0, tmp);
+    }
   }
 
   return SV_OK;
@@ -607,78 +741,6 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
 }
 
 // ----------------------
-// GetCurveEndDerivatives
-// ----------------------
-int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
-		                          const int p, const double D0[3],
-                                          const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
-                                          vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints)
-{
-  vtkSVNURBSUtils::AddDerivativeRows(NP, newNP, p, knots);
-
-  vtkSVNURBSUtils::AddDerivativePoints(points, p, D0, DN, U, knots, newPoints);
-
-  return SV_OK;
-}
-
-// ----------------------
-// AddDerivativePoints
-// ----------------------
-int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
-		                       const int p, const double D0[3],
-                                       const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
-                                       vtkTypedArray<double> *newPoints)
-{
-  int nKnot = knots->GetNumberOfTuples();
-  int n = nKnot - (p + 1);
-  newPoints->Resize(n, 3);
-
-  //Add extra derivative in points
-  double d0val = U->GetTuple1(p+1)/p;
-  double dNval = (1 - U->GetTuple1(n - p - 4))/p;
-
-  //Set first spot
-  for (int i=0; i<3; i++)
-  {
-    double val = points->GetValue(0, i);
-    newPoints->SetValue(0, i, val);
-  }
-
-  //Set SPECIAL second spot
-  for (int i=0; i<3; i++)
-  {
-    double val = d0val * D0[i];
-    newPoints->SetValue(1, i, val);
-  }
-
-  //Set rest of matrix
-  for (int i=2; i<n-2; i++)
-  {
-    for (int j=0; j<3; j++)
-    {
-      double val = points->GetValue(i-1, j);
-      newPoints->SetValue(i, j, val);
-    }
-  }
-
-  //Set SPECIAL second to last row
-  for (int i=0 ; i<3; i++)
-  {
-    double val = dNval *DN[i];
-    newPoints->SetValue(n-2, i, val);
-  }
-
-  //Set last row
-  for (int i=0; i<3; i++)
-  {
-    double val = points->GetValue(n - 3, i);
-    newPoints->SetValue(n - 1, i, val);
-  }
-
-  return SV_OK;
-}
-
-// ----------------------
 // SetSurfaceEndDerivatives
 // ----------------------
 int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTypedArray<double> *NPV,
@@ -775,6 +837,316 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
   else
   {
     vtkSVNURBSUtils::DeepCopy(tmp2Points, newPoints);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// SurfaceInsertKnot
+// ----------------------
+int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
+                                       vtkDoubleArray *uKnots, const int uDegree,
+                                       vtkDoubleArray *vKnots, const int vDegree,
+                                       const int insertDirection,
+                                       const double insertValue, const int span,
+                                       const int currentMultiplicity,
+                                       const int numberOfInserts,
+                                       vtkSVControlGrid *newControlPoints,
+                                       vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Set values used by alg to more concise vars
+  int np     = dims[0];
+  int p      = uDegree;
+  int mp     = dims[1];
+  int q      = vDegree;
+  double dir = insertDirection;
+  double u   = insertValue;
+  int k      = span;
+  int s      = currentMultiplicity;
+  int r      = numberOfInserts;
+
+  // Can't possibly add more knots at location than the degree of the curve
+  if ( (r+s) > p && dir == 0)
+  {
+    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
+  }
+  if ( (r+s) > q && dir == 1)
+  {
+    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
+  }
+
+  // Double check to see if correct vals were given
+  if (np*mp != controlPoints->GetNumberOfPoints())
+  {
+    fprintf(stderr,"Invalid number of control points in u or v direction given\n");
+    return SV_ERROR;
+  }
+
+  if (dir == 0)
+  {
+    // number of knots
+    int nup = np+p+1;
+    int nk  = np+r;
+
+    // Set output number of points and knots
+    newControlPoints->GetPoints()->SetNumberOfPoints(nup*mp);
+    newControlPoints->SetDimensions(nup, mp, 1);
+    newUKnots->SetNumberOfTuples(nup+r);
+
+    // Double check to see if correct vals were given
+    if (uKnots->GetNumberOfTuples() != nup)
+    {
+      fprintf(stderr,"Invalid number of control points given with knot span\n");
+      return SV_ERROR;
+    }
+
+    vtkNew(vtkDoubleArray, tmpPoints);
+    tmpPoints->SetNumberOfComponents(4);
+    tmpPoints->SetNumberOfTuples(p+1);
+    // Set unchanging knots
+    for (int i=0; i<=k; i++)
+      newUKnots->SetTuple1(i, uKnots->GetTuple1(i));
+
+    // Set the new knot r times
+    for (int i=1; i<=r; i++)
+      newUKnots->SetTuple1(k+i, u);
+
+    // Set the rest of the new knot span
+    for (int i=k+1; i<=nup; i++)
+      newUKnots->SetTuple1(i+r, uKnots->GetTuple1(i));
+
+    // Copy the v knot vector to output
+    newVKnots->DeepCopy(vKnots);
+
+    // Set up alpha array
+    double **alpha = new double*[p-s];
+    for (int i=0; i<p-s; i++)
+      alpha[i] = new double[r];
+
+    // Preload all the alphas
+    for (int i=1; i<=r; i++)
+    {
+      int L = k-p+i;
+      for (int j=0; j<=p-i-s; j++)
+        alpha[j][i] = (u - uKnots->GetTuple1(L+j))/(uKnots->GetTuple1(j+k+1)-uKnots->GetTuple1(L+j));
+    }
+
+    // Insert knot each column
+    for (int col=0; col<=mp; col++)
+    {
+      // Set unchanging control points
+      for (int i=0; i<=k-p; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(i, col, 0, pw);
+        newControlPoints->SetControlPoint(i, col, 0, pw);
+      }
+
+      for (int i=0; i<np; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(i, col, 0, pw);
+        newControlPoints->SetControlPoint(i+r, col, 0, pw);
+      }
+
+      // Set up tmp points
+      for (int i=0; i<=p-s; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(k-p+i, col, 0, pw);
+        tmpPoints->SetTuple(i, pw);
+      }
+
+      // Insert the new knot r times
+      for (int i=0; i<=r; i++)
+      {
+        int L = k-p+1;
+        for (int j=0; j<=p-i-s; j++)
+        {
+          double pt0[4], pt1[4], newPoint[4];
+          tmpPoints->GetTuple(j+1, pt0);
+          tmpPoints->GetTuple(j, pt1);
+          vtkMath::MultiplyScalar(pt0, alpha[j][i]);
+          vtkMath::MultiplyScalar(pt1, 1-alpha[j][i]);
+          vtkMath::Add(pt0, pt1, newPoint);
+          tmpPoints->SetTuple(j, newPoint);
+        }
+
+        // Fill the control point grid with the tmp points
+        newControlPoints->SetControlPoint(L, col, 0, tmpPoints->GetTuple(0));
+        newControlPoints->SetControlPoint(k+r-i-s, col, 0, tmpPoints->GetTuple(p-i-s));
+      }
+    }
+
+    // Clean up alphas
+    for (int i=0; i<p-s; i++)
+      delete [] alpha[i];
+    delete [] alpha;
+
+  }
+  // Other dir!!
+  else if (dir == 1)
+  {
+    // number of knots
+    int nup = mp+q+1;
+    int nk  = mp+r;
+
+    // Set output number of points and knots
+    newControlPoints->GetPoints()->SetNumberOfPoints(nup*np);
+    newControlPoints->SetDimensions(np, nup, 1);
+    newVKnots->SetNumberOfTuples(nup+r);
+
+    // Double check to see if correct vals were given
+    if (vKnots->GetNumberOfTuples() != nup)
+    {
+      fprintf(stderr,"Invalid number of control points given with knot span\n");
+      return SV_ERROR;
+    }
+
+    vtkNew(vtkDoubleArray, tmpPoints);
+    tmpPoints->SetNumberOfComponents(4);
+    tmpPoints->SetNumberOfTuples(p+1);
+    // Set unchanging knots
+    for (int i=0; i<=k; i++)
+      newVKnots->SetTuple1(i, vKnots->GetTuple1(i));
+
+    // Set the new knot r times
+    for (int i=1; i<=r; i++)
+      newVKnots->SetTuple1(k+i, u);
+
+    // Set the rest of the new knot span
+    for (int i=k+1; i<=nup; i++)
+      newVKnots->SetTuple1(i+r, vKnots->GetTuple1(i));
+
+    // Copy the u knot vector to output
+    newUKnots->DeepCopy(uKnots);
+
+    // Set up alpha array
+    double **alpha = new double*[q-s];
+    for (int i=0; i<q-s; i++)
+      alpha[i] = new double[r];
+
+    // Preload all the alphas
+    for (int i=1; i<=r; i++)
+    {
+      int L = k-q+i;
+      for (int j=0; j<=q-i-s; j++)
+        alpha[j][i] = (u - vKnots->GetTuple1(L+j))/(vKnots->GetTuple1(j+k+1)-vKnots->GetTuple1(L+j));
+    }
+
+    // Insert knot each row
+    for (int row=0; row<=np; row++)
+    {
+      // Set unchanging control points
+      for (int i=0; i<=k-q; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(row, i, 0, pw);
+        newControlPoints->SetControlPoint(row, i, 0, pw);
+      }
+
+      for (int i=0; i<mp; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(row, i, 0, pw);
+        newControlPoints->SetControlPoint(row, i+r, 0, pw);
+      }
+
+      // Set up tmp points
+      for (int i=0; i<=q-s; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(row, k-q+i, 0, pw);
+        tmpPoints->SetTuple(i, pw);
+      }
+
+      // Insert the new knot r times
+      for (int i=0; i<=r; i++)
+      {
+        int L = k-q+1;
+        for (int j=0; j<=q-i-s; j++)
+        {
+          double pt0[4], pt1[4], newPoint[4];
+          tmpPoints->GetTuple(j+1, pt0);
+          tmpPoints->GetTuple(j, pt1);
+          vtkMath::MultiplyScalar(pt0, alpha[j][i]);
+          vtkMath::MultiplyScalar(pt1, 1-alpha[j][i]);
+          vtkMath::Add(pt0, pt1, newPoint);
+          tmpPoints->SetTuple(j, newPoint);
+        }
+
+        // Fill the control point grid with the tmp points
+        newControlPoints->SetControlPoint(row, L, 0, tmpPoints->GetTuple(0));
+        newControlPoints->SetControlPoint(row, k+r-i-s, 0, tmpPoints->GetTuple(q-i-s));
+      }
+    }
+
+    // Clean up alphas
+    for (int i=0; i<q-s; i++)
+      delete [] alpha[i];
+    delete [] alpha;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// AddDerivativePoints
+// ----------------------
+int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
+		                       const int p, const double D0[3],
+                                       const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
+                                       vtkTypedArray<double> *newPoints)
+{
+  int nKnot = knots->GetNumberOfTuples();
+  int n = nKnot - (p + 1);
+  newPoints->Resize(n, 3);
+
+  //Add extra derivative in points
+  double d0val = U->GetTuple1(p+1)/p;
+  double dNval = (1 - U->GetTuple1(n - p - 4))/p;
+
+  //Set first spot
+  for (int i=0; i<3; i++)
+  {
+    double val = points->GetValue(0, i);
+    newPoints->SetValue(0, i, val);
+  }
+
+  //Set SPECIAL second spot
+  for (int i=0; i<3; i++)
+  {
+    double val = d0val * D0[i];
+    newPoints->SetValue(1, i, val);
+  }
+
+  //Set rest of matrix
+  for (int i=2; i<n-2; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      double val = points->GetValue(i-1, j);
+      newPoints->SetValue(i, j, val);
+    }
+  }
+
+  //Set SPECIAL second to last row
+  for (int i=0 ; i<3; i++)
+  {
+    double val = dNval *DN[i];
+    newPoints->SetValue(n-2, i, val);
+  }
+
+  //Set last row
+  for (int i=0; i<3; i++)
+  {
+    double val = points->GetValue(n - 3, i);
+    newPoints->SetValue(n - 1, i, val);
   }
 
   return SV_OK;
@@ -1092,7 +1464,7 @@ int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
 }
 
 // ----------------------
-// FindSpan
+// GetMultiplicity
 // ----------------------
 int vtkSVNURBSUtils::GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multiplicity,
                                      vtkDoubleArray *singleValues)

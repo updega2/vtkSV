@@ -77,8 +77,11 @@ public:
   /** \brief Addition between each tuple of two data arrays. */
   static int VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps);
 
+  /** \brief Addition of two arrays of given size. */
+  static int Add(double a[], double b[], double result[], const int size);
 
-
+  /** \brief Multiply value to array of given size; edits in place */
+  static int MultiplyScalar(double a[], double scalar, const int size);
 
 protected:
   vtkSVMathUtils();
