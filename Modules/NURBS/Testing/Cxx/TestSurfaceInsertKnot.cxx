@@ -75,6 +75,7 @@ int TestSurfaceInsertKnot(int argc, char *argv[])
   controlPoints->SetPoint(6, 0.0, 5.0, 0.0);
   controlPoints->SetPoint(7, 2.0, -1.0, -2.0);
   controlPoints->SetPoint(8, 4.0, 1.0, 1.0);
+  controlPointGrid->SetPoints(controlPoints);
 
   // uKnot vector equal space
   vtkNew(vtkDoubleArray, uKnots);

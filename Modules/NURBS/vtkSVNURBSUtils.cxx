@@ -2282,7 +2282,7 @@ int vtkSVNURBSUtils::TypedArrayToControlGrid(vtkTypedArray<double> *array, vtkSV
   int dims = array->GetDimensions();
   //2D array with third dimensions the coordinates
   int dim[3];
-  for (int i=0; i<4; i++)
+  for (int i=0; i<3; i++)
   {
     dim[i] = array->GetExtents()[i].GetSize();
   }
@@ -2300,10 +2300,9 @@ int vtkSVNURBSUtils::TypedArrayToControlGrid(vtkTypedArray<double> *array, vtkSV
 
   output->SetDimensions(dim[0], dim[1], 1);
   output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]);
-  vtkNew(vtkDoubleArray, weights);
-  weights->SetNumberOfTuples(dim[0]*dim[1]);
-  weights->SetName("Weights");
 
+  // Sum over all of the weights
+  double weight_total = 0.0;
   for (int i=0; i<dim[0]; i++)
   {
     for (int j=0; j<dim[1]; j++)
@@ -2312,16 +2311,31 @@ int vtkSVNURBSUtils::TypedArrayToControlGrid(vtkTypedArray<double> *array, vtkSV
       pos[0] = i;
       pos[1] = j;
       int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      double pw[4];
-      for (int k=0; k<4; k++)
-      {
-        pw[k] = array->GetValue(i, j, k);
-      }
-      output->GetPoints()->SetPoint(ptId, pw);
-      weights->SetTuple1(ptId, pw[3]);
+      double weight = array->GetValue(i, j, 3);
+      weight_total += weight;
     }
   }
-  output->GetPointData()->AddArray(weights);
+
+  //2D array with third dimensions the coordinates
+  for (int i=0; i<dim[0]; i++)
+  {
+    for (int j=0; j<dim[1]; j++)
+    {
+      int pos[3]; pos[2] =0;
+      pos[0] = i;
+      pos[1] = j;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      double pt[3];
+      for (int k=0; k<3; k++)
+      {
+        pt[k] = array->GetValue(i, j, k);
+      }
+      double weight = array->GetValue(i, j, 3);
+      vtkMath::MultiplyScalar(pt, weight/weight_total);
+
+      output->GetPoints()->SetPoint(ptId, pt);
+    }
+  }
 
   return SV_OK;
 }

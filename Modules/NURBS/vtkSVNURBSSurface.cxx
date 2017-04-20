@@ -369,11 +369,6 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   vtkNew(vtkSparseArray<double>, NUfinal);
   NUfinal->Resize(numUDiv, nUCon);
 
-  // Get double array for rational basis functions
-  vtkNew(vtkDoubleArray, NUrational);
-  NUrational->SetNumberOfTuples(numUDiv);
-  NUrational->FillComponent(0, 0.0);
-
   // Loop through control points
   for (int i=0; i<nUCon; i++)
   {
@@ -392,35 +387,6 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   // Last value should be 1
   NUfinal->SetValue(numUDiv-1, nUCon-1, 1.0);
 
-  // Get weights
-  vtkDataArray *weights = this->ControlPointGrid->GetPointData()->GetArray("Weights");
-
-  // Multiply by weights for rational curve
-  for (int i=0; i<numUDiv; i++)
-  {
-    double ratVal = 0.0;
-    for (int j=0; j<nUCon; j++)
-    {
-      double val       = NUfinal->GetValue(i, j);
-      //int ptId         = this->ControlPointGrid->GetPointId(j, 0, 0);
-      double ratWeight = 1.0;//weights->GetTuple1(ptId);
-      ratVal           = ratVal + val*ratWeight;
-    }
-    NUrational->SetTuple1(i, ratVal);
-  }
-  // Now that we have denominator, calculate numerators!
-  for (int i=0; i<numUDiv; i++)
-  {
-    for (int j=0; j<nUCon; j++)
-    {
-      double val       = NUfinal->GetValue(i, j);
-      //int ptId         = this->ControlPointGrid->GetPointId(j, 0, 0);
-      double ratWeight = 1.0;//weights->GetTuple1(ptId);
-      double ratVal    = NUrational->GetTuple1(i);
-      NUfinal->SetValue(i, j, val*ratWeight/ratVal);
-    }
-  }
-
   // V direction!
   // -----------------------------------------------------------------------
   int numVDiv = ceil(1.0/vSpacing);
@@ -434,11 +400,6 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   // Get sparse array for basis functions
   vtkNew(vtkSparseArray<double>, NVfinal);
   NVfinal->Resize(numVDiv, nVCon);
-
-  // Get double array for rational basis functions
-  vtkNew(vtkDoubleArray, NVrational);
-  NVrational->SetNumberOfTuples(numVDiv);
-  NVrational->FillComponent(0, 0.0);
 
   // Loop through control points
   for (int i=0; i<nVCon; i++)
@@ -459,32 +420,6 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
 
   // Last value should be 1
   NVfinal->SetValue(numVDiv-1, nVCon-1, 1.0);
-
-  // Multiply by weights for rational curve
-  for (int i=0; i<numVDiv; i++)
-  {
-    double ratVal = 0.0;
-    for (int j=0; j<nVCon; j++)
-    {
-      double val       = NVfinal->GetValue(i, j);
-      //int ptId         = this->ControlPointGrid->GetPointId(j, i, 0);
-      double ratWeight = 1.0;//weights->GetTuple1(ptId);
-      ratVal           = ratVal + val*ratWeight;
-    }
-    NVrational->SetTuple1(i, ratVal);
-  }
-  // Now that we have denominator, calculate numerators!
-  for (int i=0; i<numVDiv; i++)
-  {
-    for (int j=0; j<nVCon; j++)
-    {
-      double val       = NVfinal->GetValue(i, j);
-      //int ptId         = this->ControlPointGrid->GetPointId(j, i, 0);
-      double ratWeight = 1.0;//weights->GetTuple1(ptId);
-      double ratVal    = NVrational->GetTuple1(i);
-      NVfinal->SetValue(i, j, val*ratWeight/ratVal);
-    }
-  }
 
   vtkNew(vtkSparseArray<double>, NVfinalT);
   vtkSVNURBSUtils::MatrixTranspose(NVfinal, 0, NVfinalT);
@@ -507,7 +442,6 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
   }
-  fprintf(stderr,"BREAK\n");
 
   // Set up final grid of points
   vtkNew(vtkSVControlGrid, finalGrid);
