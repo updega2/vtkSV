@@ -91,16 +91,3 @@ else()
 
 endif()
 #------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# Create additional executables
-if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST SoDumb)
-  foreach(exe ${EXE_LIST})
-    add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVPARAMETERIZATION_NAME} ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVCOMMON_NAME})
-    install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
-  endforeach()
-endif()
-#------------------------------------------------------------------------------

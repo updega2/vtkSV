@@ -33,6 +33,7 @@
 #include "vtkDataArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
+#include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
@@ -526,7 +527,7 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
   controlPoints->GetDimensions(dims);
 
   // Set values used by alg to more concise vars
-  int np   = dims[0] - 1;
+  int np   = dims[0]-1;
   int p    = degree;
   double u = insertValue;
   int k    = span;
@@ -612,18 +613,13 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
     }
 
     // Set the newly calculated points for this insert
-    double tmp[4];
-    tmpPoints->GetTuple(0, tmp);
-    newControlPoints->SetControlPoint(L, 0, 0, tmp);
-    tmpPoints->GetTuple(p-i-s, tmp);
-    newControlPoints->SetControlPoint(k+r-i-s, 0, 0, tmp);
+    newControlPoints->SetControlPoint(L, 0, 0, tmpPoints->GetTuple(0));
+    newControlPoints->SetControlPoint(k+r-i-s, 0, 0, tmpPoints->GetTuple(p-i-s));
 
     // Place the tmp points in the output points
     for (int j=L+1; j<k-s; j++)
-    {
-      tmpPoints->GetTuple(j-L, tmp);
-      newControlPoints->SetControlPoint(j, 0, 0, tmp);
-    }
+      newControlPoints->SetControlPoint(j, 0, 0, tmpPoints->GetTuple(j-L));
+
   }
 
   return SV_OK;
@@ -715,7 +711,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   //fprintf(stdout,"Inverted system V:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPVinv);
   vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != SV_OK)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, 1, pointMatFinal, 1, 3, tmpUGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
@@ -723,7 +719,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   vtkNew(vtkDenseArray<double>, tmpUGridT);
   vtkSVNURBSUtils::MatrixTranspose(tmpUGrid, 1, tmpUGridT);
   vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, tmpUGridT, 1, tmpVGrid) != SV_OK)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, 1, tmpUGridT, 1, 3, tmpVGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
@@ -860,9 +856,9 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
   controlPoints->GetDimensions(dims);
 
   // Set values used by alg to more concise vars
-  int np     = dims[0];
+  int np     = dims[0]-1;
   int p      = uDegree;
-  int mp     = dims[1];
+  int mp     = dims[1]-1;
   int q      = vDegree;
   double dir = insertDirection;
   double u   = insertValue;
@@ -881,7 +877,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
   }
 
   // Double check to see if correct vals were given
-  if (np*mp != controlPoints->GetNumberOfPoints())
+  if ((np+1)*(mp+1) != controlPoints->GetNumberOfPoints())
   {
     fprintf(stderr,"Invalid number of control points in u or v direction given\n");
     return SV_ERROR;
@@ -894,12 +890,12 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
     int nk  = np+r;
 
     // Set output number of points and knots
-    newControlPoints->GetPoints()->SetNumberOfPoints(nup*mp);
-    newControlPoints->SetDimensions(nup, mp, 1);
-    newUKnots->SetNumberOfTuples(nup+r);
+    newControlPoints->GetPoints()->SetNumberOfPoints((nup+1)*(mp+1));
+    newControlPoints->SetDimensions(nup+1, mp+1, 1);
+    newUKnots->SetNumberOfTuples(nup+r+1);
 
     // Double check to see if correct vals were given
-    if (uKnots->GetNumberOfTuples() != nup)
+    if (uKnots->GetNumberOfTuples() != nup+1)
     {
       fprintf(stderr,"Invalid number of control points given with knot span\n");
       return SV_ERROR;
@@ -947,7 +943,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
         newControlPoints->SetControlPoint(i, col, 0, pw);
       }
 
-      for (int i=0; i<np; i++)
+      for (int i=0; i<=np; i++)
       {
         double pw[4];
         controlPoints->GetControlPoint(i, col, 0, pw);
@@ -965,7 +961,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       // Insert the new knot r times
       for (int i=0; i<=r; i++)
       {
-        int L = k-p+1;
+        int L = k-p+i;
         for (int j=0; j<=p-i-s; j++)
         {
           double pt0[4], pt1[4], newPoint[4];
@@ -975,12 +971,17 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
           vtkMath::MultiplyScalar(pt1, 1-alpha[j][i]);
           vtkMath::Add(pt0, pt1, newPoint);
           tmpPoints->SetTuple(j, newPoint);
+
+          // Fill the control point grid with the tmp points
+          newControlPoints->SetControlPoint(L, col, 0, tmpPoints->GetTuple(0));
+          newControlPoints->SetControlPoint(k+r-i-s, col, 0, tmpPoints->GetTuple(p-i-s));
         }
 
-        // Fill the control point grid with the tmp points
-        newControlPoints->SetControlPoint(L, col, 0, tmpPoints->GetTuple(0));
-        newControlPoints->SetControlPoint(k+r-i-s, col, 0, tmpPoints->GetTuple(p-i-s));
+        for (int i=L+1; i<k-s; i++)
+          newControlPoints->SetControlPoint(i, col, 0, tmpPoints->GetTuple(i-L));
+
       }
+
     }
 
     // Clean up alphas
@@ -997,9 +998,9 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
     int nk  = mp+r;
 
     // Set output number of points and knots
-    newControlPoints->GetPoints()->SetNumberOfPoints(nup*np);
-    newControlPoints->SetDimensions(np, nup, 1);
-    newVKnots->SetNumberOfTuples(nup+r);
+    newControlPoints->GetPoints()->SetNumberOfPoints((nup+1)*(np+1));
+    newControlPoints->SetDimensions(np+1, nup+1, 1);
+    newVKnots->SetNumberOfTuples(nup+r+1);
 
     // Double check to see if correct vals were given
     if (vKnots->GetNumberOfTuples() != nup)
@@ -1078,11 +1079,15 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
           vtkMath::MultiplyScalar(pt1, 1-alpha[j][i]);
           vtkMath::Add(pt0, pt1, newPoint);
           tmpPoints->SetTuple(j, newPoint);
+
+          // Fill the control point grid with the tmp points
+          newControlPoints->SetControlPoint(row, L, 0, tmpPoints->GetTuple(0));
+          newControlPoints->SetControlPoint(row, k+r-i-s, 0, tmpPoints->GetTuple(q-i-s));
         }
 
-        // Fill the control point grid with the tmp points
-        newControlPoints->SetControlPoint(row, L, 0, tmpPoints->GetTuple(0));
-        newControlPoints->SetControlPoint(row, k+r-i-s, 0, tmpPoints->GetTuple(q-i-s));
+        for (int i=L+1; i<k-s; i++)
+          newControlPoints->SetControlPoint(row, i, 0, tmpPoints->GetTuple(i-L));
+
       }
     }
 
@@ -1644,23 +1649,23 @@ int vtkSVNURBSUtils::MatrixVecMultiply(vtkTypedArray<double>* mat, const int mat
 // ----------------------
 // MatrixMatrixMultiply
 // ----------------------
-int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints,
-                                        vtkTypedArray<double> *mat1, const int mat1IsPoints,
+int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints, const int point0Dims,
+                                        vtkTypedArray<double> *mat1, const int mat1IsPoints, const int point1Dims,
                                         vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
-  if (mat0IsPoints && mat0->GetExtents()[2].GetSize() != 3)
+  if (mat0IsPoints && mat0->GetExtents()[2].GetSize() != point0Dims)
   {
-    fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
+    fprintf(stderr,"Third dimension of matrix should contain %d dims, but doesn't!\n", point0Dims);
     return SV_ERROR;
   }
 
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat1IsPoints && mat1->GetExtents()[2].GetSize() != 3)
+  if (mat1IsPoints && mat1->GetExtents()[2].GetSize() != point1Dims)
   {
-    fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
+    fprintf(stderr,"Third dimension of matrix should contain %d dims, but doesn't!\n", point1Dims);
     return SV_ERROR;
   }
 
@@ -1672,10 +1677,15 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   }
 
   int either = 0;
-  if (mat0IsPoints || mat1IsPoints)
+  if (mat0IsPoints)
   {
     either = 1;
-    output->Resize(nrM0, ncM1, 3);
+    output->Resize(nrM0, ncM1, point0Dims);
+  }
+  else if (mat1IsPoints)
+  {
+    either = 1;
+    output->Resize(nrM0, ncM1, point1Dims);
   }
   else
   {
@@ -1688,15 +1698,15 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   }
   else if (mat0IsPoints && mat1IsPoints)
   {
-    vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(mat0, mat1, output);
+    vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(mat0, mat1, point0Dims, output);
   }
   else if (mat0IsPoints)
   {
-    vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(mat0, mat1, output);
+    vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(mat0, mat1, point0Dims, output);
   }
   else
   {
-    vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(mat0, mat1, output);
+    vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(mat0, mat1, point1Dims, output);
   }
 
   return SV_OK;
@@ -1745,17 +1755,18 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
 }
 
 // ----------------------
-// PointMatrixMatrixForDGEMM
+// PointMatrixPointMatrixForDGEMM
 // ----------------------
 int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                              vtkTypedArray<double> *mat1,
+                                             const int pointDims,
                                              vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat0->GetExtents()[2].GetSize() != 3)
+  if (mat0->GetExtents()[2].GetSize() != pointDims)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
     return SV_ERROR;
@@ -1768,8 +1779,10 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
     return SV_ERROR;
   }
 
-  double *mat0Vecs[3], *mat1Vecs[3], *outVecs[3];
-  for (int i=0; i<3; i++)
+  double **mat0Vecs = new double*[pointDims];
+  double **mat1Vecs = new double*[pointDims];
+  double **outVecs  = new double*[pointDims];
+  for (int i=0; i<pointDims; i++)
   {
     mat0Vecs[i] = new double[nrM0*ncM0];
     mat1Vecs[i] = new double[nrM1*ncM1];
@@ -1777,28 +1790,34 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   }
   vtkSVNURBSUtils::PointMatrixToVectors(mat0, mat0Vecs);
   vtkSVNURBSUtils::PointMatrixToVectors(mat1, mat1Vecs);
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vecs[i], nrM0, ncM0,
                              mat1Vecs[i], nrM1, ncM1, outVecs[i]) != SV_OK)
     {
-      for (int i=0; i<3; i++)
+      for (int i=0; i<pointDims; i++)
       {
         delete [] mat0Vecs[i];
         delete [] mat1Vecs[i];
         delete [] outVecs[i];
       }
+      delete [] mat0Vecs;
+      delete [] mat1Vecs;
+      delete [] outVecs;
       return SV_ERROR;
     }
   }
-  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
+  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, pointDims, output);
 
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     delete [] mat0Vecs[i];
     delete [] mat1Vecs[i];
     delete [] outVecs[i];
   }
+      delete [] mat0Vecs;
+      delete [] mat1Vecs;
+      delete [] outVecs;
 
   return SV_OK;
 }
@@ -1808,13 +1827,14 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
 // ----------------------
 int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                              vtkTypedArray<double> *mat1,
+                                             const int pointDims,
                                              vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat0->GetExtents()[2].GetSize() != 3)
+  if (mat0->GetExtents()[2].GetSize() != pointDims)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
     return SV_ERROR;
@@ -1827,37 +1847,42 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
     return SV_ERROR;
   }
 
-  double *mat1Vec = new double[nrM1*ncM1];
-  double *mat0Vecs[3], *outVecs[3];
-  for (int i=0; i<3; i++)
+  double *mat1Vec   = new double[nrM1*ncM1];
+  double **mat0Vecs = new double*[pointDims];
+  double **outVecs  = new double*[pointDims];
+  for (int i=0; i<pointDims; i++)
   {
     mat0Vecs[i] = new double[nrM0*ncM0];
     outVecs[i]  = new double[nrM0*ncM1];
   }
   vtkSVNURBSUtils::PointMatrixToVectors(mat0, mat0Vecs);
   vtkSVNURBSUtils::MatrixToVector(mat1, mat1Vec);
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vecs[i], nrM0, ncM0,
                              mat1Vec, nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       delete [] mat1Vec;
-      for (int i=0; i<3; i++)
+      for (int i=0; i<pointDims; i++)
       {
         delete [] mat0Vecs[i];
         delete [] outVecs[i];
       }
+      delete [] mat0Vecs;
+      delete [] outVecs;
       return SV_ERROR;
     }
   }
-  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
+  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, pointDims, output);
 
   delete [] mat1Vec;
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     delete [] mat0Vecs[i];
     delete [] outVecs[i];
   }
+  delete [] mat0Vecs;
+  delete [] outVecs;
 
   return SV_OK;
 }
@@ -1867,13 +1892,14 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
 // ----------------------
 int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
+                                       const int pointDims,
                                        vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat1->GetExtents()[2].GetSize() != 3)
+  if (mat1->GetExtents()[2].GetSize() != pointDims)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
     return SV_ERROR;
@@ -1886,37 +1912,42 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
     return SV_ERROR;
   }
 
-  double *mat0Vec = new double[nrM0*ncM0];
-  double *mat1Vecs[3], *outVecs[3];
-  for (int i=0; i<3; i++)
+  double *mat0Vec   = new double[nrM0*ncM0];
+  double **mat1Vecs = new double*[pointDims];
+  double **outVecs  = new double*[pointDims];
+  for (int i=0; i<pointDims; i++)
   {
     mat1Vecs[i] = new double[nrM1*ncM1];
     outVecs[i]  = new double[nrM0*ncM1];
   }
   vtkSVNURBSUtils::MatrixToVector(mat0, mat0Vec);
   vtkSVNURBSUtils::PointMatrixToVectors(mat1, mat1Vecs);
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vec, nrM0, ncM0,
                              mat1Vecs[i], nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       delete [] mat0Vec;
-      for (int i=0; i<3; i++)
+      for (int i=0; i<pointDims; i++)
       {
         delete [] mat1Vecs[i];
         delete [] outVecs[i];
       }
+      delete [] mat1Vecs;
+      delete [] outVecs;
       return SV_ERROR;
     }
   }
-  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
+  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, pointDims, output);
 
   delete [] mat0Vec;
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     delete [] mat1Vecs[i];
     delete [] outVecs[i];
   }
+  delete [] mat1Vecs;
+  delete [] outVecs;
 
   return SV_OK;
 }
@@ -2054,7 +2085,7 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   int dim[3];
   grid->GetDimensions(dim);
 
-  if (dim[2] != SV_OK)
+  if (dim[2] != 1)
   {
     fprintf(stderr,"3 Dimensions are not yet supported\n");
     return SV_ERROR;
@@ -2084,6 +2115,52 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   return SV_OK;
 }
 
+// ----------------------
+// ControlGridToTypedArray
+// ----------------------
+int vtkSVNURBSUtils::ControlGridToTypedArray(vtkSVControlGrid *grid, vtkTypedArray<double> *output)
+{
+  int dim[3];
+  grid->GetDimensions(dim);
+
+  if (dim[2] != 1)
+  {
+    fprintf(stderr,"3 Dimensions are not yet supported\n");
+    return SV_ERROR;
+  }
+
+  //Get weights
+  vtkDataArray *weights = grid->GetPointData()->GetArray("Weights");
+  if (weights == NULL)
+  {
+    fprintf(stderr,"No weights on control point grid\n");
+    return SV_ERROR;
+  }
+
+  //2D array with third dimensions the coordinates + weights
+  output->Resize(dim[0], dim[1], 4);
+
+  for (int i=0; i<dim[0]; i++)
+  {
+    for (int j=0; j<dim[1]; j++)
+    {
+      int pos[3]; pos[2] =0;
+      pos[0] = i;
+      pos[1] = j;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      double pw[4];
+
+      grid->GetPoint(ptId, pw);
+      pw[3] = weights->GetTuple1(ptId);
+      for (int k=0; k<4; k++)
+      {
+        output->SetValue(i, j, k, pw[k]);
+      }
+    }
+  }
+
+  return SV_OK;
+}
 // ----------------------
 // PointsToTypedArray
 // ----------------------
@@ -2195,6 +2272,58 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
   }
 
     return SV_OK;
+}
+
+// ----------------------
+// TypedArrayToControlGrid
+// ----------------------
+int vtkSVNURBSUtils::TypedArrayToControlGrid(vtkTypedArray<double> *array, vtkSVControlGrid *output)
+{
+  int dims = array->GetDimensions();
+  //2D array with third dimensions the coordinates
+  int dim[3];
+  for (int i=0; i<4; i++)
+  {
+    dim[i] = array->GetExtents()[i].GetSize();
+  }
+
+  if (dims > 3)
+  {
+    fprintf(stderr,"3 Dimensions are not yet supported\n");
+    return SV_ERROR;
+  }
+  if (dim[2] != 4)
+  {
+    fprintf(stderr,"Third dimension should have xyz coordinates, fourth weight\n");
+    return SV_ERROR;
+  }
+
+  output->SetDimensions(dim[0], dim[1], 1);
+  output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]);
+  vtkNew(vtkDoubleArray, weights);
+  weights->SetNumberOfTuples(dim[0]*dim[1]);
+  weights->SetName("Weights");
+
+  for (int i=0; i<dim[0]; i++)
+  {
+    for (int j=0; j<dim[1]; j++)
+    {
+      int pos[3]; pos[2] =0;
+      pos[0] = i;
+      pos[1] = j;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      double pw[4];
+      for (int k=0; k<4; k++)
+      {
+        pw[k] = array->GetValue(i, j, k);
+      }
+      output->GetPoints()->SetPoint(ptId, pw);
+      weights->SetTuple1(ptId, pw[3]);
+    }
+  }
+  output->GetPointData()->AddArray(weights);
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -2755,22 +2884,17 @@ int vtkSVNURBSUtils::VectorToMatrix(double *matVec, const int nr, const int nc, 
 // ----------------------
 // PointMatrixToVectors
 // ----------------------
-int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *matVecs[3])
+int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double **matVecs)
 {
   int nr = mat->GetExtents()[0].GetSize();
   int nc = mat->GetExtents()[1].GetSize();
   int np = mat->GetExtents()[2].GetSize();
-  if (np != 3)
-  {
-    fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return SV_ERROR;
-  }
 
   for (int i=0; i<nc; i++)
   {
     for (int j=0; j<nr; j++)
     {
-      for (int k=0; k<3; k++)
+      for (int k=0; k<np; k++)
       {
         matVecs[k][i*nr+j] = mat->GetValue(j, i, k);
       }
@@ -2783,13 +2907,13 @@ int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *ma
 // ----------------------
 // VectorsToPointMatrix
 // ----------------------
-int vtkSVNURBSUtils::VectorsToPointMatrix(double *matVecs[3], const int nr, const int nc, vtkTypedArray<double> *mat)
+int vtkSVNURBSUtils::VectorsToPointMatrix(double **matVecs, const int nr, const int nc, const int np, vtkTypedArray<double> *mat)
 {
   for (int i=0; i<nc; i++)
   {
     for (int j=0; j<nr; j++)
     {
-      for (int k=0; k<3; k++)
+      for (int k=0; k<np; k++)
       {
         double val = matVecs[k][i*nr+j];
         mat->SetValue(j, i, k, val);

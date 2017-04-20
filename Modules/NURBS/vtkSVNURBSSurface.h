@@ -99,14 +99,6 @@ public:
   //@}
 
   //@{
-  // / \brief Get and set the weights
-  vtkGetObjectMacro(UWeights, vtkDoubleArray);
-  vtkSetObjectMacro(UWeights, vtkDoubleArray);
-  vtkGetObjectMacro(VWeights, vtkDoubleArray);
-  vtkSetObjectMacro(VWeights, vtkDoubleArray);
-  //@}
-
-  //@{
   // / \brief Get the PolyData Representation
   vtkGetObjectMacro(SurfaceRepresentation, vtkPolyData);
   vtkSetObjectMacro(SurfaceRepresentation, vtkPolyData);
@@ -150,6 +142,10 @@ public:
   int GetControlPoint(const int index, const int dim, double coordinates[3], double &weight) {return 0;} /**< \brief Unimplemented */
   int GetControlPoints(vtkIntArray *indices, const int dim, vtkPoints *coordinates, vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
 
+  int SetUWeights(vtkDoubleArray *uWeights) {return 0;} /**< \brief Unimplemented */
+  int GetUWeights(vtkDoubleArray *uWeights) {return 0;} /**< \brief Unimplemented */
+  int SetVWeights(vtkDoubleArray *vWeights) {return 0;} /**< \brief Unimplemented */
+  int GetVWeights(vtkDoubleArray *vWeights) {return 0;} /**< \brief Unimplemented */
   int SetWeight(const int index, const int dim, const double weight) {return 0;} /**< \brief Unimplemented */
   int GetWeight(const int index, const int dim, double &weight) {return 0;} /**< \brief Unimplemented */
 
@@ -192,9 +188,6 @@ protected:
   vtkDoubleArray *UKnotVector;
   vtkDoubleArray *VKnotVector;
   vtkDoubleArray *UVKnotVectors[2];
-  vtkDoubleArray *UWeights;
-  vtkDoubleArray *VWeights;
-  vtkDoubleArray *UVWeights[2];
 
   vtkPolyData *SurfaceRepresentation;
 

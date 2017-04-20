@@ -239,3 +239,34 @@ int vtkSVControlGrid::GetPointId(const int i, const int j, const int k, int &ptI
 
   return SV_OK;
 }
+
+// ----------------------
+// GetPointId
+// ----------------------
+int vtkSVControlGrid::GetPointId(const int i, const int j, const int k)
+{
+  int extent[6];
+  this->GetExtent(extent);
+
+  //fprintf(stdout,"Extents: %d %d %d %d %d %d\n", extent[0],
+  //                                                  extent[1],
+  //                                                  extent[2],
+  //                                                  extent[3],
+  //                                                  extent[4],
+  //                                                  extent[5]);
+  if(i < extent[0] || i > extent[1] ||
+     j < extent[2] || j > extent[3] ||
+     k < extent[4] || k > extent[5])
+    {
+    vtkErrorMacro("ERROR: IJK coordinates are outside of grid extent!");
+    return SV_ERROR; // out of bounds!
+    }
+
+  int pos[3];
+  pos[0] = i;
+  pos[1] = j;
+  pos[2] = k;
+
+  int ptId = vtkStructuredData::ComputePointIdForExtent(extent, pos);
+  return ptId;
+}

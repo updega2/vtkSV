@@ -146,14 +146,16 @@ public:
   //Conversion functions
   static int PolyDatasToStructuredGrid(vtkPolyData **inputs, const int numInputs, vtkStructuredGrid *points);
   static int StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkTypedArray<double> *output);
+  static int ControlGridToTypedArray(vtkSVControlGrid *grid, vtkTypedArray<double> *output);
   static int TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vtkStructuredGrid *output);
+  static int TypedArrayToControlGrid(vtkTypedArray<double> *array, vtkSVControlGrid *output);
   static int PointsToTypedArray(vtkPoints *points, vtkTypedArray<double> *output);
   static int TypedArrayToPoints(vtkTypedArray<double> *array, vtkPoints *output);
   static int DoubleArrayToTypedArray(vtkDoubleArray *input, vtkTypedArray<double> *output);
   static int MatrixToVector(vtkTypedArray<double> *mat, double *matVec);
   static int VectorToMatrix(double *matVec, const int nr, const int nc, vtkTypedArray<double> *mat);
-  static int PointMatrixToVectors(vtkTypedArray<double> *mat, double *matVecs[3]);
-  static int VectorsToPointMatrix(double *matVecs[3], const int nr, const int nc, vtkTypedArray<double> *mat);
+  static int PointMatrixToVectors(vtkTypedArray<double> *mat, double **matVecs);
+  static int VectorsToPointMatrix(double **matVecs, const int nr, const int nc, const int np,  vtkTypedArray<double> *mat);
   static int DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double> *output);
 
   //Matrix and vector math
@@ -161,20 +163,23 @@ public:
   static int MatrixVecMultiply(vtkTypedArray<double> *mat, const int matIsPoints,
                                vtkTypedArray<double> *vec, const int vecIsPoints,
                                vtkTypedArray<double> *output);
-  static int MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints,
-                                  vtkTypedArray<double> *mat1, const int mat1IsPoints,
+  static int MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints, const int point0Dims,
+                                  vtkTypedArray<double> *mat1, const int mat1IsPoints, const int point1Dims,
                                   vtkTypedArray<double> *output);
   static int MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                   vtkTypedArray<double> *mat1,
                                   vtkTypedArray<double> *output);
   static int PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                             vtkTypedArray<double> *mat1,
+                                            const int pointDims,
                                             vtkTypedArray<double> *output);
   static int MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
+                                       const int pointDims,
                                        vtkTypedArray<double> *output);
   static int PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
+                                       const int pointDims,
                                        vtkTypedArray<double> *output);
   static int DGEMM(const double *A, const int nrA, const int ncA,
                    const double *B, const int nrB, const int ncB,

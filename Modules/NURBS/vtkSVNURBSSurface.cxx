@@ -62,14 +62,10 @@ vtkSVNURBSSurface::vtkSVNURBSSurface()
   this->ControlPointGrid    = vtkSVControlGrid::New();
 
   for (int i=0; i<2; i++)
-  {
     this->UVKnotVectors[i] = vtkDoubleArray::New();
-    this->UVWeights[i]     = vtkDoubleArray::New();
-  }
+
   this->UKnotVector = this->UVKnotVectors[0];
   this->VKnotVector = this->UVKnotVectors[1];
-  this->UWeights = this->UVWeights[0];
-  this->VWeights = this->UVWeights[1];
 
   this->SurfaceRepresentation = vtkPolyData::New();
 }
@@ -88,10 +84,6 @@ vtkSVNURBSSurface::~vtkSVNURBSSurface()
     if (this->UVKnotVectors[i] != NULL)
     {
       this->UVKnotVectors[i]->Delete();
-    }
-    if (this->UVWeights[i] != NULL)
-    {
-      this->UVWeights[i]->Delete();
     }
   }
 
@@ -118,8 +110,6 @@ void vtkSVNURBSSurface::DeepCopy(vtkSVNURBSSurface *src)
   this->ControlPointGrid->DeepCopy(src->GetControlPointGrid());
   this->UKnotVector->DeepCopy(src->GetUKnotVector());
   this->VKnotVector->DeepCopy(src->GetVKnotVector());
-  this->UWeights->DeepCopy(src->GetUWeights());
-  this->VWeights->DeepCopy(src->GetVWeights());
 
   this->SurfaceRepresentation->DeepCopy(src->GetSurfaceRepresentation());
 }
@@ -278,12 +268,6 @@ void vtkSVNURBSSurface::SetControlPoints(vtkStructuredGrid *points2d)
   this->ControlPointGrid->GetPointData()->GetArray("Weights")
     ->FillComponent(0, 1.0);
 
-  // Set and fill the components of weights
-  this->UWeights->SetNumberOfTuples(dim[0]);
-  this->UWeights->FillComponent(0, 1.0);
-  this->VWeights->SetNumberOfTuples(dim[1]);
-  this->VWeights->FillComponent(0, 1.0);
-
   // Update number of control points
   this->NumberOfUControlPoints = dim[0];
   this->NumberOfVControlPoints = dim[1];
@@ -408,15 +392,19 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   // Last value should be 1
   NUfinal->SetValue(numUDiv-1, nUCon-1, 1.0);
 
+  // Get weights
+  vtkDataArray *weights = this->ControlPointGrid->GetPointData()->GetArray("Weights");
+
   // Multiply by weights for rational curve
   for (int i=0; i<numUDiv; i++)
   {
     double ratVal = 0.0;
     for (int j=0; j<nUCon; j++)
     {
-      double val = NUfinal->GetValue(i, j);
-      double ratWeight = this->UWeights->GetTuple1(j);
-      ratVal = ratVal + val*ratWeight;
+      double val       = NUfinal->GetValue(i, j);
+      //int ptId         = this->ControlPointGrid->GetPointId(j, 0, 0);
+      double ratWeight = 1.0;//weights->GetTuple1(ptId);
+      ratVal           = ratVal + val*ratWeight;
     }
     NUrational->SetTuple1(i, ratVal);
   }
@@ -426,8 +414,9 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
     for (int j=0; j<nUCon; j++)
     {
       double val       = NUfinal->GetValue(i, j);
+      //int ptId         = this->ControlPointGrid->GetPointId(j, 0, 0);
+      double ratWeight = 1.0;//weights->GetTuple1(ptId);
       double ratVal    = NUrational->GetTuple1(i);
-      double ratWeight = this->UWeights->GetTuple1(j);
       NUfinal->SetValue(i, j, val*ratWeight/ratVal);
     }
   }
@@ -477,9 +466,10 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
     double ratVal = 0.0;
     for (int j=0; j<nVCon; j++)
     {
-      double val = NVfinal->GetValue(i, j);
-      double ratWeight = this->VWeights->GetTuple1(j);
-      ratVal = ratVal + val*ratWeight;
+      double val       = NVfinal->GetValue(i, j);
+      //int ptId         = this->ControlPointGrid->GetPointId(j, i, 0);
+      double ratWeight = 1.0;//weights->GetTuple1(ptId);
+      ratVal           = ratVal + val*ratWeight;
     }
     NVrational->SetTuple1(i, ratVal);
   }
@@ -489,8 +479,9 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
     for (int j=0; j<nVCon; j++)
     {
       double val       = NVfinal->GetValue(i, j);
+      //int ptId         = this->ControlPointGrid->GetPointId(j, i, 0);
+      double ratWeight = 1.0;//weights->GetTuple1(ptId);
       double ratVal    = NVrational->GetTuple1(i);
-      double ratWeight = this->VWeights->GetTuple1(j);
       NVfinal->SetValue(i, j, val*ratWeight/ratVal);
     }
   }
@@ -500,28 +491,29 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   //Get the physical points on the surface!
   // -----------------------------------------------------------------------
   vtkNew(vtkDenseArray<double>, tmpControlGrid);
-  vtkSVNURBSUtils::StructuredGridToTypedArray(this->ControlPointGrid, tmpControlGrid);
+  vtkSVNURBSUtils::ControlGridToTypedArray(this->ControlPointGrid, tmpControlGrid);
 
   // Do first matrix multiply with u basis functions
   vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, tmpControlGrid, 1, tmpUGrid) != SV_OK)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, 1, tmpControlGrid, 1, 4, tmpUGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
   }
   // Do second matrix multiply with v basis functions
   vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, NVfinalT, 0, tmpVGrid) != SV_OK)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 4, NVfinalT, 0, 1, tmpVGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
   }
+  fprintf(stderr,"BREAK\n");
 
   // Set up final grid of points
-  vtkNew(vtkStructuredGrid, finalGrid);
+  vtkNew(vtkSVControlGrid, finalGrid);
   vtkNew(vtkPoints, tmpVPoints);
   finalGrid->SetPoints(tmpVPoints);
-  vtkSVNURBSUtils::TypedArrayToStructuredGrid(tmpVGrid, finalGrid);
+  vtkSVNURBSUtils::TypedArrayToControlGrid(tmpVGrid, finalGrid);
 
   // Get grid connectivity for pointset
   vtkNew(vtkCellArray, surfaceCells);
