@@ -90,23 +90,12 @@ public:
   //@{
   // / \brief Set the control point grid
   vtkGetObjectMacro(ControlPointGrid, vtkSVControlGrid);
-  vtkSetObjectMacro(ControlPointGrid, vtkSVControlGrid);
   //@}
 
   //@{
   // / \brief Get and set the knot vector object
   vtkGetObjectMacro(UKnotVector, vtkDoubleArray);
-  vtkSetObjectMacro(UKnotVector, vtkDoubleArray);
   vtkGetObjectMacro(VKnotVector, vtkDoubleArray);
-  vtkSetObjectMacro(VKnotVector, vtkDoubleArray);
-  //@}
-
-  //@{
-  // / \brief Get and set the weights
-  vtkGetObjectMacro(UWeights, vtkDoubleArray);
-  vtkSetObjectMacro(UWeights, vtkDoubleArray);
-  vtkGetObjectMacro(VWeights, vtkDoubleArray);
-  vtkSetObjectMacro(VWeights, vtkDoubleArray);
   //@}
 
   //@{
@@ -132,7 +121,13 @@ public:
   //Functions to manipulate the geometry
   void UpdateCurve() {} /**< \brief Unimplemented */
   int IncreaseDegree(const int degree, const int dim) {return 0;} /**< \brief Unimplemented */
-  int InsertKnot(const double newKnot, const int dim, const double tolerance) {return 0;} /**< \brief Unimplemented */
+
+  int SetUKnotVector(vtkDoubleArray *knots);
+  int SetVKnotVector(vtkDoubleArray *kntos);
+
+  /** \brief Insert a knot certain number of times. */
+  int InsertKnot(const double newKnot, const int dim, const int numberOfInserts);
+
   int InsertKnots(vtkDoubleArray *newKnots, const int dim, const double tolerance) {return 0;} /**< \brief Unimplemented */
   int RemoveKnot(const int index, const int dim, const double tolerance) {return 0;} /**< \brief Unimplemented */
   int SetKnot(const int index, const int dim, const double newKnot) {return 0;} /**< \brief Unimplemented */
@@ -140,11 +135,17 @@ public:
   int GetKnot(const int index, const int dim, double &knotVal) {return 0;} /**< \brief Unimplemented */
   int GetKnots(const int indices, const int dim, vtkDoubleArray *knotVals) {return 0;} /**< \brief Unimplemented */
 
+  int SetControlPointGrid(vtkSVControlGrid *controlPoints);
+
   int SetControlPoint(const int index, const int dim, const double coordinate[3], const double weight) {return 0;} /**< \brief Unimplemented */
   int SetControlPoints(vtkIntArray *indices, const int dim, vtkPoints *coordinates, vtkDoubleArray *weights); /**< \brief Unimplemented */
   int GetControlPoint(const int index, const int dim, double coordinates[3], double &weight) {return 0;} /**< \brief Unimplemented */
   int GetControlPoints(vtkIntArray *indices, const int dim, vtkPoints *coordinates, vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
 
+  int SetUWeights(vtkDoubleArray *uWeights) {return 0;} /**< \brief Unimplemented */
+  int GetUWeights(vtkDoubleArray *uWeights) {return 0;} /**< \brief Unimplemented */
+  int SetVWeights(vtkDoubleArray *vWeights) {return 0;} /**< \brief Unimplemented */
+  int GetVWeights(vtkDoubleArray *vWeights) {return 0;} /**< \brief Unimplemented */
   int SetWeight(const int index, const int dim, const double weight) {return 0;} /**< \brief Unimplemented */
   int GetWeight(const int index, const int dim, double &weight) {return 0;} /**< \brief Unimplemented */
 
@@ -187,9 +188,6 @@ protected:
   vtkDoubleArray *UKnotVector;
   vtkDoubleArray *VKnotVector;
   vtkDoubleArray *UVKnotVectors[2];
-  vtkDoubleArray *UWeights;
-  vtkDoubleArray *VWeights;
-  vtkDoubleArray *UVWeights[2];
 
   vtkPolyData *SurfaceRepresentation;
 

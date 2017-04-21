@@ -56,7 +56,6 @@ vtkSVNURBSCurve::vtkSVNURBSCurve()
 
   this->ControlPointGrid   = vtkSVControlGrid::New();
   this->KnotVector         = vtkDoubleArray::New();
-  this->Weights            = vtkDoubleArray::New();
 
   this->CurveRepresentation = vtkPolyData::New();
 }
@@ -73,10 +72,6 @@ vtkSVNURBSCurve::~vtkSVNURBSCurve()
   if (this->KnotVector != NULL)
   {
     this->KnotVector->Delete();
-  }
-  if (this->Weights != NULL)
-  {
-    this->Weights->Delete();
   }
 
   if (this->CurveRepresentation != NULL)
@@ -98,7 +93,6 @@ void vtkSVNURBSCurve::DeepCopy(vtkSVNURBSCurve *src)
 
   this->ControlPointGrid->DeepCopy(src->GetControlPointGrid());
   this->KnotVector->DeepCopy(src->GetKnotVector());
-  this->Weights->DeepCopy(src->GetWeights());
 
   this->CurveRepresentation->DeepCopy(src->GetCurveRepresentation());
 }
@@ -156,15 +150,109 @@ void vtkSVNURBSCurve::SetControlPoints(vtkPoints *points1d)
   this->ControlPointGrid->SetPoints(points1d);
 
   // Loop through points and set weight
+  vtkNew(vtkDoubleArray, weights);
+  weights->SetNumberOfTuples(nCon);
   for (int i=0; i<nCon; i++)
-    this->Weights->InsertTuple1(i, 1.0);
-  this->Weights->SetName("Weights");
+    weights->SetTuple1(i, 1.0);
+  weights->SetName("Weights");
 
   // Set the array on the grid
-  this->ControlPointGrid->GetPointData()->AddArray(this->Weights);
+  this->ControlPointGrid->GetPointData()->AddArray(weights);
 
   // Update number of control points
   this->NumberOfControlPoints = nCon;
+}
+
+// ----------------------
+// SetControlPoints
+// ----------------------
+int vtkSVNURBSCurve::InsertKnot(const double newKnot, const int numberOfInserts)
+{
+  // Get current info about curve degree
+  int p = this->Degree;
+
+  // Get the location of the knot
+  int span=0;
+  vtkSVNURBSUtils::FindSpan(p, newKnot, this->KnotVector, span);
+
+  // If the value at the location is our value, we need to get current mult
+  int mult=0;
+  if(this->KnotVector->GetTuple1(span) == newKnot)
+  {
+    int i=span;
+    int count = 1;
+    while(this->KnotVector->GetTuple1(i+1) == this->KnotVector->GetTuple1(i) &&
+          i < this->KnotVector->GetNumberOfTuples())
+    {
+      count++;
+      i++;
+    }
+    mult = count;
+  }
+
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  // Insert the knot
+  if (vtkSVNURBSUtils::CurveInsertKnot(this->ControlPointGrid,
+                                       this->KnotVector,
+                                       p, newKnot, span,
+                                       mult, numberOfInserts,
+                                       newControlPoints, newKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error on knot insertion");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetKnotVector(newKnots);
+
+  return SV_OK;
+
+}
+
+// ----------------------
+// SetKnotVector
+// ----------------------
+int vtkSVNURBSCurve::SetKnotVector(vtkDoubleArray *knots)
+{
+  this->KnotVector->DeepCopy(knots);
+
+  this->NumberOfKnotPoints = this->KnotVector->GetNumberOfTuples();
+  return SV_OK;
+}
+
+// ----------------------
+// SetControlPointGrid
+// ----------------------
+int vtkSVNURBSCurve::SetControlPointGrid(vtkSVControlGrid *controlPoints)
+{
+  this->ControlPointGrid->DeepCopy(controlPoints);
+
+  int dims[3];
+  this->ControlPointGrid->GetDimensions(dims);
+  this->NumberOfControlPoints = dims[0];
+  return SV_OK;
+}
+
+// ----------------------
+// GetControlPoint
+// ----------------------
+int vtkSVNURBSCurve::GetControlPoint(const int index, double coordinates[3], double &weight)
+{
+  this->ControlPointGrid->GetControlPoint(index, 0, 0, coordinates, weight);
+  return SV_OK;
+}
+
+// ----------------------
+// GetControlPoint
+// ----------------------
+int vtkSVNURBSCurve::GetControlPoint(const int index, double pw[4])
+{
+  this->ControlPointGrid->GetControlPoint(index, 0, 0, pw);
+  return SV_OK;
 }
 
 // ----------------------
@@ -232,6 +320,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
     }
   }
 
+  vtkDataArray *weights = this->ControlPointGrid->GetPointData()->GetArray("Weights");
   // Last value should be 1
   Nfinal->SetValue(numDiv-1, nCon-1, 1.0);
 
@@ -242,7 +331,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
     for (int j=0; j<nCon; j++)
     {
       double val       = Nfinal->GetValue(i, j);
-      double ratWeight = this->Weights->GetTuple1(j);
+      double ratWeight = weights->GetTuple1(j);
       ratVal = ratVal + val*ratWeight;
     }
     Nrational->SetTuple1(i, ratVal);
@@ -254,7 +343,7 @@ int vtkSVNURBSCurve::GeneratePolyDataRepresentation(const double spacing)
     {
       double val       = Nfinal->GetValue(i, j);
       double ratVal    = Nrational->GetTuple1(i);
-      double ratWeight = this->Weights->GetTuple1(j);
+      double ratWeight = weights->GetTuple1(j);
       Nfinal->SetValue(i, j, val*ratWeight/ratVal);
     }
   }

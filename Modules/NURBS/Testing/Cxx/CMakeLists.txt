@@ -27,7 +27,10 @@
 
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestLoftNURBSCurve.cxx,NO_DATA
-  TestLoftNURBSSurface.cxx,NO_DATA)
+  TestLoftNURBSSurface.cxx,NO_DATA
+  TestCurveInsertKnot.cxx,NO_DATA
+  TestCircle.cxx,NO_DATA
+  TestSurfaceInsertKnot.cxx,NO_DATA)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)

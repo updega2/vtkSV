@@ -33,10 +33,13 @@
 #include "vtkDataArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkMath.h"
+#include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
+#include "vtkSVIOUtils.h"
 #include "vtkStructuredData.h"
 
 #include <cassert>
@@ -440,7 +443,7 @@ int vtkSVNURBSUtils::GetPBasisFunctions(vtkDoubleArray *U, vtkDoubleArray *knots
 }
 
 // ----------------------
-// GetControlPointOfCurve
+// GetControlPointsOfCurve
 // ----------------------
 int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U, vtkDoubleArray *weights,
                                           vtkDoubleArray *knots,
@@ -490,6 +493,150 @@ int vtkSVNURBSUtils::GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *
   if (vtkSVNURBSUtils::TypedArrayToPoints(cPointArray, cPoints) != SV_OK)
   {
     return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetCurveEndDerivatives
+// ----------------------
+int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
+		                          const int p, const double D0[3],
+                                          const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
+                                          vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints)
+{
+  vtkSVNURBSUtils::AddDerivativeRows(NP, newNP, p, knots);
+
+  vtkSVNURBSUtils::AddDerivativePoints(points, p, D0, DN, U, knots, newPoints);
+
+  return SV_OK;
+}
+
+// ----------------------
+// CurveInsertKnot
+// ----------------------
+int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                     const int degree,
+                                     const double insertValue, const int span,
+                                     const int currentMultiplicity,
+                                     const int numberOfInserts,
+                                     vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Really quick, convert all points to pw
+  for (int i=0; i<controlPoints->GetPoints()->GetNumberOfPoints(); i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(i, 0, 0, pw);
+    vtkMath::MultiplyScalar(pw, pw[3]);
+    controlPoints->SetControlPoint(i, 0, 0, pw);
+  }
+
+  // Set values used by alg to more concise vars
+  int np   = dims[0]-1;
+  int p    = degree;
+  double u = insertValue;
+  int k    = span;
+  int s    = currentMultiplicity;
+  int r    = numberOfInserts;
+
+  // Can't possibly add more knots at location than the degree of the curve
+  if ( (r+s) > p)
+  {
+    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
+  }
+
+  // number of knots
+  int mp = np+p+1;
+  int nq = np+r;
+
+  // Set output number of points and knots
+  newControlPoints->GetPoints()->SetNumberOfPoints(nq+1);
+  newControlPoints->SetDimensions(nq+1, 1, 1);
+  newKnots->SetNumberOfTuples(mp+r+1);
+
+  // Double check to see if correct vals were given
+  if (knots->GetNumberOfTuples() != mp+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with knot span\n");
+    return SV_ERROR;
+  }
+
+  vtkNew(vtkDoubleArray, tmpPoints);
+  tmpPoints->SetNumberOfComponents(4);
+  tmpPoints->SetNumberOfTuples(p+1);
+  // Set unchanging knots
+  for (int i=0; i<=k; i++)
+    newKnots->SetTuple1(i, knots->GetTuple1(i));
+
+  // Set the new knot r times
+  for (int i=1; i<=r; i++)
+    newKnots->SetTuple1(k+i, u);
+
+  // Set the rest of the new knot span
+  for (int i=k+1; i<=mp; i++)
+    newKnots->SetTuple1(i+r, knots->GetTuple1(i));
+
+  // Set unchanging control points before knot
+  for (int i=0; i<=k-p; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(i, 0, 0, pw);
+    newControlPoints->SetControlPoint(i, 0, 0, pw);
+  }
+  for (int i=k-s; i<=np; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(i, 0, 0, pw);
+    newControlPoints->SetControlPoint(i+r, 0, 0, pw);
+  }
+
+  // Load tmp points
+  for (int i=0; i<=p-s; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(k-p+i, 0, 0, pw);
+    tmpPoints->SetTuple(i, pw);
+  }
+
+  // Insert the knot multiplicity r
+  int L=0;
+  for (int j=1; j<=r; j++)
+  {
+    L = k-p+j;
+    for (int i=0; i<=p-j-s; i++)
+    {
+      double alpha = (u - knots->GetTuple1(L+i))/(knots->GetTuple1(i+k+1)-knots->GetTuple1(L+i));
+      double pt0[4], pt1[4], newPoint[4];
+      tmpPoints->GetTuple(i+1, pt0);
+      tmpPoints->GetTuple(i, pt1);
+      vtkSVMathUtils::MultiplyScalar(pt0, alpha, 4);
+
+      vtkSVMathUtils::MultiplyScalar(pt1, (1-alpha), 4);
+      vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+      tmpPoints->SetTuple(i, newPoint);
+    }
+
+    // Set the newly calculated points for this insert
+    newControlPoints->SetControlPoint(L, 0, 0, tmpPoints->GetTuple(0));
+    newControlPoints->SetControlPoint(k+r-j-s, 0, 0, tmpPoints->GetTuple(p-j-s));
+  }
+
+  // Place the tmp points in the output points
+  for (int i=L+1; i<k-s; i++)
+    newControlPoints->SetControlPoint(i, 0, 0, tmpPoints->GetTuple(i-L));
+
+  // Really quick, convert all points back
+  for (int i=0; i<newControlPoints->GetPoints()->GetNumberOfPoints(); i++)
+  {
+    double pw[4];
+    newControlPoints->GetControlPoint(i, 0, 0, pw);
+    vtkMath::MultiplyScalar(pw, 1./pw[3]);
+    newControlPoints->SetControlPoint(i, 0, 0, pw);
   }
 
   return SV_OK;
@@ -581,7 +728,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   //fprintf(stdout,"Inverted system V:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPVinv);
   vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, pointMatFinal, 1, tmpUGrid) != SV_OK)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, 1, pointMatFinal, 1, 3, tmpUGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
@@ -589,7 +736,7 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   vtkNew(vtkDenseArray<double>, tmpUGridT);
   vtkSVNURBSUtils::MatrixTranspose(tmpUGrid, 1, tmpUGridT);
   vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, tmpUGridT, 1, tmpVGrid) != SV_OK)
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, 1, tmpUGridT, 1, 3, tmpVGrid) != SV_OK)
   {
     fprintf(stderr, "Error in matrix multiply\n");
     return SV_ERROR;
@@ -602,78 +749,6 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   vtkSVNURBSUtils::TypedArrayToStructuredGrid(tmpVGridT, cPoints);
   //fprintf(stdout,"Final structured grid of control points\n");
   //vtkSVNURBSUtils::PrintStructuredGrid(cPoints);
-
-  return SV_OK;
-}
-
-// ----------------------
-// GetCurveEndDerivatives
-// ----------------------
-int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
-		                          const int p, const double D0[3],
-                                          const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
-                                          vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints)
-{
-  vtkSVNURBSUtils::AddDerivativeRows(NP, newNP, p, knots);
-
-  vtkSVNURBSUtils::AddDerivativePoints(points, p, D0, DN, U, knots, newPoints);
-
-  return SV_OK;
-}
-
-// ----------------------
-// AddDerivativePoints
-// ----------------------
-int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
-		                       const int p, const double D0[3],
-                                       const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
-                                       vtkTypedArray<double> *newPoints)
-{
-  int nKnot = knots->GetNumberOfTuples();
-  int n = nKnot - (p + 1);
-  newPoints->Resize(n, 3);
-
-  //Add extra derivative in points
-  double d0val = U->GetTuple1(p+1)/p;
-  double dNval = (1 - U->GetTuple1(n - p - 4))/p;
-
-  //Set first spot
-  for (int i=0; i<3; i++)
-  {
-    double val = points->GetValue(0, i);
-    newPoints->SetValue(0, i, val);
-  }
-
-  //Set SPECIAL second spot
-  for (int i=0; i<3; i++)
-  {
-    double val = d0val * D0[i];
-    newPoints->SetValue(1, i, val);
-  }
-
-  //Set rest of matrix
-  for (int i=2; i<n-2; i++)
-  {
-    for (int j=0; j<3; j++)
-    {
-      double val = points->GetValue(i-1, j);
-      newPoints->SetValue(i, j, val);
-    }
-  }
-
-  //Set SPECIAL second to last row
-  for (int i=0 ; i<3; i++)
-  {
-    double val = dNval *DN[i];
-    newPoints->SetValue(n-2, i, val);
-  }
-
-  //Set last row
-  for (int i=0; i<3; i++)
-  {
-    double val = points->GetValue(n - 3, i);
-    newPoints->SetValue(n - 1, i, val);
-  }
 
   return SV_OK;
 }
@@ -775,6 +850,346 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
   else
   {
     vtkSVNURBSUtils::DeepCopy(tmp2Points, newPoints);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// SurfaceInsertKnot
+// ----------------------
+int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
+                                       vtkDoubleArray *uKnots, const int uDegree,
+                                       vtkDoubleArray *vKnots, const int vDegree,
+                                       const int insertDirection,
+                                       const double insertValue, const int span,
+                                       const int currentMultiplicity,
+                                       const int numberOfInserts,
+                                       vtkSVControlGrid *newControlPoints,
+                                       vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Realy quick, convert all points to pw
+  vtkDataArray *weights = controlPoints->GetPointData()->GetArray("Weights");
+  for (int i=0; i<controlPoints->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    controlPoints->GetPoints()->GetPoint(i, pt);
+    double weight = weights->GetTuple1(i);
+    vtkMath::MultiplyScalar(pt, weight);
+    controlPoints->GetPoints()->SetPoint(i, pt);
+  }
+
+  // Set values used by alg to more concise vars
+  int np     = dims[0]-1;
+  int p      = uDegree;
+  int mp     = dims[1]-1;
+  int q      = vDegree;
+  double dir = insertDirection;
+  double u   = insertValue;
+  int k      = span;
+  int s      = currentMultiplicity;
+  int r      = numberOfInserts;
+
+  // Can't possibly add more knots at location than the degree of the curve
+  if ( (r+s) > p && dir == 0)
+  {
+    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
+  }
+  if ( (r+s) > q && dir == 1)
+  {
+    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
+  }
+
+  // Double check to see if correct vals were given
+  if ((np+1)*(mp+1) != controlPoints->GetNumberOfPoints())
+  {
+    fprintf(stderr,"Invalid number of control points in u or v direction given\n");
+    return SV_ERROR;
+  }
+
+  if (dir == 0)
+  {
+    // number of knots
+    int nuk = np+p+1;
+    int nup  = np+r;
+
+    // Set output number of points and knots
+    newControlPoints->SetNumberOfControlPoints((nup+1)*(mp+1));
+    newControlPoints->SetDimensions(nup+1, mp+1, 1);
+    newUKnots->SetNumberOfTuples(nuk+r+1);
+
+    // Double check to see if correct vals were given
+    if (uKnots->GetNumberOfTuples() != nuk+1)
+    {
+      fprintf(stderr,"Invalid number of control points given with knot span\n");
+      return SV_ERROR;
+    }
+
+    vtkNew(vtkDoubleArray, tmpPoints);
+    tmpPoints->SetNumberOfComponents(4);
+    tmpPoints->SetNumberOfTuples(p+1);
+    // Set unchanging knots
+    for (int i=0; i<=k; i++)
+      newUKnots->SetTuple1(i, uKnots->GetTuple1(i));
+
+    // Set the new knot r times
+    for (int i=1; i<=r; i++)
+      newUKnots->SetTuple1(k+i, u);
+
+    // Set the rest of the new knot span
+    for (int i=k+1; i<=nuk; i++)
+      newUKnots->SetTuple1(i+r, uKnots->GetTuple1(i));
+
+    // Copy the v knot vector to output
+    newVKnots->DeepCopy(vKnots);
+
+    // Set up alpha array
+    double **alpha = new double*[p-s];
+    for (int i=0; i<p-s; i++)
+      alpha[i] = new double[r+1];
+
+    // Preload all the alphas
+    for (int j=1; j<=r; j++)
+    {
+      int L = k-p+j;
+      for (int i=0; i<=p-j-s; i++)
+        alpha[i][j] = (u - uKnots->GetTuple1(L+i))/(uKnots->GetTuple1(i+k+1)-uKnots->GetTuple1(L+i));
+    }
+
+    // Insert knot each column
+    for (int col=0; col<=mp; col++)
+    {
+      // Set unchanging control points
+      for (int i=0; i<=k-p; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(i, col, 0, pw);
+        newControlPoints->SetControlPoint(i, col, 0, pw);
+      }
+
+      for (int i=k-s; i<=np; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(i, col, 0, pw);
+        newControlPoints->SetControlPoint(i+r, col, 0, pw);
+      }
+
+      // Set up tmp points
+      for (int i=0; i<=p-s; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(k-p+i, col, 0, pw);
+        tmpPoints->SetTuple(i, pw);
+      }
+
+      // Insert the new knot r times
+      int L=0;
+      for (int j=1; j<=r; j++)
+      {
+        L = k-p+j;
+        for (int i=0; i<=p-j-s; i++)
+        {
+          double pt0[4], pt1[4], newPoint[4];
+          tmpPoints->GetTuple(i+1, pt0);
+          tmpPoints->GetTuple(i, pt1);
+          vtkSVMathUtils::MultiplyScalar(pt0, alpha[i][j], 4);
+          vtkSVMathUtils::MultiplyScalar(pt1, 1-alpha[i][j], 4);
+          vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+          tmpPoints->SetTuple(i, newPoint);
+
+          // Fill the control point grid with the tmp points
+          newControlPoints->SetControlPoint(L, col, 0, tmpPoints->GetTuple(0));
+          newControlPoints->SetControlPoint(k+r-j-s, col, 0, tmpPoints->GetTuple(p-j-s));
+        }
+      }
+      for (int i=L+1; i<k-s; i++)
+        newControlPoints->SetControlPoint(i, col, 0, tmpPoints->GetTuple(i-L));
+
+    }
+
+    // Clean up alphas
+    for (int i=0; i<p-s; i++)
+      delete [] alpha[i];
+    delete [] alpha;
+
+  }
+  // Other dir!!
+  else if (dir == 1)
+  {
+    // number of knots
+    int nuk = mp+q+1;
+    int nup  = mp+r;
+
+    // Set output number of points and knots
+    newControlPoints->SetNumberOfControlPoints((nup+1)*(np+1));
+    newControlPoints->SetDimensions(np+1, nup+1, 1);
+    newVKnots->SetNumberOfTuples(nuk+r+1);
+
+    // Double check to see if correct vals were given
+    if (vKnots->GetNumberOfTuples() != nuk+1)
+    {
+      fprintf(stderr,"Invalid number of control points given with knot span\n");
+      return SV_ERROR;
+    }
+
+    vtkNew(vtkDoubleArray, tmpPoints);
+    tmpPoints->SetNumberOfComponents(4);
+    tmpPoints->SetNumberOfTuples(p+1);
+    // Set unchanging knots
+    for (int i=0; i<=k; i++)
+      newVKnots->SetTuple1(i, vKnots->GetTuple1(i));
+
+    // Set the new knot r times
+    for (int i=1; i<=r; i++)
+      newVKnots->SetTuple1(k+i, u);
+
+    // Set the rest of the new knot span
+    for (int i=k+1; i<=nuk; i++)
+      newVKnots->SetTuple1(i+r, vKnots->GetTuple1(i));
+
+    // Copy the u knot vector to output
+    newUKnots->DeepCopy(uKnots);
+
+    // Set up alpha array
+    double **alpha = new double*[q-s];
+    for (int i=0; i<q-s; i++)
+      alpha[i] = new double[r+1];
+
+    // Preload all the alphas
+    for (int j=1; j<=r; j++)
+    {
+      int L = k-q+j;
+      for (int i=0; i<=q-j-s; j++)
+        alpha[i][j] = (u - vKnots->GetTuple1(L+i))/(vKnots->GetTuple1(i+k+1)-vKnots->GetTuple1(L+i));
+    }
+
+    // Insert knot each row
+    for (int row=0; row<=np; row++)
+    {
+      // Set unchanging control points
+      for (int i=0; i<=k-q; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(row, i, 0, pw);
+        newControlPoints->SetControlPoint(row, i, 0, pw);
+      }
+
+      for (int i=k-s; i<=mp; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(row, i, 0, pw);
+        newControlPoints->SetControlPoint(row, i+r, 0, pw);
+      }
+
+      // Set up tmp points
+      for (int i=0; i<=q-s; i++)
+      {
+        double pw[4];
+        controlPoints->GetControlPoint(row, k-q+i, 0, pw);
+        tmpPoints->SetTuple(i, pw);
+      }
+
+      // Insert the new knot r times
+      int L=0;
+      for (int j=1; j<=r; j++)
+      {
+        L = k-q+j;
+        for (int i=0; i<=q-j-s; i++)
+        {
+          double pt0[4], pt1[4], newPoint[4];
+          tmpPoints->GetTuple(i+1, pt0);
+          tmpPoints->GetTuple(i, pt1);
+          vtkSVMathUtils::MultiplyScalar(pt0, alpha[i][j], 4);
+          vtkSVMathUtils::MultiplyScalar(pt1, 1-alpha[i][j], 4);
+          vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+          tmpPoints->SetTuple(i, newPoint);
+
+          // Fill the control point grid with the tmp points
+          newControlPoints->SetControlPoint(row, L, 0, tmpPoints->GetTuple(0));
+          newControlPoints->SetControlPoint(row, k+r-j-s, 0, tmpPoints->GetTuple(q-j-s));
+        }
+      }
+
+      for (int i=L+1; i<k-s; i++)
+        newControlPoints->SetControlPoint(row, i, 0, tmpPoints->GetTuple(i-L));
+    }
+
+    // Clean up alphas
+    for (int i=0; i<q-s; i++)
+      delete [] alpha[i];
+    delete [] alpha;
+  }
+
+  // Realy quick, convert everything back to just p
+  weights = newControlPoints->GetPointData()->GetArray("Weights");
+  for (int i=0; i<newControlPoints->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    newControlPoints->GetPoints()->GetPoint(i, pt);
+    double weight = weights->GetTuple1(i);
+    vtkMath::MultiplyScalar(pt, 1./weight);
+    newControlPoints->GetPoints()->SetPoint(i, pt);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// AddDerivativePoints
+// ----------------------
+int vtkSVNURBSUtils::AddDerivativePoints(vtkTypedArray<double> *points,
+		                       const int p, const double D0[3],
+                                       const double DN[3], vtkDoubleArray *U, vtkDoubleArray *knots,
+                                       vtkTypedArray<double> *newPoints)
+{
+  int nKnot = knots->GetNumberOfTuples();
+  int n = nKnot - (p + 1);
+  newPoints->Resize(n, 3);
+
+  //Add extra derivative in points
+  double d0val = U->GetTuple1(p+1)/p;
+  double dNval = (1 - U->GetTuple1(n - p - 4))/p;
+
+  //Set first spot
+  for (int i=0; i<3; i++)
+  {
+    double val = points->GetValue(0, i);
+    newPoints->SetValue(0, i, val);
+  }
+
+  //Set SPECIAL second spot
+  for (int i=0; i<3; i++)
+  {
+    double val = d0val * D0[i];
+    newPoints->SetValue(1, i, val);
+  }
+
+  //Set rest of matrix
+  for (int i=2; i<n-2; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      double val = points->GetValue(i-1, j);
+      newPoints->SetValue(i, j, val);
+    }
+  }
+
+  //Set SPECIAL second to last row
+  for (int i=0 ; i<3; i++)
+  {
+    double val = dNval *DN[i];
+    newPoints->SetValue(n-2, i, val);
+  }
+
+  //Set last row
+  for (int i=0; i<3; i++)
+  {
+    double val = points->GetValue(n - 3, i);
+    newPoints->SetValue(n - 1, i, val);
   }
 
   return SV_OK;
@@ -1092,7 +1507,7 @@ int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
 }
 
 // ----------------------
-// FindSpan
+// GetMultiplicity
 // ----------------------
 int vtkSVNURBSUtils::GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multiplicity,
                                      vtkDoubleArray *singleValues)
@@ -1272,23 +1687,23 @@ int vtkSVNURBSUtils::MatrixVecMultiply(vtkTypedArray<double>* mat, const int mat
 // ----------------------
 // MatrixMatrixMultiply
 // ----------------------
-int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints,
-                                        vtkTypedArray<double> *mat1, const int mat1IsPoints,
+int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints, const int point0Dims,
+                                        vtkTypedArray<double> *mat1, const int mat1IsPoints, const int point1Dims,
                                         vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
-  if (mat0IsPoints && mat0->GetExtents()[2].GetSize() != 3)
+  if (mat0IsPoints && mat0->GetExtents()[2].GetSize() != point0Dims)
   {
-    fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
+    fprintf(stderr,"Third dimension of matrix should contain %d dims, but doesn't!\n", point0Dims);
     return SV_ERROR;
   }
 
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat1IsPoints && mat1->GetExtents()[2].GetSize() != 3)
+  if (mat1IsPoints && mat1->GetExtents()[2].GetSize() != point1Dims)
   {
-    fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
+    fprintf(stderr,"Third dimension of matrix should contain %d dims, but doesn't!\n", point1Dims);
     return SV_ERROR;
   }
 
@@ -1300,10 +1715,15 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   }
 
   int either = 0;
-  if (mat0IsPoints || mat1IsPoints)
+  if (mat0IsPoints)
   {
     either = 1;
-    output->Resize(nrM0, ncM1, 3);
+    output->Resize(nrM0, ncM1, point0Dims);
+  }
+  else if (mat1IsPoints)
+  {
+    either = 1;
+    output->Resize(nrM0, ncM1, point1Dims);
   }
   else
   {
@@ -1316,15 +1736,15 @@ int vtkSVNURBSUtils::MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int
   }
   else if (mat0IsPoints && mat1IsPoints)
   {
-    vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(mat0, mat1, output);
+    vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(mat0, mat1, point0Dims, output);
   }
   else if (mat0IsPoints)
   {
-    vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(mat0, mat1, output);
+    vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(mat0, mat1, point0Dims, output);
   }
   else
   {
-    vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(mat0, mat1, output);
+    vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(mat0, mat1, point1Dims, output);
   }
 
   return SV_OK;
@@ -1373,17 +1793,18 @@ int vtkSVNURBSUtils::MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
 }
 
 // ----------------------
-// PointMatrixMatrixForDGEMM
+// PointMatrixPointMatrixForDGEMM
 // ----------------------
 int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                              vtkTypedArray<double> *mat1,
+                                             const int pointDims,
                                              vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat0->GetExtents()[2].GetSize() != 3)
+  if (mat0->GetExtents()[2].GetSize() != pointDims)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
     return SV_ERROR;
@@ -1396,8 +1817,10 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
     return SV_ERROR;
   }
 
-  double *mat0Vecs[3], *mat1Vecs[3], *outVecs[3];
-  for (int i=0; i<3; i++)
+  double **mat0Vecs = new double*[pointDims];
+  double **mat1Vecs = new double*[pointDims];
+  double **outVecs  = new double*[pointDims];
+  for (int i=0; i<pointDims; i++)
   {
     mat0Vecs[i] = new double[nrM0*ncM0];
     mat1Vecs[i] = new double[nrM1*ncM1];
@@ -1405,28 +1828,34 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
   }
   vtkSVNURBSUtils::PointMatrixToVectors(mat0, mat0Vecs);
   vtkSVNURBSUtils::PointMatrixToVectors(mat1, mat1Vecs);
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vecs[i], nrM0, ncM0,
                              mat1Vecs[i], nrM1, ncM1, outVecs[i]) != SV_OK)
     {
-      for (int i=0; i<3; i++)
+      for (int i=0; i<pointDims; i++)
       {
         delete [] mat0Vecs[i];
         delete [] mat1Vecs[i];
         delete [] outVecs[i];
       }
+      delete [] mat0Vecs;
+      delete [] mat1Vecs;
+      delete [] outVecs;
       return SV_ERROR;
     }
   }
-  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
+  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, pointDims, output);
 
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     delete [] mat0Vecs[i];
     delete [] mat1Vecs[i];
     delete [] outVecs[i];
   }
+      delete [] mat0Vecs;
+      delete [] mat1Vecs;
+      delete [] outVecs;
 
   return SV_OK;
 }
@@ -1436,13 +1865,14 @@ int vtkSVNURBSUtils::PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
 // ----------------------
 int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                              vtkTypedArray<double> *mat1,
+                                             const int pointDims,
                                              vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat0->GetExtents()[2].GetSize() != 3)
+  if (mat0->GetExtents()[2].GetSize() != pointDims)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
     return SV_ERROR;
@@ -1455,37 +1885,42 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
     return SV_ERROR;
   }
 
-  double *mat1Vec = new double[nrM1*ncM1];
-  double *mat0Vecs[3], *outVecs[3];
-  for (int i=0; i<3; i++)
+  double *mat1Vec   = new double[nrM1*ncM1];
+  double **mat0Vecs = new double*[pointDims];
+  double **outVecs  = new double*[pointDims];
+  for (int i=0; i<pointDims; i++)
   {
     mat0Vecs[i] = new double[nrM0*ncM0];
     outVecs[i]  = new double[nrM0*ncM1];
   }
   vtkSVNURBSUtils::PointMatrixToVectors(mat0, mat0Vecs);
   vtkSVNURBSUtils::MatrixToVector(mat1, mat1Vec);
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vecs[i], nrM0, ncM0,
                              mat1Vec, nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       delete [] mat1Vec;
-      for (int i=0; i<3; i++)
+      for (int i=0; i<pointDims; i++)
       {
         delete [] mat0Vecs[i];
         delete [] outVecs[i];
       }
+      delete [] mat0Vecs;
+      delete [] outVecs;
       return SV_ERROR;
     }
   }
-  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
+  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, pointDims, output);
 
   delete [] mat1Vec;
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     delete [] mat0Vecs[i];
     delete [] outVecs[i];
   }
+  delete [] mat0Vecs;
+  delete [] outVecs;
 
   return SV_OK;
 }
@@ -1495,13 +1930,14 @@ int vtkSVNURBSUtils::PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
 // ----------------------
 int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
+                                       const int pointDims,
                                        vtkTypedArray<double> *output)
 {
   int nrM0 = mat0->GetExtents()[0].GetSize();
   int ncM0 = mat0->GetExtents()[1].GetSize();
   int nrM1 = mat1->GetExtents()[0].GetSize();
   int ncM1 = mat1->GetExtents()[1].GetSize();
-  if (mat1->GetExtents()[2].GetSize() != 3)
+  if (mat1->GetExtents()[2].GetSize() != pointDims)
   {
     fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
     return SV_ERROR;
@@ -1514,37 +1950,42 @@ int vtkSVNURBSUtils::MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
     return SV_ERROR;
   }
 
-  double *mat0Vec = new double[nrM0*ncM0];
-  double *mat1Vecs[3], *outVecs[3];
-  for (int i=0; i<3; i++)
+  double *mat0Vec   = new double[nrM0*ncM0];
+  double **mat1Vecs = new double*[pointDims];
+  double **outVecs  = new double*[pointDims];
+  for (int i=0; i<pointDims; i++)
   {
     mat1Vecs[i] = new double[nrM1*ncM1];
     outVecs[i]  = new double[nrM0*ncM1];
   }
   vtkSVNURBSUtils::MatrixToVector(mat0, mat0Vec);
   vtkSVNURBSUtils::PointMatrixToVectors(mat1, mat1Vecs);
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     if (vtkSVNURBSUtils::DGEMM(mat0Vec, nrM0, ncM0,
                              mat1Vecs[i], nrM1, ncM1, outVecs[i]) != SV_OK)
     {
       delete [] mat0Vec;
-      for (int i=0; i<3; i++)
+      for (int i=0; i<pointDims; i++)
       {
         delete [] mat1Vecs[i];
         delete [] outVecs[i];
       }
+      delete [] mat1Vecs;
+      delete [] outVecs;
       return SV_ERROR;
     }
   }
-  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, output);
+  vtkSVNURBSUtils::VectorsToPointMatrix(outVecs, nrM0, ncM1, pointDims, output);
 
   delete [] mat0Vec;
-  for (int i=0; i<3; i++)
+  for (int i=0; i<pointDims; i++)
   {
     delete [] mat1Vecs[i];
     delete [] outVecs[i];
   }
+  delete [] mat1Vecs;
+  delete [] outVecs;
 
   return SV_OK;
 }
@@ -1682,7 +2123,7 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   int dim[3];
   grid->GetDimensions(dim);
 
-  if (dim[2] != SV_OK)
+  if (dim[2] != 1)
   {
     fprintf(stderr,"3 Dimensions are not yet supported\n");
     return SV_ERROR;
@@ -1705,6 +2146,59 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
       for (int k=0; k<3; k++)
       {
         output->SetValue(i, j, k, pt[k]);
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// ControlGridToTypedArray
+// ----------------------
+int vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid, vtkTypedArray<double> *output)
+{
+  int dim[3];
+  grid->GetDimensions(dim);
+
+  if (dim[2] != 1)
+  {
+    fprintf(stderr,"3 Dimensions are not yet supported\n");
+    return SV_ERROR;
+  }
+
+  //Get weights
+  vtkDataArray *weights = grid->GetPointData()->GetArray("Weights");
+  if (weights == NULL)
+  {
+    fprintf(stderr,"No weights on control point grid\n");
+    return SV_ERROR;
+  }
+
+  //2D array with third dimensions the coordinates + weights
+  output->Resize(dim[0], dim[1], 4);
+
+  for (int i=0; i<dim[0]; i++)
+  {
+    for (int j=0; j<dim[1]; j++)
+    {
+      int pos[3]; pos[2] =0;
+      pos[0] = i;
+      pos[1] = j;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      double pw[4];
+
+      grid->GetPoint(ptId, pw);
+      pw[3] = weights->GetTuple1(ptId);
+
+      // This needs to be noted! We are doing this for the reationality of
+      // surfaces. Multiplying point by weight, but also keeping the fourth
+      // location so that in the end we have a sum of the weights as well.
+      vtkMath::MultiplyScalar(pw, pw[3]);
+
+      for (int k=0; k<4; k++)
+      {
+        output->SetValue(i, j, k, pw[k]);
       }
     }
   }
@@ -1823,6 +2317,57 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
   }
 
     return SV_OK;
+}
+
+// ----------------------
+// TypedArrayToControlGrid
+// ----------------------
+int vtkSVNURBSUtils::TypedArrayToStructuredGridRational(vtkTypedArray<double> *array, vtkStructuredGrid *output)
+{
+  int dims = array->GetDimensions();
+  //2D array with third dimensions the coordinates
+  int dim[3];
+  for (int i=0; i<3; i++)
+  {
+    dim[i] = array->GetExtents()[i].GetSize();
+  }
+
+  if (dims > 3)
+  {
+    fprintf(stderr,"3 Dimensions are not yet supported\n");
+    return SV_ERROR;
+  }
+  if (dim[2] != 4)
+  {
+    fprintf(stderr,"Third dimension should have xyz coordinates, fourth weight\n");
+    return SV_ERROR;
+  }
+
+  output->SetDimensions(dim[0], dim[1], 1);
+  output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]);
+
+  //2D array with third dimensions the coordinates
+  for (int i=0; i<dim[0]; i++)
+  {
+    for (int j=0; j<dim[1]; j++)
+    {
+      int pos[3]; pos[2] =0;
+      pos[0] = i;
+      pos[1] = j;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      double pt[3];
+      for (int k=0; k<3; k++)
+      {
+        pt[k] = array->GetValue(i, j, k);
+      }
+      double weight_total = array->GetValue(i, j, 3);
+      vtkMath::MultiplyScalar(pt, 1./weight_total);
+
+      output->GetPoints()->SetPoint(ptId, pt);
+    }
+  }
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -2383,22 +2928,17 @@ int vtkSVNURBSUtils::VectorToMatrix(double *matVec, const int nr, const int nc, 
 // ----------------------
 // PointMatrixToVectors
 // ----------------------
-int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *matVecs[3])
+int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double **matVecs)
 {
   int nr = mat->GetExtents()[0].GetSize();
   int nc = mat->GetExtents()[1].GetSize();
   int np = mat->GetExtents()[2].GetSize();
-  if (np != 3)
-  {
-    fprintf(stderr,"Third dimension of matrix should contain xyz coordinates, but doesn't!\n");
-    return SV_ERROR;
-  }
 
   for (int i=0; i<nc; i++)
   {
     for (int j=0; j<nr; j++)
     {
-      for (int k=0; k<3; k++)
+      for (int k=0; k<np; k++)
       {
         matVecs[k][i*nr+j] = mat->GetValue(j, i, k);
       }
@@ -2411,13 +2951,13 @@ int vtkSVNURBSUtils::PointMatrixToVectors(vtkTypedArray<double> *mat, double *ma
 // ----------------------
 // VectorsToPointMatrix
 // ----------------------
-int vtkSVNURBSUtils::VectorsToPointMatrix(double *matVecs[3], const int nr, const int nc, vtkTypedArray<double> *mat)
+int vtkSVNURBSUtils::VectorsToPointMatrix(double **matVecs, const int nr, const int nc, const int np, vtkTypedArray<double> *mat)
 {
   for (int i=0; i<nc; i++)
   {
     for (int j=0; j<nr; j++)
     {
-      for (int k=0; k<3; k++)
+      for (int k=0; k<np; k++)
       {
         double val = matVecs[k][i*nr+j];
         mat->SetValue(j, i, k, val);

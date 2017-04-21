@@ -51,6 +51,7 @@
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
+#include "vtkSVControlGrid.h"
 #include "vtkTypedArray.h"
 
 #include <cassert> // assert() in inline implementations.
@@ -77,12 +78,26 @@ public:
   static int GetPBasisFunctions(vtkDoubleArray *u, vtkDoubleArray *knots,
                                 const int p,
                                 vtkTypedArray<double> *N);
+
+  // Curve functions
   static int GetControlPointsOfCurve(vtkPoints *points, vtkDoubleArray *U,
                                      vtkDoubleArray *weights, vtkDoubleArray *knots,
                                      const int p,
                                      std::string ktype,
                                      const double D0[3], const double DN[3],
                                      vtkPoints *cPoints);
+  static int SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
+		                                const int p, const double D0[3], const double DN[3],
+                                    vtkDoubleArray *U, vtkDoubleArray *knots,
+                                    vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints);
+  static int CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                             const int degree,
+                             const double insertValue, const int span,
+                             const int currentMultiplicity,
+                             const int numberOfInserts,
+                             vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
+
+  // Surface functions
   static int GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
                                        vtkDoubleArray *V, vtkDoubleArray *uWeights,
                                        vtkDoubleArray *vWeights, vtkDoubleArray *uKnots,
@@ -91,10 +106,6 @@ public:
                                        vtkDoubleArray *DU0, vtkDoubleArray *DUN,
                                        vtkDoubleArray *DV0, vtkDoubleArray *DVN,
                                        vtkStructuredGrid *cPoints);
-  static int SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedArray<double> *points,
-		                                const int p, const double D0[3], const double DN[3],
-                                    vtkDoubleArray *U, vtkDoubleArray *knots,
-                                    vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints);
   static int SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTypedArray<double> *NPV,
                                       vtkTypedArray<double> *points,
 		                                  const int p, const int q,
@@ -105,6 +116,16 @@ public:
                                       vtkDoubleArray *uKnots, vtkDoubleArray *vKnots,
                                       vtkTypedArray<double> *newNPU, vtkTypedArray<double> *newNPV,
                                       vtkTypedArray<double> *newPoints);
+  static int SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
+                               vtkDoubleArray *uKnots, const int uDegree,
+                               vtkDoubleArray *vKnots, const int vDegree,
+                               const int insertDirection,
+                               const double insertValue, const int span,
+                               const int currentMultiplicity,
+                               const int numberOfInserts,
+                               vtkSVControlGrid *newControlPoints,
+                               vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
+
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
   static int AddDerivativePoints(vtkTypedArray<double> *points,
@@ -125,14 +146,16 @@ public:
   //Conversion functions
   static int PolyDatasToStructuredGrid(vtkPolyData **inputs, const int numInputs, vtkStructuredGrid *points);
   static int StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkTypedArray<double> *output);
+  static int ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid, vtkTypedArray<double> *output);
   static int TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vtkStructuredGrid *output);
+  static int TypedArrayToStructuredGridRational(vtkTypedArray<double> *array, vtkStructuredGrid *output);
   static int PointsToTypedArray(vtkPoints *points, vtkTypedArray<double> *output);
   static int TypedArrayToPoints(vtkTypedArray<double> *array, vtkPoints *output);
   static int DoubleArrayToTypedArray(vtkDoubleArray *input, vtkTypedArray<double> *output);
   static int MatrixToVector(vtkTypedArray<double> *mat, double *matVec);
   static int VectorToMatrix(double *matVec, const int nr, const int nc, vtkTypedArray<double> *mat);
-  static int PointMatrixToVectors(vtkTypedArray<double> *mat, double *matVecs[3]);
-  static int VectorsToPointMatrix(double *matVecs[3], const int nr, const int nc, vtkTypedArray<double> *mat);
+  static int PointMatrixToVectors(vtkTypedArray<double> *mat, double **matVecs);
+  static int VectorsToPointMatrix(double **matVecs, const int nr, const int nc, const int np,  vtkTypedArray<double> *mat);
   static int DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double> *output);
 
   //Matrix and vector math
@@ -140,20 +163,23 @@ public:
   static int MatrixVecMultiply(vtkTypedArray<double> *mat, const int matIsPoints,
                                vtkTypedArray<double> *vec, const int vecIsPoints,
                                vtkTypedArray<double> *output);
-  static int MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints,
-                                  vtkTypedArray<double> *mat1, const int mat1IsPoints,
+  static int MatrixMatrixMultiply(vtkTypedArray<double> *mat0, const int mat0IsPoints, const int point0Dims,
+                                  vtkTypedArray<double> *mat1, const int mat1IsPoints, const int point1Dims,
                                   vtkTypedArray<double> *output);
   static int MatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                   vtkTypedArray<double> *mat1,
                                   vtkTypedArray<double> *output);
   static int PointMatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                             vtkTypedArray<double> *mat1,
+                                            const int pointDims,
                                             vtkTypedArray<double> *output);
   static int MatrixPointMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
+                                       const int pointDims,
                                        vtkTypedArray<double> *output);
   static int PointMatrixMatrixForDGEMM(vtkTypedArray<double> *mat0,
                                        vtkTypedArray<double> *mat1,
+                                       const int pointDims,
                                        vtkTypedArray<double> *output);
   static int DGEMM(const double *A, const int nrA, const int ncA,
                    const double *B, const int nrB, const int ncB,

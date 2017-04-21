@@ -38,6 +38,7 @@
 #include <vtkRenderWindowInteractor.h>
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSCurve.h"
 #include "vtkSVNURBSUtils.h"
 #include "vtkStructuredGridGeometryFilter.h"
@@ -48,81 +49,79 @@
 
 #include <unistd.h>
 
-int TestLoftNURBSCurve(int argc, char *argv[])
+int TestCurveInsertKnot(int argc, char *argv[])
 {
-  // Set number of initial data points
-  int nc = 11;
+  // Set the curve knot insertion details
+  int p=3;     //degree
+  int np=8;     //control points
+  int m=p+np+1; //m
+  int r=3;     // number of insertions we want to do
+  double u=0.38;   // insertion value
 
-  // Set up input data
-  vtkNew(vtkDoubleArray, x_data);
-  x_data->SetNumberOfTuples(nc);
-  vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nc, x_data);
+  // Set the knot vector
+  vtkNew(vtkDoubleArray, knots);
+  vtkSVNURBSUtils::LinSpaceClamp(0, 1, m, p, knots);
 
-  vtkNew(vtkPoints, inputPoints);
-  inputPoints->Reset();
-  for (int i=0; i<nc; i++)
+  // Set the control points
+  vtkNew(vtkPoints, cpoints);
+  cpoints->SetNumberOfPoints(np);
+  cpoints->SetPoint(0, 0.0, 0.0, 0.0);
+  cpoints->SetPoint(1, 1.0, 0.0, 0.0);
+  cpoints->SetPoint(2, 1.0, -1.0, 0.0);
+  cpoints->SetPoint(3, 2.0, -1.0, 0.0);
+  cpoints->SetPoint(4, 2.0, 1.0, 0.0);
+  cpoints->SetPoint(5, 0.0, 2.0, 0.0);
+  cpoints->SetPoint(6, -2.0, 3.0, 0.0);
+  cpoints->SetPoint(7, -1.0, 0.0, 0.0);
+
+  // Set up the curve
+  vtkNew(vtkSVNURBSCurve, curve);
+  curve->SetKnotVector(knots);
+  curve->SetControlPoints(cpoints);
+  curve->SetDegree(p);
+
+  // Insert knot 0.5 r times
+  // Don't insert knot to create baseline image
+  curve->InsertKnot(u, r);
+
+  // Check the result
+  if (curve->GetNumberOfControlPoints() != np+r)
   {
-    double xval = x_data->GetTuple1(i);
-    double yval = sin(xval - M_PI/2.0);
-    double zval = 0.0;
-
-    inputPoints->InsertNextPoint(xval, yval, zval);
+    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    return EXIT_FAILURE;
   }
 
-  // Create data
-  vtkNew(vtkPolyData, inputPoly);
-  inputPoly->SetPoints(inputPoints);
+  if (curve->GetNumberOfKnotPoints() != m+r)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    return EXIT_FAILURE;
+  }
 
-  // Lofter
-  vtkNew(vtkSVLoftNURBSCurve, lofter);
-  lofter->SetInputData(inputPoly);
-  lofter->SetDegree(3);
-  lofter->SetPolyDataSpacing(0.05);
-  lofter->SetKnotSpanType("derivative");
-  lofter->SetParametricSpanType("chord");
-  lofter->Update();
+  curve->GeneratePolyDataRepresentation(0.01);
 
-  // Get outputs
-  vtkNew(vtkPolyData, curvePd);
-  curvePd->DeepCopy(lofter->GetOutput());
-  vtkNew(vtkStructuredGridGeometryFilter, converter);
-  converter->SetInputData(lofter->GetCurve()->GetControlPointGrid());
-  converter->Update();
-  vtkNew(vtkPolyData, controlGridPd);
-  controlGridPd->DeepCopy(converter->GetOutput());
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename, curve->GetCurveRepresentation());
+  filename = "/Users/adamupdegrove/Desktop/tmp/TEST_struct.vts";
+  vtkSVIOUtils::WriteVTSFile(filename, curve->GetControlPointGrid());
 
   // Set up mapper
   vtkNew(vtkPolyDataMapper, mapper);
-  mapper->SetInputData(curvePd);
-
-  vtkNew(vtkPolyDataMapper, gridMapper);
-  gridMapper->SetInputData(controlGridPd);
+  mapper->SetInputData(curve->GetCurveRepresentation());
 
   // Set up actor
   vtkNew(vtkActor, actor);
   actor->SetMapper(mapper);
-
-  // Set up grid actor
-  vtkNew(vtkActor, gridActor);
-  gridActor->SetMapper(gridMapper);
 
   // Set up renderer and window
   vtkNew(vtkRenderer, renderer);
   vtkNew(vtkRenderWindow, renWin);
   renWin->AddRenderer( renderer );
   renderer->AddActor(actor);
-  renderer->AddActor(gridActor);
   renderer->SetBackground(.1, .2, .3);
 
   // Set up interactor
   vtkNew(vtkRenderWindowInteractor, renWinInteractor);
   renWinInteractor->SetRenderWindow( renWin );
-
-  // TODO: Camera and bettering coloring for test
-  // Camera change
-  //vtkCamera *camera = renderer->GetActiveCamera();
-  //renderer->ResetCamera();
-  //camera->Elevation(60);
 
   // Render
   renWin->Render();
