@@ -146,9 +146,9 @@ public:
   //Conversion functions
   static int PolyDatasToStructuredGrid(vtkPolyData **inputs, const int numInputs, vtkStructuredGrid *points);
   static int StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkTypedArray<double> *output);
-  static int ControlGridToTypedArray(vtkSVControlGrid *grid, vtkTypedArray<double> *output);
+  static int ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid, vtkTypedArray<double> *output);
   static int TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vtkStructuredGrid *output);
-  static int TypedArrayToControlGrid(vtkTypedArray<double> *array, vtkSVControlGrid *output);
+  static int TypedArrayToStructuredGridRational(vtkTypedArray<double> *array, vtkStructuredGrid *output);
   static int PointsToTypedArray(vtkPoints *points, vtkTypedArray<double> *output);
   static int TypedArrayToPoints(vtkTypedArray<double> *array, vtkPoints *output);
   static int DoubleArrayToTypedArray(vtkDoubleArray *input, vtkTypedArray<double> *output);

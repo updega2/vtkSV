@@ -49,60 +49,46 @@
 
 #include <unistd.h>
 
-int TestCurveInsertKnot(int argc, char *argv[])
+int TestCircle(int argc, char *argv[])
 {
   // Set the curve knot insertion details
-  int p=3;     //degree
-  int np=8;     //control points
+  int p=2;     //degree
+  int np=9;     //control points
   int m=p+np+1; //m
-  int r=3;     // number of insertions we want to do
-  double u=0.38;   // insertion value
+  int r=2;     // number of insertions we want to do
+  double u=0.6;   // insertion value
 
   // Set the knot vector
   vtkNew(vtkDoubleArray, knots);
   vtkSVNURBSUtils::LinSpaceClamp(0, 1, m, p, knots);
+  knots->SetTuple1(3, 1./4);
+  knots->SetTuple1(4, 1./4);
+  knots->SetTuple1(5, 1./2);
+  knots->SetTuple1(6, 1./2);
+  knots->SetTuple1(7, 3./4);
+  knots->SetTuple1(8, 3./4);
 
   // Set the control points
-  vtkNew(vtkPoints, cpoints);
-  cpoints->SetNumberOfPoints(np);
-  cpoints->SetPoint(0, 0.0, 0.0, 0.0);
-  cpoints->SetPoint(1, 1.0, 0.0, 0.0);
-  cpoints->SetPoint(2, 1.0, -1.0, 0.0);
-  cpoints->SetPoint(3, 2.0, -1.0, 0.0);
-  cpoints->SetPoint(4, 2.0, 1.0, 0.0);
-  cpoints->SetPoint(5, 0.0, 2.0, 0.0);
-  cpoints->SetPoint(6, -2.0, 3.0, 0.0);
-  cpoints->SetPoint(7, -1.0, 0.0, 0.0);
+  vtkNew(vtkSVControlGrid, controlPointGrid);
+  controlPointGrid->SetDimensions(np, 1, 1);
+  controlPointGrid->SetNumberOfControlPoints(np);
+  controlPointGrid->SetControlPoint(0, 0, 0, 1.0, 0.0, 0.0, 1.0);
+  controlPointGrid->SetControlPoint(1, 0, 0, 1.0, 1.0, 0.0, sqrt(2)/2);
+  controlPointGrid->SetControlPoint(2, 0, 0, 0.0, 1.0, 0.0, 1.0);
+  controlPointGrid->SetControlPoint(3, 0, 0, -1.0, 1.0, 0.0, sqrt(2)/2);
+  controlPointGrid->SetControlPoint(4, 0, 0, -1.0, 0.0, 0.0, 1.0);
+  controlPointGrid->SetControlPoint(5, 0, 0, -1.0, -1.0, 0.0, sqrt(2)/2);
+  controlPointGrid->SetControlPoint(6, 0, 0, 0.0, -1.0, 0.0, 1.0);
+  controlPointGrid->SetControlPoint(7, 0, 0, 1.0, -1.0, 0.0, sqrt(2)/2);
+  controlPointGrid->SetControlPoint(8, 0, 0, 1.0, 0.0, 0.0, 1.0);
 
   // Set up the curve
   vtkNew(vtkSVNURBSCurve, curve);
   curve->SetKnotVector(knots);
-  curve->SetControlPoints(cpoints);
+  curve->SetControlPointGrid(controlPointGrid);
   curve->SetDegree(p);
 
-  // Insert knot 0.5 r times
-  // Don't insert knot to create baseline image
-  curve->InsertKnot(u, r);
-
-  // Check the result
-  if (curve->GetNumberOfControlPoints() != np+r)
-  {
-    fprintf(stderr, "Curve was not updated to correct number of control points\n");
-    return EXIT_FAILURE;
-  }
-
-  if (curve->GetNumberOfKnotPoints() != m+r)
-  {
-    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
-    return EXIT_FAILURE;
-  }
-
   curve->GeneratePolyDataRepresentation(0.01);
-
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename, curve->GetCurveRepresentation());
-  filename = "/Users/adamupdegrove/Desktop/tmp/TEST_struct.vts";
-  vtkSVIOUtils::WriteVTSFile(filename, curve->GetControlPointGrid());
 
   // Set up mapper
   vtkNew(vtkPolyDataMapper, mapper);

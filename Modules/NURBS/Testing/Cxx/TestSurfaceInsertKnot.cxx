@@ -28,14 +28,15 @@
  *
  *=========================================================================*/
 
-#include <vtkCamera.h>
+#include "vtkCamera.h"
 #include "vtkSVControlGrid.h"
 #include "vtkDataObject.h"
 #include "vtkPoints.h"
-#include <vtkPolyDataMapper.h>
-#include <vtkRenderer.h>
-#include <vtkRenderWindow.h>
-#include <vtkRenderWindowInteractor.h>
+#include "vtkPointData.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkRenderWindowInteractor.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
@@ -53,33 +54,44 @@ int TestSurfaceInsertKnot(int argc, char *argv[])
 {
   // Set the curve knot insertion details
   int p=2;     //degree
-  int q=2;     //degree
-  int np=3;     //control points
-  int mp=3;     //control points
+  int q=1;     //degree
+  int np=9;     //control points
+  int mp=2;     //control points
   int nuk=p+np+1; //nuk
   int nvk=q+mp+1; //nvk
-  int r=1;     // number of insertions we want to do
-  double u=0.5;   // insertion value
+  int ru=2;     // number of insertions we want to do
+  int rv=1;     // number of insertions we want to do
+  double u=0.8;   // insertion value
+  double v0=0.2;   // insertion value
+  double v1=0.7;   // insertion value
 
-  // Control points (simple grid)
-  vtkNew(vtkStructuredGrid, controlPointGrid);
-  vtkNew(vtkPoints, controlPoints);
+  // Control points for a cylinder, two circles really
+  vtkNew(vtkSVControlGrid, controlPointGrid);
   controlPointGrid->SetDimensions(np, mp, 1);
-  controlPoints->SetNumberOfPoints(np*mp);
-  controlPoints->SetPoint(0, 0.0, 0.0, 0.0);
-  controlPoints->SetPoint(1, 1.0, 0.0, 1.0);
-  controlPoints->SetPoint(2, 3.0, 1.0, -1.0);
-  controlPoints->SetPoint(3, 0.0, 1.0, 1.0);
-  controlPoints->SetPoint(4, 1.0, -2.0, -1.0);
-  controlPoints->SetPoint(5, 2.0, 0.0, 0.0);
-  controlPoints->SetPoint(6, 0.0, 5.0, 0.0);
-  controlPoints->SetPoint(7, 2.0, -1.0, -2.0);
-  controlPoints->SetPoint(8, 4.0, 1.0, 1.0);
-  controlPointGrid->SetPoints(controlPoints);
+  controlPointGrid->SetNumberOfControlPoints(np*mp);
+  for (int j=0; j<mp; j++)
+  {
+    controlPointGrid->SetControlPoint(0, j, 0, 1.0, 0.0, j+(j*9), 1.0);
+    controlPointGrid->SetControlPoint(1, j, 0, 1.0, 1.0, j+(j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(2, j, 0, 0.0, 1.0, j+(j*9), 1.0);
+    controlPointGrid->SetControlPoint(3, j, 0, -1.0, 1.0, j+(j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(4, j, 0, -1.0, 0.0, j+(j*9), 1.0);
+    controlPointGrid->SetControlPoint(5, j, 0, -1.0, -1.0, j+(j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(6, j, 0, 0.0, -1.0, j+(j*9), 1.0);
+    controlPointGrid->SetControlPoint(7, j, 0, 1.0, -1.0, j+(j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(8, j, 0, 1.0, 0.0, j+(j*9), 1.0);
+  }
 
   // uKnot vector equal space
   vtkNew(vtkDoubleArray, uKnots);
   vtkSVNURBSUtils::LinSpaceClamp(0, 1, nuk, p, uKnots);
+  // Replace interior knot values with circle vals
+  uKnots->SetTuple1(3, 1./4);
+  uKnots->SetTuple1(4, 1./4);
+  uKnots->SetTuple1(5, 1./2);
+  uKnots->SetTuple1(6, 1./2);
+  uKnots->SetTuple1(7, 3./4);
+  uKnots->SetTuple1(8, 3./4);
 
   // vKnot vector equal space
   vtkNew(vtkDoubleArray, vKnots);
@@ -87,17 +99,91 @@ int TestSurfaceInsertKnot(int argc, char *argv[])
 
   // Set up the surface
   vtkNew(vtkSVNURBSSurface, surface);
-  surface->SetControlPoints(controlPointGrid);
+  surface->SetControlPointGrid(controlPointGrid);
   surface->SetUKnotVector(uKnots);
   surface->SetVKnotVector(vKnots);
+  surface->SetUDegree(p);
+  surface->SetVDegree(q);
 
-  surface->GeneratePolyDataRepresentation(0.1, 0.1);
+  // Now lets insert a knot u in the U dir r times
+  // Comment out knot insertion for baseline
+  surface->InsertKnot(u, 0, ru);
 
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename, surface->GetSurfaceRepresentation());
+  // Check the result
+  if (surface->GetNumberOfUControlPoints() != np+ru)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    return EXIT_FAILURE;
+  }
 
+  if (surface->GetNumberOfUKnotPoints() != nuk+ru)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    return EXIT_FAILURE;
+  }
 
-  // Double check the actual values
+  // Now lets insert a knot v in the V dir r times
+  surface->InsertKnot(v0, 1, rv);
+
+  // Check the result
+  if (surface->GetNumberOfVControlPoints() != mp+rv)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    return EXIT_FAILURE;
+  }
+
+  if (surface->GetNumberOfVKnotPoints() != nvk+rv)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    return EXIT_FAILURE;
+  }
+
+  // Now lets insert a knot v in the V dir r times
+  surface->InsertKnot(v1, 1, rv);
+
+  // Check the result
+  if (surface->GetNumberOfVControlPoints() != mp+rv+rv)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    return EXIT_FAILURE;
+  }
+
+  if (surface->GetNumberOfVKnotPoints() != nvk+rv+rv)
+  {
+    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    return EXIT_FAILURE;
+  }
+
+  surface->GeneratePolyDataRepresentation(0.01, 0.01);
+
+  // Set up mapper
+  vtkNew(vtkPolyDataMapper, mapper);
+  mapper->SetInputData(surface->GetSurfaceRepresentation());
+
+  // Set up actor
+  vtkNew(vtkActor, actor);
+  actor->SetMapper(mapper);
+
+  // Set up renderer and window
+  vtkNew(vtkRenderer, renderer);
+  vtkNew(vtkRenderWindow, renWin);
+  renWin->AddRenderer( renderer );
+  renderer->AddActor(actor);
+  renderer->SetBackground(.1, .2, .3);
+
+  // Set up interactor
+  vtkNew(vtkRenderWindowInteractor, renWinInteractor);
+  renWinInteractor->SetRenderWindow( renWin );
+
+  vtkCamera *camera = renderer->GetActiveCamera();
+  renderer->ResetCamera();
+  camera->Azimuth(45);
+  camera->Elevation(45);
+
+  // Render
+  renWin->Render();
+  renWinInteractor->Start();
+
 
   return EXIT_SUCCESS;
 }

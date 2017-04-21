@@ -101,6 +101,39 @@ vtkSVControlGrid* vtkSVControlGrid::GetData(vtkInformationVector* v, int i)
 }
 
 // ----------------------
+// SetNumberOfControlPoints
+// ----------------------
+int vtkSVControlGrid::SetNumberOfControlPoints(const int numPoints)
+{
+  this->GetPoints()->SetNumberOfPoints(numPoints);
+  vtkDataArray *weights = this->GetPointData()->GetArray("Weights");
+  if (weights == NULL)
+  {
+    fprintf(stderr,"No weigths on surface\n");
+    return SV_ERROR;
+  }
+  int numCurrentVals = weights->GetNumberOfTuples();
+  if (numPoints > numCurrentVals)
+    weights->SetNumberOfTuples(numPoints);
+  return SV_OK;
+}
+
+// ----------------------
+// SetControlPoint
+// ----------------------
+int vtkSVControlGrid::SetControlPoint(const int i, const int j, const int k, const double p0, const double p1, const double p2, const double w)
+{
+  int ptId;
+  double pt[3]; pt[0] = p0; pt[1] = p1; pt[2] = p2;
+  this->GetPointId(i, j, k, ptId);
+  this->GetPoints()->SetPoint(ptId, pt);
+  this->GetPointData()->GetArray("Weights")->InsertTuple1(ptId, w);
+
+  return SV_OK;
+}
+
+
+// ----------------------
 // SetControlPoint
 // ----------------------
 int vtkSVControlGrid::SetControlPoint(const int i, const int j, const int k, const double p[3], const double w)

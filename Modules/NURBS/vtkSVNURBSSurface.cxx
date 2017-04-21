@@ -230,7 +230,7 @@ int vtkSVNURBSSurface::SetUKnotVector(vtkDoubleArray *knots)
 int vtkSVNURBSSurface::SetVKnotVector(vtkDoubleArray *knots)
 {
   this->VKnotVector->DeepCopy(knots);
-  this->NumberOfUKnotPoints = this->VKnotVector->GetNumberOfTuples();
+  this->NumberOfVKnotPoints = this->VKnotVector->GetNumberOfTuples();
   return SV_OK;
 }
 
@@ -425,8 +425,12 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   vtkSVNURBSUtils::MatrixTranspose(NVfinal, 0, NVfinalT);
   //Get the physical points on the surface!
   // -----------------------------------------------------------------------
+  // When dealing with the rational of NURBS, need to multiply points by
+  // weights when sending through matrix multiplication. However, still need
+  // fourth spot in point, weight vector because in the end, we will need
+  // to divide by the total weight
   vtkNew(vtkDenseArray<double>, tmpControlGrid);
-  vtkSVNURBSUtils::ControlGridToTypedArray(this->ControlPointGrid, tmpControlGrid);
+  vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(this->ControlPointGrid, tmpControlGrid);
 
   // Do first matrix multiply with u basis functions
   vtkNew(vtkDenseArray<double>, tmpUGrid);
@@ -444,10 +448,10 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   }
 
   // Set up final grid of points
-  vtkNew(vtkSVControlGrid, finalGrid);
+  vtkNew(vtkStructuredGrid, finalGrid);
   vtkNew(vtkPoints, tmpVPoints);
   finalGrid->SetPoints(tmpVPoints);
-  vtkSVNURBSUtils::TypedArrayToControlGrid(tmpVGrid, finalGrid);
+  vtkSVNURBSUtils::TypedArrayToStructuredGridRational(tmpVGrid, finalGrid);
 
   // Get grid connectivity for pointset
   vtkNew(vtkCellArray, surfaceCells);

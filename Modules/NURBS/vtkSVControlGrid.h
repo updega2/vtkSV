@@ -63,6 +63,20 @@ public:
   /// \brief Initialize to empty structured grid
   void Initialize();
 
+  /** \brief Set the number of control points, needs to be called before
+   *  and SetControlPoint(. */
+  int SetNumberOfControlPoints(const int numPoints);
+
+  /** \brief Set a control point using i, j, k location. Space must be pre-allocated with Allocate.
+   *  \param i location in first axis of structured grid.
+   *  \param j location in second axis of structured grid.
+   *  \param k location in third axis of structured grid.
+   *  \param p0 x 3d location to set control point to.
+   *  \param p1 y 3d location to set control point to.
+   *  \param p2 z 3d location to set control point to.
+   *  \param w weight to associate with control point. */
+  int SetControlPoint(const int i, const int j, const int k, const double p0, const double p1, const double p2, const double w);
+
   /** \brief Set a control point using i, j, k location. Space must be pre-allocated with Allocate.
    *  \param i location in first axis of structured grid.
    *  \param j location in second axis of structured grid.
