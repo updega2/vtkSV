@@ -128,7 +128,7 @@ public:
   /** \brief Insert a knot certain number of times. */
   int InsertKnot(const double newKnot, const int dim, const int numberOfInserts);
 
-  int InsertKnots(vtkDoubleArray *newKnots, const int dim, const double tolerance) {return 0;} /**< \brief Unimplemented */
+  int InsertKnots(vtkDoubleArray *newKnots, const int dim);
   int RemoveKnot(const int index, const int dim, const double tolerance) {return 0;} /**< \brief Unimplemented */
   int SetKnot(const int index, const int dim, const double newKnot) {return 0;} /**< \brief Unimplemented */
   int SetKnots(vtkIntArray *indices, const int dim, vtkDoubleArray *newKnots) {return 0;} /**< \brief Unimplemented */

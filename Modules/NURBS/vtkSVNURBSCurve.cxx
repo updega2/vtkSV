@@ -164,7 +164,7 @@ void vtkSVNURBSCurve::SetControlPoints(vtkPoints *points1d)
 }
 
 // ----------------------
-// SetControlPoints
+// InsertKnot
 // ----------------------
 int vtkSVNURBSCurve::InsertKnot(const double newKnot, const int numberOfInserts)
 {
@@ -211,6 +211,35 @@ int vtkSVNURBSCurve::InsertKnot(const double newKnot, const int numberOfInserts)
 
   return SV_OK;
 
+}
+
+// ----------------------
+// InsertKnots
+// ----------------------
+int vtkSVNURBSCurve::InsertKnots(vtkDoubleArray *newKnots)
+{
+  // Get current degree
+  int p = this->Degree;
+
+  // Set up new knots and new control points
+  vtkNew(vtkDoubleArray, newKnotSpan);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  if (vtkSVNURBSUtils::CurveKnotRefinement(this->ControlPointGrid,
+                                           this->KnotVector,
+                                           p, newKnots,
+                                           newControlPoints,
+                                           newKnotSpan) != SV_OK)
+  {
+    vtkErrorMacro("Error in knot refinement");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetKnotVector(newKnotSpan);
+
+  return SV_OK;
 }
 
 // ----------------------

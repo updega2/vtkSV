@@ -96,6 +96,10 @@ public:
                              const int currentMultiplicity,
                              const int numberOfInserts,
                              vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
+  static int CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                 const int degree,
+                                 vtkDoubleArray *insertKnots,
+                                 vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
 
   // Surface functions
   static int GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
@@ -125,6 +129,14 @@ public:
                                const int numberOfInserts,
                                vtkSVControlGrid *newControlPoints,
                                vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
+ static int SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
+                                  vtkDoubleArray *uKnots, const int uDegree,
+                                  vtkDoubleArray *vKnots, const int vDegree,
+                                  const int insertDirection,
+                                  vtkDoubleArray *insertKnots,
+                                  vtkSVControlGrid *newControlPoints,
+                                  vtkDoubleArray *newUKnots,
+                                  vtkDoubleArray *newVKnots);
 
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
@@ -142,6 +154,10 @@ public:
                              vtkTypedArray<double> *Nus);
   static int FindSpan(int p, double u, vtkDoubleArray *knots, int &span);
   static int GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multiplicity, vtkDoubleArray *singleValues);
+  static int GetPWFromP(vtkSVControlGrid *controlPoints);
+  static int GetPWFromP(vtkSVControlGrid *controlPoints, vtkSVControlGrid *controlPointWeights);
+  static int GetPFromPW(vtkSVControlGrid *controlPoints);
+  static int GetPFromPW(vtkSVControlGrid *controlPointWeights, vtkSVControlGrid *controlPoints);
 
   //Conversion functions
   static int PolyDatasToStructuredGrid(vtkPolyData **inputs, const int numInputs, vtkStructuredGrid *points);

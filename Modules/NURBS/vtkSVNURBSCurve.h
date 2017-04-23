@@ -122,7 +122,10 @@ public:
    *  for that, use SetKnot; this creates an entirely new knot point in the vector. */
   int InsertKnot(const double newKnot, const int numberOfInserts);
 
-  int InsertKnots(vtkDoubleArray *newKnots, const double tolerance) {return 0;} /**< \brief Unimplemented */
+  /** \brief insert multiple knots at the same time; should be an increasing knot
+   *  span that is within the bound of the current knots. Make sure this is
+   *  done as this is not checked. */
+  int InsertKnots(vtkDoubleArray *newKnots);
   int RemoveKnot(const int index, const double tolerance) {return 0;} /**< \brief Unimplemented */
 
   /** \brief Set the entire knot vector. Must make sure everything is consistent, curve does not check */
