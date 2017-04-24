@@ -631,6 +631,245 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
 }
 
 // ----------------------
+// CurveRemoveKnot
+// ----------------------
+int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                     const int degree,
+                                     const double removeValue, const int removeIndex,
+                                     const int currentMultiplicity,
+                                     const int numberOfRemovals,
+                                     const double tol,
+                                     vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Copy control points and knots to new objects
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
+  vtkNew(vtkDoubleArray, tmpKnots);
+  tmpKnots->DeepCopy(knots);
+  vtkSVNURBSUtils::PrintArray(tmpKnots);
+
+  // Set values used by alg to more concise vars
+  int n    = dims[0]-1;
+  int p    = degree;
+  double u = removeValue;
+  int r    = removeIndex;
+  int num  = numberOfRemovals;
+  int s    = currentMultiplicity;
+
+  int m     = n+p+1;
+  int ord   = p+1;
+  int fout  = (2*r-s-p)/2;
+  int last  = r-s;
+  int first = r-p;
+
+  fprintf(stdout,"Removing %f at index %d, %d times, has current %d mult\n", u, r, num, s);
+
+  // Double check to see if correct vals were given
+  if (knots->GetNumberOfTuples() != m+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with knot span\n");
+    return SV_ERROR;
+  }
+
+  if (knots->GetTuple1(r) != u)
+  {
+    fprintf(stderr,"Incorrect index %d given for knot value %f\n", r, u);
+    return SV_ERROR;
+  }
+
+  // Compute a tolerance for points
+  double origin[3]; origin[0] = 0.0; origin[1] = 0.0; origin[2] = 0.0;
+  double minWeight = VTK_SV_LARGE_DOUBLE;
+  double maxDist   = 0.0;
+  for (int i=0; i<=n; i++)
+  {
+    double pw[4];
+    controlPoints->GetControlPoint(i, 0, 0, pw);
+    if (pw[3] < minWeight)
+      minWeight = pw[3];
+    double dist = vtkSVMathUtils::Distance(pw, origin, 3) > maxDist;
+    if (dist > maxDist)
+      maxDist = dist;
+  }
+  double tolerance = tol*minWeight/(1+fabs(maxDist));
+  fprintf(stdout,"What is tolerance %f\n", tolerance);
+
+  vtkNew(vtkDoubleArray, tmpPoints);
+  tmpPoints->SetNumberOfComponents(4);
+  tmpPoints->SetNumberOfTuples(2*p+1);
+
+  // Set iter vars
+  int i;
+  int j;
+  int ii;
+  int jj;
+  int t;
+
+  for (t=0; t<num; t++)
+  {
+    // Get difference between indices of tmpPoints and control points
+    int off = first-1;
+
+    // Set tmpPoints
+    double pw0[4], pw1[4];
+    PW->GetControlPoint(off, 0, 0, pw0);
+    PW->GetControlPoint(last+1, 0, 0, pw1);
+    tmpPoints->SetTuple(0, pw0);
+    tmpPoints->SetTuple(last+1-off, pw1);
+
+    // Update iter vars
+    i=first;
+    j=last;
+    ii=1;
+    jj=last-off;
+    int remFlag = 0;
+
+    // Go through and compute control points for each removal
+    while (j-i > t)
+    {
+      double alpha0 = (u-tmpKnots->GetTuple1(i))/(tmpKnots->GetTuple1(i+ord+t)-tmpKnots->GetTuple1(i));
+      double alpha1 = (u-tmpKnots->GetTuple1(j-t))/(tmpKnots->GetTuple1(j+ord)-tmpKnots->GetTuple1(j-t));
+
+
+      // Set tmpPoints control points
+      double pw2[4], pw3[4], newPoint0[4];
+      tmpPoints->GetTuple(ii-1, pw2);
+      PW->GetControlPoint(i, 0, 0, pw3);
+      vtkSVMathUtils::MultiplyScalar(pw2, 1.0-alpha0, 4);
+      vtkSVMathUtils::Subtract(pw3, pw2, newPoint0, 4);
+      vtkSVMathUtils::MultiplyScalar(newPoint0, 1.0/alpha0, 4);
+      tmpPoints->SetTuple(ii, newPoint0);
+
+      double pw4[4], pw5[4], newPoint1[4];
+      tmpPoints->GetTuple(jj+1, pw4);
+      PW->GetControlPoint(j, 0, 0, pw5);
+      vtkSVMathUtils::MultiplyScalar(pw4, alpha1, 4);
+      vtkSVMathUtils::Subtract(pw5, pw4, newPoint1, 4);
+      vtkSVMathUtils::MultiplyScalar(newPoint1, 1.0/(1.0-alpha1), 4);
+      tmpPoints->SetTuple(jj, newPoint1);
+
+      // edit iter vars
+      i++;
+      ii++;
+      j--;
+      jj--;
+    }
+
+    // Check to see if we can remove knot
+    if (j-i < t)
+    {
+      double pw2[4], pw3[4];
+      tmpPoints->GetTuple(ii-1, pw2);
+      tmpPoints->GetTuple(jj+1, pw3);
+      fprintf(stdout,"WHAT IS: %f\n", vtkSVMathUtils::Distance(pw2, pw3, 4));
+      //if (vtkSVMathUtils::Distance(pw2, pw3, 4) <= tolerance)
+        remFlag = 1;
+    }
+    else
+    {
+      double alpha0 = (u-tmpKnots->GetTuple1(i))/(tmpKnots->GetTuple1(i+ord+t)-tmpKnots->GetTuple1(i));
+
+      double pw2[4], pw3[4], pw4[4], testPoint[4];
+      PW->GetControlPoint(i, 0, 0, pw2);
+      tmpPoints->GetTuple(ii+t+1, pw3);
+      tmpPoints->GetTuple(ii-1, pw4);
+      vtkSVMathUtils::MultiplyScalar(pw3, alpha0, 4);
+      vtkSVMathUtils::MultiplyScalar(pw4, 1.0-alpha0, 4);
+      vtkSVMathUtils::Add(pw3, pw4, testPoint, 4);
+
+      fprintf(stdout,"WHAT IS: %f\n", vtkSVMathUtils::Distance(pw2, pw3, 4));
+      //if (vtkSVMathUtils::Distance(pw2, testPoint, 4) <= tolerance)
+        remFlag = 1;
+    }
+
+    // Check if knot can be removed
+    if (remFlag == 0)
+      break;
+    else
+    {
+      i = first;
+      j = last;
+
+      // Save new control points from tmpPoints
+      while (j-i > t)
+      {
+        double pw2[4], pw3[4];
+        tmpPoints->GetTuple(i-off, pw2);
+        tmpPoints->GetTuple(j-off, pw3);
+
+        PW->SetControlPoint(i, 0, 0, pw2);
+        PW->SetControlPoint(j, 0, 0, pw3);
+        i++;
+        j--;
+      }
+
+    }
+    first--;
+    last--;
+  }
+
+  if (t==0)
+  {
+    fprintf(stdout,"No knots were able to be removed\n");
+    return SV_OK;
+  }
+
+  // Update new knots
+  newKnots->SetNumberOfTuples(m+1-t);
+  for (int k=0; k<=m-t; k++)
+    newKnots->SetTuple1(k, tmpKnots->GetTuple1(k));
+  for (int k=r+1; k<=m; k++)
+    newKnots->SetTuple1(k-t, tmpKnots->GetTuple1(k));
+  vtkSVNURBSUtils::PrintArray(newKnots);
+
+  // Update iter vars
+  j = fout;
+  i = fout;
+  for (int k=1; k<t; k++)
+  {
+    if (k%2 == 1)
+      i++;
+    else
+      j--;
+  }
+
+  // Update new control points
+  newControlPoints->GetPoints()->SetNumberOfPoints(n+1-t);
+  newControlPoints->SetDimensions(n+1-t, 1, 1);
+
+  for (int k=0; k<=n-t; k++)
+  {
+    double pw[4];
+    PW->GetControlPoint(k, 0, 0, pw);
+    fprintf(stdout,"WHat is Point: %.4f %.4f %.4f\n", pw[0], pw[1], pw[2]);
+    vtkMath::MultiplyScalar(pw, 1./pw[3]);
+    newControlPoints->SetControlPoint(k, 0, 0, pw);
+  }
+
+  for (int k=i+1; k<=n; k++)
+  {
+    double pw[4];
+    PW->GetControlPoint(k, 0, 0, pw);
+    newControlPoints->SetControlPoint(j, 0, 0, pw);
+    j++;
+  }
+
+  fprintf(stdout,"New POInts:\n");
+  for (int k=0; k<=n-t; k++)
+  {
+    double pw[4];
+    newControlPoints->GetControlPoint(k, 0, 0, pw);
+    fprintf(stdout,"WHat is Point: %.4f %.4f %.4f\n", pw[0], pw[1], pw[2]);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
 // CurveKnotRefinement
 // ----------------------
 int vtkSVNURBSUtils::CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
@@ -746,6 +985,106 @@ int vtkSVNURBSUtils::CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDou
 
   // Convert back from weighted points
   vtkSVNURBSUtils::GetPFromPW(newControlPoints);
+
+  return SV_OK;
+}
+
+// CurveBezierExtraction
+// ----------------------
+int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                           const int degree,
+                                           vtkSVNURBSCollection *curves)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Really quick, convert all points to pw
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
+
+  // Set values used by alg to more concise vars
+  int n = dims[0]-1;
+  int p = degree;
+
+  int m  = n+p+1;
+  int a  = p;
+  int b  = p+1;
+  int nb = 0;
+
+  // Double check to see if correct vals were given
+  if (knots->GetNumberOfTuples() != m+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with knot span\n");
+    return SV_ERROR;
+  }
+
+  int i;
+  for(i=0; i<-p; i++)
+  {
+  }
+
+  // Initiate array for alphas
+  vtkNew(vtkDoubleArray, alphas);
+  alphas->SetNumberOfTuples(m);
+
+  while (b < m)
+  {
+    // Need to set this up!
+    vtkNew(vtkSVControlGrid, newControlPoints);
+    vtkNew(vtkSVControlGrid, tmpControlPoints);
+
+    // Check multiplicity
+    i = b;
+    while (b < m && knots->GetTuple1(b+1) == knots->GetTuple1(b))
+      b++;
+    int mult = b-i+1;
+    if (mult < p)
+    {
+      // Alpha numerator
+      int numer = knots->GetTuple1(b) - knots->GetTuple1(a);
+      // Compute all alphas
+      for (int j=p; j>mult; j++)
+        alphas->SetTuple1(j-mult-1, numer/(knots->GetTuple1(a+j)-knots->GetTuple1(a)));
+
+      int r = p-mult;
+
+      // Insert the knot the number of times needed to get to p
+      for (j=1; j<=r; j++)
+      {
+        int save = r-j;
+        int s = mult+j;
+        for (k=p; k>=s; k--)
+        {
+          double alpha = alphas->GetTuple1(k-s);
+          double pw0[4], pw1[4], newPoint;
+          newControlPoints->GetControlPoint(k, 0, 0, pw0);
+          newControlPoints->GetControlPoint(k-1, 0, 0, pw1);
+          vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
+          vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
+          vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+        }
+        if (b < m)
+        {
+          double pw[4];
+          newControlPoints->GetControlPoint(p, 0, 0, pw);
+          tmpControlPoints->SetControlPoint(save, 0, 0, pw);
+        }
+      }
+    }
+    nb++;
+    if (b < m)
+    {
+      for (i=p-mult; i<=p; i++)
+      {
+        double pw[4];
+        PW->GetControlPoint(b-p+i, 0, 0, pw);
+        tmp->ControlPoints->SetControlPoint(i, 0, 0, pw);
+      }
+      a=b;
+      b++;
+    }
+  }
 
   return SV_OK;
 }
@@ -1821,7 +2160,7 @@ int vtkSVNURBSUtils::BasisEvaluationVec(vtkDoubleArray *knots, int p, int kEval,
 // ----------------------
 // FindSpan
 // ----------------------
-int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
+int vtkSVNURBSUtils::FindSpan(const int p, const double u, vtkDoubleArray *knots, int &span)
 {
   int nKnot = knots->GetNumberOfTuples();
   int nCon = nKnot - p - 1;
@@ -1844,6 +2183,33 @@ int vtkSVNURBSUtils::FindSpan(int p, double u, vtkDoubleArray *knots, int &span)
     mid = (low+high)/2;
   }
   span = mid;
+  return SV_OK;
+}
+
+// ----------------------
+// FindKnotMultiplicity
+// ----------------------
+int vtkSVNURBSUtils::FindKnotMultiplicity(const int knotIndex, const double u, vtkDoubleArray *knots, int &mult)
+{
+  mult = 0;
+  if(knots->GetTuple1(knotIndex) == u)
+  {
+    int i=knotIndex;
+    int count = 1;
+    while(knots->GetTuple1(i+1) == knots->GetTuple1(i) &&
+          i < knots->GetNumberOfTuples())
+    {
+      count++;
+      i++;
+    }
+    mult = count;
+  }
+  else
+  {
+    fprintf(stderr,"Incorrect index %d given for knot %f\n", knotIndex, u);
+    return SV_ERROR;
+  }
+
   return SV_OK;
 }
 

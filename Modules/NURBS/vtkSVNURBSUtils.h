@@ -96,10 +96,20 @@ public:
                              const int currentMultiplicity,
                              const int numberOfInserts,
                              vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
+  static int CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                             const int degree,
+                             const double removeValue, const int removeIndex,
+                             const int currentMultiplicity,
+                             const int numberOfRemovals,
+                             const double tol,
+                             vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots);
   static int CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
                                  const int degree,
                                  vtkDoubleArray *insertKnots,
                                  vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
+  static int CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                   const int degree,
+                                   vtkSVNURBSCollection *curves);
 
   // Surface functions
   static int GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
@@ -152,7 +162,8 @@ public:
                              vtkDoubleArray *Nu);
   static int BasisEvaluationVec(vtkDoubleArray *knots, int p, int kEval, vtkDoubleArray *uEvals,
                              vtkTypedArray<double> *Nus);
-  static int FindSpan(int p, double u, vtkDoubleArray *knots, int &span);
+  static int FindSpan(const int p, const double u, vtkDoubleArray *knots, int &span);
+  static int FindKnotMultiplicity(const int knotIndex, const double u, vtkDoubleArray *knots, int &mult);
   static int GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multiplicity, vtkDoubleArray *singleValues);
   static int GetPWFromP(vtkSVControlGrid *controlPoints);
   static int GetPWFromP(vtkSVControlGrid *controlPoints, vtkSVControlGrid *controlPointWeights);

@@ -32,7 +32,8 @@ vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestCircle.cxx,NO_DATA
   TestSurfaceInsertKnot.cxx,NO_DATA
   TestCurveKnotRefinement.cxx,NO_DATA
-  TestSurfaceKnotRefinement.cxx,NO_DATA)
+  TestSurfaceKnotRefinement.cxx,NO_DATA
+  TestSurfaceKnotRefinement.cxx,NO_DATA,NO_VALID,NO_OUTPUT)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)

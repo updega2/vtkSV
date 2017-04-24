@@ -67,9 +67,12 @@ public:
    *  \return the signed area. */
   static double ComputeTriangleArea(double pt0[3], double pt1[3], double pt2[3]);
 
+  //@{
   /** \brief Get distance between two 3D points, very simple
    *  \return the unsigned distance */
   static double Distance(double pt0[3], double pt1[3]);
+  static double Distance(double pt0[], double pt1[], const int size);
+  //@}
 
   /** \brief Dot product between each tuple of two data arrays. */
   static int VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps);
@@ -79,6 +82,9 @@ public:
 
   /** \brief Addition of two arrays of given size. */
   static int Add(double a[], double b[], double result[], const int size);
+
+  /** \brief Addition of two arrays of given size. */
+  static int Subtract(double a[], double b[], double result[], const int size);
 
   /** \brief Multiply value to array of given size; edits in place */
   static int MultiplyScalar(double a[], double scalar, const int size);

@@ -178,17 +178,7 @@ int vtkSVNURBSCurve::InsertKnot(const double newKnot, const int numberOfInserts)
   // If the value at the location is our value, we need to get current mult
   int mult=0;
   if(this->KnotVector->GetTuple1(span) == newKnot)
-  {
-    int i=span;
-    int count = 1;
-    while(this->KnotVector->GetTuple1(i+1) == this->KnotVector->GetTuple1(i) &&
-          i < this->KnotVector->GetNumberOfTuples())
-    {
-      count++;
-      i++;
-    }
-    mult = count;
-  }
+    vtkSVNURBSUtils::FindKnotMultiplicity(span, newKnot, this->KnotVector, mult);
 
   // Set up new knots and points
   vtkNew(vtkDoubleArray, newKnots);
@@ -238,6 +228,72 @@ int vtkSVNURBSCurve::InsertKnots(vtkDoubleArray *newKnots)
   // Replace existing data with new data
   this->SetControlPointGrid(newControlPoints);
   this->SetKnotVector(newKnotSpan);
+
+  return SV_OK;
+}
+
+// ----------------------
+// RemoveKnot
+// ----------------------
+int vtkSVNURBSCurve::RemoveKnot(const double removeKnot, const int numberOfRemovals, const double tol)
+{
+  int p = this->Degree;
+  int knotIndex = -1;
+  vtkSVNURBSUtils::PrintArray(this->KnotVector);
+  for (int i=0; i<this->KnotVector->GetNumberOfTuples(); i++)
+  {
+    if (this->KnotVector->GetTuple1(i) == removeKnot)
+    {
+      knotIndex = i;
+      break;
+    }
+  }
+
+  if (knotIndex == -1)
+  {
+    vtkErrorMacro("Knot value was not found in span");
+    return SV_ERROR;
+  }
+
+  if (this->RemoveKnotAtIndex(knotIndex, numberOfRemovals, tol) != SV_OK)
+    return SV_ERROR;
+
+  return SV_OK;
+}
+
+// ----------------------
+// RemoveKnot
+// ----------------------
+int vtkSVNURBSCurve::RemoveKnotAtIndex(const int knotIndex, const int numberOfRemovals, const double tol)
+{
+  int p = this->Degree;
+  double removeKnot = this->KnotVector->GetTuple1(knotIndex);
+  int mult;
+  if (vtkSVNURBSUtils::FindKnotMultiplicity(knotIndex, removeKnot, this->KnotVector, mult) != SV_OK)
+  {
+    vtkErrorMacro("Error in getting multiplicity");
+    return SV_ERROR;
+  }
+
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  // Insert the knot
+  if (vtkSVNURBSUtils::CurveRemoveKnot(this->ControlPointGrid,
+                                       this->KnotVector,
+                                       p, removeKnot, knotIndex,
+                                       mult, numberOfRemovals,
+                                       tol,
+                                       newControlPoints, newKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error on knot insertion");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetKnotVector(newKnots);
 
   return SV_OK;
 }

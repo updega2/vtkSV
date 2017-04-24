@@ -193,6 +193,17 @@ double vtkSVMathUtils::Distance(double pt0[3], double pt1[3])
 }
 
 // ----------------------
+// Distance
+// ----------------------
+double vtkSVMathUtils::Distance(double pt0[3], double pt1[3], const int size)
+{
+  double val = 0.0;
+  for (int i=0; i<size; i++)
+    val += (pow(pt1[i] - pt0[i], 2.0));
+  return sqrt(val);
+}
+
+// ----------------------
 // VectorDotProduct
 // ----------------------
 int vtkSVMathUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps)
@@ -251,7 +262,18 @@ int vtkSVMathUtils::Add(double a[], double b[], double result[], const int size)
 }
 
 // ----------------------
-// Add
+// Subtract
+// ----------------------
+int vtkSVMathUtils::Subtract(double a[], double b[], double result[], const int size)
+{
+  for (int i=0; i<size; i++)
+    result[i] = a[i]-b[i];
+
+  return SV_OK;
+}
+
+// ----------------------
+// MultiplyScalar
 // ----------------------
 int vtkSVMathUtils::MultiplyScalar(double a[], double scalar, const int size)
 {

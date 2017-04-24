@@ -45,11 +45,12 @@
 #include "vtkSVNURBSModule.h"
 
 #include "vtkCellArray.h"
-#include "vtkSVControlGrid.h"
 #include "vtkDenseArray.h"
 #include "vtkDoubleArray.h"
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
+#include "vtkSVControlGrid.h"
+#include "vtkSVNURBSCollection.h"
 
 class VTKSVNURBS_EXPORT vtkSVNURBSCurve : public vtkDataObject
 {
@@ -126,7 +127,15 @@ public:
    *  span that is within the bound of the current knots. Make sure this is
    *  done as this is not checked. */
   int InsertKnots(vtkDoubleArray *newKnots);
-  int RemoveKnot(const int index, const double tolerance) {return 0;} /**< \brief Unimplemented */
+
+  /** \brief remove single knot from knot span of specified value. Value must match
+   *  exactly, a tolerance is not used. To remove a knot at a certain location, use
+   *  the following function. If the knot exists multiple times, the first occurence
+   *  of the knot will be used. */
+  int RemoveKnot(const double removeKnot, const int numberOfRemovals, const double tol);
+
+  /** \brief remove single knot at a specified location in the knot span. */
+  int RemoveKnotAtIndex(const int knotIndex, const int numberOfRemovals, const double tol);
 
   /** \brief Set the entire knot vector. Must make sure everything is consistent, curve does not check */
   int SetKnotVector(vtkDoubleArray *knots);
@@ -166,6 +175,9 @@ public:
 
   /** \brief get the knot vector multiplicity. */
   int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
+
+  /** \brief decompose the surface using bezier extraction. */
+  int ExtractBezierCurves(vtkSVNURBSCollection *curves);
 
   // Description:
   // Retrieve an instance of this class from an information object.
