@@ -99,11 +99,6 @@ int TestCurveInsertKnot(int argc, char *argv[])
 
   curve->GeneratePolyDataRepresentation(0.01);
 
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename, curve->GetCurveRepresentation());
-  filename = "/Users/adamupdegrove/Desktop/tmp/TEST_struct.vts";
-  vtkSVIOUtils::WriteVTSFile(filename, curve->GetControlPointGrid());
-
   // Set up mapper
   vtkNew(vtkPolyDataMapper, mapper);
   mapper->SetInputData(curve->GetCurveRepresentation());

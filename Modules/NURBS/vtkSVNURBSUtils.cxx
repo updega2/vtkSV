@@ -527,14 +527,8 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
   int dims[3];
   controlPoints->GetDimensions(dims);
 
-  // Really quick, convert all points to pw
-  for (int i=0; i<controlPoints->GetPoints()->GetNumberOfPoints(); i++)
-  {
-    double pw[4];
-    controlPoints->GetControlPoint(i, 0, 0, pw);
-    vtkMath::MultiplyScalar(pw, pw[3]);
-    controlPoints->SetControlPoint(i, 0, 0, pw);
-  }
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
 
   // Set values used by alg to more concise vars
   int np   = dims[0]-1;
@@ -585,13 +579,13 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
   for (int i=0; i<=k-p; i++)
   {
     double pw[4];
-    controlPoints->GetControlPoint(i, 0, 0, pw);
+    PW->GetControlPoint(i, 0, 0, pw);
     newControlPoints->SetControlPoint(i, 0, 0, pw);
   }
   for (int i=k-s; i<=np; i++)
   {
     double pw[4];
-    controlPoints->GetControlPoint(i, 0, 0, pw);
+    PW->GetControlPoint(i, 0, 0, pw);
     newControlPoints->SetControlPoint(i+r, 0, 0, pw);
   }
 
@@ -599,7 +593,7 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
   for (int i=0; i<=p-s; i++)
   {
     double pw[4];
-    controlPoints->GetControlPoint(k-p+i, 0, 0, pw);
+    PW->GetControlPoint(k-p+i, 0, 0, pw);
     tmpPoints->SetTuple(i, pw);
   }
 
@@ -630,14 +624,128 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
   for (int i=L+1; i<k-s; i++)
     newControlPoints->SetControlPoint(i, 0, 0, tmpPoints->GetTuple(i-L));
 
-  // Really quick, convert all points back
-  for (int i=0; i<newControlPoints->GetPoints()->GetNumberOfPoints(); i++)
+  // Convert back to regular p
+  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
+
+  return SV_OK;
+}
+
+// ----------------------
+// CurveKnotRefinement
+// ----------------------
+int vtkSVNURBSUtils::CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                         const int degree,
+                                         vtkDoubleArray *insertKnots,
+                                         vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Really quick, convert all points to pw
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
+
+  // Set values used by alg to more concise vars
+  int n = dims[0]-1;
+  int p = degree;
+  int r = insertKnots->GetNumberOfTuples()-1;
+
+  int m = n+p+1;
+
+  // Double check to see if correct vals were given
+  if (knots->GetNumberOfTuples() != m+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with knot span\n");
+    return SV_ERROR;
+  }
+
+  if (r == 0)
+  {
+    fprintf(stderr,"If inserting one knot, use knot insertion rather than refinement\n");
+    return SV_ERROR;
+  }
+
+  int a, b;
+  vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(0), knots, a);
+  vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(r), knots, b);
+  b++;
+
+  newControlPoints->SetNumberOfControlPoints(n+r+2);
+  newControlPoints->SetDimensions(n+r+2, 1, 1);
+  newKnots->SetNumberOfTuples(m+r+2);
+
+  // Pass unchanging control points before new
+  for (int i=0; i<=a-p; i++)
   {
     double pw[4];
-    newControlPoints->GetControlPoint(i, 0, 0, pw);
-    vtkMath::MultiplyScalar(pw, 1./pw[3]);
+    PW->GetControlPoint(i, 0, 0, pw);
     newControlPoints->SetControlPoint(i, 0, 0, pw);
   }
+
+  // Set unchanging control points after new
+  for (int i=b-1; i<=n; i++)
+  {
+    double pw[4];
+    PW->GetControlPoint(i, 0, 0, pw);
+    newControlPoints->SetControlPoint(i+r+1, 0, 0, pw);
+  }
+
+  // Set unchanging knots before new ones
+  for (int i=0; i<=a; i++)
+    newKnots->SetTuple1(i, knots->GetTuple1(i));
+
+  // Set unchanging knots after new ones
+  for (int i=b+p; i<=m; i++)
+    newKnots->SetTuple1(i+r+1, knots->GetTuple1(i));
+
+  // Set iter vars
+  int i=b+p-1;
+  int k=b+p+r;
+
+  // Loop through and calc new cps
+  for (int j=r; j>=0; j--)
+  {
+    while(insertKnots->GetTuple1(j) <= knots->GetTuple1(i) && i > a)
+    {
+      double pw[4];
+      PW->GetControlPoint(i-p-1, 0, 0, pw);
+      newControlPoints->SetControlPoint(k-p-1, 0, 0, pw);
+      newKnots->SetTuple1(k, knots->GetTuple1(i));
+      k--;
+      i--;
+    }
+    double pdw[4];
+    newControlPoints->GetControlPoint(k-p, 0, 0, pdw);
+    newControlPoints->SetControlPoint(k-p-1, 0, 0, pdw);
+    for (int l=1; l<=p; l++)
+    {
+      int ind = k-p+l;
+      double alpha = newKnots->GetTuple1(k+l) - insertKnots->GetTuple1(j);
+      if (fabs(alpha) >= -1.e-10 && fabs(alpha) <= 1.0e-10)
+      {
+        double pw[4];
+        newControlPoints->GetControlPoint(ind, 0, 0, pw);
+        newControlPoints->SetControlPoint(ind-1, 0, 0, pw);
+      }
+      else
+      {
+        alpha = alpha/(newKnots->GetTuple1(k+l) - knots->GetTuple1(i-p+l));
+        double pw0[4], pw1[4], newPoint[4];
+        newControlPoints->GetControlPoint(ind-1, 0, 0, pw0);
+        newControlPoints->GetControlPoint(ind, 0, 0, pw1);
+        vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
+        vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
+        vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+        newControlPoints->SetControlPoint(ind-1, 0, 0, newPoint);
+      }
+    }
+    newKnots->SetTuple1(k, insertKnots->GetTuple1(j));
+    k--;
+  }
+
+  // Convert back from weighted points
+  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
 
   return SV_OK;
 }
@@ -658,7 +766,6 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
   points->GetDimensions(dim);
   int nUCon = dim[0];
   int nVCon = dim[1];
-
 
   vtkNew(vtkSparseArray<double>, NPUTmp);
   vtkNew(vtkSparseArray<double>, NPUFinal);
@@ -872,27 +979,19 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
   int dims[3];
   controlPoints->GetDimensions(dims);
 
-  // Realy quick, convert all points to pw
-  vtkDataArray *weights = controlPoints->GetPointData()->GetArray("Weights");
-  for (int i=0; i<controlPoints->GetNumberOfPoints(); i++)
-  {
-    double pt[3];
-    controlPoints->GetPoints()->GetPoint(i, pt);
-    double weight = weights->GetTuple1(i);
-    vtkMath::MultiplyScalar(pt, weight);
-    controlPoints->GetPoints()->SetPoint(i, pt);
-  }
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
 
   // Set values used by alg to more concise vars
-  int np     = dims[0]-1;
-  int p      = uDegree;
-  int mp     = dims[1]-1;
-  int q      = vDegree;
-  double dir = insertDirection;
-  double u   = insertValue;
-  int k      = span;
-  int s      = currentMultiplicity;
-  int r      = numberOfInserts;
+  int np   = dims[0]-1;
+  int p    = uDegree;
+  int mp   = dims[1]-1;
+  int q    = vDegree;
+  int dir  = insertDirection;
+  double u = insertValue;
+  int k    = span;
+  int s    = currentMultiplicity;
+  int r    = numberOfInserts;
 
   // Can't possibly add more knots at location than the degree of the curve
   if ( (r+s) > p && dir == 0)
@@ -905,7 +1004,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
   }
 
   // Double check to see if correct vals were given
-  if ((np+1)*(mp+1) != controlPoints->GetNumberOfPoints())
+  if ((np+1)*(mp+1) != PW->GetNumberOfPoints())
   {
     fprintf(stderr,"Invalid number of control points in u or v direction given\n");
     return SV_ERROR;
@@ -967,14 +1066,14 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       for (int i=0; i<=k-p; i++)
       {
         double pw[4];
-        controlPoints->GetControlPoint(i, col, 0, pw);
+        PW->GetControlPoint(i, col, 0, pw);
         newControlPoints->SetControlPoint(i, col, 0, pw);
       }
 
       for (int i=k-s; i<=np; i++)
       {
         double pw[4];
-        controlPoints->GetControlPoint(i, col, 0, pw);
+        PW->GetControlPoint(i, col, 0, pw);
         newControlPoints->SetControlPoint(i+r, col, 0, pw);
       }
 
@@ -982,7 +1081,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       for (int i=0; i<=p-s; i++)
       {
         double pw[4];
-        controlPoints->GetControlPoint(k-p+i, col, 0, pw);
+        PW->GetControlPoint(k-p+i, col, 0, pw);
         tmpPoints->SetTuple(i, pw);
       }
 
@@ -1074,14 +1173,14 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       for (int i=0; i<=k-q; i++)
       {
         double pw[4];
-        controlPoints->GetControlPoint(row, i, 0, pw);
+        PW->GetControlPoint(row, i, 0, pw);
         newControlPoints->SetControlPoint(row, i, 0, pw);
       }
 
       for (int i=k-s; i<=mp; i++)
       {
         double pw[4];
-        controlPoints->GetControlPoint(row, i, 0, pw);
+        PW->GetControlPoint(row, i, 0, pw);
         newControlPoints->SetControlPoint(row, i+r, 0, pw);
       }
 
@@ -1089,7 +1188,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       for (int i=0; i<=q-s; i++)
       {
         double pw[4];
-        controlPoints->GetControlPoint(row, k-q+i, 0, pw);
+        PW->GetControlPoint(row, k-q+i, 0, pw);
         tmpPoints->SetTuple(i, pw);
       }
 
@@ -1125,15 +1224,257 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
   }
 
   // Realy quick, convert everything back to just p
-  weights = newControlPoints->GetPointData()->GetArray("Weights");
-  for (int i=0; i<newControlPoints->GetNumberOfPoints(); i++)
+  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
+
+  return SV_OK;
+}
+
+// ----------------------
+// SurfaceKnotRefinement
+// ----------------------
+int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
+                                           vtkDoubleArray *uKnots, const int uDegree,
+                                           vtkDoubleArray *vKnots, const int vDegree,
+                                           const int insertDirection,
+                                           vtkDoubleArray *insertKnots,
+                                           vtkSVControlGrid *newControlPoints,
+                                           vtkDoubleArray *newUKnots,
+                                           vtkDoubleArray *newVKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Really quick, convert all points to pw
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
+
+  // Set values used by alg to more concise vars
+  int n = dims[0]-1;
+  int p = uDegree;
+  int m = dims[1]-1;
+  int q = vDegree;
+  int dir = insertDirection;
+  int r = insertKnots->GetNumberOfTuples()-1;
+
+  // Number knots
+  int nuk = n+p+1;
+  int nvk = m+q+1;
+
+  // Double check to see if correct vals were given
+  if (uKnots->GetNumberOfTuples() != nuk+1)
   {
-    double pt[3];
-    newControlPoints->GetPoints()->GetPoint(i, pt);
-    double weight = weights->GetTuple1(i);
-    vtkMath::MultiplyScalar(pt, 1./weight);
-    newControlPoints->GetPoints()->SetPoint(i, pt);
+    fprintf(stderr,"Invalid number of control points given with u knot span\n");
+    return SV_ERROR;
   }
+
+  // Double check to see if correct vals were given
+  if (vKnots->GetNumberOfTuples() != nvk+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with v knot span\n");
+    return SV_ERROR;
+  }
+
+  if (dir == 0)
+  {
+
+    int a, b;
+    vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(0), uKnots, a);
+    vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(r), uKnots, b);
+    b++;
+
+    newControlPoints->SetNumberOfControlPoints((n+r+2)*(m+1));
+    newControlPoints->SetDimensions(n+r+2, m+1, 1);
+    newUKnots->SetNumberOfTuples(nuk+r+2);
+
+    // Pass unchanging control points before new
+    for (int col=0; col<=m; col++)
+    {
+      for (int i=0; i<=a-p; i++)
+      {
+        double pw[4];
+        PW->GetControlPoint(i, col, 0, pw);
+        newControlPoints->SetControlPoint(i, col, 0, pw);
+      }
+
+      // Set unchanging control points after new
+      for (int i=b-1; i<=n; i++)
+      {
+        double pw[4];
+        PW->GetControlPoint(i, col, 0, pw);
+        newControlPoints->SetControlPoint(i+r+1, col, 0, pw);
+      }
+    }
+
+    // Set unchanging knots before new ones
+    for (int i=0; i<=a; i++)
+      newUKnots->SetTuple1(i, uKnots->GetTuple1(i));
+
+    // Set unchanging knots after new ones
+    for (int i=b+p; i<=nuk; i++)
+      newUKnots->SetTuple1(i+r+1, uKnots->GetTuple1(i));
+
+    // Copy v knot span to new v knots span
+    newVKnots->DeepCopy(vKnots);
+
+    // Set iter vars
+    int i=b+p-1;
+    int k=b+p+r;
+
+    // Loop through and calc new cps
+    for (int j=r; j>=0; j--)
+    {
+      while(insertKnots->GetTuple1(j) <= uKnots->GetTuple1(i) && i > a)
+      {
+        for (int col=0; col<=m; col++)
+        {
+          double pw[4];
+          PW->GetControlPoint(i-p-1, col, 0, pw);
+          newControlPoints->SetControlPoint(k-p-1, col, 0, pw);
+        }
+        newUKnots->SetTuple1(k, uKnots->GetTuple1(i));
+        k--;
+        i--;
+      }
+      for (int col=0; col<=m; col++)
+      {
+        double pdw[4];
+        newControlPoints->GetControlPoint(k-p, col, 0, pdw);
+        newControlPoints->SetControlPoint(k-p-1, col, 0, pdw);
+      }
+      for (int l=1; l<=p; l++)
+      {
+        int ind = k-p+l;
+        double alpha = newUKnots->GetTuple1(k+l) - insertKnots->GetTuple1(j);
+        if (fabs(alpha) >= -1.e-10 && fabs(alpha) <= 1.0e-10)
+        {
+          for (int col=0; col<=m; col++)
+          {
+            double pw[4];
+            newControlPoints->GetControlPoint(ind, col, 0, pw);
+            newControlPoints->SetControlPoint(ind-1, col, 0, pw);
+          }
+        }
+        else
+        {
+          alpha = alpha/(newUKnots->GetTuple1(k+l) - uKnots->GetTuple1(i-p+l));
+          for (int col=0; col<=m; col++)
+          {
+            double pw0[4], pw1[4], newPoint[4];
+            newControlPoints->GetControlPoint(ind-1, col, 0, pw0);
+            newControlPoints->GetControlPoint(ind, col, 0, pw1);
+            vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
+            vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
+            vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+            newControlPoints->SetControlPoint(ind-1, col, 0, newPoint);
+          }
+        }
+      }
+      newUKnots->SetTuple1(k, insertKnots->GetTuple1(j));
+      k--;
+    }
+  }
+  else if (dir == 1)
+  {
+    int a, b;
+    vtkSVNURBSUtils::FindSpan(q, insertKnots->GetTuple1(0), vKnots, a);
+    vtkSVNURBSUtils::FindSpan(q, insertKnots->GetTuple1(r), vKnots, b);
+    b++;
+
+    newControlPoints->SetNumberOfControlPoints((m+r+2)*(n+1));
+    newControlPoints->SetDimensions(n+1, m+r+2, 1);
+    newVKnots->SetNumberOfTuples(nvk+r+2);
+
+    // Pass unchanging control points before new
+    for (int row=0; row<=n; row++)
+    {
+      for (int i=0; i<=a-q; i++)
+      {
+        double pw[4];
+        PW->GetControlPoint(row, i, 0, pw);
+        newControlPoints->SetControlPoint(row, i, 0, pw);
+      }
+
+      // Set unchanging control points after new
+      for (int i=b-1; i<=m; i++)
+      {
+        double pw[4];
+        PW->GetControlPoint(row, i, 0, pw);
+        newControlPoints->SetControlPoint(row, i+r+1, 0, pw);
+      }
+    }
+
+    // Set unchanging knots before new ones
+    for (int i=0; i<=a; i++)
+      newVKnots->SetTuple1(i, vKnots->GetTuple1(i));
+
+    // Set unchanging knots after new ones
+    for (int i=b+q; i<=nvk; i++)
+      newVKnots->SetTuple1(i+r+1, vKnots->GetTuple1(i));
+
+    // Copy u knot span to new u knots span
+    newUKnots->DeepCopy(uKnots);
+
+    // Set iter vars
+    int i=b+q-1;
+    int k=b+q+r;
+
+    // Loop through and calc new cps
+    for (int j=r; j>=0; j--)
+    {
+      while(insertKnots->GetTuple1(j) <= vKnots->GetTuple1(i) && i > a)
+      {
+        for (int row=0; row<=n; row++)
+        {
+          double pw[4];
+          PW->GetControlPoint(row, i-q-1, 0, pw);
+          newControlPoints->SetControlPoint(row, k-q-1, 0, pw);
+        }
+        newVKnots->SetTuple1(k, vKnots->GetTuple1(i));
+        k--;
+        i--;
+      }
+      for (int row=0; row<=n; row++)
+      {
+        double pdw[4];
+        newControlPoints->GetControlPoint(row, k-q, 0, pdw);
+        newControlPoints->SetControlPoint(row, k-q-1, 0, pdw);
+      }
+      for (int l=1; l<=q; l++)
+      {
+        int ind = k-q+l;
+        double alpha = newVKnots->GetTuple1(k+l) - insertKnots->GetTuple1(j);
+        if (fabs(alpha) >= -1.e-10 && fabs(alpha) <= 1.0e-10)
+        {
+          for (int row=0; row<=n; row++)
+          {
+            double pw[4];
+            newControlPoints->GetControlPoint(row, ind, 0, pw);
+            newControlPoints->SetControlPoint(row, ind-1, 0, pw);
+          }
+        }
+        else
+        {
+          alpha = alpha/(newVKnots->GetTuple1(k+l) - vKnots->GetTuple1(i-q+l));
+          for (int row=0; row<=n; row++)
+          {
+            double pw0[4], pw1[4], newPoint[4];
+            newControlPoints->GetControlPoint(row, ind-1, 0, pw0);
+            newControlPoints->GetControlPoint(row, ind, 0, pw1);
+            vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
+            vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
+            vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+            newControlPoints->SetControlPoint(row, ind-1, 0, newPoint);
+          }
+        }
+      }
+      newVKnots->SetTuple1(k, insertKnots->GetTuple1(j));
+      k--;
+    }
+  }
+
+  // Convert back from weighted points
+  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
 
   return SV_OK;
 }
@@ -1544,6 +1885,91 @@ int vtkSVNURBSUtils::GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multipl
     // Add new mult because not equal
     multiplicity->InsertNextTuple1(1);
     singleValues->InsertNextTuple1(array->GetTuple1(numVals-1));
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetPWFromP
+// ----------------------
+int vtkSVNURBSUtils::GetPWFromP(vtkSVControlGrid *controlPoints)
+{
+  // Realy quick, convert all points to pw
+  vtkDataArray *weights = controlPoints->GetPointData()->GetArray("Weights");
+  for (int i=0; i<controlPoints->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    controlPoints->GetPoints()->GetPoint(i, pt);
+    double weight = weights->GetTuple1(i);
+    vtkMath::MultiplyScalar(pt, weight);
+    controlPoints->GetPoints()->SetPoint(i, pt);
+  }
+
+  return SV_OK;
+}
+
+
+// ----------------------
+// GetPWFromP
+// ----------------------
+int vtkSVNURBSUtils::GetPWFromP(vtkSVControlGrid *controlPoints, vtkSVControlGrid *controlPointWeights)
+{
+  // Realy quick, convert all points to pw
+  controlPointWeights->SetNumberOfControlPoints(controlPoints->GetNumberOfPoints());
+  controlPointWeights->SetDimensions(controlPoints->GetDimensions());
+  vtkDataArray *weights = controlPoints->GetPointData()->GetArray("Weights");
+  vtkDataArray *newWeights = controlPointWeights->GetPointData()->GetArray("Weights");
+  for (int i=0; i<controlPoints->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    controlPoints->GetPoints()->GetPoint(i, pt);
+    double weight = weights->GetTuple1(i);
+    vtkMath::MultiplyScalar(pt, weight);
+    controlPointWeights->GetPoints()->SetPoint(i, pt);
+    newWeights->SetTuple1(i, weight);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetPFromPW
+// ----------------------
+int vtkSVNURBSUtils::GetPFromPW(vtkSVControlGrid *controlPoints)
+{
+  // Realy quick, convert all points to pw
+  vtkDataArray *weights = controlPoints->GetPointData()->GetArray("Weights");
+  for (int i=0; i<controlPoints->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    controlPoints->GetPoints()->GetPoint(i, pt);
+    double weight = weights->GetTuple1(i);
+    vtkMath::MultiplyScalar(pt, 1./weight);
+    controlPoints->GetPoints()->SetPoint(i, pt);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetPFromPW
+// ----------------------
+int vtkSVNURBSUtils::GetPFromPW(vtkSVControlGrid *controlPointWeights, vtkSVControlGrid *controlPoints)
+{
+  // Realy quick, convert all points to pw
+  controlPoints->SetNumberOfControlPoints(controlPointWeights->GetNumberOfPoints());
+  controlPoints->SetDimensions(controlPointWeights->GetDimensions());
+  vtkDataArray *weights = controlPointWeights->GetPointData()->GetArray("Weights");
+  vtkDataArray *newWeights = controlPointWeights->GetPointData()->GetArray("Weights");
+  for (int i=0; i<controlPointWeights->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    controlPointWeights->GetPoints()->GetPoint(i, pt);
+    double weight = weights->GetTuple1(i);
+    vtkMath::MultiplyScalar(pt, 1./weight);
+    controlPoints->GetPoints()->SetPoint(i, pt);
+    newWeights->SetTuple1(i, weight);
   }
 
   return SV_OK;

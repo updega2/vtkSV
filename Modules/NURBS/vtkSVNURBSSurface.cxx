@@ -215,6 +215,37 @@ int vtkSVNURBSSurface::InsertKnot(const double newKnot, const int dim, const int
 }
 
 // ----------------------
+// InsertKnots
+// ----------------------
+int vtkSVNURBSSurface::InsertKnots(vtkDoubleArray *newKnots, const int dim)
+{
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newUKnotSpan);
+  vtkNew(vtkDoubleArray, newVKnotSpan);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  if (vtkSVNURBSUtils::SurfaceKnotRefinement(this->ControlPointGrid,
+                                             this->UKnotVector,
+                                             this->UDegree,
+                                             this->VKnotVector,
+                                             this->VDegree,
+                                             dim, newKnots,
+                                             newControlPoints,
+                                             newUKnotSpan, newVKnotSpan) != SV_OK)
+  {
+    vtkErrorMacro("Error on knot insertion");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetUKnotVector(newUKnotSpan);
+  this->SetVKnotVector(newVKnotSpan);
+
+  return SV_OK;
+}
+
+// ----------------------
 // SetUKnotVector
 // ----------------------
 int vtkSVNURBSSurface::SetUKnotVector(vtkDoubleArray *knots)
