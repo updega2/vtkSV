@@ -44,9 +44,6 @@
 #include "vtkDataObjectCollection.h"
 #include "vtkSVNURBSModule.h"
 
-#include "vtkNURBSCurve.h" // Needed for inline methods
-#include "vtkNURBSSurface.h" // Needed for inline methods
-
 class VTKSVNURBS_EXPORT vtkSVNURBSCollection : public vtkDataObjectCollection
 {
 public:

@@ -52,6 +52,7 @@
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkSVControlGrid.h"
+#include "vtkSVNURBSCollection.h"
 #include "vtkTypedArray.h"
 
 #include <cassert> // assert() in inline implementations.

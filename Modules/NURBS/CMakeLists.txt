@@ -33,9 +33,9 @@ set(module vtkSVNURBS)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS vtkSVNURBSUtils.cxx vtkSVControlGrid.cxx vtkSVNURBSCurve.cxx vtkSVNURBSSurface.cxx vtkSVNURBSVolume.cxx
-  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx)
+  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx vtkSVNURBSCollection.cxx)
 set(HDRS vtkSVNURBSUtils.h   vtkSVControlGrid.h   vtkSVNURBSCurve.h   vtkSVNURBSSurface.h vtkSVNURBSVolume.h
-  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h)
+  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h vtkSVNURBSCollection.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -89,18 +89,5 @@ else()
       )
   endif()
 
-endif()
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# Executables
-if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST SoDumb)
-  foreach(exe ${EXE_LIST})
-    add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME} ${SV_LIB_VTKSVCOMMON_NAME} ${SV_LIB_VTKSVNURBS_NAME})
-    install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
-  endforeach()
 endif()
 #------------------------------------------------------------------------------

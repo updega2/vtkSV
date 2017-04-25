@@ -49,7 +49,7 @@
 
 #include <unistd.h>
 
-int main(int argc, char *argv[])
+int TestCurveRemoveKnot(int argc, char *argv[])
 {
   // Set the curve knot insertion details
   int p=3;     //degree

@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include "vtkDataObjectCollection.h"
+#include "vtkSVNURBSCollection.h"
 #include "vtkObjectFactory.h"
 
 vtkStandardNewMacro(vtkSVNURBSCollection);

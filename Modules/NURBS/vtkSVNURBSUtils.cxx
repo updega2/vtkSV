@@ -39,6 +39,7 @@
 #include "vtkSparseArray.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVMathUtils.h"
+#include "vtkSVNURBSCurve.h"
 #include "vtkSVIOUtils.h"
 #include "vtkStructuredData.h"
 
@@ -1010,7 +1011,6 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
   int m  = n+p+1;
   int a  = p;
   int b  = p+1;
-  int nb = 0;
 
   // Double check to see if correct vals were given
   if (knots->GetNumberOfTuples() != m+1)
@@ -1019,9 +1019,25 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
     return SV_ERROR;
   }
 
+  // Set up new knots, just bezier knot span
+  vtkNew(vtkDoubleArray, newKnots);
+  vtkSVNURBSUtils::LinSpace(0, 1, 2*p+1, newKnots);
+
+  // New control points, updated each time for new bezier curve
+  vtkNew(vtkSVControlGrid, newControlPoints);
+  newControlPoints->GetPoints()->SetNumberOfPoints(p+1);
+  newControlPoints->SetDimensions(p+1, 1, 1);
+  vtkNew(vtkSVControlGrid, tmpControlPoints);
+  newControlPoints->GetPoints()->SetNumberOfPoints(p-1);
+  newControlPoints->SetDimensions(p-1, 1, 1);
+
+  // Set first p+1 control points
   int i;
-  for(i=0; i<-p; i++)
+  for(int i=0; i<=p; i++)
   {
+    double pw[4];
+    PW->GetControlPoint(i, 0, 0, pw);
+    newControlPoints->SetControlPoint(i, 0, 0, pw);
   }
 
   // Initiate array for alphas
@@ -1030,12 +1046,9 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
 
   while (b < m)
   {
-    // Need to set this up!
-    vtkNew(vtkSVControlGrid, newControlPoints);
-    vtkNew(vtkSVControlGrid, tmpControlPoints);
 
     // Check multiplicity
-    i = b;
+    int i = b;
     while (b < m && knots->GetTuple1(b+1) == knots->GetTuple1(b))
       b++;
     int mult = b-i+1;
@@ -1044,25 +1057,27 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
       // Alpha numerator
       int numer = knots->GetTuple1(b) - knots->GetTuple1(a);
       // Compute all alphas
-      for (int j=p; j>mult; j++)
+      for (int j=p; j>mult; j--)
         alphas->SetTuple1(j-mult-1, numer/(knots->GetTuple1(a+j)-knots->GetTuple1(a)));
 
       int r = p-mult;
 
       // Insert the knot the number of times needed to get to p
-      for (j=1; j<=r; j++)
+      for (int j=1; j<=r; j++)
       {
         int save = r-j;
         int s = mult+j;
-        for (k=p; k>=s; k--)
+        for (int k=p; k>=s; k--)
         {
           double alpha = alphas->GetTuple1(k-s);
-          double pw0[4], pw1[4], newPoint;
+          double pw0[4], pw1[4], newPoint[4];
           newControlPoints->GetControlPoint(k, 0, 0, pw0);
           newControlPoints->GetControlPoint(k-1, 0, 0, pw1);
           vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
           vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
           vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+          newControlPoints->SetControlPoint(k, 0, 0, newPoint);
+
         }
         if (b < m)
         {
@@ -1072,14 +1087,28 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
         }
       }
     }
-    nb++;
+
+    vtkNew(vtkSVNURBSCurve, newCurve);
+    newCurve->SetControlPointGrid(newControlPoints);
+    newCurve->SetKnotVector(newKnots);
+    newCurve->SetDegree(p);
+    curves->AddItem(newCurve);
+
+    // Set up next curve
     if (b < m)
     {
+      for (int k=0; k<p-1; k++)
+      {
+        double pw[4];
+        tmpControlPoints->GetControlPoint(k, 0, 0, pw);
+        newControlPoints->SetControlPoint(k, 0, 0, pw);
+
+      }
       for (i=p-mult; i<=p; i++)
       {
         double pw[4];
         PW->GetControlPoint(b-p+i, 0, 0, pw);
-        tmp->ControlPoints->SetControlPoint(i, 0, 0, pw);
+        newControlPoints->SetControlPoint(i, 0, 0, pw);
       }
       a=b;
       b++;
