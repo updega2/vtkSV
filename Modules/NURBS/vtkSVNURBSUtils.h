@@ -52,7 +52,8 @@
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkSVControlGrid.h"
-#include "vtkSVNURBSCollection.h"
+#include "vtkSVNURBSCurveCollection.h"
+#include "vtkSVNURBSSurfaceCollection.h"
 #include "vtkTypedArray.h"
 
 #include <cassert> // assert() in inline implementations.
@@ -110,7 +111,7 @@ public:
                                  vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
   static int CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
                                    const int degree,
-                                   vtkSVNURBSCollection *curves);
+                                   vtkSVNURBSCurveCollection *curves);
 
   // Surface functions
   static int GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDoubleArray *U,
@@ -148,6 +149,11 @@ public:
                                   vtkSVControlGrid *newControlPoints,
                                   vtkDoubleArray *newUKnots,
                                   vtkDoubleArray *newVKnots);
+  static int SurfaceBezierExtraction(vtkSVControlGrid *controlPoints,
+                                     vtkDoubleArray *uKnots, const int uDegree,
+                                     vtkDoubleArray *vKnots, const int vDegree,
+                                     const int extractDirection,
+                                     vtkSVNURBSSurfaceCollection *surface);
 
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);

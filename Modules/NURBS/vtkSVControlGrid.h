@@ -113,7 +113,7 @@ public:
    *  \param k location in third axis of structured grid.
    *  \param p 3d location of control point.
    *  \param w weight associated with control point. */
-  int GetControlPoint(const int i, const int j, const int k, double p[3], double &w);
+  int GetControlPoint(const int i, const int j, const int k, double p[3], double &weight);
 
   /** \brief Get a control point at given location
    *  \param i location in first axis of structured grid.

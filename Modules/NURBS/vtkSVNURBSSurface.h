@@ -44,11 +44,12 @@
 #include "vtkDataObject.h"
 #include "vtkSVNURBSModule.h"
 
-#include "vtkSVControlGrid.h"
 #include "vtkDenseArray.h"
 #include "vtkDoubleArray.h"
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
+#include "vtkSVControlGrid.h"
+#include "vtkSVNURBSSurfaceCollection.h"
 
 class VTKSVNURBS_EXPORT vtkSVNURBSSurface : public vtkDataObject
 {
@@ -157,6 +158,12 @@ public:
   int GetUMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
   int GetVMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
   int GetMultiplicity(const int dim, vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
+
+  //@{
+  /** \brief functions to extract bezier portions of the surface */
+  int ExtractBezierStrips(const int dim, vtkSVNURBSSurfaceCollection *surfaces);
+  int ExtractBezierPatches(vtkSVNURBSSurfaceCollection *surfaces);
+  //@}
 
   /** \brief Get structured grid connectivity.
    *  \param connectivity empty cell array to be filled with a structured grid connectivity. */

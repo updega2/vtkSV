@@ -28,36 +28,42 @@
  *
  *=========================================================================*/
 
+#include "vtkSVNURBSSurfaceCollection.h"
+#include "vtkObjectFactory.h"
+
+#include "vtkSVNURBSSurface.h"
+
+vtkStandardNewMacro(vtkSVNURBSSurfaceCollection);
+
 /**
- *  \class vtkSVNURBSCollection
- *  \brief This is a wrapper around vtkDataObjectCollection for NURBS
- *
- *  \author Adam Updegrove
- *  \author updega2@gmail.com
- *  \author UC Berkeley
- *  \author shaddenlab.berkeley.edu
+ * Add a NURBS object to the list.
  */
-
-#ifndef vtkSVNURBSCollection_h
-#define vtkSVNURBSCollection_h
-
-#include "vtkDataObjectCollection.h"
-#include "vtkSVNURBSModule.h"
-
-class VTKSVNURBS_EXPORT vtkSVNURBSCollection : public vtkDataObjectCollection
+void vtkSVNURBSSurfaceCollection::AddItem(vtkSVNURBSSurface *ds)
 {
-public:
-  vtkTypeMacro(vtkSVNURBSCollection,vtkDataObjectCollection);
-  static vtkSVNURBSCollection *New();
+  this->vtkCollection::AddItem(ds);
+}
 
-protected:
-  vtkSVNURBSCollection() {}
-  ~vtkSVNURBSCollection() {}
+/**
+ * Get the next NURBS object in the list.
+ */
+vtkSVNURBSSurface *vtkSVNURBSSurfaceCollection::GetNextItem()
+{
+  return static_cast<vtkSVNURBSSurface *>(this->GetNextItemAsObject());
+}
 
+/**
+ * Get the ith NURBS object in the list.
+ */
+vtkSVNURBSSurface *vtkSVNURBSSurfaceCollection::GetItem(int i)
+{
+  return static_cast<vtkSVNURBSSurface *>(this->GetItemAsObject(i));
+}
 
-private:
-  vtkSVNURBSCollection(const vtkSVNURBSCollection&);
-  void operator=(const vtkSVNURBSCollection&);
-};
-
-#endif
+/**
+ * Reentrant safe way to get an object in a collection. Just pass the
+ * same cookie back and forth.
+ */
+vtkSVNURBSSurface *vtkSVNURBSSurfaceCollection::GetNextDataObject(vtkCollectionSimpleIterator &cookie)
+{
+  return static_cast<vtkSVNURBSSurface *>(this->GetNextItemAsObject(cookie));
+}

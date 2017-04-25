@@ -147,6 +147,7 @@ void vtkSVNURBSCurve::SetControlPoints(vtkPoints *points1d)
   this->ControlPointGrid->SetDimensions(nCon, 1, 1);
 
   // Set the points
+  this->ControlPointGrid->GetPoints()->SetNumberOfPoints(nCon);
   this->ControlPointGrid->SetPoints(points1d);
 
   // Loop through points and set weight
@@ -486,5 +487,21 @@ int vtkSVNURBSCurve::GetStructuredGridConnectivity(const int numPoints, vtkCellA
 int vtkSVNURBSCurve::GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots)
 {
   vtkSVNURBSUtils::GetMultiplicity(this->KnotVector, multiplicity, singleKnots);
+  return SV_OK;
+}
+
+// ----------------------
+// ExtractBezierCurves
+// ----------------------
+int vtkSVNURBSCurve::ExtractBezierCurves(vtkSVNURBSCurveCollection *curves)
+{
+  if (vtkSVNURBSUtils::CurveBezierExtraction(this->ControlPointGrid,
+                                             this->KnotVector,
+                                             this->Degree,
+                                             curves) != SV_OK)
+  {
+    vtkErrorMacro("Error extracting Bezier curves");
+    return SV_ERROR;
+  }
   return SV_OK;
 }

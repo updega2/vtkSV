@@ -50,7 +50,8 @@
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
 #include "vtkSVControlGrid.h"
-#include "vtkSVNURBSCollection.h"
+
+class vtkSVNURBSCurveCollection;
 
 class VTKSVNURBS_EXPORT vtkSVNURBSCurve : public vtkDataObject
 {
@@ -177,7 +178,7 @@ public:
   int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
 
   /** \brief decompose the surface using bezier extraction. */
-  int ExtractBezierCurves(vtkSVNURBSCollection *curves);
+  int ExtractBezierCurves(vtkSVNURBSCurveCollection *curves);
 
   // Description:
   // Retrieve an instance of this class from an information object.

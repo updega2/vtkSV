@@ -532,6 +532,53 @@ int vtkSVNURBSSurface::GetMultiplicity(const int dim, vtkIntArray *multiplicity,
 }
 
 // ----------------------
+// ExtractBezierStrips
+// ----------------------
+int vtkSVNURBSSurface::ExtractBezierStrips(const int dim, vtkSVNURBSSurfaceCollection *surfaces)
+{
+  if (vtkSVNURBSUtils::SurfaceBezierExtraction(this->ControlPointGrid,
+                                               this->UKnotVector, this->UDegree,
+                                               this->VKnotVector, this->VDegree,
+                                               dim,
+                                               surfaces) != SV_OK)
+  {
+    vtkErrorMacro("Error in extraction of the bezier strips");
+    return SV_ERROR;
+  }
+  return SV_OK;
+}
+
+// ----------------------
+// ExtractBezierStrips
+// ----------------------
+int vtkSVNURBSSurface::ExtractBezierPatches(vtkSVNURBSSurfaceCollection *surfaces)
+{
+  vtkNew(vtkSVNURBSSurfaceCollection, surfaceStrips);
+  this->ExtractBezierStrips(0, surfaceStrips);
+
+  for (int i=0; i<surfaceStrips->GetNumberOfItems(); i++)
+  {
+    vtkSVNURBSSurface *tmpSurface = surfaceStrips->GetItem(i);
+
+    vtkNew(vtkSVNURBSSurfaceCollection, surfacePatches);
+    if (vtkSVNURBSUtils::SurfaceBezierExtraction(tmpSurface->GetControlPointGrid(),
+                                                 tmpSurface->GetUKnotVector(), tmpSurface->GetUDegree(),
+                                                 tmpSurface->GetVKnotVector(), tmpSurface->GetVDegree(),
+                                                 1,
+                                                 surfacePatches) != SV_OK)
+    {
+      vtkErrorMacro("Error in extraction of the bezier strips");
+      return SV_ERROR;
+    }
+
+    for (int j=0; j<surfacePatches->GetNumberOfItems(); j++)
+      surfaces->AddItem(surfacePatches->GetItem(j));
+  }
+  return SV_OK;
+}
+
+
+// ----------------------
 // GetStructuredGridConnectivity
 // ----------------------
 int vtkSVNURBSSurface::GetStructuredGridConnectivity(const int numXPoints, const int numYPoints, vtkCellArray *connectivity)

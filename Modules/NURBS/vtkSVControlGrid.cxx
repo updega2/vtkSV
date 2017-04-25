@@ -210,7 +210,7 @@ int vtkSVControlGrid::InsertControlPoint(const int i, const int j, const int k, 
 // ----------------------
 // GetControlPoint
 // ----------------------
-int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double p[3], double &w)
+int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double p[3], double &weight)
 {
   int ptId;
   if (this->GetPointId(i, j, k, ptId) != SV_OK)
@@ -219,7 +219,7 @@ int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, dou
     return SV_ERROR;
   }
   this->GetPoint(ptId, p);
-  w = this->GetPointData()->GetArray("Weights")->GetTuple1(ptId);
+  weight = this->GetPointData()->GetArray("Weights")->GetTuple1(ptId);
 
   return SV_OK;
 }
@@ -229,14 +229,15 @@ int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, dou
 // ----------------------
 int vtkSVControlGrid::GetControlPoint(const int i, const int j, const int k, double pw[4])
 {
-  double onlyp[3], w;
+  double onlyp[3];
+  double weight;
 
-  if (this->GetControlPoint(i, j, k, onlyp, w) != SV_OK)
+  if (this->GetControlPoint(i, j, k, onlyp, weight) != SV_OK)
     vtkErrorMacro("Point not retrieved successfully");
 
   for (int l=0; l<3; l++)
     pw[l] = onlyp[l];
-  pw[3] = w;
+  pw[3] = weight;
 
   return SV_OK;
 }
