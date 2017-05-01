@@ -352,7 +352,7 @@ public:
                          vtkPolyData *loop, vtkIdList *boundaryIds);
 
 
-  /** \brief Function separate multiple boundary loops. */
+  /** \brief Function to separate multiple boundary loops. */
   static int SeparateLoops(vtkPolyData *pd, vtkPolyData **loops, int numBoundaries, const double xvec[3], const double zvec[3], const int boundaryStart[2]);
 
   //@{

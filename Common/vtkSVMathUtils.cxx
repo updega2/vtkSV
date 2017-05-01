@@ -58,7 +58,7 @@ void vtkSVMathUtils::Multiply_ATA_b(vtkSVSparseMatrix *a_trans,
 // ----------------------
 // InnerProduct
 // ----------------------
-double vtkSVMathUtils::InnerProduct(const double *a, const double *b, int n)
+double vtkSVMathUtils::InnerProduct(const double a[], const double b[], int n)
 {
   double result = 0.0;
   for (int c = 0; c < n; c++)
@@ -69,10 +69,52 @@ double vtkSVMathUtils::InnerProduct(const double *a, const double *b, int n)
 // ----------------------
 // Add
 // ----------------------
-void vtkSVMathUtils::Add(const double *a, const double *b, double beta, int n, double *c)
+void vtkSVMathUtils::Add(const double a[], const double alpha, const double b[], const double beta, const int n, double c[])
+{
+  for (int i = 0; i < n; i++)
+    c[i] = a[i] * alpha + b[i] * beta;
+}
+
+// ----------------------
+// Add
+// ----------------------
+void vtkSVMathUtils::Add(const double a[], const double b[], const double beta, const int n, double c[])
 {
   for (int i = 0; i < n; i++)
     c[i] = a[i] + b[i] * beta;
+}
+
+// ----------------------
+// Add
+// ----------------------
+int vtkSVMathUtils::Add(double a[], double b[], double result[], const int size)
+{
+  for (int i=0; i<size; i++)
+    result[i] = a[i]+b[i];
+
+  return SV_OK;
+}
+
+// ----------------------
+// Subtract
+// ----------------------
+int vtkSVMathUtils::Subtract(double a[], double b[], double result[], const int size)
+{
+  for (int i=0; i<size; i++)
+    result[i] = a[i]-b[i];
+
+  return SV_OK;
+}
+
+// ----------------------
+// MultiplyScalar
+// ----------------------
+int vtkSVMathUtils::MultiplyScalar(double a[], double scalar, const int size)
+{
+  for (int i=0; i<size; i++)
+    a[i] = a[i]*scalar;
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -206,7 +248,7 @@ double vtkSVMathUtils::Distance(double pt0[3], double pt1[3], const int size)
 // ----------------------
 // VectorDotProduct
 // ----------------------
-int vtkSVMathUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, double product[3], int numVals, int numComps)
+int vtkSVMathUtils::VectorDotProduct(vtkDataArray *v0, vtkDataArray *v1, double product[], int numVals, int numComps)
 {
   // Initialize product to zero
   for (int i=0; i<numComps; i++)
@@ -231,7 +273,7 @@ int vtkSVMathUtils::VectorDotProduct(vtkFloatArray *v0, vtkFloatArray *v1, doubl
 // ----------------------
 // VectorAdd
 // ----------------------
-int vtkSVMathUtils::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scalar, vtkFloatArray *result, int numVals, int numComps)
+int vtkSVMathUtils::VectorAdd(vtkDataArray *v0, vtkDataArray *v1, double scalar, vtkDataArray *result, int numVals, int numComps)
 {
   // Loop through all tuples
   for (int i=0; i<numVals; i++)
@@ -246,39 +288,6 @@ int vtkSVMathUtils::VectorAdd(vtkFloatArray *v0, vtkFloatArray *v1, double scala
       result->SetComponent(i, j, sum);
     }
   }
-
-  return SV_OK;
-}
-
-// ----------------------
-// Add
-// ----------------------
-int vtkSVMathUtils::Add(double a[], double b[], double result[], const int size)
-{
-  for (int i=0; i<size; i++)
-    result[i] = a[i]+b[i];
-
-  return SV_OK;
-}
-
-// ----------------------
-// Subtract
-// ----------------------
-int vtkSVMathUtils::Subtract(double a[], double b[], double result[], const int size)
-{
-  for (int i=0; i<size; i++)
-    result[i] = a[i]-b[i];
-
-  return SV_OK;
-}
-
-// ----------------------
-// MultiplyScalar
-// ----------------------
-int vtkSVMathUtils::MultiplyScalar(double a[], double scalar, const int size)
-{
-  for (int i=0; i<size; i++)
-    a[i] = a[i]*scalar;
 
   return SV_OK;
 }

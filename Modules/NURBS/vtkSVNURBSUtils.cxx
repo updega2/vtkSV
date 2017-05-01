@@ -78,7 +78,7 @@ void vtkSVNURBSUtils::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 // LinSpace
 // ----------------------
-int vtkSVNURBSUtils::LinSpace(double min, double max, int num, vtkDoubleArray *result)
+int vtkSVNURBSUtils::LinSpace(const double min, const double max, const int num, vtkDoubleArray *result)
 {
   result->SetNumberOfTuples(num);
   double div = (max-min)/(num-1);
@@ -93,7 +93,7 @@ int vtkSVNURBSUtils::LinSpace(double min, double max, int num, vtkDoubleArray *r
 // ----------------------
 // LinSpaceClamp
 // ----------------------
-int vtkSVNURBSUtils::LinSpaceClamp(double min, double max, int num, int p, vtkDoubleArray *result)
+int vtkSVNURBSUtils::LinSpaceClamp(const double min, const double max, const int num, const int p, vtkDoubleArray *result)
 {
   result->SetNumberOfTuples(num);
   int numinterior = num - 2*(p+1);
@@ -266,6 +266,11 @@ int vtkSVNURBSUtils::GetCentripetalSpacedUs(vtkPoints *xyz, int num, vtkDoubleAr
 // ----------------------
 // GetUs
 // ----------------------
+// /details "equal" just gives an equally spaced parameter vector. "chord"
+// computes the total eucledian distance between the given points. The
+// spacing of the vetor U then reflects the distance of the points based
+// on the chord length. "centripetal" is very similar to "chord", but
+// is better for input data with lots of curvature.
 int vtkSVNURBSUtils::GetUs(vtkPoints *xyz, std::string type, vtkDoubleArray *U)
 {
   int nCon = xyz->GetNumberOfPoints();
@@ -610,10 +615,7 @@ int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
       double pt0[4], pt1[4], newPoint[4];
       tmpPoints->GetTuple(i+1, pt0);
       tmpPoints->GetTuple(i, pt1);
-      vtkSVMathUtils::MultiplyScalar(pt0, alpha, 4);
-
-      vtkSVMathUtils::MultiplyScalar(pt1, (1-alpha), 4);
-      vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+      vtkSVMathUtils::Add(pt0, alpha, pt1, 1.0-alpha, 4, newPoint);
       tmpPoints->SetTuple(i, newPoint);
     }
 
@@ -741,16 +743,14 @@ int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
       double pw2[4], pw3[4], newPoint0[4];
       tmpPoints->GetTuple(ii-1, pw2);
       PW->GetControlPoint(i, 0, 0, pw3);
-      vtkSVMathUtils::MultiplyScalar(pw2, 1.0-alpha0, 4);
-      vtkSVMathUtils::Subtract(pw3, pw2, newPoint0, 4);
+      vtkSVMathUtils::Add(pw3, 1.0, pw2, -1.0*(1.0-alpha0), 4, newPoint0);
       vtkSVMathUtils::MultiplyScalar(newPoint0, 1.0/alpha0, 4);
       tmpPoints->SetTuple(ii, newPoint0);
 
       double pw4[4], pw5[4], newPoint1[4];
       tmpPoints->GetTuple(jj+1, pw4);
       PW->GetControlPoint(j, 0, 0, pw5);
-      vtkSVMathUtils::MultiplyScalar(pw4, alpha1, 4);
-      vtkSVMathUtils::Subtract(pw5, pw4, newPoint1, 4);
+      vtkSVMathUtils::Add(pw5, 1.0, pw4, -1.0*alpha1, 4, newPoint1);
       vtkSVMathUtils::MultiplyScalar(newPoint1, 1.0/(1.0-alpha1), 4);
       tmpPoints->SetTuple(jj, newPoint1);
 
@@ -779,9 +779,7 @@ int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
       PW->GetControlPoint(i, 0, 0, pw2);
       tmpPoints->GetTuple(ii+t+1, pw3);
       tmpPoints->GetTuple(ii-1, pw4);
-      vtkSVMathUtils::MultiplyScalar(pw3, alpha0, 4);
-      vtkSVMathUtils::MultiplyScalar(pw4, 1.0-alpha0, 4);
-      vtkSVMathUtils::Add(pw3, pw4, testPoint, 4);
+      vtkSVMathUtils::Add(pw3, alpha0, pw4, 1.0-alpha0, 4, testPoint);
 
       fprintf(stdout,"WHAT IS: %f\n", vtkSVMathUtils::Distance(pw2, pw3, 4));
       //if (vtkSVMathUtils::Distance(pw2, testPoint, 4) <= tolerance)
@@ -975,9 +973,7 @@ int vtkSVNURBSUtils::CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDou
         double pw0[4], pw1[4], newPoint[4];
         newControlPoints->GetControlPoint(ind-1, 0, 0, pw0);
         newControlPoints->GetControlPoint(ind, 0, 0, pw1);
-        vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
-        vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
-        vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+        vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
         newControlPoints->SetControlPoint(ind-1, 0, 0, newPoint);
       }
     }
@@ -1073,9 +1069,7 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
           double pw0[4], pw1[4], newPoint[4];
           newControlPoints->GetControlPoint(k, 0, 0, pw0);
           newControlPoints->GetControlPoint(k-1, 0, 0, pw1);
-          vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
-          vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
-          vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+          vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
           newControlPoints->SetControlPoint(k, 0, 0, newPoint);
 
         }
@@ -1466,9 +1460,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
           double pt0[4], pt1[4], newPoint[4];
           tmpPoints->GetTuple(i+1, pt0);
           tmpPoints->GetTuple(i, pt1);
-          vtkSVMathUtils::MultiplyScalar(pt0, alpha[i][j], 4);
-          vtkSVMathUtils::MultiplyScalar(pt1, 1-alpha[i][j], 4);
-          vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+          vtkSVMathUtils::Add(pt0, alpha[i][j], pt1, 1.0-alpha[i][j], 4, newPoint);
           tmpPoints->SetTuple(i, newPoint);
 
           // Fill the control point grid with the tmp points
@@ -1573,9 +1565,7 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
           double pt0[4], pt1[4], newPoint[4];
           tmpPoints->GetTuple(i+1, pt0);
           tmpPoints->GetTuple(i, pt1);
-          vtkSVMathUtils::MultiplyScalar(pt0, alpha[i][j], 4);
-          vtkSVMathUtils::MultiplyScalar(pt1, 1-alpha[i][j], 4);
-          vtkSVMathUtils::Add(pt0, pt1, newPoint, 4);
+          vtkSVMathUtils::Add(pt0, alpha[i][j], pt1, 1.0-alpha[i][j], 4, newPoint);
           tmpPoints->SetTuple(i, newPoint);
 
           // Fill the control point grid with the tmp points
@@ -1734,9 +1724,7 @@ int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
             double pw0[4], pw1[4], newPoint[4];
             newControlPoints->GetControlPoint(ind-1, col, 0, pw0);
             newControlPoints->GetControlPoint(ind, col, 0, pw1);
-            vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
-            vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
-            vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+            vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
             newControlPoints->SetControlPoint(ind-1, col, 0, newPoint);
           }
         }
@@ -1832,9 +1820,7 @@ int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
             double pw0[4], pw1[4], newPoint[4];
             newControlPoints->GetControlPoint(row, ind-1, 0, pw0);
             newControlPoints->GetControlPoint(row, ind, 0, pw1);
-            vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
-            vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
-            vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+            vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
             newControlPoints->SetControlPoint(row, ind-1, 0, newPoint);
           }
         }
@@ -1970,9 +1956,7 @@ int vtkSVNURBSUtils::SurfaceBezierExtraction(vtkSVControlGrid *controlPoints,
               double pw0[4], pw1[4], newPoint[4];
               newControlPoints->GetControlPoint(k, col, 0, pw0);
               newControlPoints->GetControlPoint(k-1, col, 0, pw1);
-              vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
-              vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
-              vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+              vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
               newControlPoints->SetControlPoint(k, col, 0, newPoint);
             }
           }
@@ -2108,9 +2092,7 @@ int vtkSVNURBSUtils::SurfaceBezierExtraction(vtkSVControlGrid *controlPoints,
               double pw0[4], pw1[4], newPoint[4];
               newControlPoints->GetControlPoint(row, k, 0, pw0);
               newControlPoints->GetControlPoint(row, k-1, 0, pw1);
-              vtkSVMathUtils::MultiplyScalar(pw0, alpha, 4);
-              vtkSVMathUtils::MultiplyScalar(pw1, 1.0-alpha, 4);
-              vtkSVMathUtils::Add(pw0, pw1, newPoint, 4);
+              vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
               newControlPoints->SetControlPoint(row, k, 0, newPoint);
             }
           }
