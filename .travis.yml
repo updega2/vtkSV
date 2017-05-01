@@ -50,6 +50,8 @@ cache:
   - ~/travis/external/vtk-6.2-build
   - ~/travis/external/vtk-7.0
   - ~/travis/external/vtk-7.0-build
+  timeout: 900
+
 
 before_script:
   - $SCRIPTS/travis_build_vtk.sh
