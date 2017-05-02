@@ -241,6 +241,21 @@ public:
                                    const int degree,
                                    vtkSVNURBSCurveCollection *curves);
 
+  /** \brief Increases the degree of the curve by first performing bezier
+   *  extraction of the curve knot span, the increasing the degree, and then
+   *  removing unnecessary knot points.
+   *  \param controlPoints Control points of curve.
+   *  \param knots The knots of the curve.
+   *  \param degree Degree of the curve.
+   *  \param numberOfIncreases Number of times to increase the degree. Final
+   *  degree will be degree+numberOfIncreases.
+   *  \return newControlPoints The new control points after knot insertion.
+   *  \return newKnots The new knot span. */
+   static int CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                  const int degree,
+                                  const int numberOfIncreases,
+                                  vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots);
+
   // Surface functions
   /** \brief Get the control points of a surface given the input data points
    *  an approximating array of paramter values, control point weights (equal
@@ -458,8 +473,7 @@ public:
   static int WhereNotEqual(double val, vtkDoubleArray *in, vtkIntArray *out);
 
   //Print operations
-  static int PrintArray(vtkIntArray *arr);
-  static int PrintArray(vtkDoubleArray *arr);
+  static int PrintArray(vtkDataArray *arr);
   static int PrintVector(vtkTypedArray<double> *vec);
   static int PrintMatrix(vtkTypedArray<double> *mat);
   static int PrintStructuredGrid(vtkStructuredGrid *mat);

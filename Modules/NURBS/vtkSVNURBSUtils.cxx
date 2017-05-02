@@ -654,7 +654,6 @@ int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
   vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
   vtkNew(vtkDoubleArray, tmpKnots);
   tmpKnots->DeepCopy(knots);
-  vtkSVNURBSUtils::PrintArray(tmpKnots);
 
   // Set values used by alg to more concise vars
   int n    = dims[0]-1;
@@ -987,6 +986,7 @@ int vtkSVNURBSUtils::CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDou
   return SV_OK;
 }
 
+// ----------------------
 // CurveBezierExtraction
 // ----------------------
 int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
@@ -1111,6 +1111,340 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
       b++;
     }
   }
+
+  return SV_OK;
+}
+
+// ----------------------
+// CurveBezierExtraction
+// ----------------------
+int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                         const int degree,
+                                         const int numberOfIncreases,
+                                         vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
+{
+  // Get dimensions of control point grid
+  int dims[3];
+  controlPoints->GetDimensions(dims);
+
+  // Really quick, convert all points to pw
+  vtkNew(vtkSVControlGrid, PW);
+  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
+
+  // Set values used by alg to more concise vars
+  int n = dims[0]-1;
+  int p = degree;
+  int t = numberOfIncreases;
+
+  int m   = n+p+1;
+  int ph  = p+t;
+  int ph2 = ph/2;
+
+  // Double check to see if correct vals were given
+  if (knots->GetNumberOfTuples() != m+1)
+  {
+    fprintf(stderr,"Invalid number of control points given with knot span\n");
+    return SV_ERROR;
+  }
+
+  // Compute s by cmputing the number of nonnon-repeated internal knot vals
+  vtkNew(vtkIntArray, multiplicity);
+  vtkNew(vtkDoubleArray, singleValues);
+  vtkSVNURBSUtils::GetMultiplicity(knots, multiplicity, singleValues);
+
+  // S s is length of mult vector minus 2 (p+1 ends)
+  int s = multiplicity->GetNumberOfTuples() - 2;
+  int mhat = m+s+2;
+  int nhat = n+s+1;
+
+  // Set up new knots, just bezier knot span
+  newKnots->SetNumberOfTuples(mhat+1);
+
+  // New control points, updated each time for new bezier curve
+  newControlPoints->SetNumberOfControlPoints(nhat+1);
+  newControlPoints->SetDimensions(nhat+1, 1, 1);
+
+  // Set up tmp arrays
+  // Coeffecients for degree elevation
+  vtkNew(vtkDoubleArray, bezalphas);
+  bezalphas->SetNumberOfComponents(p+1);
+  bezalphas->SetNumberOfTuples(p+t+1);
+
+  // Bezier control points, degree p
+  vtkNew(vtkDoubleArray, bpts);
+  bpts->SetNumberOfComponents(4);
+  bpts->SetNumberOfTuples(p+1);
+
+  // Bezier control points, degree p+t
+  vtkNew(vtkDoubleArray, ebpts);
+  ebpts->SetNumberOfComponents(4);
+  ebpts->SetNumberOfTuples(p+t+1);
+
+  // Leftmost control pionts of next Bezier segment
+  vtkNew(vtkDoubleArray, nextbpts);
+  nextbpts->SetNumberOfComponents(4);
+  nextbpts->SetNumberOfTuples(p-1);
+
+  // Alpha values for knot insertion
+  vtkNew(vtkDoubleArray, alphas);
+  alphas->SetNumberOfTuples(p-1);
+
+  //Compute coefficients
+  bezalphas->SetComponent(0, 0, 1.0);
+  bezalphas->SetComponent(ph, p, 1.0);
+  for (int i=1; i<=ph2; i++)
+  {
+    double inv = 1.0/vtkSVMathUtils::Binom(ph, i);
+    int mpi = svminimum(p, i);
+    for (int j=svmaximum(0, i-t); j<=mpi; j++)
+    {
+      double newVal = inv*vtkSVMathUtils::Binom(p, j)*vtkSVMathUtils::Binom(t, i-j);
+      bezalphas->SetComponent(i, j, newVal);
+    }
+  }
+
+  for (int i=ph2+1; i<=ph-1; i++)
+  {
+    int mpi = svminimum(p, i);
+    for (int j=svmaximum(0, i-t); j<=mpi; j++)
+      bezalphas->SetComponent(i, j, bezalphas->GetComponent(ph-i, p-j));
+  }
+
+  // Set up iter vars
+  int mh   =  ph;
+  int kind =  ph+1;
+  int r    = -1;
+  int a    =  p;
+  int b    =  p+1;
+  int cind =  1;
+  double ua = knots->GetTuple1(0);
+
+  // Pass the first control point
+  double firstpw[4];
+  PW->GetControlPoint(0, 0, 0, firstpw);
+  newControlPoints->SetControlPoint(0, 0, 0, firstpw);
+
+  for (int i=0; i<=ph; i++)
+    newKnots->SetTuple1(i, ua);
+
+  // Initialize the first bezier segment.
+  for (int i=0; i<=p; i++)
+  {
+    double pw[4];
+    PW->GetControlPoint(i, 0 , 0, pw);
+    bpts->SetTuple(i, pw);
+  }
+
+  // Loop through knot vector
+  while (b<m)
+  {
+    // Calculate mult
+    int i=b;
+    while (b<m && knots->GetTuple1(b) == knots->GetTuple1(b+1))
+    {
+      b++;
+      fprintf(stdout,"QUA: %d\n", b);
+      fprintf(stdout,"QUA 2: %d\n", m);
+    }
+
+    // Set up iter vars
+    int mul   = b-i+1;
+    fprintf(stdout,"What is mul: %d\n", mul);
+    fprintf(stdout,"What is b: %d\n", b);
+    fprintf(stdout,"What is i: %d\n", i);
+    mh        = mh+mul+t;
+    double ub = knots->GetTuple1(b);
+    int oldr  = r;
+    r = p-mul;
+    fprintf(stdout,"What is ub: %.4f\n", ub);
+    fprintf(stdout,"What is R: %d\n", r);
+
+    // r multiplicities
+    int lbz;
+    if (oldr > 0)
+      lbz = (oldr+2)/2;
+    else
+      lbz = 1;
+    int rbz;
+    if (r >0)
+      rbz = ph-(r+1)/2;
+    else
+      rbz = ph;
+
+    // Insert this knot r times
+    // Extract bezier segment
+    if (r>0)
+    {
+      double numer = ub - ua;
+      for (int k=p; k>mul; k--)
+        alphas->SetTuple1(k-mul-1, numer/(knots->GetTuple1(a+k)-ua));
+
+      vtkSVNURBSUtils::PrintArray(alphas);
+      for (int j=1; j<=r; j++)
+      {
+        int save = r-j;
+        int mulj = mul+j;
+        for (int k=p; k>=mulj; k--)
+        {
+          double alpha = alphas->GetTuple1(k-mulj);
+          double pw0[4], pw1[4], newPoint[4];
+          bpts->GetTuple(k, pw0);
+          bpts->GetTuple(k-1, pw1);
+          vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
+          bpts->SetTuple(k, newPoint);
+        }
+        double pw[4];
+        bpts->GetTuple(p, pw);
+        nextbpts->SetTuple(save, pw);
+      }
+    }
+    vtkSVNURBSUtils::PrintArray(bpts);
+
+    // Elevate degree of segment
+    for (int i=lbz; i<=ph; i++)
+    {
+      double zero[4] = {0.0, 0.0, 0.0, 0.0};
+      ebpts->SetTuple(0, zero);
+      int mpi = svminimum(p, i);
+      for (int j=svmaximum(0, i-t); j<=mpi; j++)
+      {
+        double pw0[4], pw1[4], newPoint[4];
+        ebpts->GetTuple(i, pw0);
+        bpts->GetTuple(j, pw1);
+        vtkSVMathUtils::Add(pw0, 1.0, pw1, bezalphas->GetComponent(i, j), 4, newPoint);
+        ebpts->SetTuple(i, newPoint);
+      }
+    }
+    vtkSVNURBSUtils::PrintArray(ebpts);
+
+    fprintf(stdout,"IS THIS SKIPPED PRIOR!?\n");
+    // Now remove unnecessary knots
+    if (oldr>1)
+    {
+      fprintf(stdout,"Removing the knot %d\n", oldr);
+      // Set up iter vars
+      int first = kind-2;
+      int last  = kind;
+
+      double den = ub - ua;
+      double bet = (ub-newKnots->GetTuple1(kind-1))/den;
+
+      // Loop through
+      for (int tr=1; tr<oldr; tr++)
+      {
+        int i = first;
+        int j = last;
+        int kj = j-kind+1;
+
+        // Compute the new control points
+        while (j-i > tr)
+        {
+          // Suspiscious
+          if (i<cind)
+          {
+      vtkSVNURBSUtils::PrintArray(newKnots);
+      fprintf(stdout,"What vals: %d %d\n", i, i);
+            double alpha = (ub-newKnots->GetTuple1(i))/(ua-newKnots->GetTuple1(i));
+            double pw0[4], pw1[4], newPoint[4];
+            newControlPoints->GetControlPoint(i, 0, 0, pw0);
+            newControlPoints->GetControlPoint(i-1, 0, 0, pw1);
+            vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
+            fprintf(stdout,"Tell me when 1: %d\n", i);
+            newControlPoints->SetControlPoint(i, 0, 0, newPoint);
+          }
+          if (j>=lbz)
+          {
+            if (j-tr<=kind-ph+oldr)
+            {
+              double gam = (ub-newKnots->GetTuple1(j-tr))/den;
+              double pw0[4], pw1[4], newPoint[4];
+              ebpts->GetTuple(kj, pw0);
+              ebpts->GetTuple(kj+1, pw1);
+              vtkSVMathUtils::Add(pw0, gam, pw1, 1.0-gam, 4, newPoint);
+              ebpts->SetTuple(kj, newPoint);
+            }
+            else
+            {
+      fprintf(stdout, "%d What is bet: %.4f\n", kj, bet);
+      fprintf(stdout, "UB: %.4f, newK: %.4f, kind: %d, den %.4f\n", ub, newKnots->GetTuple1(kind-1), kind, den);
+              double pw0[4], pw1[4], newPoint[4];
+              ebpts->GetTuple(kj, pw0);
+              ebpts->GetTuple(kj+1, pw1);
+              vtkSVMathUtils::Add(pw0, bet, pw1, 1.0-bet, 4, newPoint);
+              ebpts->SetTuple(kj, newPoint);
+            }
+          }
+          i++;
+          j--;
+          kj--;
+        }
+        first--;
+        last++;
+      }
+    }
+
+    fprintf(stdout,"WAHT IS A: %d\n", a);
+    // Load knot ua for the end of the span
+    if (a!=p)
+    {
+      for (int i=0; i<ph-oldr; i++)
+      {
+        newKnots->SetTuple1(kind, ua);
+        kind++;
+      }
+    }
+
+    // Load remaining control points
+    for (int j=lbz; j<=rbz; j++)
+    {
+      double pw[4];
+      ebpts->GetTuple(j, pw);
+            fprintf(stdout,"Load remain: %d\n", cind);
+      newControlPoints->SetControlPoint(cind, 0, 0, pw);
+      cind++;
+    }
+
+    // Set up the next b points
+    if (b<m)
+    {
+      for (int j=0; j<r; j++)
+      {
+        double pw[4];
+        nextbpts->GetTuple(j, pw);
+        bpts->SetTuple(j, pw);
+      }
+      for (int j=r; j<=p; j++)
+      {
+        double pw[4];
+        PW->GetControlPoint(b-p+j, 0, 0, pw);
+        bpts->SetTuple(j, pw);
+      }
+      a=b;
+      b++;
+      ua=ub;
+    }
+    else
+    {
+      // This is the end
+      for (int i=0; i<=ph; i++)
+        newKnots->SetTuple1(kind+i, ub);
+    }
+  }
+  int nh = mh-ph-1;
+
+  if (mh != mhat)
+  {
+    fprintf(stderr,"Something went wrong: mhat %d does not equal iter m %d\n", mhat, mh);
+    return SV_ERROR;
+  }
+  if (nh != nhat)
+  {
+    fprintf(stderr,"Something went wrong: mhat %d does not equal iter m %d\n", nhat, nh);
+    return SV_ERROR;
+  }
+
+  // Realy quick, convert everything back to just p
+  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
 
   return SV_OK;
 }
@@ -3782,34 +4116,20 @@ int vtkSVNURBSUtils::WhereNotEqual(double val, vtkDoubleArray *in, vtkIntArray *
 // ----------------------
 // PrintArray
 // ----------------------
-int vtkSVNURBSUtils::PrintArray(vtkIntArray *arr)
+int vtkSVNURBSUtils::PrintArray(vtkDataArray *arr)
 {
-  int num = arr->GetNumberOfTuples();
-  fprintf(stdout,"Array: %d tuples\n", num);
+  int num  = arr->GetNumberOfTuples();
+  int comp = arr->GetNumberOfComponents();
+  fprintf(stdout,"Array: %d tuples, %d components\n", num, comp);
   fprintf(stdout,"----------------------------------------------------------\n");
   for (int i=0; i<num; i++)
   {
-    fprintf(stdout,"%.4f ", arr->GetTuple1(i));
+    for (int j=0; j<comp; j++)
+    {
+      fprintf(stdout,"%.4f ", arr->GetComponent(i, j));
+    }
+    fprintf(stdout,"\n");
   }
-  fprintf(stdout,"\n");
-  fprintf(stdout,"----------------------------------------------------------\n");
-
-  return SV_OK;
-}
-
-// ----------------------
-// PrintArray
-// ----------------------
-int vtkSVNURBSUtils::PrintArray(vtkDoubleArray *arr)
-{
-  int num = arr->GetNumberOfTuples();
-  fprintf(stdout,"Array: %d tuples\n", num);
-  fprintf(stdout,"----------------------------------------------------------\n");
-  for (int i=0; i<num; i++)
-  {
-    fprintf(stdout,"%.4f ", arr->GetTuple1(i));
-  }
-  fprintf(stdout,"\n");
   fprintf(stdout,"----------------------------------------------------------\n");
 
   return SV_OK;

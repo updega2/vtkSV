@@ -153,6 +153,9 @@ public:
    *  \return resultant vector array. */
   static int VectorAdd(vtkDataArray *v0, vtkDataArray *v1, double scalar, vtkDataArray *result, int numVals, int numComps);
 
+  /** \brief Compute the binoial coefficient. */
+  static double Binom(const int i, const int j);
+
 protected:
   vtkSVMathUtils();
   ~vtkSVMathUtils();

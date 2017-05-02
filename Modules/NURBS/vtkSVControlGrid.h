@@ -158,8 +158,6 @@ protected:
 
   virtual void ComputeScalarRange() {vtkStructuredGrid::GetScalarRange();}
 
-  vtkPoints *InternalPoints;
-
 private:
   vtkSVControlGrid(const vtkSVControlGrid&);  // Not implemented.
   void operator=(const vtkSVControlGrid&);  // Not implemented.

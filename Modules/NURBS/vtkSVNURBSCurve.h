@@ -115,10 +115,11 @@ public:
   /** \brief Set the control points using a point set. */
   void SetControlPoints(vtkPoints *points1d);
 
-  //void SetControlPoints(vtkDenseArray<double[3]> *points2d) {} /**< \brief Unimplemented */
   //Functions to manipulate the geometry
   void UpdateCurve() {} /**< \brief Unimplemented */
-  int IncreaseDegree(const int degree) {return 0;} /**< \brief Unimplemented */
+
+  /** \brief Increase the degree of the curve a specified number of times. */
+  int IncreaseDegree(const int numberOfIncreases);
 
   /** \brief single knot value insertion. Does not replace a knot;
    *  for that, use SetKnot; this creates an entirely new knot point in the vector. */

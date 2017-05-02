@@ -165,6 +165,40 @@ void vtkSVNURBSCurve::SetControlPoints(vtkPoints *points1d)
 }
 
 // ----------------------
+// IncreaseDegree
+// ----------------------
+int vtkSVNURBSCurve::IncreaseDegree(const int numberOfIncreases)
+{
+  // Get current info about curve degree
+  int curp = this->Degree;
+
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  // Increase the degree
+  if (vtkSVNURBSUtils::CurveIncreaseDegree(this->ControlPointGrid, this->KnotVector,
+                                           curp, numberOfIncreases,
+                                           newControlPoints, newKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error in raising the curve degree");
+    return SV_ERROR;
+  }
+  if (newControlPoints->GetNumberOfPoints()+curp+numberOfIncreases+1 != newKnots->GetNumberOfTuples())
+  {
+    vtkErrorMacro("Error in setting the correct control points and knots during curve degree elevation");
+    return SV_ERROR;
+  }
+  vtkSVNURBSUtils::PrintPoints(this->ControlPointGrid->GetPoints());
+  vtkSVNURBSUtils::PrintPoints(newControlPoints->GetPoints());
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetKnotVector(newKnots);
+  this->Degree = curp+numberOfIncreases;
+}
+
+// ----------------------
 // InsertKnot
 // ----------------------
 int vtkSVNURBSCurve::InsertKnot(const double newKnot, const int numberOfInserts)

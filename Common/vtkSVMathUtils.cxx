@@ -38,6 +38,7 @@
 #include <cstdio>
 
 #include <algorithm>
+#include <cmath>
 
 // ----------------------
 // Multiply_ATA_b
@@ -290,4 +291,23 @@ int vtkSVMathUtils::VectorAdd(vtkDataArray *v0, vtkDataArray *v1, double scalar,
   }
 
   return SV_OK;
+}
+
+// ----------------------
+// Binom
+// ----------------------
+double vtkSVMathUtils::Binom(const int n, const int k)
+{
+  if (n>=k)
+  {
+    int den=1;
+    int num=1;
+    for (int i=1; i<=k; i++)
+      den*=i;
+    for (int j=n-k+1; j<=n; j++)
+      num*=j;
+
+    return num/den;
+  }
+  return 0.0;
 }
