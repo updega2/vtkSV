@@ -28,13 +28,14 @@
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestLoftNURBSCurve.cxx,NO_DATA
   TestLoftNURBSSurface.cxx,NO_DATA
-  TestCurveInsertKnot.cxx,NO_DATA
   TestCircle.cxx,NO_DATA
-  TestSurfaceInsertKnot.cxx,NO_DATA
+  TestCurveInsertKnot.cxx,NO_DATA
   TestCurveKnotRefinement.cxx,NO_DATA
-  TestSurfaceKnotRefinement.cxx,NO_DATA
   TestCurveRemoveKnot.cxx,NO_DATA,NO_VALID,NO_OUTPUT
   TestCurveBezierExtraction.cxx,NO_DATA
+  TestCurveIncreaseDegree.cxx,NO_DATA
+  TestSurfaceInsertKnot.cxx,NO_DATA
+  TestSurfaceKnotRefinement.cxx,NO_DATA
   TestSurfaceBezierExtraction.cxx,NO_DATA)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests

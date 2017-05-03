@@ -189,8 +189,6 @@ int vtkSVNURBSCurve::IncreaseDegree(const int numberOfIncreases)
     vtkErrorMacro("Error in setting the correct control points and knots during curve degree elevation");
     return SV_ERROR;
   }
-  vtkSVNURBSUtils::PrintPoints(this->ControlPointGrid->GetPoints());
-  vtkSVNURBSUtils::PrintPoints(newControlPoints->GetPoints());
 
   // Replace existing data with new data
   this->SetControlPointGrid(newControlPoints);

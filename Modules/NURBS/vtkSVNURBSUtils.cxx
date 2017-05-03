@@ -1154,8 +1154,8 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
 
   // S s is length of mult vector minus 2 (p+1 ends)
   int s = multiplicity->GetNumberOfTuples() - 2;
-  int mhat = m+s+2;
-  int nhat = n+s+1;
+  int mhat = m+t*(s+2);
+  int nhat = n+t*(s+1);
 
   // Set up new knots, just bezier knot span
   newKnots->SetNumberOfTuples(mhat+1);
@@ -1241,23 +1241,14 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
     // Calculate mult
     int i=b;
     while (b<m && knots->GetTuple1(b) == knots->GetTuple1(b+1))
-    {
       b++;
-      fprintf(stdout,"QUA: %d\n", b);
-      fprintf(stdout,"QUA 2: %d\n", m);
-    }
 
     // Set up iter vars
     int mul   = b-i+1;
-    fprintf(stdout,"What is mul: %d\n", mul);
-    fprintf(stdout,"What is b: %d\n", b);
-    fprintf(stdout,"What is i: %d\n", i);
     mh        = mh+mul+t;
     double ub = knots->GetTuple1(b);
     int oldr  = r;
     r = p-mul;
-    fprintf(stdout,"What is ub: %.4f\n", ub);
-    fprintf(stdout,"What is R: %d\n", r);
 
     // r multiplicities
     int lbz;
@@ -1279,7 +1270,6 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
       for (int k=p; k>mul; k--)
         alphas->SetTuple1(k-mul-1, numer/(knots->GetTuple1(a+k)-ua));
 
-      vtkSVNURBSUtils::PrintArray(alphas);
       for (int j=1; j<=r; j++)
       {
         int save = r-j;
@@ -1298,13 +1288,12 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
         nextbpts->SetTuple(save, pw);
       }
     }
-    vtkSVNURBSUtils::PrintArray(bpts);
 
     // Elevate degree of segment
     for (int i=lbz; i<=ph; i++)
     {
       double zero[4] = {0.0, 0.0, 0.0, 0.0};
-      ebpts->SetTuple(0, zero);
+      ebpts->SetTuple(i, zero);
       int mpi = svminimum(p, i);
       for (int j=svmaximum(0, i-t); j<=mpi; j++)
       {
@@ -1315,13 +1304,10 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
         ebpts->SetTuple(i, newPoint);
       }
     }
-    vtkSVNURBSUtils::PrintArray(ebpts);
 
-    fprintf(stdout,"IS THIS SKIPPED PRIOR!?\n");
     // Now remove unnecessary knots
     if (oldr>1)
     {
-      fprintf(stdout,"Removing the knot %d\n", oldr);
       // Set up iter vars
       int first = kind-2;
       int last  = kind;
@@ -1342,14 +1328,11 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
           // Suspiscious
           if (i<cind)
           {
-      vtkSVNURBSUtils::PrintArray(newKnots);
-      fprintf(stdout,"What vals: %d %d\n", i, i);
             double alpha = (ub-newKnots->GetTuple1(i))/(ua-newKnots->GetTuple1(i));
             double pw0[4], pw1[4], newPoint[4];
             newControlPoints->GetControlPoint(i, 0, 0, pw0);
             newControlPoints->GetControlPoint(i-1, 0, 0, pw1);
             vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
-            fprintf(stdout,"Tell me when 1: %d\n", i);
             newControlPoints->SetControlPoint(i, 0, 0, newPoint);
           }
           if (j>=lbz)
@@ -1365,8 +1348,6 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
             }
             else
             {
-      fprintf(stdout, "%d What is bet: %.4f\n", kj, bet);
-      fprintf(stdout, "UB: %.4f, newK: %.4f, kind: %d, den %.4f\n", ub, newKnots->GetTuple1(kind-1), kind, den);
               double pw0[4], pw1[4], newPoint[4];
               ebpts->GetTuple(kj, pw0);
               ebpts->GetTuple(kj+1, pw1);
@@ -1383,7 +1364,6 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
       }
     }
 
-    fprintf(stdout,"WAHT IS A: %d\n", a);
     // Load knot ua for the end of the span
     if (a!=p)
     {
@@ -1399,7 +1379,6 @@ int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDou
     {
       double pw[4];
       ebpts->GetTuple(j, pw);
-            fprintf(stdout,"Load remain: %d\n", cind);
       newControlPoints->SetControlPoint(cind, 0, 0, pw);
       cind++;
     }
