@@ -158,6 +158,60 @@ vtkSVNURBSSurface* vtkSVNURBSSurface::GetData(vtkInformationVector* v, int i)
 }
 
 // ----------------------
+// IncreaseDegree
+// ----------------------
+int vtkSVNURBSSurface::IncreaseDegree(const int numberOfIncreases, const int dim)
+{
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newUKnots);
+  vtkNew(vtkDoubleArray, newVKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  if (vtkSVNURBSUtils::SurfaceIncreaseDegree(this->ControlPointGrid,
+                                             this->UKnotVector,
+                                             this->UDegree,
+                                             this->VKnotVector,
+                                             this->VDegree,
+                                             dim, numberOfIncreases,
+                                             newControlPoints,
+                                             newUKnots, newVKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error on degree elevation");
+    return SV_ERROR;
+  }
+
+  int dims[3];
+  newControlPoints->GetDimensions(dims);
+  if (dim == 0)
+  {
+    if (dims[0]+this->UDegree+numberOfIncreases+1 != newUKnots->GetNumberOfTuples())
+    {
+      vtkErrorMacro("Error in setting the correct control points and knots during surface degree elevation");
+      return SV_ERROR;
+    }
+  }
+  else if (dim == 1)
+  {
+    if (dims[1]+this->VDegree+numberOfIncreases+1 != newVKnots->GetNumberOfTuples())
+    {
+      vtkErrorMacro("Error in setting the correct control points and knots during surface degree elevation");
+      return SV_ERROR;
+    }
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetUKnotVector(newUKnots);
+  this->SetVKnotVector(newVKnots);
+  if (dim == 0)
+    this->UDegree += numberOfIncreases;
+  else if (dim == 1)
+    this->VDegree += numberOfIncreases;
+
+  return SV_OK;
+}
+
+// ----------------------
 // InsertKnot
 // ----------------------
 int vtkSVNURBSSurface::InsertKnot(const double newKnot, const int dim, const int numberOfInserts)
@@ -273,7 +327,7 @@ int vtkSVNURBSSurface::SetControlPointGrid(vtkSVControlGrid *controlPoints)
   this->ControlPointGrid->DeepCopy(controlPoints);
   int dim[3];
   controlPoints->GetDimensions(dim);
-  this->ControlPointGrid->GetDimensions(dim);
+  this->ControlPointGrid->SetDimensions(dim);
   this->NumberOfUControlPoints = dim[0];
   this->NumberOfVControlPoints = dim[1];
 

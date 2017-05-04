@@ -402,13 +402,34 @@ public:
    *  \param uDegree Degree of the surface in the u direction.
    *  \param vKnots The knots of the surface in the v direction.
    *  \param vDegree Degree of the surface in the v direction.
-   *  \param extractDirection Direction to extract
+   *  \param extractDirection Direction to extract.
    *  \return surfaces The collection of bezier strips. */
   static int SurfaceBezierExtraction(vtkSVControlGrid *controlPoints,
                                      vtkDoubleArray *uKnots, const int uDegree,
                                      vtkDoubleArray *vKnots, const int vDegree,
                                      const int extractDirection,
                                      vtkSVNURBSSurfaceCollection *surface);
+
+  /** \brief Increases the degree of the surface by first performing bezier
+   *  extraction of the surface knot span, then increasing the degree, and then
+   *  removing unnecessary knot points.
+   *  \param controlPoints Control points of curve.
+   *  \param uKnots The knots of the curve in the u direction.
+   *  \param uDegree Degree of the curve in the u direction.
+   *  \param vKnots The knots of the curve in the u direction.
+   *  \param vDegree Degree of the curve in the u direction.
+   *  \param increaseDirection Direction to increase the degree of.
+   *  \return newControlPoints The new control points after elevation.
+   *  \return newUKnots The new knot span in the u direction.
+   *  \return newVKnots The new knot span in the v direction. */
+   static int SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
+                                    vtkDoubleArray *uKnots, const int uDegree,
+                                    vtkDoubleArray *vKnots, const int vDegree,
+                                    const int increaseDirection,
+                                    const int numberOfIncreases,
+                                    vtkSVControlGrid *newControlPoints,
+                                    vtkDoubleArray *newUKnots,
+                                    vtkDoubleArray *newVKnots);
 
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
