@@ -50,28 +50,31 @@
 
 #include <unistd.h>
 
-int TestCurveIncreaseDegree(int argc, char *argv[])
+int TestCurveDecreaseDegree(int argc, char *argv[])
 {
-  // Set the curve increase degree
-  int p=2;     //degree
-  int np=8;     //control points
+  // Set the curve decrease details
+  int p=5;     //degree
+  int np=30;     //control points
   int m=p+np+1; //m
 
   // Set the knot vector
   vtkNew(vtkDoubleArray, knots);
   vtkSVNURBSUtils::LinSpaceClamp(0, 1, m, p, knots);
 
+  // X and Y data values
+  double xmin = 0.0; double xmax=5.0;
+  vtkNew(vtkDoubleArray, xvals);
+  vtkSVNURBSUtils::LinSpace(xmin, xmax, np, xvals);
+
   // Set the control points
   vtkNew(vtkPoints, cpoints);
   cpoints->SetNumberOfPoints(np);
-  cpoints->SetPoint(0, 0.0, 0.0, 0.0);
-  cpoints->SetPoint(1, 1.0, 0.0, 0.0);
-  cpoints->SetPoint(2, 1.0, -1.0, 0.0);
-  cpoints->SetPoint(3, 0.0, -1.0, 0.0);
-  cpoints->SetPoint(4, -1.0, -1.0, 0.0);
-  cpoints->SetPoint(5, -1.0, 0.0, 0.0);
-  cpoints->SetPoint(6, -1.0, 1.0, 0.0);
-  cpoints->SetPoint(7, 0.0, 1.0, 0.0);
+  for (int i=0; i<np; i++)
+  {
+    double x = xvals->GetTuple1(i);
+    double y = pow(x, 1./2);
+    cpoints->SetPoint(i, x, y, 0.0);
+  }
 
   // Set up the curve
   vtkNew(vtkSVNURBSCurve, curve);
@@ -79,9 +82,12 @@ int TestCurveIncreaseDegree(int argc, char *argv[])
   curve->SetControlPoints(cpoints);
   curve->SetDegree(p);
 
-  // Increase the degree
-  // Don't increase degree to create baseline image
-  curve->IncreaseDegree(5);
+  // Increase the degree first to make duplicate knot points. Both degree
+  // reduction and knot removal achieve higher accuracy when there are
+  // duplicate knot points
+  // Comment out for baseline
+  curve->IncreaseDegree(4);
+  curve->DecreaseDegree(3.0); // Now reduce degree
 
   // Generate representation
   curve->GeneratePolyDataRepresentation(0.01);

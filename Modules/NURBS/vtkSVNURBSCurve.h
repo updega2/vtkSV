@@ -116,10 +116,16 @@ public:
   void SetControlPoints(vtkPoints *points1d);
 
   //Functions to manipulate the geometry
-  void UpdateCurve() {} /**< \brief Unimplemented */
+
+  /** \brief Simply updates the number of control points, number of knot points
+   *  and the degree based on the vectors. Shouldn't really need to be called. */
+  void UpdateCurve();
 
   /** \brief Increase the degree of the curve a specified number of times. */
   int IncreaseDegree(const int numberOfIncreases);
+
+  /** \brief Increase the degree of the curve with specified tolerance. */
+  int DecreaseDegree(const double tolerance);
 
   /** \brief single knot value insertion. Does not replace a knot;
    *  for that, use SetKnot; this creates an entirely new knot point in the vector. */
@@ -142,16 +148,27 @@ public:
   /** \brief Set the entire knot vector. Must make sure everything is consistent, curve does not check */
   int SetKnotVector(vtkDoubleArray *knots);
 
-  int SetKnot(const int index, const double newKnot) {return 0;} /**< \brief Unimplemented */
-  int SetKnots(vtkIntArray *indices, vtkDoubleArray *newKnots) {return 0;} /**< \brief Unimplemented */
-  int GetKnot(const int index, double &knotVal) {return 0;} /**< \brief Unimplemented */
-  int GetKnots(const int indices, vtkDoubleArray *knotVals) {return 0;} /**< \brief Unimplemented */
+  //@{
+  /** \brief Function to set/overwrite the knot/s value at the provided index/indices. Index
+   *  must be less than span length. */
+  int SetKnot(const int index, const double newKnot);
+  int SetKnots(vtkIntArray *indices, vtkDoubleArray *newKnots);
+  //@}
 
-  int SetControlPoint(const int index, const double coordinate[3], const double weight) {return 0;} /**< \brief Unimplemented */
-  int SetControlPoints(vtkIntArray *indices, vtkPoints *coordinates, vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
+  //@{
+  /** \brief Function to get knot/s at the provided index/indices. */
+  int GetKnot(const int index, double &knotVal);
+  int GetKnots(vtkIntArray *indices, vtkDoubleArray *knotVals);
+  //@}
 
   /** \brief Set the entire control point grid. Must make sure everything is consistent. Input is not checked. */
   int SetControlPointGrid(vtkSVControlGrid *controlPoints);
+
+  //@{
+  /** \brief Function to set control point/s at the provided index/indices. */
+  int SetControlPoint(const int index, const double coordinates[3], const double weight);
+  int SetControlPoint(const int index, const double pw[4]);
+  //@}
 
   //@{
   /** \brief Get a single control point and its corresponding weight. */
@@ -159,13 +176,18 @@ public:
   int GetControlPoint(const int index, double pw[4]);
   //@}
 
-  int GetControlPoints(vtkIntArray *indices, vtkPoints *coordinates, vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
+  //@{
+  /** \brief Functions to set/get the weight vectors of the control points. Length
+   *  of weights must match the number of control points. */
+  int SetWeights(vtkDoubleArray *weights);
+  int GetWeights(vtkDoubleArray *weights);
+  //}
 
-  int SetWeights(vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
-  int GetWeights(vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
-
-  int SetWeight(const int index, const double weight) {return 0;} /**< \brief Unimplemented */
-  int GetWeight(const int index, double &weight) {return 0;} /**< \brief Unimplemented */
+  //@{
+  /** \brief Functions to get and set individual weights in the weight vector. */
+  int SetWeight(const int index, const double weight);
+  int GetWeight(const int index, double &weight);
+  //@}
 
   /** \brief set NURBS to closed, loops around. */
   void SetClosed(const int closed) {this->Closed = closed;}

@@ -249,12 +249,34 @@ public:
    *  \param degree Degree of the curve.
    *  \param numberOfIncreases Number of times to increase the degree. Final
    *  degree will be degree+numberOfIncreases.
-   *  \return newControlPoints The new control points after knot insertion.
+   *  \return newControlPoints The new control points after elevation.
    *  \return newKnots The new knot span. */
    static int CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
                                   const int degree,
                                   const int numberOfIncreases,
                                   vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots);
+
+  /** \brief Decreases the degree of the curve by first performing bezier
+   *  extraction of the curve knot span, the decreasing the degree, and then
+   *  removing unnecessary knot points.
+   *  \param controlPoints Control points of curve.
+   *  \param knots The knots of the curve.
+   *  \param degree Degree of the curve.
+   *  \param tolerance Tol to withold during reduction.
+   *  \return newControlPoints The new control points after reduction.
+   *  \return newKnots The new knot span. */
+   static int CurveDecreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
+                                  const int degree,
+                                  const double tolerance,
+                                  vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots);
+
+  /** \brief Decreases the degree of a bezier curve by 1.
+   *  \param controlPoints Control points of curve as 4 comp array (meant to be used internal to other funcs)
+   *  \param tolerance Tol to withold during reduction.
+   *  \return newControlPoints The new control points after reduction. */
+   static int BezierCurveDecreaseDegree(vtkDoubleArray *controlPoints,
+                                        double &maxError,
+                                        vtkDoubleArray *newControlPoints);
 
   // Surface functions
   /** \brief Get the control points of a surface given the input data points

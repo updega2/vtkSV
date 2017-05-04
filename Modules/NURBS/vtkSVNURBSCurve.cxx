@@ -165,6 +165,16 @@ void vtkSVNURBSCurve::SetControlPoints(vtkPoints *points1d)
 }
 
 // ----------------------
+// UpdateCurve
+// ----------------------
+void vtkSVNURBSCurve::UpdateCurve()
+{
+  this->NumberOfControlPoints = this->ControlPointGrid->GetPoints()->GetNumberOfPoints();
+  this->NumberOfKnotPoints    = this->KnotVector->GetNumberOfTuples();
+  this->Degree = this->NumberOfKnotPoints - this->NumberOfControlPoints - 1;
+}
+
+// ----------------------
 // IncreaseDegree
 // ----------------------
 int vtkSVNURBSCurve::IncreaseDegree(const int numberOfIncreases)
@@ -194,6 +204,38 @@ int vtkSVNURBSCurve::IncreaseDegree(const int numberOfIncreases)
   this->SetControlPointGrid(newControlPoints);
   this->SetKnotVector(newKnots);
   this->Degree = curp+numberOfIncreases;
+}
+
+// ----------------------
+// DecreaseDegree
+// ----------------------
+int vtkSVNURBSCurve::DecreaseDegree(const double tolerance)
+{
+  // Get current info about curve degree
+  int curp = this->Degree;
+
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  // Decrease the degree
+  if (vtkSVNURBSUtils::CurveDecreaseDegree(this->ControlPointGrid, this->KnotVector,
+                                           curp, tolerance,
+                                           newControlPoints, newKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error in lowering the curve degree");
+    return SV_ERROR;
+  }
+  if (newControlPoints->GetNumberOfPoints()+curp != newKnots->GetNumberOfTuples())
+  {
+    vtkErrorMacro("Error in setting the correct control points and knots during curve degree reduction");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetKnotVector(newKnots);
+  this->Degree = curp-1;
 }
 
 // ----------------------
@@ -272,7 +314,6 @@ int vtkSVNURBSCurve::RemoveKnot(const double removeKnot, const int numberOfRemov
 {
   int p = this->Degree;
   int knotIndex = -1;
-  vtkSVNURBSUtils::PrintArray(this->KnotVector);
   for (int i=0; i<this->KnotVector->GetNumberOfTuples(); i++)
   {
     if (this->KnotVector->GetTuple1(i) == removeKnot)
@@ -343,6 +384,73 @@ int vtkSVNURBSCurve::SetKnotVector(vtkDoubleArray *knots)
 }
 
 // ----------------------
+// SetKnot
+// ----------------------
+int vtkSVNURBSCurve::SetKnot(const int index, const double newKnot)
+{
+  if (index >= this->NumberOfKnotPoints)
+  {
+    vtkErrorMacro("Index " << index << " outside length of knot vector: " << this->NumberOfKnotPoints);
+    return SV_ERROR;
+  }
+  if (index > 0)
+  {
+    if (this->KnotVector->GetTuple1(index-1) > newKnot)
+    {
+      vtkErrorMacro("Invalid knot inserted; " << newKnot <<
+      " must be greater than or equal to previous knot: " << this->KnotVector->GetTuple1(index-1));
+      return SV_ERROR;
+    }
+  }
+  this->KnotVector->SetTuple1(index, newKnot);
+  return SV_OK;
+}
+
+// ----------------------
+// SetKnots
+// ----------------------
+int vtkSVNURBSCurve::SetKnots(vtkIntArray *indices, vtkDoubleArray *newKnots)
+{
+  int numNewKnots = indices->GetNumberOfTuples();
+  for (int i=0; i<numNewKnots; i++)
+  {
+    if (this->SetKnot(indices->GetTuple1(i), newKnots->GetTuple1(i)) != SV_OK)
+      return SV_ERROR;
+  }
+  return SV_OK;
+}
+
+// ----------------------
+// GetKnot
+// ----------------------
+int vtkSVNURBSCurve::GetKnot(const int index, double &knotVal)
+{
+  if (index >= this->NumberOfKnotPoints)
+  {
+    vtkErrorMacro("Index " << index << " outside length of knot vector: " << this->NumberOfKnotPoints);
+    return SV_ERROR;
+  }
+  knotVal = this->KnotVector->GetTuple1(index);
+  return SV_OK;
+}
+
+// ----------------------
+// GetKnots
+// ----------------------
+int vtkSVNURBSCurve::GetKnots(vtkIntArray *indices, vtkDoubleArray *knotVals)
+{
+  int numKnotVals = indices->GetNumberOfTuples();
+  for (int i=0; i<numKnotVals; i++)
+  {
+    double returnVal;
+    if (this->GetKnot(indices->GetTuple1(i), returnVal) != SV_OK)
+      return SV_ERROR;
+    knotVals->InsertTuple1(i, returnVal);
+  }
+  return SV_OK;
+}
+
+// ----------------------
 // SetControlPointGrid
 // ----------------------
 int vtkSVNURBSCurve::SetControlPointGrid(vtkSVControlGrid *controlPoints)
@@ -352,6 +460,23 @@ int vtkSVNURBSCurve::SetControlPointGrid(vtkSVControlGrid *controlPoints)
   int dims[3];
   this->ControlPointGrid->GetDimensions(dims);
   this->NumberOfControlPoints = dims[0];
+  return SV_OK;
+}
+// ----------------------
+// SetControlPoint
+// ----------------------
+int vtkSVNURBSCurve::SetControlPoint(const int index, const double coordinates[3], const double weight)
+{
+  this->ControlPointGrid->SetControlPoint(index, 0, 0, coordinates, weight);
+  return SV_OK;
+}
+
+// ----------------------
+// SetControlPoint
+// ----------------------
+int vtkSVNURBSCurve::SetControlPoint(const int index, const double pw[4])
+{
+  this->ControlPointGrid->SetControlPoint(index, 0, 0, pw);
   return SV_OK;
 }
 
@@ -371,6 +496,58 @@ int vtkSVNURBSCurve::GetControlPoint(const int index, double pw[4])
 {
   this->ControlPointGrid->GetControlPoint(index, 0, 0, pw);
   return SV_OK;
+}
+
+// ----------------------
+// SetWeights
+// ----------------------
+int vtkSVNURBSCurve::SetWeights(vtkDoubleArray *weights)
+{
+  if (weights->GetNumberOfTuples() != this->ControlPointGrid->GetPoints()->GetNumberOfPoints())
+  {
+    vtkErrorMacro("Cannot set weight vector on control points as number of tuples " << weights->GetNumberOfTuples() << " does not equal the number of control points " << this->ControlPointGrid->GetPoints()->GetNumberOfPoints());
+    return SV_ERROR;
+  }
+  weights->SetName("Weights");
+  this->ControlPointGrid->GetPointData()->AddArray(weights);
+  return SV_OK;
+}
+
+// ----------------------
+// GetWeights
+// ----------------------
+int vtkSVNURBSCurve::GetWeights(vtkDoubleArray *weights)
+{
+  weights = vtkDoubleArray::SafeDownCast(this->ControlPointGrid->GetPointData()->GetArray("Weights"));
+  return SV_OK;
+}
+
+// ----------------------
+// SetWeight
+// ----------------------
+int vtkSVNURBSCurve::SetWeight(const int index, const double weight)
+{
+  vtkDataArray *weights = this->ControlPointGrid->GetPointData()->GetArray("Weights");
+  if (index >= weights->GetNumberOfTuples())
+  {
+    vtkErrorMacro("Index " << index << " outside length of weight vector: " << weights->GetNumberOfTuples());
+    return SV_ERROR;
+  }
+  weights->SetTuple1(index, weight);
+}
+
+// ----------------------
+// GetWeight
+// ----------------------
+int vtkSVNURBSCurve::GetWeight(const int index, double &weight)
+{
+  vtkDataArray *weights = this->ControlPointGrid->GetPointData()->GetArray("Weights");
+  if (index >= weights->GetNumberOfTuples())
+  {
+    vtkErrorMacro("Index " << index << " outside length of weight vector: " << weights->GetNumberOfTuples());
+    return SV_ERROR;
+  }
+  weight = weights->GetTuple1(index);
 }
 
 // ----------------------

@@ -41,6 +41,7 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSCurve.h"
 #include "vtkSVNURBSUtils.h"
+#include "vtkSVMathUtils.h"
 #include "vtkStructuredGridGeometryFilter.h"
 
 #include <string>
@@ -53,28 +54,29 @@ int TestCurveRemoveKnot(int argc, char *argv[])
 {
   // Set the curve knot insertion details
   int p=3;     //degree
-  int np=10;     //control points
+  int np=30;     //control points
   int m=p+np+1; //m
-  double u=1./7;   // remove value
+  double u=18./27;   // remove value
   int r=1;     // number of removals
 
   // Set the knot vector
   vtkNew(vtkDoubleArray, knots);
   vtkSVNURBSUtils::LinSpaceClamp(0, 1, m, p, knots);
 
+  // X and Y data values
+  double xmin = 0.0; double xmax=5.0;
+  vtkNew(vtkDoubleArray, xvals);
+  vtkSVNURBSUtils::LinSpace(xmin, xmax, np, xvals);
+
   // Set the control points
   vtkNew(vtkPoints, cpoints);
   cpoints->SetNumberOfPoints(np);
-  cpoints->SetPoint(0, 0.0, 0.0, 0.0);
-  cpoints->SetPoint(1, 0.0, 1.0, 0.0);
-  cpoints->SetPoint(2, 1.0, 1.5, 0.0);
-  cpoints->SetPoint(3, 2.0, 2.0, 0.0);
-  cpoints->SetPoint(4, 3.0, 2.5, 0.0);
-  cpoints->SetPoint(5, 4.0, 3.0, 0.0);
-  cpoints->SetPoint(6, 5.0, 3.5, 0.0);
-  cpoints->SetPoint(7, 6.0, 3.5, 0.0);
-  cpoints->SetPoint(8, 7.0, 3.0, 0.0);
-  cpoints->SetPoint(9, 8.0, 2.5, 0.0);
+  for (int i=0; i<np; i++)
+  {
+    double x = xvals->GetTuple1(i);
+    double y = pow(x, 1./2);
+    cpoints->SetPoint(i, x, y, 0.0);
+  }
 
   // Set up the curve
   vtkNew(vtkSVNURBSCurve, curve);
