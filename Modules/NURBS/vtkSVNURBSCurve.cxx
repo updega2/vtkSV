@@ -302,11 +302,16 @@ int vtkSVNURBSCurve::InsertKnots(vtkDoubleArray *newKnots)
   vtkNew(vtkDoubleArray, newKnotSpan);
   vtkNew(vtkSVControlGrid, newControlPoints);
 
-  if (vtkSVNURBSUtils::CurveKnotRefinement(this->ControlPointGrid,
-                                           this->KnotVector,
-                                           p, newKnots,
-                                           newControlPoints,
-                                           newKnotSpan) != SV_OK)
+  vtkDoubleArray *vKnots = NULL; // just one direction for curve
+  vtkDoubleArray *newVKnots = NULL; // just one direction for curve
+  int q = 0; // just one direction for curve
+  int dir = 0; // just one directio for curve
+  if (vtkSVNURBSUtils::KnotRefinement(this->ControlPointGrid,
+                                      this->KnotVector, p,
+                                      vKnots, q,
+                                      dir, newKnots,
+                                      newControlPoints,
+                                      newKnotSpan, newVKnots) != SV_OK)
   {
     vtkErrorMacro("Error in knot refinement");
     return SV_ERROR;

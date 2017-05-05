@@ -740,124 +740,6 @@ int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
 }
 
 // ----------------------
-// CurveKnotRefinement
-// ----------------------
-int vtkSVNURBSUtils::CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
-                                         const int degree,
-                                         vtkDoubleArray *insertKnots,
-                                         vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
-{
-  // Get dimensions of control point grid
-  int dims[3];
-  controlPoints->GetDimensions(dims);
-
-  // Really quick, convert all points to pw
-  vtkNew(vtkSVControlGrid, PW);
-  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
-
-  // Set values used by alg to more concise vars
-  int n = dims[0]-1;
-  int p = degree;
-  int r = insertKnots->GetNumberOfTuples()-1;
-
-  int m = n+p+1;
-
-  // Double check to see if correct vals were given
-  if (knots->GetNumberOfTuples() != m+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with knot span\n");
-    return SV_ERROR;
-  }
-
-  if (r == 0)
-  {
-    fprintf(stderr,"If inserting one knot, use knot insertion rather than refinement\n");
-    return SV_ERROR;
-  }
-
-  int a, b;
-  vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(0), knots, a);
-  vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(r), knots, b);
-  b++;
-
-  newControlPoints->SetNumberOfControlPoints(n+r+2);
-  newControlPoints->SetDimensions(n+r+2, 1, 1);
-  newKnots->SetNumberOfTuples(m+r+2);
-
-  // Pass unchanging control points before new
-  for (int i=0; i<=a-p; i++)
-  {
-    double pw[4];
-    PW->GetControlPoint(i, 0, 0, pw);
-    newControlPoints->SetControlPoint(i, 0, 0, pw);
-  }
-
-  // Set unchanging control points after new
-  for (int i=b-1; i<=n; i++)
-  {
-    double pw[4];
-    PW->GetControlPoint(i, 0, 0, pw);
-    newControlPoints->SetControlPoint(i+r+1, 0, 0, pw);
-  }
-
-  // Set unchanging knots before new ones
-  for (int i=0; i<=a; i++)
-    newKnots->SetTuple1(i, knots->GetTuple1(i));
-
-  // Set unchanging knots after new ones
-  for (int i=b+p; i<=m; i++)
-    newKnots->SetTuple1(i+r+1, knots->GetTuple1(i));
-
-  // Set iter vars
-  int i=b+p-1;
-  int k=b+p+r;
-
-  // Loop through and calc new cps
-  for (int j=r; j>=0; j--)
-  {
-    while(insertKnots->GetTuple1(j) <= knots->GetTuple1(i) && i > a)
-    {
-      double pw[4];
-      PW->GetControlPoint(i-p-1, 0, 0, pw);
-      newControlPoints->SetControlPoint(k-p-1, 0, 0, pw);
-      newKnots->SetTuple1(k, knots->GetTuple1(i));
-      k--;
-      i--;
-    }
-    double pdw[4];
-    newControlPoints->GetControlPoint(k-p, 0, 0, pdw);
-    newControlPoints->SetControlPoint(k-p-1, 0, 0, pdw);
-    for (int l=1; l<=p; l++)
-    {
-      int ind = k-p+l;
-      double alpha = newKnots->GetTuple1(k+l) - insertKnots->GetTuple1(j);
-      if (fabs(alpha) >= -1.e-10 && fabs(alpha) <= 1.0e-10)
-      {
-        double pw[4];
-        newControlPoints->GetControlPoint(ind, 0, 0, pw);
-        newControlPoints->SetControlPoint(ind-1, 0, 0, pw);
-      }
-      else
-      {
-        alpha = alpha/(newKnots->GetTuple1(k+l) - knots->GetTuple1(i-p+l));
-        double pw0[4], pw1[4], newPoint[4];
-        newControlPoints->GetControlPoint(ind-1, 0, 0, pw0);
-        newControlPoints->GetControlPoint(ind, 0, 0, pw1);
-        vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
-        newControlPoints->SetControlPoint(ind-1, 0, 0, newPoint);
-      }
-    }
-    newKnots->SetTuple1(k, insertKnots->GetTuple1(j));
-    k--;
-  }
-
-  // Convert back from weighted points
-  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
-
-  return SV_OK;
-}
-
-// ----------------------
 // CurveBezierExtraction
 // ----------------------
 int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
@@ -1857,16 +1739,16 @@ int vtkSVNURBSUtils::InsertKnot(vtkSVControlGrid *controlPoints,
 }
 
 // ----------------------
-// SurfaceKnotRefinement
+// KnotRefinement
 // ----------------------
-int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
-                                           vtkDoubleArray *uKnots, const int uDegree,
-                                           vtkDoubleArray *vKnots, const int vDegree,
-                                           const int insertDirection,
-                                           vtkDoubleArray *insertKnots,
-                                           vtkSVControlGrid *newControlPoints,
-                                           vtkDoubleArray *newUKnots,
-                                           vtkDoubleArray *newVKnots)
+int vtkSVNURBSUtils::KnotRefinement(vtkSVControlGrid *controlPoints,
+                                    vtkDoubleArray *uKnots, const int uDegree,
+                                    vtkDoubleArray *vKnots, const int vDegree,
+                                    const int insertDirection,
+                                    vtkDoubleArray *insertKnots,
+                                    vtkSVControlGrid *newControlPoints,
+                                    vtkDoubleArray *newUKnots,
+                                    vtkDoubleArray *newVKnots)
 {
   // Get dimensions of control point grid
   int dims[3];
@@ -1888,22 +1770,14 @@ int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
   int nuk = n+p+1;
   int nvk = m+q+1;
 
-  // Double check to see if correct vals were given
-  if (uKnots->GetNumberOfTuples() != nuk+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with u knot span\n");
-    return SV_ERROR;
-  }
-
-  // Double check to see if correct vals were given
-  if (vKnots->GetNumberOfTuples() != nvk+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with v knot span\n");
-    return SV_ERROR;
-  }
-
   if (dir == 0)
   {
+    // Double check to see if correct vals were given
+    if (uKnots->GetNumberOfTuples() != nuk+1)
+    {
+      fprintf(stderr,"Invalid number of control points given with u knot span\n");
+      return SV_ERROR;
+    }
 
     int a, b;
     vtkSVNURBSUtils::FindSpan(p, insertKnots->GetTuple1(0), uKnots, a);
@@ -1942,7 +1816,8 @@ int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
       newUKnots->SetTuple1(i+r+1, uKnots->GetTuple1(i));
 
     // Copy v knot span to new v knots span
-    newVKnots->DeepCopy(vKnots);
+    if(newVKnots != NULL && vKnots != NULL)
+      newVKnots->DeepCopy(vKnots);
 
     // Set iter vars
     int i=b+p-1;
@@ -2001,6 +1876,13 @@ int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
   }
   else if (dir == 1)
   {
+    // Double check to see if correct vals were given
+    if (vKnots->GetNumberOfTuples() != nvk+1)
+    {
+      fprintf(stderr,"Invalid number of control points given with v knot span\n");
+      return SV_ERROR;
+    }
+
     int a, b;
     vtkSVNURBSUtils::FindSpan(q, insertKnots->GetTuple1(0), vKnots, a);
     vtkSVNURBSUtils::FindSpan(q, insertKnots->GetTuple1(r), vKnots, b);
@@ -2038,7 +1920,8 @@ int vtkSVNURBSUtils::SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
       newVKnots->SetTuple1(i+r+1, vKnots->GetTuple1(i));
 
     // Copy u knot span to new u knots span
-    newUKnots->DeepCopy(uKnots);
+    if (newUKnots != NULL && uKnots != NULL)
+      newUKnots->DeepCopy(uKnots);
 
     // Set iter vars
     int i=b+q-1;

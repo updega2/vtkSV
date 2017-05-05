@@ -143,6 +143,71 @@ public:
                                 const int p,
                                 vtkTypedArray<double> *N);
 
+  // Arbitrary nurbs modification functions
+  /** \brief Inserts a given knot into a nurbs object a given number of times.
+   *  \param controlPoints Control points of surface.
+   *  \param uKnots The knots of the surface in the u direction.
+   *  \param uDegree Degree of the surface in the u direction.
+   *  \param vKnots The knots of the surface in the v direction.
+   *  \param vDegree Degree of the surface in the v direction.
+   *  \param insertDirection The direction the knot should be inserted in.
+   *  \param span The span where the knot will be inserted. Use FindSpan.
+   *  \param currentMultiplicity The current multiplicity of the insertValue.
+   *  \param numberOfInserts Number of times to insert the knot.
+   *  \return newControlPoints The new control points after knot insertion.
+   *  \return newUKnots The new knot span in the u direction.
+   *  \return newVKnots The new knot span in the v direction. */
+  static int InsertKnot(vtkSVControlGrid *controlPoints,
+                        vtkDoubleArray *uKnots, const int uDegree,
+                        vtkDoubleArray *vKnots, const int vDegree,
+                        const int insertDirection,
+                        const double insertValue, const int span,
+                        const int currentMultiplicity,
+                        const int numberOfInserts,
+                        vtkSVControlGrid *newControlPoints,
+                        vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
+
+  /** \brief Performs knot refinement. Takes a set of given knots and inputs
+   *  them into the knot span.
+   *  \param controlPoints Control points of surface.
+   *  \param uKnots The knots of the surface in the u direction.
+   *  \param uDegree Degree of the surface in the u direction.
+   *  \param vKnots The knots of the surface in the v direction.
+   *  \param vDegree Degree of the surface in the v direction.
+   *  \param insertKnots The array of knots to be inserted.
+   *  \return newControlPoints The new control points after knot insertion.
+   *  \return newUKnots The new knot span in the u direction.
+   *  \return newVKnots The new knot span in the v direction. */
+ static int KnotRefinement(vtkSVControlGrid *controlPoints,
+                           vtkDoubleArray *uKnots, const int uDegree,
+                           vtkDoubleArray *vKnots, const int vDegree,
+                           const int insertDirection,
+                           vtkDoubleArray *insertKnots,
+                           vtkSVControlGrid *newControlPoints,
+                           vtkDoubleArray *newUKnots,
+                           vtkDoubleArray *newVKnots);
+
+  /** \brief Increases the degree of a nurbs object by first performing bezier
+   *  extraction of the surface knot span, then increasing the degree, and then
+   *  removing unnecessary knot points.
+   *  \param controlPoints Control points of curve.
+   *  \param uKnots The knots of the curve in the u direction.
+   *  \param uDegree Degree of the curve in the u direction.
+   *  \param vKnots The knots of the curve in the u direction.
+   *  \param vDegree Degree of the curve in the u direction.
+   *  \param increaseDirection Direction to increase the degree of.
+   *  \return newControlPoints The new control points after elevation.
+   *  \return newUKnots The new knot span in the u direction.
+   *  \return newVKnots The new knot span in the v direction. */
+   static int IncreaseDegree(vtkSVControlGrid *controlPoints,
+                             vtkDoubleArray *uKnots, const int uDegree,
+                             vtkDoubleArray *vKnots, const int vDegree,
+                             const int increaseDirection,
+                             const int numberOfIncreases,
+                             vtkSVControlGrid *newControlPoints,
+                             vtkDoubleArray *newUKnots,
+                             vtkDoubleArray *newVKnots);
+
   // Curve functions
   /** \brief Get the control points of a curve given the input data points
    *  an approximating array of paramter values, control point weights (equal
@@ -200,19 +265,6 @@ public:
                              const int numberOfRemovals,
                              const double tol,
                              vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots);
-
-  /** \brief Performs knot refinement. Takes a set of given knots and inputs
-   *  them into the knot span.
-   *  \param controlPoints Control points of curve.
-   *  \param knots The knots of the curve.
-   *  \param degree Degree of the curve.
-   *  \param insertKnots The array of knots to be inserted.
-   *  \return newControlPoints The new control points after knot insertion.
-   *  \return newKnots The new knot span. */
-  static int CurveKnotRefinement(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
-                                 const int degree,
-                                 vtkDoubleArray *insertKnots,
-                                 vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
 
   /** \brief Extracts the set of bezier curves from the curve.
    *  \param controlPoints Control points of curve.
@@ -321,49 +373,6 @@ public:
                                       vtkTypedArray<double> *newNPU, vtkTypedArray<double> *newNPV,
                                       vtkTypedArray<double> *newPoints);
 
-  /** \brief Inserts a given knot into a nurbs object a given number of times.
-   *  \param controlPoints Control points of surface.
-   *  \param uKnots The knots of the surface in the u direction.
-   *  \param uDegree Degree of the surface in the u direction.
-   *  \param vKnots The knots of the surface in the v direction.
-   *  \param vDegree Degree of the surface in the v direction.
-   *  \param insertDirection The direction the knot should be inserted in.
-   *  \param span The span where the knot will be inserted. Use FindSpan.
-   *  \param currentMultiplicity The current multiplicity of the insertValue.
-   *  \param numberOfInserts Number of times to insert the knot.
-   *  \return newControlPoints The new control points after knot insertion.
-   *  \return newUKnots The new knot span in the u direction.
-   *  \return newVKnots The new knot span in the v direction. */
-  static int InsertKnot(vtkSVControlGrid *controlPoints,
-                        vtkDoubleArray *uKnots, const int uDegree,
-                        vtkDoubleArray *vKnots, const int vDegree,
-                        const int insertDirection,
-                        const double insertValue, const int span,
-                        const int currentMultiplicity,
-                        const int numberOfInserts,
-                        vtkSVControlGrid *newControlPoints,
-                        vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
-
-  /** \brief Performs knot refinement. Takes a set of given knots and inputs
-   *  them into the knot span.
-   *  \param controlPoints Control points of surface.
-   *  \param uKnots The knots of the surface in the u direction.
-   *  \param uDegree Degree of the surface in the u direction.
-   *  \param vKnots The knots of the surface in the v direction.
-   *  \param vDegree Degree of the surface in the v direction.
-   *  \param insertKnots The array of knots to be inserted.
-   *  \return newControlPoints The new control points after knot insertion.
-   *  \return newUKnots The new knot span in the u direction.
-   *  \return newVKnots The new knot span in the v direction. */
- static int SurfaceKnotRefinement(vtkSVControlGrid *controlPoints,
-                                  vtkDoubleArray *uKnots, const int uDegree,
-                                  vtkDoubleArray *vKnots, const int vDegree,
-                                  const int insertDirection,
-                                  vtkDoubleArray *insertKnots,
-                                  vtkSVControlGrid *newControlPoints,
-                                  vtkDoubleArray *newUKnots,
-                                  vtkDoubleArray *newVKnots);
-
   /** \brief Extracts the set of bezier strips from the surface.
    *  \param uKnots The knots of the surface in the u direction.
    *  \param uDegree Degree of the surface in the u direction.
@@ -376,27 +385,6 @@ public:
                                      vtkDoubleArray *vKnots, const int vDegree,
                                      const int extractDirection,
                                      vtkSVNURBSSurfaceCollection *surface);
-
-  /** \brief Increases the degree of a nurbs object by first performing bezier
-   *  extraction of the surface knot span, then increasing the degree, and then
-   *  removing unnecessary knot points.
-   *  \param controlPoints Control points of curve.
-   *  \param uKnots The knots of the curve in the u direction.
-   *  \param uDegree Degree of the curve in the u direction.
-   *  \param vKnots The knots of the curve in the u direction.
-   *  \param vDegree Degree of the curve in the u direction.
-   *  \param increaseDirection Direction to increase the degree of.
-   *  \return newControlPoints The new control points after elevation.
-   *  \return newUKnots The new knot span in the u direction.
-   *  \return newVKnots The new knot span in the v direction. */
-   static int IncreaseDegree(vtkSVControlGrid *controlPoints,
-                             vtkDoubleArray *uKnots, const int uDegree,
-                             vtkDoubleArray *vKnots, const int vDegree,
-                             const int increaseDirection,
-                             const int numberOfIncreases,
-                             vtkSVControlGrid *newControlPoints,
-                             vtkDoubleArray *newUKnots,
-                             vtkDoubleArray *newVKnots);
 
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
