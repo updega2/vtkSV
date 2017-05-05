@@ -187,9 +187,16 @@ int vtkSVNURBSCurve::IncreaseDegree(const int numberOfIncreases)
   vtkNew(vtkSVControlGrid, newControlPoints);
 
   // Increase the degree
-  if (vtkSVNURBSUtils::CurveIncreaseDegree(this->ControlPointGrid, this->KnotVector,
-                                           curp, numberOfIncreases,
-                                           newControlPoints, newKnots) != SV_OK)
+  vtkDoubleArray *vKnots = NULL; // just one direction for curve
+  vtkDoubleArray *newVKnots = NULL; // just one direction for curve
+  int q = 0; // just one direction for curve
+  int dir = 0; // just one directio for curve
+  if (vtkSVNURBSUtils::IncreaseDegree(this->ControlPointGrid,
+                                      this->KnotVector, curp,
+                                      vKnots, q, dir,
+                                      numberOfIncreases,
+                                      newControlPoints,
+                                      newKnots, newVKnots) != SV_OK)
   {
     vtkErrorMacro("Error in raising the curve degree");
     return SV_ERROR;

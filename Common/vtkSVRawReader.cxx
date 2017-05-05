@@ -71,22 +71,6 @@ vtkSVRawReader::~vtkSVRawReader()
 }
 
 //------------------------------------------------------------------------------
-// Overload standard modified time function. If locator is modified,
-// then this object is modified as well.
-vtkMTimeType vtkSVRawReader::GetMTime()
-{
-  vtkMTimeType mTime1 = this->Superclass::GetMTime();
-
-  if (this->Locator)
-  {
-    vtkMTimeType mTime2 = this->Locator->GetMTime();
-    mTime1 = std::max(mTime1, mTime2);
-  }
-
-  return mTime1;
-}
-
-//------------------------------------------------------------------------------
 int vtkSVRawReader::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),

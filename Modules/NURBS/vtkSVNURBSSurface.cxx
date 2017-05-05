@@ -167,14 +167,14 @@ int vtkSVNURBSSurface::IncreaseDegree(const int numberOfIncreases, const int dim
   vtkNew(vtkDoubleArray, newVKnots);
   vtkNew(vtkSVControlGrid, newControlPoints);
 
-  if (vtkSVNURBSUtils::SurfaceIncreaseDegree(this->ControlPointGrid,
-                                             this->UKnotVector,
-                                             this->UDegree,
-                                             this->VKnotVector,
-                                             this->VDegree,
-                                             dim, numberOfIncreases,
-                                             newControlPoints,
-                                             newUKnots, newVKnots) != SV_OK)
+  if (vtkSVNURBSUtils::IncreaseDegree(this->ControlPointGrid,
+                                      this->UKnotVector,
+                                      this->UDegree,
+                                      this->VKnotVector,
+                                      this->VDegree,
+                                      dim, numberOfIncreases,
+                                      newControlPoints,
+                                      newUKnots, newVKnots) != SV_OK)
   {
     vtkErrorMacro("Error on degree elevation");
     return SV_ERROR;

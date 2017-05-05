@@ -223,21 +223,6 @@ public:
                                    const int degree,
                                    vtkSVNURBSCurveCollection *curves);
 
-  /** \brief Increases the degree of the curve by first performing bezier
-   *  extraction of the curve knot span, the increasing the degree, and then
-   *  removing unnecessary knot points.
-   *  \param controlPoints Control points of curve.
-   *  \param knots The knots of the curve.
-   *  \param degree Degree of the curve.
-   *  \param numberOfIncreases Number of times to increase the degree. Final
-   *  degree will be degree+numberOfIncreases.
-   *  \return newControlPoints The new control points after elevation.
-   *  \return newKnots The new knot span. */
-   static int CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
-                                  const int degree,
-                                  const int numberOfIncreases,
-                                  vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots);
-
   /** \brief Decreases the degree of the curve by first performing bezier
    *  extraction of the curve knot span, the decreasing the degree, and then
    *  removing unnecessary knot points.
@@ -392,7 +377,7 @@ public:
                                      const int extractDirection,
                                      vtkSVNURBSSurfaceCollection *surface);
 
-  /** \brief Increases the degree of the surface by first performing bezier
+  /** \brief Increases the degree of a nurbs object by first performing bezier
    *  extraction of the surface knot span, then increasing the degree, and then
    *  removing unnecessary knot points.
    *  \param controlPoints Control points of curve.
@@ -404,14 +389,14 @@ public:
    *  \return newControlPoints The new control points after elevation.
    *  \return newUKnots The new knot span in the u direction.
    *  \return newVKnots The new knot span in the v direction. */
-   static int SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
-                                    vtkDoubleArray *uKnots, const int uDegree,
-                                    vtkDoubleArray *vKnots, const int vDegree,
-                                    const int increaseDirection,
-                                    const int numberOfIncreases,
-                                    vtkSVControlGrid *newControlPoints,
-                                    vtkDoubleArray *newUKnots,
-                                    vtkDoubleArray *newVKnots);
+   static int IncreaseDegree(vtkSVControlGrid *controlPoints,
+                             vtkDoubleArray *uKnots, const int uDegree,
+                             vtkDoubleArray *vKnots, const int vDegree,
+                             const int increaseDirection,
+                             const int numberOfIncreases,
+                             vtkSVControlGrid *newControlPoints,
+                             vtkDoubleArray *newUKnots,
+                             vtkDoubleArray *newVKnots);
 
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);

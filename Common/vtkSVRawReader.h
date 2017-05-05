@@ -37,17 +37,17 @@
 #define vtkSVRawReader_h
 
 #include "vtkSVCommonModule.h" // For export macro
-#include "vtkAbstractPolyDataReader.h"
+#include "vtkPolyDataAlgorithm.h"
 
 class vtkCellArray;
 class vtkFloatArray;
 class vtkIncrementalPointLocator;
 class vtkPoints;
 
-class VTKSVCOMMON_EXPORT vtkSVRawReader : public vtkAbstractPolyDataReader
+class VTKSVCOMMON_EXPORT vtkSVRawReader : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVRawReader,vtkAbstractPolyDataReader);
+  vtkTypeMacro(vtkSVRawReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   /**
@@ -55,11 +55,11 @@ public:
    */
   static vtkSVRawReader *New();
 
-  /**
-   * Overload standard modified time function. If locator is modified,
-   * then this object is modified as well.
-   */
-  vtkMTimeType GetMTime();
+  //@{
+  /** \brief Set/Get FileName. */
+  vtkSetStringMacro(FileName);
+  vtkGetStringMacro(FileName);
+  //@}
 
   //@{
   /**
@@ -88,6 +88,7 @@ protected:
    */
   vtkIncrementalPointLocator* NewDefaultLocator();
 
+  char *FileName;
   int Merging;
   vtkIncrementalPointLocator *Locator;
 

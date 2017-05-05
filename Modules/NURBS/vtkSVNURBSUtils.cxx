@@ -987,319 +987,6 @@ int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkD
 }
 
 // ----------------------
-// CurveIncreaseDegree
-// ----------------------
-int vtkSVNURBSUtils::CurveIncreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
-                                         const int degree,
-                                         const int numberOfIncreases,
-                                         vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
-{
-  // Get dimensions of control point grid
-  int dims[3];
-  controlPoints->GetDimensions(dims);
-
-  // Really quick, convert all points to pw
-  vtkNew(vtkSVControlGrid, PW);
-  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
-
-  // Set values used by alg to more concise vars
-  int n = dims[0]-1;
-  int p = degree;
-  int t = numberOfIncreases;
-
-  int m   = n+p+1;
-  int ph  = p+t;
-  int ph2 = ph/2;
-
-  // Double check to see if correct vals were given
-  if (knots->GetNumberOfTuples() != m+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with knot span\n");
-    return SV_ERROR;
-  }
-
-  // Compute s by cmputing the number of nonnon-repeated internal knot vals
-  vtkNew(vtkIntArray, multiplicity);
-  vtkNew(vtkDoubleArray, singleValues);
-  vtkSVNURBSUtils::GetMultiplicity(knots, multiplicity, singleValues);
-
-  // S s is length of mult vector minus 2 (p+1 ends)
-  int s = multiplicity->GetNumberOfTuples() - 2;
-  int mhat = m+t*(s+2);
-  int nhat = n+t*(s+1);
-
-  // Set up new knots, just bezier knot span
-  newKnots->SetNumberOfTuples(mhat+1);
-
-  // New control points, updated each time for new bezier curve
-  newControlPoints->SetNumberOfControlPoints(nhat+1);
-  newControlPoints->SetDimensions(nhat+1, 1, 1);
-
-  // Set up tmp arrays
-  // Coeffecients for degree elevation
-  vtkNew(vtkDoubleArray, bezalphas);
-  bezalphas->SetNumberOfComponents(p+1);
-  bezalphas->SetNumberOfTuples(p+t+1);
-
-  // Bezier control points, degree p
-  vtkNew(vtkDoubleArray, bpts);
-  bpts->SetNumberOfComponents(4);
-  bpts->SetNumberOfTuples(p+1);
-
-  // Bezier control points, degree p+t
-  vtkNew(vtkDoubleArray, ebpts);
-  ebpts->SetNumberOfComponents(4);
-  ebpts->SetNumberOfTuples(p+t+1);
-
-  // Leftmost control pionts of next Bezier segment
-  vtkNew(vtkDoubleArray, nextbpts);
-  nextbpts->SetNumberOfComponents(4);
-  nextbpts->SetNumberOfTuples(p-1);
-
-  // Alpha values for knot insertion
-  vtkNew(vtkDoubleArray, alphas);
-  alphas->SetNumberOfTuples(p-1);
-
-  //Compute coefficients
-  bezalphas->SetComponent(0, 0, 1.0);
-  bezalphas->SetComponent(ph, p, 1.0);
-  for (int i=1; i<=ph2; i++)
-  {
-    double inv = 1.0/vtkSVMathUtils::Binom(ph, i);
-    int mpi = svminimum(p, i);
-    for (int j=svmaximum(0, i-t); j<=mpi; j++)
-    {
-      double newVal = inv*vtkSVMathUtils::Binom(p, j)*vtkSVMathUtils::Binom(t, i-j);
-      bezalphas->SetComponent(i, j, newVal);
-    }
-  }
-
-  for (int i=ph2+1; i<=ph-1; i++)
-  {
-    int mpi = svminimum(p, i);
-    for (int j=svmaximum(0, i-t); j<=mpi; j++)
-      bezalphas->SetComponent(i, j, bezalphas->GetComponent(ph-i, p-j));
-  }
-
-  // Set up iter vars
-  int mh   =  ph;
-  int kind =  ph+1;
-  int r    = -1;
-  int a    =  p;
-  int b    =  p+1;
-  int cind =  1;
-  double ua = knots->GetTuple1(0);
-
-  // Pass the first control point
-  double firstpw[4];
-  PW->GetControlPoint(0, 0, 0, firstpw);
-  newControlPoints->SetControlPoint(0, 0, 0, firstpw);
-
-  for (int i=0; i<=ph; i++)
-    newKnots->SetTuple1(i, ua);
-
-  // Initialize the first bezier segment.
-  for (int i=0; i<=p; i++)
-  {
-    double pw[4];
-    PW->GetControlPoint(i, 0 , 0, pw);
-    bpts->SetTuple(i, pw);
-  }
-
-  // Loop through knot vector
-  while (b<m)
-  {
-    // Calculate mult
-    int i=b;
-    while (b<m && knots->GetTuple1(b) == knots->GetTuple1(b+1))
-      b++;
-
-    // Set up iter vars
-    int mul   = b-i+1;
-    mh        = mh+mul+t;
-    double ub = knots->GetTuple1(b);
-    int oldr  = r;
-    r = p-mul;
-
-    // r multiplicities
-    int lbz;
-    if (oldr > 0)
-      lbz = (oldr+2)/2;
-    else
-      lbz = 1;
-    int rbz;
-    if (r >0)
-      rbz = ph-(r+1)/2;
-    else
-      rbz = ph;
-
-    // Insert this knot r times
-    // Extract bezier segment
-    if (r>0)
-    {
-      double numer = ub - ua;
-      for (int k=p; k>mul; k--)
-        alphas->SetTuple1(k-mul-1, numer/(knots->GetTuple1(a+k)-ua));
-
-      for (int j=1; j<=r; j++)
-      {
-        int save = r-j;
-        int mulj = mul+j;
-        for (int k=p; k>=mulj; k--)
-        {
-          double alpha = alphas->GetTuple1(k-mulj);
-          double pw0[4], pw1[4], newPoint[4];
-          bpts->GetTuple(k, pw0);
-          bpts->GetTuple(k-1, pw1);
-          vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
-          bpts->SetTuple(k, newPoint);
-        }
-        double pw[4];
-        bpts->GetTuple(p, pw);
-        nextbpts->SetTuple(save, pw);
-      }
-    }
-
-    // Elevate degree of segment
-    for (int i=lbz; i<=ph; i++)
-    {
-      double zero[4] = {0.0, 0.0, 0.0, 0.0};
-      ebpts->SetTuple(i, zero);
-      int mpi = svminimum(p, i);
-      for (int j=svmaximum(0, i-t); j<=mpi; j++)
-      {
-        double pw0[4], pw1[4], newPoint[4];
-        ebpts->GetTuple(i, pw0);
-        bpts->GetTuple(j, pw1);
-        vtkSVMathUtils::Add(pw0, 1.0, pw1, bezalphas->GetComponent(i, j), 4, newPoint);
-        ebpts->SetTuple(i, newPoint);
-      }
-    }
-
-    // Now remove unnecessary knots
-    if (oldr>1)
-    {
-      // Set up iter vars
-      int first = kind-2;
-      int last  = kind;
-
-      double den = ub - ua;
-      double bet = (ub-newKnots->GetTuple1(kind-1))/den;
-
-      // Loop through
-      for (int tr=1; tr<oldr; tr++)
-      {
-        int i = first;
-        int j = last;
-        int kj = j-kind+1;
-
-        // Compute the new control points
-        while (j-i > tr)
-        {
-          // Suspiscious
-          if (i<cind)
-          {
-            double alpha = (ub-newKnots->GetTuple1(i))/(ua-newKnots->GetTuple1(i));
-            double pw0[4], pw1[4], newPoint[4];
-            newControlPoints->GetControlPoint(i, 0, 0, pw0);
-            newControlPoints->GetControlPoint(i-1, 0, 0, pw1);
-            vtkSVMathUtils::Add(pw0, alpha, pw1, 1.0-alpha, 4, newPoint);
-            newControlPoints->SetControlPoint(i, 0, 0, newPoint);
-          }
-          if (j>=lbz)
-          {
-            if (j-tr<=kind-ph+oldr)
-            {
-              double gam = (ub-newKnots->GetTuple1(j-tr))/den;
-              double pw0[4], pw1[4], newPoint[4];
-              ebpts->GetTuple(kj, pw0);
-              ebpts->GetTuple(kj+1, pw1);
-              vtkSVMathUtils::Add(pw0, gam, pw1, 1.0-gam, 4, newPoint);
-              ebpts->SetTuple(kj, newPoint);
-            }
-            else
-            {
-              double pw0[4], pw1[4], newPoint[4];
-              ebpts->GetTuple(kj, pw0);
-              ebpts->GetTuple(kj+1, pw1);
-              vtkSVMathUtils::Add(pw0, bet, pw1, 1.0-bet, 4, newPoint);
-              ebpts->SetTuple(kj, newPoint);
-            }
-          }
-          i++;
-          j--;
-          kj--;
-        }
-        first--;
-        last++;
-      }
-    }
-
-    // Load knot ua for the end of the span
-    if (a!=p)
-    {
-      for (int i=0; i<ph-oldr; i++)
-      {
-        newKnots->SetTuple1(kind, ua);
-        kind++;
-      }
-    }
-
-    // Load remaining control points
-    for (int j=lbz; j<=rbz; j++)
-    {
-      double pw[4];
-      ebpts->GetTuple(j, pw);
-      newControlPoints->SetControlPoint(cind, 0, 0, pw);
-      cind++;
-    }
-
-    // Set up the next b points
-    if (b<m)
-    {
-      for (int j=0; j<r; j++)
-      {
-        double pw[4];
-        nextbpts->GetTuple(j, pw);
-        bpts->SetTuple(j, pw);
-      }
-      for (int j=r; j<=p; j++)
-      {
-        double pw[4];
-        PW->GetControlPoint(b-p+j, 0, 0, pw);
-        bpts->SetTuple(j, pw);
-      }
-      a=b;
-      b++;
-      ua=ub;
-    }
-    else
-    {
-      // This is the end
-      for (int i=0; i<=ph; i++)
-        newKnots->SetTuple1(kind+i, ub);
-    }
-  }
-  int nh = mh-ph-1;
-
-  if (mh != mhat)
-  {
-    fprintf(stderr,"Something went wrong: mhat %d does not equal iter m %d\n", mhat, mh);
-    return SV_ERROR;
-  }
-  if (nh != nhat)
-  {
-    fprintf(stderr,"Something went wrong: mhat %d does not equal iter m %d\n", nhat, nh);
-    return SV_ERROR;
-  }
-
-  // Realy quick, convert everything back to just p
-  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
-
-  return SV_OK;
-}
-
-// ----------------------
 // CurveDecreaseDegree
 // ----------------------
 int vtkSVNURBSUtils::CurveDecreaseDegree(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
@@ -2731,16 +2418,16 @@ int vtkSVNURBSUtils::SurfaceBezierExtraction(vtkSVControlGrid *controlPoints,
 }
 
 // ----------------------
-// SurfaceIncreaseDegree
+// IncreaseDegree
 // ----------------------
-int vtkSVNURBSUtils::SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
-                                           vtkDoubleArray *uKnots, const int uDegree,
-                                           vtkDoubleArray *vKnots, const int vDegree,
-                                           const int increaseDirection,
-                                           const int numberOfIncreases,
-                                           vtkSVControlGrid *newControlPoints,
-                                           vtkDoubleArray *newUKnots,
-                                           vtkDoubleArray *newVKnots)
+int vtkSVNURBSUtils::IncreaseDegree(vtkSVControlGrid *controlPoints,
+                                    vtkDoubleArray *uKnots, const int uDegree,
+                                    vtkDoubleArray *vKnots, const int vDegree,
+                                    const int increaseDirection,
+                                    const int numberOfIncreases,
+                                    vtkSVControlGrid *newControlPoints,
+                                    vtkDoubleArray *newUKnots,
+                                    vtkDoubleArray *newVKnots)
 {
   // Get dimensions of control point grid
   int dims[3];
@@ -2761,20 +2448,14 @@ int vtkSVNURBSUtils::SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
   int nuk = n+p+1;
   int nvk = m+q+1;
 
-  // Double check to see if correct vals were given
-  if (uKnots->GetNumberOfTuples() != nuk+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with knot span\n");
-    return SV_ERROR;
-  }
-  if (vKnots->GetNumberOfTuples() != nvk+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with knot span\n");
-    return SV_ERROR;
-  }
-
   if (dir == 0)
   {
+    // Double check to see if correct vals were given
+    if (uKnots->GetNumberOfTuples() != nuk+1)
+    {
+      fprintf(stderr,"Invalid number of control points given with knot span\n");
+      return SV_ERROR;
+    }
     // Compute s by cmputing the number of non-repeated internal knot vals
     vtkNew(vtkIntArray, multiplicity);
     vtkNew(vtkDoubleArray, singleValues);
@@ -2791,7 +2472,8 @@ int vtkSVNURBSUtils::SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
 
     // Set up new knots, just bezier knot span
     newUKnots->SetNumberOfTuples(nukhat+1);
-    newVKnots->DeepCopy(vKnots);
+    if (newVKnots != NULL && vKnots != NULL)
+      newVKnots->DeepCopy(vKnots);
 
     // New control points, updated each time for new bezier curve
     newControlPoints->SetNumberOfControlPoints((nhat+1)*(m+1));
@@ -3096,6 +2778,12 @@ int vtkSVNURBSUtils::SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
   }
   else if (dir == 1)
   {
+    if (vKnots->GetNumberOfTuples() != nvk+1)
+    {
+      fprintf(stderr,"Invalid number of control points given with knot span\n");
+      return SV_ERROR;
+    }
+
     // Compute s by cmputing the number of non-repeated internal knot vals
     vtkNew(vtkIntArray, multiplicity);
     vtkNew(vtkDoubleArray, singleValues);
@@ -3112,7 +2800,8 @@ int vtkSVNURBSUtils::SurfaceIncreaseDegree(vtkSVControlGrid *controlPoints,
 
     // Set up new knots, just bezier knot span
     newVKnots->SetNumberOfTuples(nvkhat+1);
-    newUKnots->DeepCopy(uKnots);
+    if (newUKnots != NULL && uKnots != NULL)
+      newUKnots->DeepCopy(uKnots);
 
     // New control points, updated each time for new bezier curve
     newControlPoints->SetNumberOfControlPoints((nhat+1)*(n+1));
