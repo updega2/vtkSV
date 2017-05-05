@@ -92,7 +92,7 @@ protected:
   int Merging;
   vtkIncrementalPointLocator *Locator;
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) VTK_OVERRIDE;
+  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int ReadRawFile(FILE *fp, vtkPoints*, vtkCellArray*);
 private:
   vtkSVRawReader(const vtkSVRawReader&);
