@@ -79,6 +79,9 @@ public:
   /** \brief read a polydata file. */
   static int ReadVTPFile(std::string inputFilename, vtkPolyData *polydata);
 
+  /** \brief read a raw file. */
+  static int ReadRawFile(std::string inputFilename, vtkPolyData *polydata);
+
   /** \brief read an stl or polydata file. */
   static int ReadInputFile(std::string inputFilename, vtkPolyData *polydata);
 
@@ -98,6 +101,12 @@ public:
   /** \brief write a vts file. */
   static int WriteVTSFile(std::string outputFilename, vtkStructuredGrid *writeStructuredGrid);
   static int WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName);
+  //@}
+  //
+  //@{
+  /** \brief write a raw file. */
+  static int WriteRawFile(std::string outputFilename, vtkPolyData *writePolyData);
+  static int WriteRawFile(std::string inputFilename,vtkPolyData *writePolyData,std::string attachName);
   //@}
 
 protected:

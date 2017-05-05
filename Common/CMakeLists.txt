@@ -32,8 +32,8 @@ set(module vtkSVCommon)
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx vtkSVSparseMatrix.cxx vtkSVMathUtils.cxx)
-set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   vtkSVSparseMatrix.h vtkSVMathUtils.h vtkSVGlobals.h)
+set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx vtkSVSparseMatrix.cxx vtkSVMathUtils.cxx vtkSVRawReader.cxx vtkSVRawWriter.cxx)
+set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   vtkSVSparseMatrix.h vtkSVMathUtils.h vtkSVGlobals.h vtkSVRawReader.h vtkSVRawWriter.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

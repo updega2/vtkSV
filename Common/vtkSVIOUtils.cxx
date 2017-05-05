@@ -35,6 +35,8 @@
 #include "vtkSmartPointer.h"
 #include "vtkSTLReader.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVRawReader.h"
+#include "vtkSVRawWriter.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -155,6 +157,28 @@ int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
 
   //Create an STL reader for reading the file
   vtkNew(vtkXMLPolyDataReader, reader);
+  reader->SetFileName(inputFilename.c_str());
+  reader->Update();
+
+  //Save the output information from the boundary filter to a Poly Data
+  //structure
+  polydata->DeepCopy(reader->GetOutput());
+  polydata->BuildLinks();
+
+  return SV_OK;
+}
+
+// ----------------------
+// ReadRawFile
+// ----------------------
+int vtkSVIOUtils::ReadRawFile(std::string inputFilename, vtkPolyData *polydata)
+{
+  // Check file exists
+  if (vtkSVIOUtils::CheckFileExists(inputFilename) != SV_OK)
+    return SV_ERROR;
+
+  //Create an STL reader for reading the file
+  vtkNew(vtkSVRawReader, reader);
   reader->SetFileName(inputFilename.c_str());
   reader->Update();
 
@@ -359,6 +383,54 @@ int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writ
 #else
   writer->SetInputData(writeStructuredGrid);
 #endif
+
+  writer->Write();
+  return SV_OK;
+}
+
+// ----------------------
+// WriteRawFile
+// ----------------------
+int vtkSVIOUtils::WriteRawFile(std::string outputFilename,vtkPolyData *writePolyData)
+{
+  // Get directory
+  std::string dirName = vtkSVIOUtils::GetPath(outputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(dirName) != SV_OK)
+    return SV_ERROR;
+
+  vtkNew(vtkSVRawWriter, writer);
+  writer->SetFileName(outputFilename.c_str());
+  writer->SetInputData(writePolyData);
+
+  writer->Write();
+  return SV_OK;
+}
+
+// ----------------------
+// WriteRawFile
+// ----------------------
+/** \details In this version, the inputFilename is used to get the path and raw name.
+ *  The attachName is then attached to the end of the inputFilename
+ *  for the ouput filename. */
+int vtkSVIOUtils::WriteRawFile(std::string inputFilename,vtkPolyData *writePolyData,std::string attachName)
+{
+  std::string rawName, pathName, outputFilename;
+
+  vtkNew(vtkSVRawWriter, writer);
+
+  pathName = vtkSVIOUtils::GetPath(inputFilename);
+  rawName = vtkSVIOUtils::GetRawName(inputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(pathName) != SV_OK)
+    return SV_ERROR;
+
+  outputFilename = pathName+"/"+rawName+attachName+".vtp";
+
+  writer->SetFileName(outputFilename.c_str());
+  writer->SetInputData(writePolyData);
 
   writer->Write();
   return SV_OK;
