@@ -521,120 +521,6 @@ int vtkSVNURBSUtils::SetCurveEndDerivatives(vtkTypedArray<double> *NP, vtkTypedA
 }
 
 // ----------------------
-// CurveInsertKnot
-// ----------------------
-int vtkSVNURBSUtils::CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
-                                     const int degree,
-                                     const double insertValue, const int span,
-                                     const int currentMultiplicity,
-                                     const int numberOfInserts,
-                                     vtkSVControlGrid *newControlPoints, vtkDoubleArray *newKnots)
-{
-  // Get dimensions of control point grid
-  int dims[3];
-  controlPoints->GetDimensions(dims);
-
-  vtkNew(vtkSVControlGrid, PW);
-  vtkSVNURBSUtils::GetPWFromP(controlPoints, PW);
-
-  // Set values used by alg to more concise vars
-  int np   = dims[0]-1;
-  int p    = degree;
-  double u = insertValue;
-  int k    = span;
-  int s    = currentMultiplicity;
-  int r    = numberOfInserts;
-
-  // Can't possibly add more knots at location than the degree of the curve
-  if ( (r+s) > p)
-  {
-    fprintf(stderr, "Error: number of inserts and current multiplicity cannot exceed the degree of the curve\n");
-  }
-
-  // number of knots
-  int mp = np+p+1;
-  int nq = np+r;
-
-  // Set output number of points and knots
-  newControlPoints->GetPoints()->SetNumberOfPoints(nq+1);
-  newControlPoints->SetDimensions(nq+1, 1, 1);
-  newKnots->SetNumberOfTuples(mp+r+1);
-
-  // Double check to see if correct vals were given
-  if (knots->GetNumberOfTuples() != mp+1)
-  {
-    fprintf(stderr,"Invalid number of control points given with knot span\n");
-    return SV_ERROR;
-  }
-
-  vtkNew(vtkDoubleArray, tmpPoints);
-  tmpPoints->SetNumberOfComponents(4);
-  tmpPoints->SetNumberOfTuples(p+1);
-  // Set unchanging knots
-  for (int i=0; i<=k; i++)
-    newKnots->SetTuple1(i, knots->GetTuple1(i));
-
-  // Set the new knot r times
-  for (int i=1; i<=r; i++)
-    newKnots->SetTuple1(k+i, u);
-
-  // Set the rest of the new knot span
-  for (int i=k+1; i<=mp; i++)
-    newKnots->SetTuple1(i+r, knots->GetTuple1(i));
-
-  // Set unchanging control points before knot
-  for (int i=0; i<=k-p; i++)
-  {
-    double pw[4];
-    PW->GetControlPoint(i, 0, 0, pw);
-    newControlPoints->SetControlPoint(i, 0, 0, pw);
-  }
-  for (int i=k-s; i<=np; i++)
-  {
-    double pw[4];
-    PW->GetControlPoint(i, 0, 0, pw);
-    newControlPoints->SetControlPoint(i+r, 0, 0, pw);
-  }
-
-  // Load tmp points
-  for (int i=0; i<=p-s; i++)
-  {
-    double pw[4];
-    PW->GetControlPoint(k-p+i, 0, 0, pw);
-    tmpPoints->SetTuple(i, pw);
-  }
-
-  // Insert the knot multiplicity r
-  int L=0;
-  for (int j=1; j<=r; j++)
-  {
-    L = k-p+j;
-    for (int i=0; i<=p-j-s; i++)
-    {
-      double alpha = (u - knots->GetTuple1(L+i))/(knots->GetTuple1(i+k+1)-knots->GetTuple1(L+i));
-      double pt0[4], pt1[4], newPoint[4];
-      tmpPoints->GetTuple(i+1, pt0);
-      tmpPoints->GetTuple(i, pt1);
-      vtkSVMathUtils::Add(pt0, alpha, pt1, 1.0-alpha, 4, newPoint);
-      tmpPoints->SetTuple(i, newPoint);
-    }
-
-    // Set the newly calculated points for this insert
-    newControlPoints->SetControlPoint(L, 0, 0, tmpPoints->GetTuple(0));
-    newControlPoints->SetControlPoint(k+r-j-s, 0, 0, tmpPoints->GetTuple(p-j-s));
-  }
-
-  // Place the tmp points in the output points
-  for (int i=L+1; i<k-s; i++)
-    newControlPoints->SetControlPoint(i, 0, 0, tmpPoints->GetTuple(i-L));
-
-  // Convert back to regular p
-  vtkSVNURBSUtils::GetPFromPW(newControlPoints);
-
-  return SV_OK;
-}
-
-// ----------------------
 // CurveRemoveKnot
 // ----------------------
 int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
@@ -2019,17 +1905,17 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
 }
 
 // ----------------------
-// SurfaceInsertKnot
+// InsertKnot
 // ----------------------
-int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
-                                       vtkDoubleArray *uKnots, const int uDegree,
-                                       vtkDoubleArray *vKnots, const int vDegree,
-                                       const int insertDirection,
-                                       const double insertValue, const int span,
-                                       const int currentMultiplicity,
-                                       const int numberOfInserts,
-                                       vtkSVControlGrid *newControlPoints,
-                                       vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots)
+int vtkSVNURBSUtils::InsertKnot(vtkSVControlGrid *controlPoints,
+                                vtkDoubleArray *uKnots, const int uDegree,
+                                vtkDoubleArray *vKnots, const int vDegree,
+                                const int insertDirection,
+                                const double insertValue, const int span,
+                                const int currentMultiplicity,
+                                const int numberOfInserts,
+                                vtkSVControlGrid *newControlPoints,
+                                vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots)
 {
   // Get dimensions of control point grid
   int dims[3];
@@ -2100,7 +1986,8 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       newUKnots->SetTuple1(i+r, uKnots->GetTuple1(i));
 
     // Copy the v knot vector to output
-    newVKnots->DeepCopy(vKnots);
+    if (newVKnots != NULL && vKnots != NULL)
+      newVKnots->DeepCopy(vKnots);
 
     // Set up alpha array
     double **alpha = new double*[p-s];
@@ -2205,7 +2092,8 @@ int vtkSVNURBSUtils::SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
       newVKnots->SetTuple1(i+r, vKnots->GetTuple1(i));
 
     // Copy the u knot vector to output
-    newUKnots->DeepCopy(uKnots);
+    if (newUKnots != NULL && uKnots != NULL)
+      newUKnots->DeepCopy(uKnots);
 
     // Set up alpha array
     double **alpha = new double*[q-s];

@@ -183,24 +183,6 @@ public:
                                     vtkDoubleArray *U, vtkDoubleArray *knots,
                                     vtkTypedArray<double> *newNP, vtkTypedArray<double> *newPoints);
 
-
-  /** \brief Inserts a given knot into a curve a given number of times.
-   *  \param controlPoints Control points of curve.
-   *  \param knots The knots of the curve.
-   *  \param degree Degree of the curve.
-   *  \param insertValue The knot value to be inserted.
-   *  \param span The span where the knot will be inserted. Use FindSpan.
-   *  \param currentMultiplicity The current multiplicity of the insertValue.
-   *  \param numberOfInserts Number of times to insert the knot.
-   *  \return newControlPoints The new control points after knot insertion.
-   *  \return newKnots The new knot span. */
-  static int CurveInsertKnot(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
-                             const int degree,
-                             const double insertValue, const int span,
-                             const int currentMultiplicity,
-                             const int numberOfInserts,
-                             vtkSVControlGrid* newControlPoints, vtkDoubleArray *newKnots);
-
   /** \brief Removes a given knot from a curve.
    *  \param controlPoints Control points of curve.
    *  \param knots The knots of the curve.
@@ -354,7 +336,7 @@ public:
                                       vtkTypedArray<double> *newNPU, vtkTypedArray<double> *newNPV,
                                       vtkTypedArray<double> *newPoints);
 
-  /** \brief Inserts a given knot into a surface a given number of times.
+  /** \brief Inserts a given knot into a nurbs object a given number of times.
    *  \param controlPoints Control points of surface.
    *  \param uKnots The knots of the surface in the u direction.
    *  \param uDegree Degree of the surface in the u direction.
@@ -367,15 +349,15 @@ public:
    *  \return newControlPoints The new control points after knot insertion.
    *  \return newUKnots The new knot span in the u direction.
    *  \return newVKnots The new knot span in the v direction. */
-  static int SurfaceInsertKnot(vtkSVControlGrid *controlPoints,
-                               vtkDoubleArray *uKnots, const int uDegree,
-                               vtkDoubleArray *vKnots, const int vDegree,
-                               const int insertDirection,
-                               const double insertValue, const int span,
-                               const int currentMultiplicity,
-                               const int numberOfInserts,
-                               vtkSVControlGrid *newControlPoints,
-                               vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
+  static int InsertKnot(vtkSVControlGrid *controlPoints,
+                        vtkDoubleArray *uKnots, const int uDegree,
+                        vtkDoubleArray *vKnots, const int vDegree,
+                        const int insertDirection,
+                        const double insertValue, const int span,
+                        const int currentMultiplicity,
+                        const int numberOfInserts,
+                        vtkSVControlGrid *newControlPoints,
+                        vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
 
   /** \brief Performs knot refinement. Takes a set of given knots and inputs
    *  them into the knot span.

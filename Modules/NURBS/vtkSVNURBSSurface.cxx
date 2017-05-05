@@ -246,15 +246,15 @@ int vtkSVNURBSSurface::InsertKnot(const double newKnot, const int dim, const int
   vtkNew(vtkDoubleArray, newVKnots);
   vtkNew(vtkSVControlGrid, newControlPoints);
 
-  if (vtkSVNURBSUtils::SurfaceInsertKnot(this->ControlPointGrid,
-                                         this->UKnotVector,
-                                         this->UDegree,
-                                         this->VKnotVector,
-                                         this->VDegree,
-                                         dim, newKnot, span,
-                                         mult, numberOfInserts,
-                                         newControlPoints,
-                                         newUKnots, newVKnots) != SV_OK)
+  if (vtkSVNURBSUtils::InsertKnot(this->ControlPointGrid,
+                                  this->UKnotVector,
+                                  this->UDegree,
+                                  this->VKnotVector,
+                                  this->VDegree,
+                                  dim, newKnot, span,
+                                  mult, numberOfInserts,
+                                  newControlPoints,
+                                  newUKnots, newVKnots) != SV_OK)
   {
     vtkErrorMacro("Error on knot insertion");
     return SV_ERROR;

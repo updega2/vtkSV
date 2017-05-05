@@ -41,12 +41,13 @@ vtk_module(vtkSVCommon
   "${DOCUMENTATION}"
   DEPENDS
   vtkCommonDataModel
-  vtkIOXML
-  vtkIOGeometry
   vtkFiltersCore
   vtkFiltersExtraction
   vtkFiltersGeometry
   vtkFiltersSources
+  vtkIOCore
+  vtkIOGeometry
+  vtkIOXML
   TEST_DEPENDS
   vtkInteractionStyle
   vtkRendering${VTK_RENDERING_BACKEND}

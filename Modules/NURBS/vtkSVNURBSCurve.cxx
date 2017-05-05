@@ -260,11 +260,16 @@ int vtkSVNURBSCurve::InsertKnot(const double newKnot, const int numberOfInserts)
   vtkNew(vtkSVControlGrid, newControlPoints);
 
   // Insert the knot
-  if (vtkSVNURBSUtils::CurveInsertKnot(this->ControlPointGrid,
-                                       this->KnotVector,
-                                       p, newKnot, span,
-                                       mult, numberOfInserts,
-                                       newControlPoints, newKnots) != SV_OK)
+  vtkDoubleArray *vKnots = NULL; // just one direction for curve
+  vtkDoubleArray *newVKnots = NULL; // just one direction for curve
+  int q = 0; // just one direction for curve
+  int dir = 0; // just one directio for curve
+  if (vtkSVNURBSUtils::InsertKnot(this->ControlPointGrid,
+                                  this->KnotVector, p,
+                                  vKnots, q, dir,
+                                  newKnot, span,
+                                  mult, numberOfInserts,
+                                  newControlPoints, newKnots, newVKnots) != SV_OK)
   {
     vtkErrorMacro("Error on knot insertion");
     return SV_ERROR;
