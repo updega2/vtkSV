@@ -370,13 +370,19 @@ int vtkSVNURBSCurve::RemoveKnotAtIndex(const int knotIndex, const int numberOfRe
   vtkNew(vtkDoubleArray, newKnots);
   vtkNew(vtkSVControlGrid, newControlPoints);
 
-  // Insert the knot
-  if (vtkSVNURBSUtils::CurveRemoveKnot(this->ControlPointGrid,
-                                       this->KnotVector,
-                                       p, removeKnot, knotIndex,
-                                       mult, numberOfRemovals,
-                                       tol,
-                                       newControlPoints, newKnots) != SV_OK)
+  // Remove the knot
+  vtkDoubleArray *vKnots = NULL; // just one direction for curve
+  vtkDoubleArray *newVKnots = NULL; // just one direction for curve
+  int q = 0; // just one direction for curve
+  int dir = 0; // just one directio for curve
+  if (vtkSVNURBSUtils::RemoveKnot(this->ControlPointGrid,
+                                  this->KnotVector, p,
+                                  vKnots, q,
+                                  dir, removeKnot, knotIndex,
+                                  mult, numberOfRemovals,
+                                  tol,
+                                  newControlPoints,
+                                  newKnots, newVKnots) != SV_OK)
   {
     vtkErrorMacro("Error on knot insertion");
     return SV_ERROR;

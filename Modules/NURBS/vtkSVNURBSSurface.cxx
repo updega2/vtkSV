@@ -212,6 +212,61 @@ int vtkSVNURBSSurface::IncreaseDegree(const int numberOfIncreases, const int dim
 }
 
 // ----------------------
+// DecreaseDegree
+// ----------------------
+int vtkSVNURBSSurface::DecreaseDegree(const double tolerance, const int dim)
+{
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newUKnots);
+  vtkNew(vtkDoubleArray, newVKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  if (vtkSVNURBSUtils::DecreaseDegree(this->ControlPointGrid,
+                                      this->UKnotVector,
+                                      this->UDegree,
+                                      this->VKnotVector,
+                                      this->VDegree,
+                                      dim,
+                                      tolerance,
+                                      newControlPoints,
+                                      newUKnots, newVKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error on degree elevation");
+    return SV_ERROR;
+  }
+
+  int dims[3];
+  newControlPoints->GetDimensions(dims);
+  if (dim == 0)
+  {
+    if (dims[0]+this->UDegree != newUKnots->GetNumberOfTuples())
+    {
+      vtkErrorMacro("Error in setting the correct control points and knots during surface degree elevation");
+      return SV_ERROR;
+    }
+  }
+  else if (dim == 1)
+  {
+    if (dims[1]+this->VDegree != newVKnots->GetNumberOfTuples())
+    {
+      vtkErrorMacro("Error in setting the correct control points and knots during surface degree elevation");
+      return SV_ERROR;
+    }
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetUKnotVector(newUKnots);
+  this->SetVKnotVector(newVKnots);
+  if (dim == 0)
+    this->UDegree -= 1;
+  else if (dim == 1)
+    this->VDegree -= 1;
+
+  return SV_OK;
+}
+
+// ----------------------
 // InsertKnot
 // ----------------------
 int vtkSVNURBSSurface::InsertKnot(const double newKnot, const int dim, const int numberOfInserts)
@@ -295,6 +350,88 @@ int vtkSVNURBSSurface::InsertKnots(vtkDoubleArray *newKnots, const int dim)
   this->SetControlPointGrid(newControlPoints);
   this->SetUKnotVector(newUKnotSpan);
   this->SetVKnotVector(newVKnotSpan);
+
+  return SV_OK;
+}
+
+// ----------------------
+// RemoveKnot
+// ----------------------
+int vtkSVNURBSSurface::RemoveKnot(const double removeKnot, const int dim, const int numberOfRemovals, const double tolerance)
+{
+  int p;
+  if (dim == 0)
+    p = this->UDegree;
+  else if(dim == 1)
+    p = this->VDegree;
+
+  // Get the location of the knot
+  int knotIndex = -1;
+  for (int i=0; i<this->UVKnotVectors[dim]->GetNumberOfTuples(); i++)
+  {
+    if (this->UVKnotVectors[dim]->GetTuple1(i) == removeKnot)
+    {
+      knotIndex = i;
+      break;
+    }
+  }
+
+  if (knotIndex == -1)
+  {
+    vtkErrorMacro("Knot value was not found in span");
+    return SV_ERROR;
+  }
+
+  if (this->RemoveKnotAtIndex(knotIndex, dim, numberOfRemovals, tolerance) != SV_OK)
+    return SV_ERROR;
+
+  return SV_OK;
+}
+
+// ----------------------
+// RemoveKnotAtIndex
+// ----------------------
+int vtkSVNURBSSurface::RemoveKnotAtIndex(const int knotIndex, const int dim,
+                                         const int numberOfRemovals, const double tolerance)
+{
+  int p;
+  if (dim == 0)
+    p = this->UDegree;
+  else if(dim == 1)
+    p = this->VDegree;
+
+  double removeKnot = this->UVKnotVectors[dim]->GetTuple1(knotIndex);
+  int mult;
+  if (vtkSVNURBSUtils::FindKnotMultiplicity(knotIndex, removeKnot, this->UVKnotVectors[dim], mult) != SV_OK)
+  {
+    vtkErrorMacro("Error in getting multiplicity");
+    return SV_ERROR;
+  }
+
+  // Set up new knots and points
+  vtkNew(vtkDoubleArray, newUKnots);
+  vtkNew(vtkDoubleArray, newVKnots);
+  vtkNew(vtkSVControlGrid, newControlPoints);
+
+  if (vtkSVNURBSUtils::RemoveKnot(this->ControlPointGrid,
+                                  this->UKnotVector,
+                                  this->UDegree,
+                                  this->VKnotVector,
+                                  this->VDegree,
+                                  dim, removeKnot, knotIndex,
+                                  mult, numberOfRemovals,
+                                  tolerance,
+                                  newControlPoints,
+                                  newUKnots, newVKnots) != SV_OK)
+  {
+    vtkErrorMacro("Error on knot insertion");
+    return SV_ERROR;
+  }
+
+  // Replace existing data with new data
+  this->SetControlPointGrid(newControlPoints);
+  this->SetUKnotVector(newUKnots);
+  this->SetVKnotVector(newVKnots);
 
   return SV_OK;
 }

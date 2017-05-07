@@ -104,7 +104,7 @@ int TestSurfaceBezierExtraction(int argc, char *argv[])
   surface->ExtractBezierPatches(surfaces); // Remove the first knot
 
   // For baseline test
-  //surface->GeneratePolyDataRepresentation(0.01, 0.01);
+  surface->GeneratePolyDataRepresentation(0.01, 0.01);
 
   vtkNew(vtkAppendPolyData, appender);
   for (int i=0; i<surfaces->GetNumberOfItems(); i++)

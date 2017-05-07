@@ -208,6 +208,62 @@ public:
                              vtkDoubleArray *newUKnots,
                              vtkDoubleArray *newVKnots);
 
+  /** \brief Removes a given knot from a nurbs object.
+   *  \param controlPoints Control points of curve.
+   *  \param uKnots The knots of the surface in the u direction.
+   *  \param uDegree Degree of the surface in the u direction.
+   *  \param vKnots The knots of the surface in the v direction.
+   *  \param vDegree Degree of the surface in the v direction.
+   *  \param removeDirection Direction to remove knot from.
+   *  \param removeValue The knot value to be removed.
+   *  \param removeIndex The index of the knot to be removed.
+   *  \param currentMultiplicity The current multiplicity of the insertValue.
+   *  \param numberOfRemovals Number of times to remove the knot.
+   *  \return newControlPoints The new control points after knot insertion.
+   *  \return newUKnots The new knot span in the u direction.
+   *  \return newVKnots The new knot span in the v direction. */
+  static int RemoveKnot(vtkSVControlGrid *controlPoints,
+                        vtkDoubleArray *uKnots, const int uDegree,
+                        vtkDoubleArray *vKnots, const int vDegree,
+                        const int removeDirection,
+                        const double removeValue, const int removeIndex,
+                        const int currentMultiplicity,
+                        const int numberOfRemovals,
+                        const double tol,
+                        vtkSVControlGrid *newControlPoints,
+                        vtkDoubleArray *newUKnots, vtkDoubleArray *newVKnots);
+
+  /** \brief Decreases the degree of the NURBS object by first performing bezier
+   *  extraction of the curve knot span, the decreasing the degree, and then
+   *  removing unnecessary knot points.
+   *  \param controlPoints Control points of curve.
+   *  \param uKnots The knots of the surface in the u direction.
+   *  \param uDegree Degree of the surface in the u direction.
+   *  \param vKnots The knots of the surface in the v direction.
+   *  \param vDegree Degree of the surface in the v direction.
+   *  \param decreaseDirection Direction to decrease.
+   *  \param tolerance Tol to withold during reduction.
+   *  \return newControlPoints The new control points after reduction.
+   *  \return newUKnots The new knot span in the u direction.
+   *  \return newVKnots The new knot span in the v direction. */
+   static int DecreaseDegree(vtkSVControlGrid *controlPoints,
+                             vtkDoubleArray *uKnots, const int uDegree,
+                             vtkDoubleArray *vKnots, const int vDegree,
+                             const int decreaseDirection,
+                             const double tolerance,
+                             vtkSVControlGrid *newControlPoints,
+                             vtkDoubleArray *newUKnots,
+                             vtkDoubleArray *newVKnots);
+
+  /** \brief Decreases the degree of a bezier NURBS by 1.
+   *  \param controlPoints Control points of NURBS is control point grid (meant to be used internal to other funcs)
+   *  \return maxError defines the error incurred when decreasing degree..
+   *  \return newControlPoints The new control points after reduction. */
+   static int BezierNURBSDecreaseDegree(vtkSVControlGrid *controlPoints,
+                                        const int decreaseDirection,
+                                        double &maxError,
+                                        vtkSVControlGrid *newControlPoints);
+
   // Curve functions
   /** \brief Get the control points of a curve given the input data points
    *  an approximating array of paramter values, control point weights (equal
@@ -291,7 +347,7 @@ public:
 
   /** \brief Decreases the degree of a bezier curve by 1.
    *  \param controlPoints Control points of curve as 4 comp array (meant to be used internal to other funcs)
-   *  \param tolerance Tol to withold during reduction.
+   *  \return maxError defines the error incurred when decreasing degree..
    *  \return newControlPoints The new control points after reduction. */
    static int BezierCurveDecreaseDegree(vtkDoubleArray *controlPoints,
                                         double &maxError,

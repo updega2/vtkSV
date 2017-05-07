@@ -121,8 +121,12 @@ public:
 
   //Functions to manipulate the geometry
   void UpdateSurface() {} /**< \brief Unimplemented */
+
+  /** \brief Increase the degree of the surface a specified number of times. */
   int IncreaseDegree(const int numberOfIncreases, const int dim);
-  int DecreaseDegree(const double tolerance, const int dim) {return 0;} /**< \brief Unimplemented */
+
+  /** \brief Decrease the degree of the surface. Will incurr some error. */
+  int DecreaseDegree(const double tolerance, const int dim);
 
   /** \brief Functions to set the U and V direction knot spans. */
   int SetUKnotVector(vtkDoubleArray *knots);
@@ -135,8 +139,11 @@ public:
    *  done as this is not checked. */
   int InsertKnots(vtkDoubleArray *newKnots, const int dim);
 
-  int RemoveKnot(const double removeKnot, const int dim, const int numberOfRemovals, const double tolerance) {return 0;} /**< \brief Unimplemented */
-  int RemoveKnotAtIndex(const int index, const int dim, const double tolerance) {return 0;} /**< \brief Unimplemented */
+  /** \brief Remove a knot a certain number of times.*/
+  int RemoveKnot(const double removeKnot, const int dim, const int numberOfRemovals, const double tolerance);
+
+  /** \brief Remove a knot at a specified location in the knot span. */
+  int RemoveKnotAtIndex(const int index, const int dim, const int numberOfRemovals, const double tolerance);
 
   int SetKnot(const int index, const int dim, const double newKnot) {return 0;} /**< \brief Unimplemented */
   int SetKnots(vtkIntArray *indices, const int dim, vtkDoubleArray *newKnots) {return 0;} /**< \brief Unimplemented */

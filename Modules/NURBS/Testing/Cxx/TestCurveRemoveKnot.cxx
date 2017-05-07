@@ -54,14 +54,18 @@ int TestCurveRemoveKnot(int argc, char *argv[])
 {
   // Set the curve knot insertion details
   int p=3;     //degree
-  int np=30;     //control points
+  int np=29;     //control points
   int m=p+np+1; //m
-  double u=18./27;   // remove value
+  double u=13./26;   // remove value
   int r=1;     // number of removals
 
   // Set the knot vector
   vtkNew(vtkDoubleArray, knots);
   vtkSVNURBSUtils::LinSpaceClamp(0, 1, m, p, knots);
+  int span;
+  vtkSVNURBSUtils::FindSpan(p, 14./26, knots, span);
+  for (int i=span-p; i<span; i++)
+    knots->SetTuple1(i, 13./26);
 
   // X and Y data values
   double xmin = 0.0; double xmax=5.0;
@@ -98,6 +102,30 @@ int TestCurveRemoveKnot(int argc, char *argv[])
     fprintf(stderr, "Curve was not updated to correct number of knot points\n");
     return EXIT_FAILURE;
   }
+  curve->GeneratePolyDataRepresentation(0.01);
+
+  // Set up mapper
+  vtkNew(vtkPolyDataMapper, mapper);
+  mapper->SetInputData(curve->GetCurveRepresentation());
+
+  // Set up actor
+  vtkNew(vtkActor, actor);
+  actor->SetMapper(mapper);
+
+  // Set up renderer and window
+  vtkNew(vtkRenderer, renderer);
+  vtkNew(vtkRenderWindow, renWin);
+  renWin->AddRenderer( renderer );
+  renderer->AddActor(actor);
+  renderer->SetBackground(.1, .2, .3);
+
+  // Set up interactor
+  vtkNew(vtkRenderWindowInteractor, renWinInteractor);
+  renWinInteractor->SetRenderWindow( renWin );
+
+  // Render
+  renWin->Render();
+  renWinInteractor->Start();
 
   return EXIT_SUCCESS;
 }

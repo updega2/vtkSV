@@ -29,14 +29,14 @@
  *=========================================================================*/
 
 #include "vtkCamera.h"
+#include "vtkAppendPolyData.h"
 #include "vtkSVControlGrid.h"
 #include "vtkDataObject.h"
 #include "vtkPoints.h"
-#include "vtkPointData.h"
-#include "vtkPolyDataMapper.h"
-#include "vtkRenderer.h"
-#include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
+#include <vtkPolyDataMapper.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
@@ -50,14 +50,13 @@
 
 #include <unistd.h>
 
-// Bug for setting mp=3, increasing degree
-int TestSurfaceIncreaseDegree(int argc, char *argv[])
+int TestSurfaceRemoveKnot(int argc, char *argv[])
 {
   // Set the curve knot insertion details
   int p=2;     //degree
   int q=1;     //degree
   int np=9;     //control points
-  int mp=2;     //control points
+  int mp=5;     //control points
   int nuk=p+np+1; //nuk
   int nvk=q+mp+1; //nvk
 
@@ -67,15 +66,15 @@ int TestSurfaceIncreaseDegree(int argc, char *argv[])
   controlPointGrid->SetNumberOfControlPoints(np*mp);
   for (int j=0; j<mp; j++)
   {
-    controlPointGrid->SetControlPoint(0, j, 0, 1.0, 0.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(1, j, 0, 1.0, 1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(2, j, 0, 0.0, 1.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(3, j, 0, -1.0, 1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(4, j, 0, -1.0, 0.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(5, j, 0, -1.0, -1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(6, j, 0, 0.0, -1.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(7, j, 0, 1.0, -1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(8, j, 0, 1.0, 0.0, j+(j*9), 1.0);
+    controlPointGrid->SetControlPoint(0, j, 0, 1.0, 0.0, (j*9), 1.0);
+    controlPointGrid->SetControlPoint(1, j, 0, 1.0, 1.0, (j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(2, j, 0, 0.0, 1.0, (j*9), 1.0);
+    controlPointGrid->SetControlPoint(3, j, 0, -1.0, 1.0, (j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(4, j, 0, -1.0, 0.0, (j*9), 1.0);
+    controlPointGrid->SetControlPoint(5, j, 0, -1.0, -1.0, (j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(6, j, 0, 0.0, -1.0, (j*9), 1.0);
+    controlPointGrid->SetControlPoint(7, j, 0, 1.0, -1.0, (j*9), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(8, j, 0, 1.0, 0.0, (j*9), 1.0);
   }
 
   // uKnot vector equal space
@@ -101,53 +100,20 @@ int TestSurfaceIncreaseDegree(int argc, char *argv[])
   surface->SetUDegree(p);
   surface->SetVDegree(q);
 
-  // Now lets increase the degree
+  // Increase the degree so we have a duplicate knot to
+  // remove
   double du = 2;
   double dv = 3;
   surface->IncreaseDegree(du, 0);
   surface->IncreaseDegree(dv, 1);
 
-  // Check the result
-  if (surface->GetUDegree() != p+du)
-  {
-    fprintf(stderr, "Curve was not updated to correct degree\n");
-    return EXIT_FAILURE;
-  }
-  if (surface->GetVDegree() != q+dv)
-  {
-    fprintf(stderr, "Curve was not updated to correct degree\n");
-    return EXIT_FAILURE;
-  }
+  // Remove knot
+  double v = 1./2;
+  int r = 1;
+  surface->RemoveKnot(v, 1, r, 0.01);
 
-  surface->GeneratePolyDataRepresentation(0.01, 0.01);
-
-  // Set up mapper
-  vtkNew(vtkPolyDataMapper, mapper);
-  mapper->SetInputData(surface->GetSurfaceRepresentation());
-
-  // Set up actor
-  vtkNew(vtkActor, actor);
-  actor->SetMapper(mapper);
-
-  // Set up renderer and window
-  vtkNew(vtkRenderer, renderer);
-  vtkNew(vtkRenderWindow, renWin);
-  renWin->AddRenderer( renderer );
-  renderer->AddActor(actor);
-  renderer->SetBackground(.1, .2, .3);
-
-  // Set up interactor
-  vtkNew(vtkRenderWindowInteractor, renWinInteractor);
-  renWinInteractor->SetRenderWindow( renWin );
-
-  vtkCamera *camera = renderer->GetActiveCamera();
-  renderer->ResetCamera();
-  camera->Azimuth(45);
-  camera->Elevation(45);
-
-  // Render
-  renWin->Render();
-  renWinInteractor->Start();
+  // For baseline test
+  //surface->GeneratePolyDataRepresentation(0.01, 0.01);
 
   return EXIT_SUCCESS;
 }

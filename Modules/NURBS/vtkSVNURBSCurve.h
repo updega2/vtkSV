@@ -136,10 +136,7 @@ public:
    *  done as this is not checked. */
   int InsertKnots(vtkDoubleArray *newKnots);
 
-  /** \brief remove single knot from knot span of specified value. Value must match
-   *  exactly, a tolerance is not used. To remove a knot at a certain location, use
-   *  the following function. If the knot exists multiple times, the first occurence
-   *  of the knot will be used. */
+  /** \brief remove single knot from knot span of specified value. Value must match knots exactly. */
   int RemoveKnot(const double removeKnot, const int numberOfRemovals, const double tol);
 
   /** \brief remove single knot at a specified location in the knot span. */
