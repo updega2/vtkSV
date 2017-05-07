@@ -2082,6 +2082,7 @@ int vtkSVNURBSUtils::DecreaseDegree(vtkSVControlGrid *controlPoints,
         }
       }
 
+
       // Now set up for next pass;
       if (b<nvk)
       {

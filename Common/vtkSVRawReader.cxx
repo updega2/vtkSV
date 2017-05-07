@@ -37,11 +37,13 @@
 #include "vtkIncrementalPointLocator.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkLine.h"
 #include "vtkMergePoints.h"
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkSVGlobals.h"
 
 #include <algorithm>
 #include <cctype>
@@ -169,7 +171,12 @@ int vtkSVRawReader::RequestData(
   output->SetPoints(mergedPts);
   mergedPts->Delete();
 
-  output->SetPolys(mergedPolys);
+  vtkNew(vtkIdList, testCell);
+  mergedPolys->GetCell(0, testCell);
+  if (testCell->GetNumberOfIds() == 3)
+    output->SetPolys(mergedPolys);
+  else if (testCell->GetNumberOfIds() == 2)
+    output->SetLines(mergedPolys);
   mergedPolys->Delete();
 
   if (this->Locator)
@@ -191,7 +198,8 @@ int vtkSVRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
   char  line[256];
   float x[3];
   int   top[2];
-  vtkIdType pts[3];
+  vtkIdType tripts[3];
+  vtkIdType linepts[2];
 
   // header:
   int lineCount = 0;
@@ -205,8 +213,13 @@ int vtkSVRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
     // Go into loop, reading points
     for (int i=0; i<top[0]; i++)
     {
-      if (fscanf(fp, "%f %f %f\n", x, x+1, x+2) != 3)
+      if (!fgets(line, 255, fp))
+        throw std::runtime_error("unable to read Raw vertex line.");
+
+      int numItems = sscanf(line, "%f %f %f\n", x, x+1, x+2);
+      if (numItems != 3)
       {
+        fprintf(stderr,"%d items on vertex line.\n", numItems);
         throw std::runtime_error("unable to read Raw vertex.");
       }
       lineCount++;
@@ -217,12 +230,32 @@ int vtkSVRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
     // Go into loop, reading cells
     for (int i=0; i<top[1]; i++)
     {
-      if (fscanf(fp, "%lld %lld %lld\n", pts, pts+1, pts+2) != 3)
+      if (!fgets(line, 255, fp))
+        throw std::runtime_error("unable to read Raw cell line.");
+
+      int numItems = sscanf(line, "%lld %lld %lld\n", tripts, tripts+1, tripts+2);
+      if (numItems == 3)
       {
-        throw std::runtime_error("unable to read Raw cell.");
+        newPolys->InsertNextCell(3, tripts);
       }
+      else
+      {
+        numItems = sscanf(line, "%lld %lld\n", linepts, linepts+1);
+        if (numItems == 2)
+        {
+          vtkNew(vtkLine, newLine);
+          newLine->GetPointIds()->SetId(0, linepts[0]);
+          newLine->GetPointIds()->SetId(1, linepts[1]);
+          newPolys->InsertNextCell(newLine);
+        }
+        else
+        {
+          fprintf(stderr,"%d items on cell line.\n", numItems);
+          throw std::runtime_error("unable to read Raw cell.");
+        }
+      }
+
       lineCount++;
-      newPolys->InsertNextCell(3, pts);
       if ((newPolys->GetNumberOfCells() % 5000) == 0)
       {
         this->UpdateProgress((newPolys->GetNumberOfCells()%50000) / 50000.0);
