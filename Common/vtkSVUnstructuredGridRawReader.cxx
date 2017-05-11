@@ -240,7 +240,7 @@ int vtkSVUnstructuredGridRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
         throw std::runtime_error("unable to read Raw cell.");
       }
 
-      lineCoun++;
+      lineCount++;
       if ((newCells->GetNumberOfCells() % 5000) == 0)
       {
         this->UpdateProgress((newCells->GetNumberOfCells()%50000) / 50000.0);
