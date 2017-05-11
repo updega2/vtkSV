@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
   }
   if (!OutputProvided)
   {
-    std::cout << "Error, output filename needs to be provided, are you converting to a .vtp (triangle) or .vtu (hex) mesh." << endl;
-    return EXIT_FAILURE;
+    std::cout << "WARNING: Output Filename not provided, setting output name based on the input filename" <<endl;
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+".vtp";
   }
 
   if (strncmp(vtkSVIOUtils::GetExt(inputFilename).c_str(), "raw", 3))
@@ -94,40 +94,23 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-  if (strncmp(vtkSVIOUtils::GetExt(outputFilename).c_str(), "vtp", 3) && strncmp(vtkSVIOUtils::GetExt(outputFilename).c_str(), "vtu", 3))
+  if (strncmp(vtkSVIOUtils::GetExt(outputFilename).c_str(), "vtp", 3))
   {
-    std::cout << "Error, output does not have vtp or vtu extension" << endl;
+    std::cout << "Error, output does not have vtp extension" << endl;
     return EXIT_FAILURE;
   }
 
-  if (!strncmp(vtkSVIOUtils::GetExt(outputFilename).c_str(), "vtp", 3))
-  {
-    // Call Function to Read File
-    std::cout<<"Reading Files..."<<endl;
-    vtkNew(vtkPolyData, inputPd);
-    if (vtkSVIOUtils::ReadPolyDataRawFile(inputFilename,inputPd) != SV_OK)
-      return EXIT_FAILURE;
+  // Call Function to Read File
+  std::cout<<"Reading Files..."<<endl;
+  vtkNew(vtkPolyData, inputPd);
+  if (vtkSVIOUtils::ReadPolyDataRawFile(inputFilename,inputPd) != SV_OK)
+    return EXIT_FAILURE;
 
 
-    //Write Files
-    std::cout<<"Writing Files..."<<endl;
-    if (vtkSVIOUtils::WriteVTPFile(outputFilename, inputPd) != SV_OK)
-      return EXIT_FAILURE;
-  }
-  else if (!strncmp(vtkSVIOUtils::GetExt(outputFilename).c_str(), "vtu", 3))
-  {
-    // Call Function to Read File
-    std::cout<<"Reading Files..."<<endl;
-    vtkNew(vtkUnstructuredGrid, inputUg);
-    if (vtkSVIOUtils::ReadUnstructuredGridRawFile(inputFilename,inputUg) != SV_OK)
-      return EXIT_FAILURE;
-
-
-    //Write Files
-    std::cout<<"Writing Files..."<<endl;
-    if (vtkSVIOUtils::WriteVTUFile(outputFilename, inputUg) != SV_OK)
-      return EXIT_FAILURE;
-  }
+  //Write Files
+  std::cout<<"Writing Files..."<<endl;
+  if (vtkSVIOUtils::WriteVTPFile(outputFilename, inputPd) != SV_OK)
+    return EXIT_FAILURE;
 
   //Exit the program without errors
   return EXIT_SUCCESS;

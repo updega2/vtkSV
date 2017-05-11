@@ -35,8 +35,9 @@
 #include "vtkSmartPointer.h"
 #include "vtkSTLReader.h"
 #include "vtkSVGlobals.h"
-#include "vtkSVRawReader.h"
+#include "vtkSVPolyDataRawReader.h"
 #include "vtkSVRawWriter.h"
+#include "vtkSVUnstructuredGridRawReader.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
@@ -169,16 +170,16 @@ int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
 }
 
 // ----------------------
-// ReadRawFile
+// ReadPolyDataRawFile
 // ----------------------
-int vtkSVIOUtils::ReadRawFile(std::string inputFilename, vtkPolyData *polydata)
+int vtkSVIOUtils::ReadPolyDataRawFile(std::string inputFilename, vtkPolyData *polydata)
 {
   // Check file exists
   if (vtkSVIOUtils::CheckFileExists(inputFilename) != SV_OK)
     return SV_ERROR;
 
-  //Create an STL reader for reading the file
-  vtkNew(vtkSVRawReader, reader);
+  //Create a raw reader for reading the file
+  vtkNew(vtkSVPolyDataRawReader, reader);
   reader->SetFileName(inputFilename.c_str());
   reader->Update();
 
@@ -186,6 +187,28 @@ int vtkSVIOUtils::ReadRawFile(std::string inputFilename, vtkPolyData *polydata)
   //structure
   polydata->DeepCopy(reader->GetOutput());
   polydata->BuildLinks();
+
+  return SV_OK;
+}
+
+// ----------------------
+// ReadUnstructuredGridRawFile
+// ----------------------
+int vtkSVIOUtils::ReadUnstructuredGridRawFile(std::string inputFilename, vtkUnstructuredGrid *unstructuredgrid)
+{
+  // Check file exists
+  if (vtkSVIOUtils::CheckFileExists(inputFilename) != SV_OK)
+    return SV_ERROR;
+
+  //Create a raw reader for reading the file
+  vtkNew(vtkSVUnstructuredGridRawReader, reader);
+  reader->SetFileName(inputFilename.c_str());
+  reader->Update();
+
+  //Save the output information from the boundary filter to a Poly Data
+  //structure
+  unstructuredgrid->DeepCopy(reader->GetOutput());
+  unstructuredgrid->BuildLinks();
 
   return SV_OK;
 }

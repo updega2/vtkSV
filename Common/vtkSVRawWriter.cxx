@@ -57,12 +57,25 @@ vtkSVRawWriter::vtkSVRawWriter()
 void vtkSVRawWriter::WriteData()
 {
   vtkPoints *pts;
-  vtkCellArray *polys;
+  vtkCellArray *cells;
   vtkPolyData *input = this->GetInput();
 
-  polys = input->GetPolys();
+  vtkIdType npts, *index;
+  input->BuildLinks();
+  input->GetCellPoints(0, npts, index);
+  if (npts == 2)
+    cells = input->GetLines();
+  else if (npts == 3)
+    cells = input->GetPolys();
+  else
+  {
+    vtkErrorMacro(<<"Raw file only supports triangles and lines");
+    this->SetErrorCode(vtkErrorCode::FileFormatError);
+    return;
+  }
+
   pts = input->GetPoints();
-  if (pts == NULL || polys == NULL)
+  if (pts == NULL || cells == NULL)
   {
     vtkErrorMacro(<<"No data to write!");
     this->SetErrorCode(vtkErrorCode::UnknownError);
@@ -76,7 +89,7 @@ void vtkSVRawWriter::WriteData()
     return;
   }
 
-  this->WriteRawFile(pts,polys);
+  this->WriteRawFile(pts,cells);
   if (this->ErrorCode == vtkErrorCode::OutOfDiskSpaceError)
   {
     vtkErrorMacro("Ran out of disk space; deleting file: "
@@ -86,7 +99,7 @@ void vtkSVRawWriter::WriteData()
 }
 
 void vtkSVRawWriter::WriteRawFile(
-  vtkPoints *pts, vtkCellArray *polys)
+  vtkPoints *pts, vtkCellArray *cells)
 {
   FILE *fp;
   double v[3];
@@ -106,7 +119,7 @@ void vtkSVRawWriter::WriteRawFile(
   vtkDebugMacro("Writing ASCII raw file");
 
   top[0] = pts->GetNumberOfPoints();
-  top[1] = polys->GetNumberOfCells();
+  top[1] = cells->GetNumberOfCells();
   fprintf (fp, "%d %d\n", top[0], top[1]);
 
   //  Write out triangle polygons.  If not a triangle polygon, report
@@ -117,17 +130,24 @@ void vtkSVRawWriter::WriteRawFile(
     pts->GetPoint(i, v);
     fprintf (fp, "%.6f %.6f %.6f\n", v[0], v[1], v[2]);
   }
-  for (polys->InitTraversal(); polys->GetNextCell(npts,indx); )
+  for (cells->InitTraversal(); cells->GetNextCell(npts,indx); )
   {
     if (npts > 3)
     {
       fclose(fp);
-      vtkErrorMacro(<<"Raw file only supports triangles");
+      vtkErrorMacro(<<"Raw file only supports triangles and lines");
       this->SetErrorCode(vtkErrorCode::FileFormatError);
       return;
     }
 
-    fprintf (fp, "%lld %lld %lld\n", indx[0], indx[1], indx[2]);
+    if (npts == 3)
+    {
+      fprintf (fp, "%lld %lld %lld\n", indx[0], indx[1], indx[2]);
+    }
+    else if (npts == 2)
+    {
+      fprintf (fp, "%lld %lld\n", indx[0], indx[1]);
+    }
   }
 
   if(fflush(fp))

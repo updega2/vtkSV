@@ -80,8 +80,10 @@ public:
   static int ReadVTPFile(std::string inputFilename, vtkPolyData *polydata);
 
   /** \brief read a raw file. */
-  static int ReadRawFile(std::string inputFilename, vtkPolyData *polydata);
+  static int ReadPolyDataRawFile(std::string inputFilename, vtkPolyData *polydata);
 
+  /** \brief read a raw file. */
+  static int ReadUnstructuredGridRawFile(std::string inputFilename, vtkUnstructuredGrid *unstructuredgrid);
   /** \brief read an stl or polydata file. */
   static int ReadInputFile(std::string inputFilename, vtkPolyData *polydata);
 

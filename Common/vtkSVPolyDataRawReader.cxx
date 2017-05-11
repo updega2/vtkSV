@@ -27,7 +27,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-#include "vtkSVRawReader.h"
+#include "vtkSVPolyDataRawReader.h"
 
 #include "vtkByteSwap.h"
 #include "vtkCellArray.h"
@@ -50,13 +50,13 @@
 #include <stdexcept>
 #include <string>
 
-vtkStandardNewMacro(vtkSVRawReader);
+vtkStandardNewMacro(vtkSVPolyDataRawReader);
 
-vtkCxxSetObjectMacro(vtkSVRawReader, Locator, vtkIncrementalPointLocator);
+vtkCxxSetObjectMacro(vtkSVPolyDataRawReader, Locator, vtkIncrementalPointLocator);
 
 //------------------------------------------------------------------------------
 // Construct object with merging set to true.
-vtkSVRawReader::vtkSVRawReader()
+vtkSVPolyDataRawReader::vtkSVPolyDataRawReader()
 {
   this->FileName = NULL;
   this->Merging = 0;
@@ -66,14 +66,14 @@ vtkSVRawReader::vtkSVRawReader()
 }
 
 //------------------------------------------------------------------------------
-vtkSVRawReader::~vtkSVRawReader()
+vtkSVPolyDataRawReader::~vtkSVPolyDataRawReader()
 {
   this->SetFileName(0);
   this->SetLocator(0);
 }
 
 //------------------------------------------------------------------------------
-int vtkSVRawReader::RequestData(
+int vtkSVPolyDataRawReader::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
   vtkInformationVector *outputVector)
@@ -190,7 +190,7 @@ int vtkSVRawReader::RequestData(
 }
 
 //------------------------------------------------------------------------------
-int vtkSVRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
+int vtkSVPolyDataRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
                                 vtkCellArray *newPolys)
 {
   vtkDebugMacro(<< "Reading Raw file");
@@ -275,13 +275,13 @@ int vtkSVRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
 //------------------------------------------------------------------------------
 // Specify a spatial locator for merging points. By
 // default an instance of vtkMergePoints is used.
-vtkIncrementalPointLocator* vtkSVRawReader::NewDefaultLocator()
+vtkIncrementalPointLocator* vtkSVPolyDataRawReader::NewDefaultLocator()
 {
   return vtkMergePoints::New();
 }
 
 //------------------------------------------------------------------------------
-void vtkSVRawReader::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVPolyDataRawReader::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 

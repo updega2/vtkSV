@@ -29,12 +29,12 @@
  *=========================================================================*/
 
 /**
- * \class   vtkSVRawReader
+ * \class   vtkSVPolyDataRawReader
  * \brief   read ASCII raw file
 */
 
-#ifndef vtkSVRawReader_h
-#define vtkSVRawReader_h
+#ifndef vtkSVPolyDataRawReader_h
+#define vtkSVPolyDataRawReader_h
 
 #include "vtkSVCommonModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
@@ -44,16 +44,16 @@ class vtkFloatArray;
 class vtkIncrementalPointLocator;
 class vtkPoints;
 
-class VTKSVCOMMON_EXPORT vtkSVRawReader : public vtkPolyDataAlgorithm
+class VTKSVCOMMON_EXPORT vtkSVPolyDataRawReader : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVRawReader,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVPolyDataRawReader,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   /**
    * Construct object with merging set to true.
    */
-  static vtkSVRawReader *New();
+  static vtkSVPolyDataRawReader *New();
 
   //@{
   /** \brief Set/Get FileName. */
@@ -80,8 +80,8 @@ public:
   //@}
 
 protected:
-  vtkSVRawReader();
-  ~vtkSVRawReader();
+  vtkSVPolyDataRawReader();
+  ~vtkSVPolyDataRawReader();
 
   /**
    * Create default locator. Used to create one when none is specified.
@@ -95,8 +95,8 @@ protected:
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
   int ReadRawFile(FILE *fp, vtkPoints*, vtkCellArray*);
 private:
-  vtkSVRawReader(const vtkSVRawReader&);
-  void operator=(const vtkSVRawReader&);
+  vtkSVPolyDataRawReader(const vtkSVPolyDataRawReader&);
+  void operator=(const vtkSVPolyDataRawReader&);
 };
 
 #endif
