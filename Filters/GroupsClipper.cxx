@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  Grouper -input [Input Filename] -output [Output Filename] -cellarray [Cell Array Name] ..." << endl;
+    cout << "  GroupsClipper -input [Input Filename] -centerlines [Centerlines] -output [Output Filename] -groupids [GroupIds Array Name] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;

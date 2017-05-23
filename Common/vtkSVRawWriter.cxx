@@ -33,11 +33,13 @@
 #include "vtkByteSwap.h"
 #include "vtkCellArray.h"
 #include "vtkErrorCode.h"
+#include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleStrip.h"
+#include "vtkSVGlobals.h"
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -124,11 +126,15 @@ void vtkSVRawWriter::WriteRawFile(
 
   //  Write out triangle polygons.  If not a triangle polygon, report
   //  an error
-  //
+  vtkNew(vtkIdList, testCell);
+  cells->GetCell(0, testCell);
   for (int i=0; i<top[0]; i++)
   {
     pts->GetPoint(i, v);
-    fprintf (fp, "%.6f %.6f %.6f\n", v[0], v[1], v[2]);
+    if (testCell->GetNumberOfIds() == 2)
+      fprintf (fp, "%.6f %.6f %.6f %d\n", v[0], v[1], v[2], 0);
+    else
+      fprintf (fp, "%.6f %.6f %.6f\n", v[0], v[1], v[2]);
   }
   for (cells->InitTraversal(); cells->GetNextCell(npts,indx); )
   {
