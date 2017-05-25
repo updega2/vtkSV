@@ -53,6 +53,12 @@ public:
 
   //@{
   /// \brief Set / get input poly data.
+  vtkSetVector3Macro(PointNormal, double);
+  vtkGetVector3Macro(PointNormal, double);
+  //@}
+
+  //@{
+  /// \brief Set / get input poly data.
   vtkSetObjectMacro(Input,vtkPolyData);
   vtkGetObjectMacro(Input,vtkPolyData);
   //@}
@@ -91,6 +97,26 @@ public:
   vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
+  //@{
+  /// \brief Use given normal for directional help
+  vtkSetMacro(UsePointNormal,int);
+  vtkGetMacro(UsePointNormal,int);
+  vtkBooleanMacro(UsePointNormal,int);
+  //@}
+
+  //@{
+  /// \brief Remove end points from centerline possible points to check
+  vtkSetMacro(RemoveEndPoints,int);
+  vtkGetMacro(RemoveEndPoints,int);
+  vtkBooleanMacro(RemoveEndPoints,int);
+  //@}
+  //@{
+  /// \brief Remove end points from centerline possible points to check
+  vtkSetMacro(ControlEndPoints,int);
+  vtkGetMacro(ControlEndPoints,int);
+  vtkBooleanMacro(ControlEndPoints,int);
+  //@}
+
   static double ComplexDot(double x[4], double y[4]);
 
 protected:
@@ -107,10 +133,14 @@ protected:
   vtkIdType LastPolyBallCellSubId;
 
   int UseRadiusInformation;
+  int UsePointNormal;
+  int RemoveEndPoints;
+  int ControlEndPoints;
 
   double LastPolyBallCellPCoord;
   double LastPolyBallCenter[3];
   double LastPolyBallCenterRadius;
+  double PointNormal[3];
 
 private:
   vtkSVPolyBallLine(const vtkSVPolyBallLine&);  // Not implemented.

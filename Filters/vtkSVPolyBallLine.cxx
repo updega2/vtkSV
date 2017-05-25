@@ -44,6 +44,9 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->LastPolyBallCenter[0] = this->LastPolyBallCenter[1] = this->LastPolyBallCenter[2] = 0.0;
   this->LastPolyBallCenterRadius = 0.0;
   this->UseRadiusInformation = 1;
+  this->UsePointNormal = 0;
+  this->RemoveEndPoints = 0;
+  this->ControlEndPoints = 0;
 }
 
 // ----------------------
@@ -173,14 +176,41 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 
     this->Input->GetCellPoints(cellId,npts,pts);
 
-    for (i=0; i<npts-1; i++)
+    int start = 0;
+    int end = npts-1;
+    if (this->RemoveEndPoints)
+    {
+      start += 1;
+      end -= 1;
+    }
+    for (i=start; i<end; i++)
       {
       this->Input->GetPoint(pts[i],point0);
       this->Input->GetPoint(pts[i+1],point1);
       if (this->UseRadiusInformation)
         {
-        radius0 = polyballRadiusArray->GetComponent(pts[i],0);
-        radius1 = polyballRadiusArray->GetComponent(pts[i+1],0);
+          radius0 = polyballRadiusArray->GetComponent(pts[i],0);
+          radius1 = polyballRadiusArray->GetComponent(pts[i+1],0);
+
+          if (this->ControlEndPoints)
+          {
+            if (i == 0)
+            {
+              double diff = radius0 - radius1;
+              if (fabs(diff) > radius1)
+              {
+                radius0 = polyballRadiusArray->GetComponent(pts[i+1],0);
+              }
+            }
+            if (i == npts-2)
+            {
+              double diff = radius1 - radius0;
+              if (fabs(diff) > radius0)
+              {
+                radius1 = polyballRadiusArray->GetComponent(pts[i],0);
+              }
+            }
+          }
         }
       else
         {
@@ -234,6 +264,19 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 
       polyballFunctionValue = (x[0]-closestPoint[0])*(x[0]-closestPoint[0]) + (x[1]-closestPoint[1])*(x[1]-closestPoint[1]) + (x[2]-closestPoint[2])*(x[2]-closestPoint[2]) - closestPoint[3]*closestPoint[3];
 
+      if (this->UsePointNormal)
+      {
+        double dir0[3], dir1[3];
+        vtkMath::Subtract(x, closestPoint, dir0);
+        vtkMath::Normalize(dir0);
+        double align0 = vtkMath::Dot(this->PointNormal, dir0);
+        if (align0 <= 0.5)
+        {
+          // We found a false positive
+          polyballFunctionValue = minPolyBallFunctionValue + 1.0;
+        }
+
+      }
       if (polyballFunctionValue<minPolyBallFunctionValue)
         {
         minPolyBallFunctionValue = polyballFunctionValue;

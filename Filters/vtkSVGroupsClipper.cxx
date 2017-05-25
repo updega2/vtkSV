@@ -55,6 +55,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkPolyDataNormals.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
 #include "vtkThreshold.h"
@@ -264,13 +265,14 @@ int vtkSVGroupsClipper::RunFilter()
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
+  groupTubes->ControlEndPointsOn();
 
   // For non group ids
   vtkNew(vtkSVPolyBallLine, nonGroupTubes);
   nonGroupTubes->SetInput(this->Centerlines);
   nonGroupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   nonGroupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
-
+  nonGroupTubes->ControlEndPointsOn();
 
   double point[3];
   double groupTubeValue, nonGroupTubeValue, tubeDifferenceValue;
@@ -293,8 +295,17 @@ int vtkSVGroupsClipper::RunFilter()
     centerlineGroupIds->DeepCopy(this->CenterlineGroupIds);
 
   // Clipping input
+  vtkNew(vtkPolyDataNormals, normaler);
+  normaler->SetInputData(this->WorkPd);
+  normaler->ComputePointNormalsOn();
+  normaler->ComputeCellNormalsOff();
+  normaler->SplittingOff();
+  normaler->Update();
+
   vtkNew(vtkPolyData, clippingInput);
-  clippingInput->DeepCopy(this->WorkPd);
+  clippingInput->DeepCopy(normaler->GetOutput());
+  vtkDataArray *normalsArray =
+    clippingInput->GetPointData()->GetArray("Normals");
 
   // Add array for group cell ids on surface
   vtkNew(vtkIntArray, startGroupIds);
@@ -362,6 +373,9 @@ int vtkSVGroupsClipper::RunFilter()
         groupTubeValue = VTK_SV_LARGE_DOUBLE;
 
       // Get value at all other ids
+      double pointNormal[3];
+      normalsArray->GetTuple(k, pointNormal);
+      nonGroupTubes->SetPointNormal(pointNormal);
       nonGroupTubeValue = nonGroupTubes->EvaluateFunction(point);
 
       // Subtract to give us the final value!
@@ -375,6 +389,7 @@ int vtkSVGroupsClipper::RunFilter()
   // Loop through all groups
   for (i=0; i<centerlineGroupIds->GetNumberOfIds(); i++)
   {
+    fprintf(stdout,"Processing group %d...\n", i);
     // Get Group id
     groupId = centerlineGroupIds->GetId(i);
 
@@ -509,23 +524,23 @@ int vtkSVGroupsClipper::RunFilter()
   vtkNew(vtkPolyData, finisher);
   finisher->DeepCopy(allCleaner->GetOutput());
 
-  // Get list of points at boundary between two groups and -1 group
-  vtkNew(vtkIdList, separateIds);
-  this->FindGroupSeparatingPoints(finisher, separateIds);
+  //// Get list of points at boundary between two groups and -1 group
+  //vtkNew(vtkIdList, separateIds);
+  //this->FindGroupSeparatingPoints(finisher, separateIds);
 
-  // Take these point ids, punch holes near them, and fill to give nice
-  // separation between groups
-  vtkNew(vtkPoints, newPoints);
-  this->PunchHoles(finisher, separateIds, newPoints);
+  //// Take these point ids, punch holes near them, and fill to give nice
+  //// separation between groups
+  //vtkNew(vtkPoints, newPoints);
+  //this->PunchHoles(finisher, separateIds, newPoints);
 
-  // Fill and paint regions with group ids
-  this->FillHoles(finisher, newPoints);
+  //// Fill and paint regions with group ids
+  //this->FillHoles(finisher, newPoints);
 
-  // Last clean to remove duplicate points
-  vtkNew(vtkCleanPolyData, finalCleaner);
-  finalCleaner->SetInputData(finisher);
-  finalCleaner->Update();
-  finisher->DeepCopy(finalCleaner->GetOutput());
+  //// Last clean to remove duplicate points
+  //vtkNew(vtkCleanPolyData, finalCleaner);
+  //finalCleaner->SetInputData(finisher);
+  //finalCleaner->Update();
+  //finisher->DeepCopy(finalCleaner->GetOutput());
 
   // Finalize
   this->WorkPd->DeepCopy(finisher);
