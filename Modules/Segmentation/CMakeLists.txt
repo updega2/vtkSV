@@ -26,23 +26,17 @@
 
 #------------------------------------------------------------------------------
 # Lib/module name
-set(lib ${SV_LIB_VTKSVPARAMETERIZATION_NAME})
-set(module vtkSVParameterization)
+set(lib ${SV_LIB_VTKSVSEGMENTATION_NAME})
+set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVPlanarMapper.cxx
-  vtkSVBoundaryMapper.cxx
-  vtkSVSquareBoundaryMapper.cxx
-  vtkSVSuperSquareBoundaryMapper.cxx)
+  vtkSVGeneralizedPolycube.cxx)
 
 set(HDRS
-  vtkSVPlanarMapper.h
-  vtkSVBoundaryMapper.h
-  vtkSVSquareBoundaryMapper.h
-  vtkSVSuperSquareBoundaryMapper.h)
+  vtkSVGeneralizedPolycube.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -50,8 +44,16 @@ set(HDRS
 set(EXTRA_LIBRARIES "")
 if(VTKSV_BUILD_FILTERS)
   set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME})
-  set(SRCS ${SRCS} vtkSVSphericalMapper.cxx)
-  set(HDRS ${HDRS} vtkSVSphericalMapper.h)
+  set(SRCS ${SRCS} vtkSVPolyDataSliceAndDiceFilter.cxx
+    svGraph.cxx svGCell.cxx)
+  set(HDRS ${HDRS} vtkSVPolyDataSliceAndDiceFilter.h
+    svGraph.h   svGCell.h)
+  # NURBS addition
+  if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION)
+    set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVNURBS_NAME} ${SV_LIB_VTKSVPARAMETERIZATION_NAME})
+    set(SRCS ${SRCS} vtkSVPolyDataToNURBSFilter.cxx)
+    set(HDRS ${HDRS} vtkSVPolyDataToNURBSFilter.h)
+  endif()
 endif()
 #------------------------------------------------------------------------------
 
@@ -62,7 +64,7 @@ if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
     message(FATAL_ERROR "Error: lib and module name should be equal; Lib is ${lib} and Module is ${module}")
   endif()
 
-  # Parameterization vtk module
+  # Segmentation vtk module
   vtksv_add_module(${lib}
     SRCS ${SRCS}
     HDRS ${HDRS}
@@ -76,6 +78,7 @@ else()
   target_link_libraries(${lib}
     ${VTK_LIBRARIES}
     ${SV_LIB_VTKSVCOMMON_NAME}
+    ${EXTRA_LIBRARIES}
     )
 
   # Set up for exports
@@ -112,13 +115,17 @@ endif()
 #------------------------------------------------------------------------------
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST PlanarMapper SuperSquarePlanarMapper)
+  set(EXE_LIST "")
   if(VTKSV_BUILD_FILTERS)
-    set(EXE_LIST ${EXE_LIST} SphericalMapper)
+    set(EXE_LIST ${EXE_LIST} SliceAndDice)
+    if(VTKSV_BUILD_MODULE_NURBS)
+      set(EXE_LIST ${EXE_LIST} PolyDataToNURBS)
+    endif()
   endif()
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVPARAMETERIZATION_NAME} ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVCOMMON_NAME})
+    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}
+      ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVCOMMON_NAME})
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()

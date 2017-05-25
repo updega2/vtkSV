@@ -24,37 +24,44 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#-----------------------------------------------------------------------------
-# vtkSV Libraries
-set(VTKSV_LIBS
-  vtkSVBoolean
-  vtkSVCommon
-  vtkSVFilters
-  vtkSVGeometry
-  vtkSVNURBS
-  vtkSVParameterization
-  vtkSVSegmentation)
-#-----------------------------------------------------------------------------
+set(DOCUMENTATION "A module containing code to segment a geometry various ways.")
 
-#-----------------------------------------------------------------------------
-# Make library names
-if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
-
-  # Set the lib name as module name
-  foreach(lib ${VTKSV_LIBS})
-    string(TOUPPER ${lib} _cap_lib_name)
-    set(SV_LIB_${_cap_lib_name}_NAME ${lib})
-  endforeach()
-else()
-
-  # Add the simvascular_ because most likely being built as simvascular lib
-  foreach(lib ${VTKSV_LIBS})
-    string(TOUPPER ${lib} _cap_lib_name)
-    if(WIN32)
-      string(TOLOWER "lib_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
-    else()
-      string(TOLOWER "_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
-    endif()
-  endforeach()
+#------------------------------------------------------------------------------
+# NURBS addition
+set(EXTRA_DEPENDS "")
+if(VTKSV_BUILD_FILTERS)
+  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVFilters)
+  if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION)
+    set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVNURBS vtkSVParameterization)
+  endif()
 endif()
-#-----------------------------------------------------------------------------
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+endif()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Module depends
+vtk_module(vtkSVSegmentation
+  DESCRIPTION
+  "${DOCUMENTATION}"
+  DEPENDS
+  vtkCommonDataModel
+  vtkCommonExecutionModel
+  vtkFiltersCore
+  vtkFiltersGeometry
+  vtkFiltersModeling
+  vtkSVCommon
+  ${EXTRA_DEPENDS}
+  TEST_DEPENDS
+  vtkFiltersExtraction
+  vtkTestingCore
+  vtkIOGeometry
+  vtkIOXML
+  vtkSVCommon
+  ${EXTRA_TEST_DEPENDS}
+  TCL_NAME
+  vtkSVSegmentation
+  )
+#------------------------------------------------------------------------------

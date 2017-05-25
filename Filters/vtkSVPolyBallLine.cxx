@@ -21,6 +21,7 @@ Version:   $Revision: 1.5 $
 
 #include "vtkSVPolyBallLine.h"
 #include "vtkPointData.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkSVGlobals.h"
 

@@ -66,6 +66,7 @@ option(VTKSV_BUILD_FILTER_EXES "Option to build the executables for each filter"
 option(VTKSV_BUILD_MODULE_NURBS            "Option to build the NURBS code"            ON)
 option(VTKSV_BUILD_MODULE_BOOLEAN          "Option to build the Boolean code"          ON)
 option(VTKSV_BUILD_MODULE_PARAMETERIZATION "Option to build the Parameterization code" ON)
+option(VTKSV_BUILD_MODULE_SEGMENTATION     "Option to build the Segmentation code" ON)
 option(VTKSV_BUILD_MODULE_GEOMETRY         "Option to build the Geometry code"         ON)
 #-----------------------------------------------------------------------------
 
