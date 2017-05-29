@@ -33,10 +33,10 @@ set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx)
+  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx)
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h)
+  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
