@@ -31,11 +31,13 @@
 #include "vtkSVEdgeWeightedCVT.h"
 
 #include "vtkCellData.h"
+#include "vtkIdList.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 
 // ----------------------
 // StandardNewMacro
@@ -166,7 +168,7 @@ int vtkSVEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &newGenerato
       // NEIGHBORS FIRST TDODO!!!
       double cvtData[3];
       this->CVTDataArray->GetTuple(evalId, cvtData);
-      doule dist = vtkSVMathUtils::Distance(pt, cvtData);
+      double dist = vtkSVMathUtils::Distance(pt, cvtData);
 
       if (dist < minDist)
       {
