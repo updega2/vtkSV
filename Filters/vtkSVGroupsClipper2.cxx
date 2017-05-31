@@ -265,7 +265,7 @@ int vtkSVGroupsClipper2::RunFilter()
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
-  groupTubes->ControlEndPointsOn();
+  groupTubes->ControlEndPointsOff();
   groupTubes->UsePointNormalOn();
 
   double point[3];

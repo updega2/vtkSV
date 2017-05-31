@@ -88,11 +88,7 @@ protected:
   int AddCellPatchNeighbor(const int cellId, const int cellNeighborPatch, int &neighborLoc);
 
   // Edge weighted distance
-  double GetEdgeWeightedDistance(const int generatorId, const int evalId);
-
-private:
-  vtkSVEdgeWeightedCVT(const vtkSVEdgeWeightedCVT&);  // Not implemented.
-  void operator=(const vtkSVEdgeWeightedCVT&);  // Not implemented.
+  virtual double GetEdgeWeightedDistance(const int generatorId, const int evalId);
 
   std::vector<int>          PointCellValenceNumber;
   std::vector<std::vector<int> > PointCellValence;
@@ -110,6 +106,10 @@ private:
   int NumberOfRings;
   int MaximumNumberOfNeighborPatches;
   double EdgeWeight;
+
+private:
+  vtkSVEdgeWeightedCVT(const vtkSVEdgeWeightedCVT&);  // Not implemented.
+  void operator=(const vtkSVEdgeWeightedCVT&);  // Not implemented.
 
 };
 

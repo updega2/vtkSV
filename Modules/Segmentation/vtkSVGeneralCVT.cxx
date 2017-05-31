@@ -314,7 +314,6 @@ int vtkSVGeneralCVT::RunFilter()
       eval = 0;
 
     // Loop through cells
-    fprintf(stdout,"IS THIS WHERE\n");
     for (int i=0; i<numDatas; i++)
     {
       if (this->UseCellArray && this->IsBoundaryCell(i))
@@ -338,7 +337,6 @@ int vtkSVGeneralCVT::RunFilter()
         }
       }
     }
-    fprintf(stdout,"IS THIS WHERE 2\n");
     fprintf(stdout,"step %d: %d\n", iter, eval);
     iter++;
   }

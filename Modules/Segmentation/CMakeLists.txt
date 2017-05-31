@@ -33,10 +33,10 @@ set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesEdgeWeightedCVT.cxx)
+  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx)
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesEdgeWeightedCVT.h)
+  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -44,9 +44,9 @@ set(HDRS
 set(EXTRA_LIBRARIES "")
 if(VTKSV_BUILD_FILTERS)
   set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME})
-  set(SRCS ${SRCS} vtkSVPolyDataSliceAndDiceFilter.cxx
+  set(SRCS ${SRCS} vtkSVCenterlinesEdgeWeightedCVT.cxx vtkSVPolyDataSliceAndDiceFilter.cxx
     svGraph.cxx svGCell.cxx)
-  set(HDRS ${HDRS} vtkSVPolyDataSliceAndDiceFilter.h
+  set(HDRS ${HDRS} vtkSVCenterlinesEdgeWeightedCVT.h vtkSVPolyDataSliceAndDiceFilter.h
     svGraph.h   svGCell.h)
   # NURBS addition
   if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION)
@@ -115,9 +115,9 @@ endif()
 #------------------------------------------------------------------------------
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST "EdgeWeightedCVT")
+  set(EXE_LIST EdgeWeightedCVT)
   if(VTKSV_BUILD_FILTERS)
-    set(EXE_LIST ${EXE_LIST} SliceAndDice)
+    set(EXE_LIST ${EXE_LIST} CenterlinesEdgeWeightedCVT SliceAndDice)
     if(VTKSV_BUILD_MODULE_NURBS)
       set(EXE_LIST ${EXE_LIST} PolyDataToNURBS)
     endif()

@@ -267,16 +267,23 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 
       if (this->UsePointNormal)
       {
-        double dir0[3], dir1[3];
+        double dir0[3];
         vtkMath::Subtract(x, closestPoint, dir0);
         vtkMath::Normalize(dir0);
         double align0 = vtkMath::Dot(this->PointNormal, dir0);
+
         if (align0 <= 0.5)
         {
           // We found a false positive
           polyballFunctionValue = minPolyBallFunctionValue + 1.0;
         }
-
+        else
+        {
+          double factor = 0.5;
+          double weight = fabs(radius1 - radius0)*fabs(radius1-radius0);
+          weight = (weight*factor)/svminimum(radius0, radius1);
+          polyballFunctionValue += weight;
+        }
       }
       if (polyballFunctionValue<minPolyBallFunctionValue)
         {

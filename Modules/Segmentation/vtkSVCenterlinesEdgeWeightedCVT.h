@@ -46,6 +46,7 @@
 #include "vtkSVSegmentationModule.h" // For exports
 
 #include "vtkPolyData.h"
+#include "vtkSVPolyBallLine.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlinesEdgeWeightedCVT : public vtkSVEdgeWeightedCVT
 {
@@ -55,9 +56,21 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
-  /// \brief Centerlines to use as basis for segmentation start.
-  vtkGetObjectMacro(CenterlinesPd, vtkPolyData);
-  vtkSetObjectMacro(CenterlinesPd, vtkPolyData);
+  /// \brief Get/Set macro for array name used by the filter. Must
+  //  be present on the centerlines.
+  vtkSetStringMacro(CenterlineRadiusArrayName);
+  vtkGetStringMacro(CenterlineRadiusArrayName);
+  vtkSetStringMacro(GroupIdsArrayName);
+  vtkGetStringMacro(GroupIdsArrayName);
+  vtkSetStringMacro(BlankingArrayName);
+  vtkGetStringMacro(BlankingArrayName);
+  //@}
+
+  //@{
+  /// \brief Get/Set the radius information
+  vtkSetMacro(UseRadiusInformation,int);
+  vtkGetMacro(UseRadiusInformation,int);
+  vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
 protected:
@@ -66,12 +79,22 @@ protected:
 
   // Derived functions
   int InitializeConnectivity();
+  int InitializeGenerators();
+  int UpdateGenerators();
+  int GetClosestGenerator(const int evalId, int &newGenerator);
+  double GetEdgeWeightedDistance(const int generatorId, const int evalId);
 
 private:
   vtkSVCenterlinesEdgeWeightedCVT(const vtkSVCenterlinesEdgeWeightedCVT&);  // Not implemented.
   void operator=(const vtkSVCenterlinesEdgeWeightedCVT&);  // Not implemented.
 
-  vtkPolyData *CenterlinesPd;
+  vtkSVPolyBallLine *DistanceFunction;
+
+  int UseRadiusInformation;
+
+  char *GroupIdsArrayName;
+  char *BlankingArrayName;
+  char *CenterlineRadiusArrayName;
 
 };
 
