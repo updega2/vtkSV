@@ -33,10 +33,10 @@ set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx)
+  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesEdgeWeightedCVT.cxx)
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h)
+  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesEdgeWeightedCVT.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -115,7 +115,7 @@ endif()
 #------------------------------------------------------------------------------
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST "")
+  set(EXE_LIST "EdgeWeightedCVT")
   if(VTKSV_BUILD_FILTERS)
     set(EXE_LIST ${EXE_LIST} SliceAndDice)
     if(VTKSV_BUILD_MODULE_NURBS)

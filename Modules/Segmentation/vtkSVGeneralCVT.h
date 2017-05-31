@@ -66,8 +66,8 @@ public:
   /// \brief Get/Set macro for array names used by filter
   vtkGetStringMacro(CVTDataArrayName);
   vtkSetStringMacro(CVTDataArrayName);
-  vtkGetStringMacro(GroupIdsArrayName);
-  vtkSetStringMacro(GroupIdsArrayName);
+  vtkGetStringMacro(PatchIdsArrayName);
+  vtkSetStringMacro(PatchIdsArrayName);
   vtkGetStringMacro(GeneratorsArrayName);
   vtkSetStringMacro(GeneratorsArrayName);
   //@}
@@ -93,10 +93,10 @@ public:
 
   //@{
   /// \brief Instead of computing a surface metric or energy, use the number
-  /// of points or cells that got transferred to a new group in that iteration
+  /// of points or cells that got transferred to a new patch in that iteration
   /// as the stopping criteria. Default is on.
-  vtkGetMacro(UseTransferredGroupsAsThreshold, int);
-  vtkSetMacro(UseTransferredGroupsAsThreshold, int);
+  vtkGetMacro(UseTransferredPatchesAsThreshold, int);
+  vtkSetMacro(UseTransferredPatchesAsThreshold, int);
   //@}
 
   //@{
@@ -107,7 +107,7 @@ public:
   //@}
 
   //@{
-  /// \brief Set a threshold criteria. Default is 2 transferred groups.
+  /// \brief Set a threshold criteria. Default is 2 transferred patchs.
   vtkGetMacro(Threshold, double);
   vtkSetMacro(Threshold, double);
   //@}
@@ -129,24 +129,25 @@ protected:
   virtual int InitializeGenerators() = 0;
   virtual int GetClosestGenerator(const int evalId, int &newGenerator) = 0;
   virtual int ComputeSurfaceMetric(double &evalMetric) = 0;
-  virtual int UpdateConnectivity() = 0;
+  virtual int UpdateConnectivity(const int evalId, const int oldGenerator, const int newGenerator) = 0;
   virtual int UpdateGenerators() = 0;
+  virtual int IsBoundaryCell(const int cellId) = 0;
 
   vtkPolyData *WorkPd; // Polydata used during filter processing
   vtkPolyData *Generators; // Polydata used during filter processing
 
-  vtkDoubleArray *CVTDataArray;  // Array on input containing info to group
+  vtkDoubleArray *CVTDataArray;  // Array on input containing info to patch
   vtkDoubleArray *GeneratorsArray;  // If using array on generators, the array
-  vtkIntArray    *GroupIdsArray; // Group ids array
+  vtkIntArray    *PatchIdsArray; // Patch ids array
 
-  char *CVTDataArrayName; // Array name on input with data to group
-  char *GroupIdsArrayName; // Array containing group id info
+  char *CVTDataArrayName; // Array name on input with data to patch
+  char *PatchIdsArrayName; // Array containing patch id info
   char *GeneratorsArrayName; // If using generator array, name of array
 
   int UsePointArray; // Use point info
   int UseCellArray; // Use cell info
   int UseGeneratorsArray; // Use the array on the generator
-  int UseTransferredGroupsAsThreshold; // Determine when to stop based on how elements switch generators
+  int UseTransferredPatchesAsThreshold; // Determine when to stop based on how elements switch generators
 
   double Threshold; // Threshold to stop at
   int MaximumNumberOfIterations; // Max iterations

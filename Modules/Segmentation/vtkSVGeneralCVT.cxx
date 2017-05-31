@@ -45,12 +45,12 @@ vtkSVGeneralCVT::vtkSVGeneralCVT()
   this->WorkPd =     vtkPolyData::New();
   this->Generators = NULL;
 
-  this->CVTDataArray =    vtkDoubleArray::New();
-  this->GroupIdsArray =   vtkIntArray::New();
-  this->GeneratorsArray = vtkDoubleArray::New();
+  this->CVTDataArray =    NULL;
+  this->PatchIdsArray =   NULL;
+  this->GeneratorsArray = NULL;
 
   this->CVTDataArrayName =    NULL;
-  this->GroupIdsArrayName =   NULL;
+  this->PatchIdsArrayName =   NULL;
   this->GeneratorsArrayName = NULL;
 
   this->UsePointArray =      0;
@@ -59,7 +59,7 @@ vtkSVGeneralCVT::vtkSVGeneralCVT()
   this->Threshold =          2.0;
 
   this->MaximumNumberOfIterations = 1.0e2;
-  this->UseTransferredGroupsAsThreshold = 1;
+  this->UseTransferredPatchesAsThreshold = 1;
 }
 
 // ----------------------
@@ -83,10 +83,10 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     delete [] this->CVTDataArrayName;
     this->CVTDataArrayName = NULL;
   }
-  if (this->GroupIdsArrayName != NULL)
+  if (this->PatchIdsArrayName != NULL)
   {
-    delete [] this->GroupIdsArrayName;
-    this->GroupIdsArrayName = NULL;
+    delete [] this->PatchIdsArrayName;
+    this->PatchIdsArrayName = NULL;
   }
   if (this->GeneratorsArrayName != NULL)
   {
@@ -94,15 +94,10 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     this->GeneratorsArrayName = NULL;
   }
 
-  if (this->CVTDataArray != NULL)
+  if (this->PatchIdsArray != NULL)
   {
-    this->CVTDataArray->Delete();
-    this->CVTDataArray = NULL;
-  }
-  if (this->GeneratorsArray != NULL)
-  {
-    this->GeneratorsArray->Delete();
-    this->GeneratorsArray = NULL;
+    this->PatchIdsArray->Delete();
+    this->PatchIdsArray = NULL;
   }
 }
 
@@ -115,15 +110,15 @@ void vtkSVGeneralCVT::PrintSelf(ostream& os, vtkIndent indent)
 
   if (this->CVTDataArrayName != NULL)
     os << indent << "CVT data array name: " << this->CVTDataArrayName << "\n";
-  if (this->GroupIdsArrayName != NULL)
-    os << indent << "Group ids array name: " << this->GroupIdsArrayName << "\n";
+  if (this->PatchIdsArrayName != NULL)
+    os << indent << "Patch ids array name: " << this->PatchIdsArrayName << "\n";
   if (this->GeneratorsArrayName != NULL)
     os << indent << "Generators array name: " << this->GeneratorsArrayName << "\n";
 
   os << indent << "Use cell array: " << this->UseCellArray << "\n";
   os << indent << "Use point array: " << this->UsePointArray << "\n";
   os << indent << "Use generators array: " << this->UseGeneratorsArray << "\n";
-  os << indent << "Use transferred groups as threshold: " << this->UseTransferredGroupsAsThreshold << "\n";
+  os << indent << "Use transferred patches as threshold: " << this->UseTransferredPatchesAsThreshold << "\n";
   os << indent << "Threshold: " << this->Threshold << "\n";
   os << indent << "Maximum number of iterations: " << this->MaximumNumberOfIterations << "\n";
 }
@@ -147,7 +142,6 @@ int vtkSVGeneralCVT::RequestData(vtkInformation *vtkNotUsed(request),
     vtkErrorMacro("Error in preprocessing the polydata\n");
     return SV_ERROR;
   }
-  fprintf(stdout,"Graph built...\n");
 
   if (this->RunFilter() != SV_OK)
   {
@@ -179,18 +173,24 @@ int vtkSVGeneralCVT::PrepFilter()
 
   if (this->UseCellArray)
   {
-    if (this->GroupIdsArrayName == NULL)
+    if (this->PatchIdsArrayName == NULL)
     {
-      vtkErrorMacro("Must provide group ids array name on input");
-      return SV_ERROR;
+      vtkDebugMacro("Patch Ids Array Name not given, setting to PatchIds");
+      this->PatchIdsArrayName = new char[strlen("PatchIds") + 1];
+      strcpy(this->PatchIdsArrayName, "PatchIds");
     }
 
-    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->GroupIdsArrayName) != SV_OK)
+    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->PatchIdsArrayName) == SV_OK)
     {
-      vtkErrorMacro("No array named "<< this->CVTDataArrayName << "on input.");
-      return SV_ERROR;
+      this->PatchIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName));
     }
-    this->GroupIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetCellData()->GetArray(this->CVTDataArrayName));
+    else
+    {
+      this->PatchIdsArray = vtkIntArray::New();
+      this->PatchIdsArray->SetNumberOfTuples(this->WorkPd->GetNumberOfCells());
+      this->PatchIdsArray->FillComponent(0, 0);
+    }
+    this->PatchIdsArray->SetName(this->PatchIdsArrayName);
 
     if (this->CVTDataArrayName == NULL)
     {
@@ -208,18 +208,24 @@ int vtkSVGeneralCVT::PrepFilter()
   }
   else if (this->UsePointArray)
   {
-    if (this->GroupIdsArrayName == NULL)
+    if (this->PatchIdsArrayName == NULL)
     {
-      vtkErrorMacro("Must provide group ids array name on input");
-      return SV_ERROR;
+      vtkDebugMacro("Patch Ids Array Name not given, setting to PatchIds");
+      this->PatchIdsArrayName = new char[strlen("PatchIds") + 1];
+      strcpy(this->PatchIdsArrayName, "PatchIds");
     }
 
-    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->GroupIdsArrayName) != SV_OK)
+    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->PatchIdsArrayName) != SV_OK)
     {
-      vtkErrorMacro("No array named "<< this->CVTDataArrayName << "on input.");
-      return SV_ERROR;
+      this->PatchIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetPointData()->GetArray(this->PatchIdsArrayName));
     }
-    this->GroupIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetPointData()->GetArray(this->CVTDataArrayName));
+    else
+    {
+      this->PatchIdsArray = vtkIntArray::New();
+      this->PatchIdsArray->SetNumberOfTuples(this->WorkPd->GetNumberOfPoints());
+      this->PatchIdsArray->FillComponent(0, 0);
+    }
+    this->PatchIdsArray->SetName(this->PatchIdsArrayName);
 
     if (this->CVTDataArrayName == NULL)
     {
@@ -297,41 +303,47 @@ int vtkSVGeneralCVT::RunFilter()
 
 
   int iter=0;
-  double eval=VTK_SV_LARGE_DOUBLE;
+  int eval=1.0e26;
 
   // iterate until threshold met
   while (eval >= this->Threshold && iter < this->MaximumNumberOfIterations)
   {
 
-    // If using transferred groups
-    if (this->UseTransferredGroupsAsThreshold)
+    // If using transferred patches
+    if (this->UseTransferredPatchesAsThreshold)
       eval = 0;
 
     // Loop through cells
+    fprintf(stdout,"IS THIS WHERE\n");
     for (int i=0; i<numDatas; i++)
     {
-      // Set for check of new generator
-      int oldGenerator = this->GroupIdsArray->GetTuple1(i);
-      int newGenerator;
-      // Get the closest generator
-      if (this->GetClosestGenerator(i, newGenerator) != SV_OK)
+      if (this->UseCellArray && this->IsBoundaryCell(i))
       {
-        vtkErrorMacro("Could not get closest generator");
-        return SV_ERROR;
+        // Set for check of new generator
+        int oldGenerator = this->PatchIdsArray->GetTuple1(i);
+        int newGenerator;
+        // Get the closest generator
+        if (this->GetClosestGenerator(i, newGenerator) != SV_OK)
+        {
+          vtkErrorMacro("Could not get closest generator");
+          return SV_ERROR;
+        }
+        if (newGenerator != oldGenerator)
+        {
+          this->UpdateConnectivity(i, oldGenerator, newGenerator);
+          //this->UpdateGenerators();
+          this->PatchIdsArray->SetTuple1(i, newGenerator);
+          if (this->UseTransferredPatchesAsThreshold)
+            eval++;
+        }
       }
-      if (newGenerator != oldGenerator)
-      {
-        this->GroupIdsArray->SetTuple1(i, newGenerator);
-        this->UpdateConnectivity();
-        this->UpdateGenerators();
-        if (this->UseTransferredGroupsAsThreshold)
-          eval++;
-        else
-          this->ComputeSurfaceMetric(eval);
-      }
-
     }
+    fprintf(stdout,"IS THIS WHERE 2\n");
+    fprintf(stdout,"step %d: %d\n", iter, eval);
+    iter++;
   }
+
+  this->WorkPd->GetCellData()->AddArray(this->PatchIdsArray);
 
   return SV_OK;
 }

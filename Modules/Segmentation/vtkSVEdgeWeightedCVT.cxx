@@ -51,6 +51,7 @@ vtkSVEdgeWeightedCVT::vtkSVEdgeWeightedCVT()
 {
   this->NumberOfRings = 2;
   this->EdgeWeight = 1.0;
+  this->MaximumNumberOfNeighborPatches = 10;
 }
 
 // ----------------------
@@ -85,7 +86,7 @@ int vtkSVEdgeWeightedCVT::InitializeConnectivity()
   {
     // Initialize point valences
     this->PointCellValenceNumber.resize(numPoints);
-    this->PointCellValenceNumber.resize(numPoints);
+    this->PointCellValence.resize(numPoints);
 
     this->GetPointCellValence();
 
@@ -110,13 +111,26 @@ int vtkSVEdgeWeightedCVT::InitializeConnectivity()
     // Get cell edge neighbors
     this->GetCellDirectNeighbors();
 
-    // Initialize cell group neighbors
-    this->NumberOfNeighborGroups.resize(numCells);
-    this->NeighborGroupsNumberOfElements.resize(numCells);
-    this->NeighborGroupsIds.resize(numCells);
+    // Initialize cell patch neighbors
+    this->NumberOfNeighborPatches.resize(numCells);
+    this->NeighborPatchesNumberOfElements.resize(numCells, std::vector<int>(this->MaximumNumberOfNeighborPatches));
+    this->NeighborPatchesIds.resize(numCells, std::vector<int>(this->MaximumNumberOfNeighborPatches));
 
-    // Get cell group neighbors
-    this->GetCellGroupNeighbors();
+    for (int i=0; i<numCells; i++)
+    {
+      this->NumberOfNeighborPatches[i] = 1;
+      for (int j=0; j<this->MaximumNumberOfNeighborPatches; j++)
+      {
+        this->NeighborPatchesNumberOfElements[i][j] = 0;
+        this->NeighborPatchesIds[i][j] = -1;
+      }
+
+      this->NeighborPatchesIds[i][0] = this->PatchIdsArray->GetTuple1(i);
+      this->NeighborPatchesNumberOfElements[i][0] = 1;
+    }
+
+    // Get cell patch neighbors
+    this->GetCellPatchNeighbors();
   }
   else if (this->UsePointArray)
   {
@@ -134,14 +148,58 @@ int vtkSVEdgeWeightedCVT::InitializeGenerators()
   if (this->UseCellArray)
   {
     int numCells = this->WorkPd->GetNumberOfCells();
+    int numGenerators;
+    if (this->UseGeneratorsArray)
+      numGenerators = this->GeneratorsArray->GetNumberOfTuples();
+    else
+      numGenerators = this->Generators->GetNumberOfPoints();
 
+    int numComps = this->CVTDataArray->GetNumberOfComponents();
+    double *data = new double[numComps];
     for (int i=0; i<numCells; i++)
     {
-      int cellGenerator;
-      this->GetClosestGenerator(i, cellGenerator);
-      this->GroupIdsArray->SetTuple1(i, cellGenerator);
+      int cellGenerator = 0;
+      double minDist = VTK_SV_LARGE_DOUBLE;
+
+      // Get number of comps in generator and data
+      this->CVTDataArray->GetTuple(i, data);
+
+      for (int j=0; j<numGenerators; j++)
+      {
+        double testDist;
+        if (this->UseGeneratorsArray)
+        {
+          // Could be large number of comps
+          double *generator = new double[numComps];
+          this->GeneratorsArray->GetTuple(j, generator);
+
+          // Compute original distance
+          testDist = vtkSVMathUtils::Distance(generator, data, numComps);
+          testDist /= 2.0;
+          delete [] generator;
+        }
+        else
+        {
+          // Compute original distance
+          double generator[3];
+          this->Generators->GetPoint(j, generator);
+          testDist = vtkSVMathUtils::Distance(generator, data, numComps);
+          testDist /= 2.0;
+        }
+
+        if (testDist < minDist)
+        {
+          cellGenerator = j;
+          minDist = testDist;
+        }
+      }
+      this->PatchIdsArray->SetTuple1(i, cellGenerator);
     }
+    delete [] data;
   }
+
+  this->UpdateGenerators();
+
   return SV_OK;
 }
 
@@ -150,30 +208,32 @@ int vtkSVEdgeWeightedCVT::InitializeGenerators()
 // ----------------------
 int vtkSVEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &newGenerator)
 {
+  // Get current generator
   int numGenerators = this->Generators->GetNumberOfPoints();
-  newGenerator = this->GroupIdsArray->GetTuple1(evalId);
+  int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
+  newGenerator =  currGenerator;
 
-  int minDist = VTK_SV_LARGE_DOUBLE;
-  for (int i=0; i<numGenerators; i++)
+  // Current minimum to beat is current generator
+  double minDist = this->GetEdgeWeightedDistance(newGenerator, evalId);
+
+  // Loop through neighboring patches
+  for (int i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
   {
-    if (this->UseGeneratorsArray)
+    // Check to make sure not zero elements or the same genrator
+    if (this->NeighborPatchesNumberOfElements[evalId][i] != 0)
     {
-      int numComps = this->GeneratorsArray->GetNumberOfComponents();
-    }
-    else
-    {
-      double pt[3];
-      this->Generators->GetPoint(i, pt);
-
-      // NEIGHBORS FIRST TDODO!!!
-      double cvtData[3];
-      this->CVTDataArray->GetTuple(evalId, cvtData);
-      double dist = vtkSVMathUtils::Distance(pt, cvtData);
-
-      if (dist < minDist)
+      if (currGenerator != this->NeighborPatchesIds[evalId][i])
       {
-        minDist = dist;
-        newGenerator = i;
+        // Test this generator
+        int neighborGenerator = this->NeighborPatchesIds[evalId][i];
+        double testDist = this->GetEdgeWeightedDistance(neighborGenerator, evalId);
+
+        // Set new min if less than current
+        if (testDist < minDist)
+        {
+          minDist = testDist;
+          newGenerator = neighborGenerator;
+        }
       }
     }
   }
@@ -182,18 +242,154 @@ int vtkSVEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &newGenerato
 }
 
 // ----------------------
+// GetEdgeWeightedDistance
+// ----------------------
+double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, const int evalId)
+{
+  // Current generator
+  int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
+
+  // Get number of comps in generator and data
+  int numComps = this->CVTDataArray->GetNumberOfComponents();
+  double *data = new double[numComps];
+  this->CVTDataArray->GetTuple(evalId, data);
+
+  // Calculate the edge weight distance
+  double edgeWeightedDist;
+  if (this->UseGeneratorsArray)
+  {
+    // Could be large number of comps
+    double *generator = new double[numComps];
+    this->GeneratorsArray->GetTuple(generatorId, generator);
+
+    // Compute original distance
+    edgeWeightedDist = vtkSVMathUtils::Distance(generator, data, numComps);
+    edgeWeightedDist /= 2.0;
+    delete [] generator;
+  }
+  else
+  {
+    // Compute original distance
+    double generator[3];
+    this->Generators->GetPoint(generatorId, generator);
+    edgeWeightedDist = vtkSVMathUtils::Distance(generator, data, numComps);
+    edgeWeightedDist /= 2.0;
+  }
+  delete [] data;
+
+  // Square in order to add edge weighted part and take norm
+  edgeWeightedDist *= edgeWeightedDist;
+
+  // Get the generator patch id
+  int i;
+  for (i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
+  {
+    if (this->NeighborPatchesIds[evalId][i] == generatorId)
+    {
+      break;
+    }
+  }
+
+  // Get the edge weighted portion
+  double edgeWeighting = 0.0;
+  if (currGenerator == generatorId)
+  {
+    edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i]);
+  }
+  else
+  {
+    edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
+  }
+
+  // Divide by the number of neighboring cells
+  edgeWeighting /= this->NumberOfNeighbors[evalId];
+
+  // Get the final edge distance to be normalized
+  edgeWeightedDist += edgeWeighting;
+
+  edgeWeightedDist = std::sqrt(edgeWeightedDist);
+
+  return edgeWeightedDist;
+}
+
+// ----------------------
 // ComputeSurfaceMetric
 // ----------------------
 int vtkSVEdgeWeightedCVT::ComputeSurfaceMetric(double &evalMetric)
 {
+  vtkDebugMacro("Need to implement surface energy calculation");
+  evalMetric = 0;
   return SV_OK;
 }
 
 // ----------------------
 // UpdateConnectivity
 // ----------------------
-int vtkSVEdgeWeightedCVT::UpdateConnectivity()
+int vtkSVEdgeWeightedCVT::UpdateConnectivity(const int evalId, const int oldGenerator,
+                                             const int newGenerator)
 {
+  // See if we can add a neighbor patch
+  int newGeneratorLoc;
+  this->AddCellPatchNeighbor(evalId, newGenerator, newGeneratorLoc);
+
+  int oldIndexPosition;
+  int newIndexPosition;
+  int oldIndexCounted = 0;
+  // Loop through neighbor patches
+  for (int i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
+  {
+    // Find spot of old generator
+    if(this->NeighborPatchesIds[evalId][i] == oldGenerator)
+    {
+      this->NeighborPatchesNumberOfElements[evalId][i]--;
+
+      oldIndexPosition = i;
+      oldIndexCounted = 1;
+
+      break;
+    }
+  }
+
+  if (oldIndexCounted == 0)
+  {
+    vtkErrorMacro("The old patch could not be found on update");
+    return SV_ERROR;
+  }
+
+  // Loop through neighbor cells
+  for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
+  {
+    int neighborCell = this->Neighbors[evalId][i];
+
+    // If not current cell
+    if (neighborCell != evalId)
+    {
+      oldIndexCounted = 0;
+      // Test adding patch to neighbor
+      this->AddCellPatchNeighbor(neighborCell, newGenerator, newGeneratorLoc);
+
+      // Loop through neighbor cells neighbor patches now
+      for (int j=0; j<this->NumberOfNeighborPatches[neighborCell]; j++)
+      {
+        if (this->NeighborPatchesIds[neighborCell][j] == oldGenerator)
+        {
+          this->NeighborPatchesNumberOfElements[neighborCell][j]--;
+          oldIndexPosition = j;
+          oldIndexCounted =  1;
+
+          break;
+        }
+      }
+      if (oldIndexCounted == 0)
+      {
+        vtkErrorMacro("The old patch could not be found on update");
+        return SV_ERROR;
+      }
+    }
+  }
+
+  this->PatchIdsArray->SetTuple1(evalId, newGenerator);
+
   return SV_OK;
 }
 
@@ -202,6 +398,49 @@ int vtkSVEdgeWeightedCVT::UpdateConnectivity()
 // ----------------------
 int vtkSVEdgeWeightedCVT::UpdateGenerators()
 {
+  // Number of generators
+  int numGenerators = this->Generators->GetNumberOfPoints();
+
+  // Number of cells
+  int numCells = this->WorkPd->GetNumberOfCells();
+
+  // Loop through cells
+  std::vector<std::vector<double> > newGenerators(numGenerators, std::vector<double>(3));
+  std::vector<int>       newGeneratorElements(numGenerators);
+  for (int i=0; i<numGenerators; i++)
+  {
+    for (int j=0; j<3; j++)
+      newGenerators[i][j] = 0.0;
+    newGeneratorElements[i] = 0;
+  }
+  for (int i=0; i<numCells; i++)
+  {
+    // Get data and patch id
+    double data[3];
+    this->CVTDataArray->GetTuple(i, data);
+    int patchId = this->PatchIdsArray->GetTuple1(i);
+
+    // Loop through num of components
+    for (int j=0; j<this->CVTDataArray->GetNumberOfComponents(); j++)
+      newGenerators[patchId][j] += data[j];
+    newGeneratorElements[patchId]++;
+  }
+
+  for (int i=0; i<numGenerators; i++)
+  {
+    for (int j=0; j<3; j++)
+      newGenerators[i][j] /= newGeneratorElements[i];
+
+    double newGen[3];
+    for (int j=0; j<3; j++)
+      newGen[j] = newGenerators[i][j];
+
+    vtkMath::Normalize(newGen);
+
+    this->Generators->GetPoints()->SetPoint(i, newGen);
+  }
+
+
   return SV_OK;
 }
 
@@ -343,6 +582,7 @@ int vtkSVEdgeWeightedCVT::GetCellDirectNeighbors()
 
       // Get cell edge neighbors
       vtkNew(vtkIdList, cellEdgeNeighbors);
+      this->WorkPd->GetCellEdgeNeighbors(i, ptId0, ptId1, cellEdgeNeighbors);
       directNeiCount += cellEdgeNeighbors->GetNumberOfIds();
       for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
       {
@@ -357,9 +597,9 @@ int vtkSVEdgeWeightedCVT::GetCellDirectNeighbors()
 }
 
 // ----------------------
-// GetCellGroupNeighbors
+// GetCellPatchNeighbors
 // ----------------------
-int vtkSVEdgeWeightedCVT::GetCellGroupNeighbors()
+int vtkSVEdgeWeightedCVT::GetCellPatchNeighbors()
 {
 
   int numCells = this->WorkPd->GetNumberOfCells();
@@ -373,9 +613,9 @@ int vtkSVEdgeWeightedCVT::GetCellGroupNeighbors()
       int cellNeighbor = this->Neighbors[i][j];
       if (cellNeighbor != i)
       {
-        int cellNeighborGroup = this->GroupIdsArray->GetTuple1(cellNeighbor);
+        int cellNeighborPatch = this->PatchIdsArray->GetTuple1(cellNeighbor);
         int neighborLoc;
-        this->AddCellGroupNeighbor(i, cellNeighborGroup, neighborLoc);
+        this->AddCellPatchNeighbor(i, cellNeighborPatch, neighborLoc);
       }
     }
 
@@ -389,9 +629,9 @@ int vtkSVEdgeWeightedCVT::GetCellGroupNeighbors()
   {
     numNeighbors = 0;
 
-    for (int j=0; j<this->NumberOfNeighborGroups[i]; j++)
+    for (int j=0; j<this->NumberOfNeighborPatches[i]; j++)
     {
-      numNeighbors += this->NeighborGroupsNumberOfElements[i][j];
+      numNeighbors += this->NeighborPatchesNumberOfElements[i][j];
     }
 
     if (numNeighbors != this->NumberOfNeighbors[i])
@@ -410,19 +650,19 @@ int vtkSVEdgeWeightedCVT::GetCellGroupNeighbors()
 }
 
 // ----------------------
-// AddCellGroupNeighbor
+// AddCellPatchNeighbor
 // ----------------------
-int vtkSVEdgeWeightedCVT::AddCellGroupNeighbor(const int cellId, const int cellNeighborGroup, int &neighborLoc)
+int vtkSVEdgeWeightedCVT::AddCellPatchNeighbor(const int cellId, const int cellNeighborPatch, int &neighborLoc)
 {
   int counted = 0;
-  int numNeighborGroups;
+  int numNeighborPatches;
 
-  for (int i=0; i<this->NumberOfNeighborGroups[cellId]; i++)
+  for (int i=0; i<this->NumberOfNeighborPatches[cellId]; i++)
   {
-    if (this->NeighborGroupsIds[cellId][i] == cellNeighborGroup)
+    if (this->NeighborPatchesIds[cellId][i] == cellNeighborPatch)
     {
       counted = 1;
-      this->NeighborGroupsNumberOfElements[cellId][i]++;
+      this->NeighborPatchesNumberOfElements[cellId][i]++;
       neighborLoc = i;
 
       break;
@@ -431,13 +671,43 @@ int vtkSVEdgeWeightedCVT::AddCellGroupNeighbor(const int cellId, const int cellN
 
   if (counted == 0)
   {
-    this->NumberOfNeighborGroups[cellId]++;
-    numNeighborGroups = this->NumberOfNeighborGroups[cellId];
+    this->NumberOfNeighborPatches[cellId]++;
+    numNeighborPatches = this->NumberOfNeighborPatches[cellId];
+
+    if (numNeighborPatches > this->MaximumNumberOfNeighborPatches)
+    {
+      vtkErrorMacro("Error in adding neighbor patch");
+      return SV_ERROR;
+    }
+    else
+    {
+      this->NeighborPatchesIds[cellId][numNeighborPatches -1] = cellNeighborPatch;
+      this->NeighborPatchesNumberOfElements[cellId][numNeighborPatches - 1]++;
+      neighborLoc = numNeighborPatches - 1;
+    }
 
   }
-  this->NeighborGroupsIds[cellId][numNeighborGroups -1] = cellNeighborGroup;
-  this->NeighborGroupsNumberOfElements[cellId][numNeighborGroups - 1]++;
-  neighborLoc = numNeighborGroups - 1;
 
   return counted;
+}
+
+// ----------------------
+// IsBoundaryCell
+// ----------------------
+int vtkSVEdgeWeightedCVT::IsBoundaryCell(const int cellId)
+{
+  int isOnBoundary = 0;
+
+  for (int i=0; i<this->NumberOfDirectNeighbors[cellId]; i++)
+  {
+    int neighborCell = this->DirectNeighbors[cellId][i];
+
+    if (this->PatchIdsArray->GetTuple1(cellId) != this->PatchIdsArray->GetTuple1(neighborCell))
+    {
+      isOnBoundary = 1;
+      break;
+    }
+  }
+
+  return true;
 }
