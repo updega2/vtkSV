@@ -32,6 +32,7 @@
 
 #include "vtkCellData.h"
 #include "vtkIdList.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
