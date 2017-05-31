@@ -307,7 +307,7 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
   // Get the final edge distance to be normalized
   edgeWeightedDist += edgeWeighting;
 
-  edgeWeightedDist = std::sqrt(edgeWeightedDist);
+  edgeWeightedDist = sqrt(edgeWeightedDist);
 
   return edgeWeightedDist;
 }
