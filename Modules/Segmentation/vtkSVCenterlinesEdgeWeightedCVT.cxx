@@ -127,7 +127,6 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
       centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(this->Generators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetComponent(i,0))));
     }
     int numGenerators = centerlineGroupIds->GetNumberOfIds();
-    fprintf(stdout,"NUMGENS: %d\n", numGenerators);
 
     // Loop through cells
     int numCells = this->WorkPd->GetNumberOfCells();

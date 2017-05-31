@@ -139,7 +139,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 
   minPolyBallFunctionValue = VTK_SV_LARGE_DOUBLE;
 
-  closestPoint[0] = closestPoint[1] = closestPoint[2] = closestPoint[2] = 0.0;
+  closestPoint[0] = closestPoint[1] = closestPoint[2] = closestPoint[3] = 0.0;
 
   this->LastPolyBallCellId = -1;
   this->LastPolyBallCellSubId = -1;
@@ -279,7 +279,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         }
         else
         {
-          double factor = 0.5;
+          double factor = 1.0;
           double weight = fabs(radius1 - radius0)*fabs(radius1-radius0);
           weight = (weight*factor)/svminimum(radius0, radius1);
           polyballFunctionValue += weight;
