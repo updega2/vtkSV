@@ -26,9 +26,19 @@
 
 ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0110_0001_Iliac_Branch_Surface.vtp}")
 ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0110_0001_Iliac_Branch_Centerlines.vtp}")
+ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0141_1001_Renal_Branch_Surface.vtp}")
+ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0141_1001_Renal_Branch_Centerlines.vtp}")
+
+set(EXTRA_TESTS "")
+if(VTKSV_BUILD_FILTERS)
+  set(EXTRA_TESTS ${EXTRA_TESTS} TestPolyDataSliceAndDiceFilter.cxx,NO_VALID,NO_OUTPUT)
+  if(VTKSV_BUILD_MODULES_NURBS)
+    set(EXTRA_TESTS ${EXTRA_TESTS} TestPolyDataToNURBSFilter.cxx,NO_VALID,NO_OUTPUT)
+  endif()
+endif()
 
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
-  TestPolyDataSliceAndDiceFilter.cxx,NO_VALID,NO_OUTPUT
-  TestPolyDataToNURBSFilter.cxx,NO_VALID,NO_OUTPUT)
+  TestGroupsClipper.cxx
+  ${EXTRA_TESTS})
 
-vtk_test_cxx_executable(${vtk-module}CxxTests tests)
+vtk_test_cxx_executable(${vtk-module}CxxTests tests RENDERING_FACTORY)

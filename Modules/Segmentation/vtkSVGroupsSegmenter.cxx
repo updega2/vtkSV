@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include "vtkSVGroupsClipper2.h"
+#include "vtkSVGroupsSegmenter.h"
 #include "vtkAppendPolyData.h"
 #include "vtkExecutive.h"
 #include "vtkCellLocator.h"
@@ -66,12 +66,12 @@
 // ----------------------
 // StandardNewMacro
 // ----------------------
-vtkStandardNewMacro(vtkSVGroupsClipper2);
+vtkStandardNewMacro(vtkSVGroupsSegmenter);
 
 // ----------------------
 // Constructor
 // ----------------------
-vtkSVGroupsClipper2::vtkSVGroupsClipper2()
+vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
 {
   this->WorkPd = vtkPolyData::New();
   this->Centerlines = NULL;
@@ -91,7 +91,7 @@ vtkSVGroupsClipper2::vtkSVGroupsClipper2()
 // ----------------------
 // Destructor
 // ----------------------
-vtkSVGroupsClipper2::~vtkSVGroupsClipper2()
+vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
 {
   if (this->WorkPd)
   {
@@ -138,7 +138,7 @@ vtkSVGroupsClipper2::~vtkSVGroupsClipper2()
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVGroupsClipper2::RequestData(
+int vtkSVGroupsSegmenter::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
@@ -186,7 +186,7 @@ int vtkSVGroupsClipper2::RequestData(
 // ----------------------
 // PrepFilter
 // ----------------------
-int vtkSVGroupsClipper2::PrepFilter()
+int vtkSVGroupsSegmenter::PrepFilter()
 {
   if (!this->Centerlines)
   {
@@ -252,7 +252,7 @@ int vtkSVGroupsClipper2::PrepFilter()
 // ----------------------
 // RunFilter
 // ----------------------
-int vtkSVGroupsClipper2::RunFilter()
+int vtkSVGroupsSegmenter::RunFilter()
 {
   // Get data arrays
   vtkDataArray *centerlineGroupIdsArray =
@@ -350,7 +350,7 @@ int vtkSVGroupsClipper2::RunFilter()
 // ----------------------
 // PrintSelf
 // ----------------------
-void vtkSVGroupsClipper2::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVGroupsSegmenter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
   os << indent << "Clip value: " << this->ClipValue << "\n";
@@ -378,7 +378,7 @@ void vtkSVGroupsClipper2::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 // PassPointGroupsToCells
 // ----------------------
-int vtkSVGroupsClipper2::PassPointGroupsToCells(vtkPolyData *pd, std::string pointArrayName )
+int vtkSVGroupsSegmenter::PassPointGroupsToCells(vtkPolyData *pd, std::string pointArrayName )
 {
   vtkNew(vtkIntArray, cellIds);
   cellIds->SetNumberOfTuples(pd->GetNumberOfCells());
@@ -408,7 +408,7 @@ int vtkSVGroupsClipper2::PassPointGroupsToCells(vtkPolyData *pd, std::string poi
 
     // Find the most occuring
     int mostOccuring, maxCount;
-    vtkSVGroupsClipper2::GetMostOccuringVal(pointVals, mostOccuring, maxCount);
+    vtkSVGroupsSegmenter::GetMostOccuringVal(pointVals, mostOccuring, maxCount);
 
     // Set the cell value based on most occuring point value
     cellIds->SetTuple1(i, mostOccuring);
@@ -420,7 +420,7 @@ int vtkSVGroupsClipper2::PassPointGroupsToCells(vtkPolyData *pd, std::string poi
 // ----------------------
 // CorrectCellBoundaries
 // ----------------------
-int vtkSVGroupsClipper2::CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName )
+int vtkSVGroupsSegmenter::CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName )
 {
   // Get current cell ids
   vtkDataArray *cellIds = pd->GetCellData()->GetArray(cellArrayName.c_str());
@@ -523,7 +523,7 @@ int vtkSVGroupsClipper2::CorrectCellBoundaries(vtkPolyData *pd, std::string cell
     if (neiSize > 1)
     {
       int maxVal, maxCount;
-      vtkSVGroupsClipper2::GetMostOccuringVal(neiCellIds, maxVal, maxCount);
+      vtkSVGroupsSegmenter::GetMostOccuringVal(neiCellIds, maxVal, maxCount);
 
       cellIds->SetTuple1(i, maxVal);
       tmpIds->SetTuple1(i, maxVal);
@@ -536,7 +536,7 @@ int vtkSVGroupsClipper2::CorrectCellBoundaries(vtkPolyData *pd, std::string cell
 // ----------------------
 // GetMostOccuringVal
 // ----------------------
-void vtkSVGroupsClipper2::GetMostOccuringVal(vtkIdList *idList, int &output,
+void vtkSVGroupsSegmenter::GetMostOccuringVal(vtkIdList *idList, int &output,
                                              int &max_count)
 {
   int numIds = idList->GetNumberOfIds();

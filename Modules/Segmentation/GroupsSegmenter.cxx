@@ -38,7 +38,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
-#include "vtkSVGroupsClipper2.h"
+#include "vtkSVGroupsSegmenter.h"
 
 int main(int argc, char *argv[])
 {
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
 
   // Filter
-  vtkNew(vtkSVGroupsClipper2, Grouper);
+  vtkNew(vtkSVGroupsSegmenter, Grouper);
 
   //OPERATION
   std::cout<<"Performing Operation..."<<endl;

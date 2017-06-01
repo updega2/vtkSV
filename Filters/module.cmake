@@ -51,12 +51,12 @@ vtk_module(vtkSVFilters
   vtkSVCommon
   vtkRenderingCore
   TEST_DEPENDS
+  vtkSVCommon
   vtkFiltersExtraction
   vtkIOXML
   vtkInteractionStyle
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
-  vtkSVCommon
   vtkTestingCore
   vtkTestingRendering
   ${EXTRA_TEST_DEPENDS}

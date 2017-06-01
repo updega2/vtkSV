@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVGroupsClipper2
+ *  \class vtkSVGroupsClipper
  *  \brief Using a polydata centerlines, separate the polydata into regions
  *  based on the centerlines
  *
@@ -39,21 +39,21 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVGroupsClipper2_h
-#define vtkSVGroupsClipper2_h
+#ifndef vtkSVGroupsClipper_h
+#define vtkSVGroupsClipper_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVSegmentationModule.h" // For export
 
-class VTKSVFILTERS_EXPORT vtkSVGroupsClipper2 : public vtkPolyDataAlgorithm
+class VTKSVSEGMENTATION_EXPORT vtkSVGroupsClipper : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVGroupsClipper2,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVGroupsClipper,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static vtkSVGroupsClipper2 *New();
+  static vtkSVGroupsClipper *New();
 
   //@{
   /// \brief Get/Set macro for the object's centerlines
@@ -108,21 +108,9 @@ public:
   vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
-  /** \brief Correct cells on the boundary by updating val if they have
-   *  multiple neighboring cells of the same value */
-  static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
-
-  /** \brief Pass an array from points to cells by using the most
-   * occuring point value. */
-  static int PassPointGroupsToCells(vtkPolyData *pd, std::string pointArrayName);
-
-  /** \brief Naive implementation to get most reoccuring number in list. Okay
-   *  because list size is small. */
-  static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
-
 protected:
-  vtkSVGroupsClipper2();
-  ~vtkSVGroupsClipper2();
+  vtkSVGroupsClipper();
+  ~vtkSVGroupsClipper();
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
@@ -131,6 +119,31 @@ protected:
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
+
+  /** \brief After all the polydata has been clipped, this is used to find
+   *  locations where the groups separate.
+   *  \param separateIds empty list to be filled with all ids of points that
+   *  are touching cells of three different regions. */
+  int FindGroupSeparatingPoints(vtkPolyData *pd,
+                                vtkIdList *separateIds);
+
+  /** \brief Goes through, finds all sets of three points that indicate a group
+   *  separation region and punches a hole through the surface.
+   *  \param seperatIds from FindGroupSeparatingPoints.
+   *  \param newPoints list of new points that need to be added to surface.*/
+  int PunchHoles(vtkPolyData *pd, vtkIdList *separateIds, vtkPoints *newPoints);
+
+
+  /** \brief Goes through and gets the loop of points around the hole that need to be
+   *  used to connect with new points.
+   *  \param newPoints from PunchHoles. */
+  int FillHoles(vtkPolyData *pd, vtkPoints *newPoints);
+
+  /** \brief Adds new point to the surface and attach an edge to all points surrounding
+   *  the hole to give a watertight surface.
+   *  \param boundary the boundary of the hole.
+   *  \param center the new point to be added. */
+  int FillRegionGroups(vtkPolyData *pd, vtkPolyData *boundary, double center[3]);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
@@ -148,8 +161,8 @@ protected:
   double ClipValue;
 
 private:
-  vtkSVGroupsClipper2(const vtkSVGroupsClipper2&);  // Not implemented.
-  void operator=(const vtkSVGroupsClipper2&);  // Not implemented.
+  vtkSVGroupsClipper(const vtkSVGroupsClipper&);  // Not implemented.
+  void operator=(const vtkSVGroupsClipper&);  // Not implemented.
 };
 
 #endif

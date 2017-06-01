@@ -33,10 +33,14 @@ set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesBasedNormals.cxx)
+  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesBasedNormals.cxx
+  vtkSVCenterlinesEdgeWeightedCVT.cxx
+  vtkSVPolyBallLine.cxx vtkSVGroupsClipper.cxx vtkSVGroupsSegmenter.cxx)
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesBasedNormals.h )
+  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesBasedNormals.h
+  vtkSVCenterlinesEdgeWeightedCVT.h
+  vtkSVPolyBallLine.h vtkSVGroupsClipper.h vtkSVGroupsSegmenter.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -44,10 +48,8 @@ set(HDRS
 set(EXTRA_LIBRARIES "")
 if(VTKSV_BUILD_FILTERS)
   set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME})
-  set(SRCS ${SRCS} vtkSVCenterlinesEdgeWeightedCVT.cxx vtkSVPolyDataSliceAndDiceFilter.cxx
-    svGraph.cxx svGCell.cxx)
-  set(HDRS ${HDRS} vtkSVCenterlinesEdgeWeightedCVT.h vtkSVPolyDataSliceAndDiceFilter.h
-    svGraph.h   svGCell.h)
+  set(SRCS ${SRCS} vtkSVPolyDataSliceAndDiceFilter.cxx svGraph.cxx svGCell.cxx)
+  set(HDRS ${HDRS} vtkSVPolyDataSliceAndDiceFilter.h svGraph.h svGCell.h)
   # NURBS addition
   if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION)
     set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVNURBS_NAME} ${SV_LIB_VTKSVPARAMETERIZATION_NAME})
@@ -115,9 +117,10 @@ endif()
 #------------------------------------------------------------------------------
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST EdgeWeightedCVT)
+  set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
+    GroupsClipper GroupsSegmenter)
   if(VTKSV_BUILD_FILTERS)
-    set(EXE_LIST ${EXE_LIST} CenterlinesEdgeWeightedCVT SliceAndDice CenterlinesBasedNormalsEdgeWeightedCVT)
+    set(EXE_LIST ${EXE_LIST} SliceAndDice)
     if(VTKSV_BUILD_MODULE_NURBS)
       set(EXE_LIST ${EXE_LIST} PolyDataToNURBS)
     endif()

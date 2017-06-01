@@ -55,11 +55,16 @@ vtk_module(vtkSVSegmentation
   vtkSVCommon
   ${EXTRA_DEPENDS}
   TEST_DEPENDS
+  vtkSVCommon
   vtkFiltersExtraction
+  vtkIOXML
+  vtkInteractionStyle
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingLabel
   vtkTestingCore
+  vtkTestingRendering
   vtkIOGeometry
   vtkIOXML
-  vtkSVCommon
   ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVSegmentation

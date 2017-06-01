@@ -31,7 +31,6 @@ vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestHausdorffDistance.cxx,NO_DATA,NO_VALID,NO_OUTPUT
   TestFindGeodesicPath.cxx
   TestFindSeparateRegions.cxx
-  TestGroupsClipper.cxx
   TestGetBoundaryFaces.cxx
   TestPassDataArray.cxx
   TestPullApartPolyData.cxx)
