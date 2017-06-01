@@ -326,7 +326,7 @@ int vtkSVGroupsClipper2::RunFilter()
     if (groupTubeValue > this->CutoffRadiusFactor * this->CutoffRadiusFactor - 1)
       groupTubeValue = VTK_SV_LARGE_DOUBLE;
 
-    startGroupIds->SetTuple1(k, groupTubes->GetLastPolyBallCellId());
+    startGroupIds->SetTuple1(k, centerlineGroupIdsArray->GetTuple1(groupTubes->GetLastPolyBallCellId()));
   }
 
   if (this->PassPointGroupsToCells(clippingInput, this->GroupIdsArrayName) != SV_OK)

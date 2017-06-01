@@ -37,13 +37,16 @@
  *  \author shaddenlab.berkeley.edu
  */
 
+#include "vtkSVCenterlinesBasedNormals.h"
 #include "vtkSVEdgeWeightedCVT.h"
 
+#include "vtkAppendPolyData.h"
 #include "vtkCellData.h"
 #include "vtkDoubleArray.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 
@@ -63,6 +66,7 @@ int main(int argc, char *argv[])
   bool InputProvided = false;
   bool CVTDataArrayNameProvided = false;
   bool GeneratorsProvided = false;
+  bool CenterlinesProvided = false;
   bool OutputProvided = false;
 
   // Variables used in processing the commandline
@@ -72,6 +76,7 @@ int main(int argc, char *argv[])
   // Filenames
   std::string inputFilename;
   std::string generatorsFilename;
+  std::string centerlinesFilename;
   std::string outputFilename;
 
   // Default values for options
@@ -84,7 +89,9 @@ int main(int argc, char *argv[])
   double threshold                      = 2;
   double edgeWeight                     = 1.0;
   std::string patchIdsArrayName         = "PatchIds";
+  std::string groupIdsArrayName         = "GroupIds";
   std::string cvtDataArrayName          = "CellNormals";
+  std::string newCellArrayName          = "CenterlinesBasedCellNormals";
   std::string generatorsArrayName       = "SliceIds";
 
   // argc is the number of strings on the command-line
@@ -96,8 +103,11 @@ int main(int argc, char *argv[])
       if(tmpstr=="-h")                       {RequestedHelp = true;}
       else if(tmpstr=="-input")              {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-generators")         {GeneratorsProvided = true; generatorsFilename = argv[++iarg];}
+      else if(tmpstr=="-centerlines")        {CenterlinesProvided = true; centerlinesFilename = argv[++iarg];}
       else if(tmpstr=="-output")             {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-patchids")           {patchIdsArrayName = argv[++iarg];}
+      else if(tmpstr=="-groupids")           {groupIdsArrayName = argv[++iarg];}
+      else if(tmpstr=="-newcellarray")       {newCellArrayName = argv[++iarg];}
       else if(tmpstr=="-cvtdata")            {CVTDataArrayNameProvided; cvtDataArrayName = argv[++iarg];}
       else if(tmpstr=="-generatorsarray")    {generatorsArrayName = argv[++iarg];}
       else if(tmpstr=="-numberofrings")      {numberOfRings = atoi(argv[++iarg]);}
@@ -113,22 +123,25 @@ int main(int argc, char *argv[])
       tmpstr.erase(0,arglength);
   }
 
-  if (RequestedHelp || !InputProvided)
+  if (RequestedHelp || !InputProvided || !CenterlinesProvided)
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  EdgeWeightedCVT -input [Input Filename] -generators [Generators Filename] -output [Output Filename] ..." << endl;
+    cout << "  EdgeWeightedCVT -input [Input Filename] -centerlines [Centerlines Filename]-generators [Generators Filename] -output [Output Filename] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -generators         : Generators file name (.vtp)"<< endl;
+    cout << "  -centerlines        : Centerlines file name (.vtp)"<< endl;
     cout << "  -output             : Output file name"<< endl;
     cout << "  -usepointarray      : Use data on points for cvt [default 0]"<< endl;
     cout << "  -usecellarray       : Use data on cellss for cvt [default 1]"<< endl;
     cout << "  -usegeneratorsarray : Instead of using generators points, use array on generator points as generator location. Usefull if more than three generator components [default 0]"<< endl;
     cout << "  -numberofrings      : Number of rings to consider neighborhood of an element [default 2]"<< endl;
     cout << "  -patchids           : Name to be used for patches found using cvt [default PatchIds]"<< endl;
+    cout << "  -groupids           : Name to be used for group [default GroupIds]"<< endl;
+    cout << "  -newcellarray       : Name to be given to output of centerlines normaler [default CenterlinesBasedCellNormals]"<< endl;
     cout << "  -cvtdata            : Name on input with data to be used for cvt [no default]"<< endl;
     cout << "  -generatorsarray    : Name on generators with data. Requied is usegeneratorsarray turned on [no default]"<< endl;
     cout << "  -threshold          : Threshold criteria for when to stop cvt iterations [default 2]"<< endl;
@@ -150,6 +163,9 @@ int main(int argc, char *argv[])
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
+    return EXIT_FAILURE;
+  vtkNew(vtkPolyData, centerlinesPd);
+  if (vtkSVIOUtils::ReadInputFile(centerlinesFilename,centerlinesPd) != 1)
     return EXIT_FAILURE;
 
   vtkNew(vtkPolyData, generatorsPd);
@@ -202,29 +218,60 @@ int main(int argc, char *argv[])
     inputPd->GetCellData()->AddArray(doubleArray);
   }
 
-  // Filter
-  vtkNew(vtkSVEdgeWeightedCVT, CVT);
+  vtkNew(vtkSVCenterlinesBasedNormals, newNormaler);
+  newNormaler->SetInputData(inputPd);
+  newNormaler->SetCenterlinesPd(centerlinesPd);
+  newNormaler->SetCellArrayName(cvtDataArrayName.c_str());
+  newNormaler->SetGroupIdsArrayName(groupIdsArrayName.c_str());
+  newNormaler->SetNewCellArrayName(newCellArrayName.c_str());
+  newNormaler->SetUsePointArray(usePointArray);
+  newNormaler->SetUseCellArray(useCellArray);
+  newNormaler->Update();
 
-  // OPERATION
-  std::cout<<"Performing Operation..."<<endl;
-  CVT->SetInputData(inputPd);
-  CVT->SetGenerators(generatorsPd);
-  CVT->SetUseCellArray(useCellArray);
-  CVT->SetUsePointArray(usePointArray);
-  CVT->SetUseGeneratorsArray(useGeneratorsArray);
-  CVT->SetNumberOfRings(numberOfRings);
-  CVT->SetThreshold(threshold);
-  CVT->SetEdgeWeight(edgeWeight);
-  CVT->SetUseTransferredPatchesAsThreshold(useTransferredPatchesAsThreshold);
-  CVT->SetMaximumNumberOfIterations(maximumNumberOfIterations);
-  CVT->SetPatchIdsArrayName(patchIdsArrayName.c_str());
-  CVT->SetCVTDataArrayName(cvtDataArrayName.c_str());
-  CVT->SetGeneratorsArrayName(generatorsArrayName.c_str());
-  CVT->Update();
+  vtkNew(vtkPolyData, better);
+  better->DeepCopy(newNormaler->GetOutput());
+  vtkNew(vtkIdList, centerlineGroupIds);
+  for (int i=0; i<inputPd->GetCellData()->GetArray(groupIdsArrayName.c_str())->GetNumberOfTuples(); i++)
+  {
+    centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(inputPd->GetCellData()->GetArray(groupIdsArrayName.c_str())->GetComponent(i,0))));
+  }
+  int numGroups = centerlineGroupIds->GetNumberOfIds();
+
+  vtkNew(vtkAppendPolyData, appender);
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = centerlineGroupIds->GetId(i);
+    vtkNew(vtkPolyData, branchPd);
+    vtkSVGeneralUtils::ThresholdPd(better, groupId, groupId, 1, groupIdsArrayName, branchPd);
+
+    // Filter
+    vtkNew(vtkSVEdgeWeightedCVT, CVT);
+
+    // OPERATION
+    std::cout<<"Performing Operation..."<<endl;
+    CVT->SetInputData(branchPd);
+    CVT->SetGenerators(generatorsPd);
+    CVT->SetUseCellArray(useCellArray);
+    CVT->SetUsePointArray(usePointArray);
+    CVT->SetUseGeneratorsArray(useGeneratorsArray);
+    CVT->SetNumberOfRings(numberOfRings);
+    CVT->SetThreshold(threshold);
+    CVT->SetEdgeWeight(edgeWeight);
+    CVT->SetUseTransferredPatchesAsThreshold(useTransferredPatchesAsThreshold);
+    CVT->SetMaximumNumberOfIterations(maximumNumberOfIterations);
+    CVT->SetPatchIdsArrayName(patchIdsArrayName.c_str());
+    CVT->SetCVTDataArrayName(newCellArrayName.c_str());
+    CVT->SetGeneratorsArrayName(generatorsArrayName.c_str());
+    CVT->Update();
+
+
+    appender->AddInputData(CVT->GetOutput());
+  }
+  appender->Update();
 
   // Get output
   vtkNew(vtkPolyData, output);
-  output = CVT->GetOutput();
+  output = appender->GetOutput();
 
   // Write Files
   std::cout<<"Writing Files..."<<endl;

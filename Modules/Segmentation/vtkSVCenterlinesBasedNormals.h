@@ -87,6 +87,9 @@ public:
   vtkSetMacro(UsePointArray, int);
   //@}
 
+
+  const static double GlobalCoords[3][3];
+
 protected:
   vtkSVCenterlinesBasedNormals();
   ~vtkSVCenterlinesBasedNormals();

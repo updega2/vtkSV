@@ -121,7 +121,6 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
 
     // Get all the different ids
     vtkNew(vtkIdList, centerlineGroupIds);
-    int i;
     for (int i=0; i<this->Generators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples(); i++)
     {
       centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(this->Generators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetComponent(i,0))));

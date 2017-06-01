@@ -135,6 +135,7 @@ protected:
 
   vtkPolyData *WorkPd; // Polydata used during filter processing
   vtkPolyData *Generators; // Polydata used during filter processing
+  vtkPolyData *WorkGenerators; // Polydata used during filter processing
 
   vtkDoubleArray *CVTDataArray;  // Array on input containing info to patch
   vtkDoubleArray *GeneratorsArray;  // If using array on generators, the array

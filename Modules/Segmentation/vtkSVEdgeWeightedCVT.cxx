@@ -153,7 +153,7 @@ int vtkSVEdgeWeightedCVT::InitializeGenerators()
     if (this->UseGeneratorsArray)
       numGenerators = this->GeneratorsArray->GetNumberOfTuples();
     else
-      numGenerators = this->Generators->GetNumberOfPoints();
+      numGenerators = this->WorkGenerators->GetNumberOfPoints();
 
     int numComps = this->CVTDataArray->GetNumberOfComponents();
     double *data = new double[numComps];
@@ -183,7 +183,7 @@ int vtkSVEdgeWeightedCVT::InitializeGenerators()
         {
           // Compute original distance
           double generator[3];
-          this->Generators->GetPoint(j, generator);
+          this->WorkGenerators->GetPoint(j, generator);
           testDist = vtkSVMathUtils::Distance(generator, data, numComps);
           testDist /= 2.0;
         }
@@ -210,7 +210,7 @@ int vtkSVEdgeWeightedCVT::InitializeGenerators()
 int vtkSVEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &newGenerator)
 {
   // Get current generator
-  int numGenerators = this->Generators->GetNumberOfPoints();
+  int numGenerators = this->WorkGenerators->GetNumberOfPoints();
   int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
   newGenerator =  currGenerator;
 
@@ -272,7 +272,7 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
   {
     // Compute original distance
     double generator[3];
-    this->Generators->GetPoint(generatorId, generator);
+    this->WorkGenerators->GetPoint(generatorId, generator);
     edgeWeightedDist = vtkSVMathUtils::Distance(generator, data, numComps);
     edgeWeightedDist /= 2.0;
   }
@@ -400,7 +400,7 @@ int vtkSVEdgeWeightedCVT::UpdateConnectivity(const int evalId, const int oldGene
 int vtkSVEdgeWeightedCVT::UpdateGenerators()
 {
   // Number of generators
-  int numGenerators = this->Generators->GetNumberOfPoints();
+  int numGenerators = this->WorkGenerators->GetNumberOfPoints();
 
   // Number of cells
   int numCells = this->WorkPd->GetNumberOfCells();
@@ -422,23 +422,26 @@ int vtkSVEdgeWeightedCVT::UpdateGenerators()
     int patchId = this->PatchIdsArray->GetTuple1(i);
 
     // Loop through num of components
-    for (int j=0; j<this->CVTDataArray->GetNumberOfComponents(); j++)
+    for (int j=0; j<3; j++)
       newGenerators[patchId][j] += data[j];
     newGeneratorElements[patchId]++;
   }
 
   for (int i=0; i<numGenerators; i++)
   {
-    for (int j=0; j<3; j++)
-      newGenerators[i][j] /= newGeneratorElements[i];
+    if (newGeneratorElements[i] != 0)
+    {
+      for (int j=0; j<3; j++)
+        newGenerators[i][j] /= newGeneratorElements[i];
 
-    double newGen[3];
-    for (int j=0; j<3; j++)
-      newGen[j] = newGenerators[i][j];
+      double newGen[3];
+      for (int j=0; j<3; j++)
+        newGen[j] = newGenerators[i][j];
 
-    vtkMath::Normalize(newGen);
+      vtkMath::Normalize(newGen);
 
-    this->Generators->GetPoints()->SetPoint(i, newGen);
+      this->WorkGenerators->GetPoints()->SetPoint(i, newGen);
+    }
   }
 
 

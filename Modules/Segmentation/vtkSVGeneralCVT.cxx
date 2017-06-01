@@ -44,6 +44,7 @@ vtkSVGeneralCVT::vtkSVGeneralCVT()
 {
   this->WorkPd =     vtkPolyData::New();
   this->Generators = NULL;
+  this->WorkGenerators = vtkPolyData::New();
 
   this->CVTDataArray =    NULL;
   this->PatchIdsArray =   NULL;
@@ -76,6 +77,11 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
   {
     this->Generators->UnRegister(this);
     this->Generators = NULL;
+  }
+  if (this->WorkGenerators != NULL)
+  {
+    this->WorkGenerators->Delete();
+    this->WorkGenerators = NULL;
   }
 
   if (this->CVTDataArrayName != NULL)
@@ -164,6 +170,7 @@ int vtkSVGeneralCVT::PrepFilter()
     vtkErrorMacro("Must set the generators!");
     return SV_ERROR;
   }
+  this->WorkGenerators->DeepCopy(this->Generators);
 
   if (this->UseCellArray && this->UsePointArray)
   {

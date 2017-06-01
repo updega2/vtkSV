@@ -41,12 +41,20 @@
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVMathUtils.h"
+#include "vtkSVIOUtils.h"
 #include "vtkTriangle.h"
 
 // ----------------------
 // StandardNewMacro
 // ----------------------
 vtkStandardNewMacro(vtkSVCenterlinesBasedNormals);
+
+const double vtkSVCenterlinesBasedNormals::GlobalCoords[3][3] =
+  {
+    {1.0, 0.0, 0.0},
+    {0.0, 1.0, 0.0},
+    {0.0, 0.0, 1.0},
+  };
 
 // ----------------------
 // Constructor
@@ -264,6 +272,7 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
   int numPoints = centerlinesWorkPd->GetNumberOfPoints();
 
   centerlinesWorkPd->BuildLinks();
+  this->WorkPd->BuildLinks();
   for (int i=0; i<numCells; i++)
   {
     vtkIdType npts, *pts;
@@ -376,6 +385,7 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
       centerlinesWorkPd->GetPoint(pts[j], pt0);
       centerlinesWorkPd->GetPoint(pts[j+1], pt1);
       vtkMath::Subtract(pt1, pt0, localZ);
+      vtkMath::Normalize(localZ);
       if (j==0)
       {
         this->ComputeLocalCoordinateSystem(localZ, startX, localX, localY);
@@ -407,20 +417,29 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
 
   int numPolyCells = this->WorkPd->GetNumberOfCells();
 
-  int numGroups = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples();
+  vtkNew(vtkIdList, centerlineGroupIds);
+  for (int i=0; i<this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples(); i++)
+  {
+    centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetComponent(i,0))));
+  }
+  int numGroups = centerlineGroupIds->GetNumberOfIds();
 
+  vtkNew(vtkPolyData, tmpPd);
+  vtkSVGeneralUtils::GiveIds(centerlinesWorkPd, this->InternalIdsArrayName, tmpPd);
+
+  vtkNew(vtkPolyData, polyTmpPd);
+  vtkSVGeneralUtils::GiveIds(this->WorkPd, this->InternalIdsArrayName, polyTmpPd);
   for (int i=0; i<numGroups; i++)
   {
-    vtkNew(vtkPolyData, tmpPd);
-    vtkSVGeneralUtils::GiveIds(centerlinesWorkPd, this->InternalIdsArrayName, tmpPd);
+    int groupId = centerlineGroupIds->GetId(i);
 
     vtkNew(vtkPolyData, centerlineBranchPd);
-    vtkSVGeneralUtils::ThresholdPd(tmpPd, i, i, 1, this->GroupIdsArrayName, centerlineBranchPd);
+    vtkSVGeneralUtils::ThresholdPd(tmpPd, groupId, groupId, 1, this->GroupIdsArrayName, centerlineBranchPd);
 
 
-    vtkSVGeneralUtils::GiveIds(this->WorkPd, this->InternalIdsArrayName, tmpPd);
     vtkNew(vtkPolyData, branchPd);
-    vtkSVGeneralUtils::ThresholdPd(tmpPd, i, i, 1, this->GroupIdsArrayName, branchPd);
+    vtkSVGeneralUtils::ThresholdPd(polyTmpPd, groupId, groupId, 1, this->GroupIdsArrayName, branchPd);
+    branchPd->BuildLinks();
 
     vtkNew(vtkPointLocator, locator);
     locator->SetDataSet(centerlineBranchPd);
@@ -430,9 +449,9 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
       // Get cell point coords
       double pts[3][3];
       vtkIdType npts, *ptids;
-      branchPd->GetCellPoints(i, npts, ptids);
+      branchPd->GetCellPoints(j, npts, ptids);
       for (int k=0; k<npts; k++)
-        this->WorkPd->GetPoint(ptids[k], pts[k]);
+        branchPd->GetPoint(ptids[k], pts[k]);
 
       // Get center
       double center[3];
@@ -447,6 +466,7 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
       double currNormal[3];
       int realCellId = branchPd->GetCellData()->GetArray(this->InternalIdsArrayName)->GetTuple1(j);
       this->CellArray->GetTuple(realCellId, currNormal);
+
       double newNormal[3];
       for (int k=0; k<3; k++)
       {
@@ -469,6 +489,16 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
 int vtkSVCenterlinesBasedNormals::ComputeStartVector(const double verts[3][3],
                                                      double startVec[3])
 {
+  double vec0[3], vec1[3];
+  vtkMath::Subtract(verts[1], verts[0], vec0);
+  vtkMath::Subtract(verts[2], verts[0], vec1);
+
+  vtkMath::Normalize(vec0);
+  vtkMath::Normalize(vec1);
+
+  vtkMath::Cross(vec0, vec1, startVec);
+  vtkMath::Normalize(startVec);
+
   return SV_OK;
 }
 
@@ -480,6 +510,17 @@ int vtkSVCenterlinesBasedNormals::ComputeLocalCoordinateSystem(const double vz[3
                                                                double vx[3],
                                                                double vy[3])
 {
+	double tempArray[3];
+  double tempLength = vtkMath::Dot(vstart, vz);
+	for (int i = 0; i < 3; i++)
+		tempArray[i] = tempLength * vz[i];
+
+  vtkMath::Subtract(vstart, tempArray, vx);
+  vtkMath::Normalize(vx);
+
+  vtkMath::Cross(vz, vx, vy);
+  vtkMath::Normalize(vy);
+
   return SV_OK;
 }
 
@@ -491,6 +532,36 @@ int vtkSVCenterlinesBasedNormals::ComputeRotationMatrix(const double vx[3],
                                                         const double vz[3],
                                                         double rotMatrix[9])
 {
+  rotMatrix[0] = vx[0]*this->GlobalCoords[0][0] +
+                 vx[1]*this->GlobalCoords[0][1] +
+                 vx[2]*this->GlobalCoords[0][2];
+  rotMatrix[1] = vx[0]*this->GlobalCoords[1][0] +
+                 vx[1]*this->GlobalCoords[1][1] +
+                 vx[2]*this->GlobalCoords[1][2];
+  rotMatrix[2] = vx[0]*this->GlobalCoords[2][0] +
+                 vx[1]*this->GlobalCoords[2][1] +
+                 vx[2]*this->GlobalCoords[2][2];
+
+  rotMatrix[3] = vy[0]*this->GlobalCoords[0][0] +
+                 vy[1]*this->GlobalCoords[0][1] +
+                 vy[2]*this->GlobalCoords[0][2];
+  rotMatrix[4] = vy[0]*this->GlobalCoords[1][0] +
+                 vy[1]*this->GlobalCoords[1][1] +
+                 vy[2]*this->GlobalCoords[1][2];
+  rotMatrix[5] = vy[0]*this->GlobalCoords[2][0] +
+                 vy[1]*this->GlobalCoords[2][1] +
+                 vy[2]*this->GlobalCoords[2][2];
+
+  rotMatrix[6] = vz[0]*this->GlobalCoords[0][0] +
+                 vz[1]*this->GlobalCoords[0][1] +
+                 vz[2]*this->GlobalCoords[0][2];
+  rotMatrix[7] = vz[0]*this->GlobalCoords[1][0] +
+                 vz[1]*this->GlobalCoords[1][1] +
+                 vz[2]*this->GlobalCoords[1][2];
+  rotMatrix[8] = vz[0]*this->GlobalCoords[2][0] +
+                 vz[1]*this->GlobalCoords[2][1] +
+                 vz[2]*this->GlobalCoords[2][2];
+
   return SV_OK;
 }
 
@@ -499,5 +570,19 @@ int vtkSVCenterlinesBasedNormals::ComputeRotationMatrix(const double vx[3],
 // ----------------------
 int vtkSVCenterlinesBasedNormals::FlipLinePoints(vtkPolyData *pd, const int cellId)
 {
+  vtkIdType npts, *pts;
+  pd->GetCellPoints(cellId, npts, pts);
+
+  double *tmpPts = new double[npts];
+  for (int i=0; i<npts; i++)
+    tmpPts[i] = pts[i];
+
+  for (int i=0; i<npts; i++)
+    pts[(npts-1)-i] = tmpPts[i];
+
+  pd->ReplaceCell(cellId, npts, pts);
+  pd->Modified();
+  pd->BuildLinks();
+
   return SV_OK;
 }
