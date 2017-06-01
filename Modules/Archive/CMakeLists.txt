@@ -26,21 +26,33 @@
 
 #------------------------------------------------------------------------------
 # Lib/module name
-set(lib ${SV_LIB_VTKSVSEGMENTATION_NAME})
-set(module vtkSVSegmentation)
+set(lib ${SV_LIB_VTKSVARCHIVE_NAME})
+set(module vtkSVArchive)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesBasedNormals.cxx
-  vtkSVCenterlinesEdgeWeightedCVT.cxx
-  vtkSVPolyBallLine.cxx vtkSVGroupsClipper.cxx vtkSVGroupsSegmenter.cxx svCenterlineGraph.cxx svCenterlineGCell.cxx)
+  vtkSVGeneralizedPolycube.cxx)
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesBasedNormals.h
-  vtkSVCenterlinesEdgeWeightedCVT.h
-  vtkSVPolyBallLine.h vtkSVGroupsClipper.h vtkSVGroupsSegmenter.h svCenterlineGraph.h svCenterlineGCell.h)
+  vtkSVGeneralizedPolycube.h)
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Filters addition
+set(EXTRA_LIBRARIES "")
+if(VTKSV_BUILD_FILTERS)
+  set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME})
+  set(SRCS ${SRCS} vtkSVPolyDataSliceAndDiceFilter.cxx svGraph.cxx svGCell.cxx)
+  set(HDRS ${HDRS} vtkSVPolyDataSliceAndDiceFilter.h svGraph.h svGCell.h)
+  # NURBS addition
+  if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION)
+    set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVNURBS_NAME} ${SV_LIB_VTKSVPARAMETERIZATION_NAME})
+    set(SRCS ${SRCS} vtkSVPolyDataToNURBSFilter.cxx)
+    set(HDRS ${HDRS} vtkSVPolyDataToNURBSFilter.h)
+  endif()
+endif()
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -64,6 +76,7 @@ else()
   target_link_libraries(${lib}
     ${VTK_LIBRARIES}
     ${SV_LIB_VTKSVCOMMON_NAME}
+    ${EXTRA_LIBRARIES}
     )
 
   # Set up for exports
@@ -100,12 +113,17 @@ endif()
 #------------------------------------------------------------------------------
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
-    GroupsClipper GroupsSegmenter)
+  set(EXE_LIST "")
+  if(VTKSV_BUILD_FILTERS)
+    set(EXE_LIST ${EXE_LIST} SliceAndDice)
+    if(VTKSV_BUILD_MODULE_NURBS)
+      set(EXE_LIST ${EXE_LIST} PolyDataToNURBS)
+    endif()
+  endif()
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}
-      ${SV_LIB_VTKSVCOMMON_NAME})
+    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVARCHIVE_NAME}
+      ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVCOMMON_NAME})
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()

@@ -114,6 +114,9 @@ endif()
 if(VTKSV_BUILD_MODULE_GEOMETRY)
   set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Geometry")
 endif()
+if(VTKSV_BUILD_MODULE_ARCHIVE)
+  set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "Modules/Archive")
+endif()
 #-----------------------------------------------------------------------------
 
 #-----------------------------------------------------------------------------

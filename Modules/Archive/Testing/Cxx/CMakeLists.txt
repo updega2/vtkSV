@@ -24,38 +24,18 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#-----------------------------------------------------------------------------
-# vtkSV Libraries
-set(VTKSV_LIBS
-  vtkSVBoolean
-  vtkSVCommon
-  vtkSVFilters
-  vtkSVGeometry
-  vtkSVNURBS
-  vtkSVParameterization
-  vtkSVSegmentation
-  vtkSVArchive)
-#-----------------------------------------------------------------------------
+ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0110_0001_Iliac_Branch_Surface.vtp}")
+ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0110_0001_Iliac_Branch_Centerlines.vtp}")
 
-#-----------------------------------------------------------------------------
-# Make library names
-if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
-
-  # Set the lib name as module name
-  foreach(lib ${VTKSV_LIBS})
-    string(TOUPPER ${lib} _cap_lib_name)
-    set(SV_LIB_${_cap_lib_name}_NAME ${lib})
-  endforeach()
-else()
-
-  # Add the simvascular_ because most likely being built as simvascular lib
-  foreach(lib ${VTKSV_LIBS})
-    string(TOUPPER ${lib} _cap_lib_name)
-    if(WIN32)
-      string(TOLOWER "lib_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
-    else()
-      string(TOLOWER "_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
-    endif()
-  endforeach()
+set(EXTRA_TESTS "")
+if(VTKSV_BUILD_FILTERS)
+  set(EXTRA_TESTS ${EXTRA_TESTS} TestPolyDataSliceAndDiceFilter.cxx,NO_VALID,NO_OUTPUT)
+  if(VTKSV_BUILD_MODULES_NURBS)
+    set(EXTRA_TESTS ${EXTRA_TESTS} TestPolyDataToNURBSFilter.cxx,NO_VALID,NO_OUTPUT)
+  endif()
 endif()
-#-----------------------------------------------------------------------------
+
+vtksv_add_test_cxx(${vtk-module}CxxTests tests
+  ${EXTRA_TESTS})
+
+vtk_test_cxx_executable(${vtk-module}CxxTests tests RENDERING_FACTORY)
