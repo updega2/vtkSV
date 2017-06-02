@@ -54,9 +54,7 @@ public:
   svCenterlineGraph();
   svCenterlineGraph(int rootId,
           vtkPolyData *linesPd,
-          std::string groupIdsArrayName,
-          std::multimap<int, int> criticalPointMap);
-
+          std::string groupIdsArrayName);
 
   //Destructor
   ~svCenterlineGraph();
@@ -69,9 +67,11 @@ public:
   int BuildGraph();
   int PrintGraph();
   int GrowGraph(svCenterlineGCell *parent);
+  int RefineGraphWithLocalCoordinates();
   int ComputeReferenceVectors(svCenterlineGCell *parent);
   int GetNewBranchDirections(svCenterlineGCell *parent);
   int GetGraphPolyData(vtkPolyData *pd);
+  int GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups);
 
   //Static Member functions
   static int GetDirectionVector(const int dir, double dirVector[3]);
@@ -91,6 +91,17 @@ public:
    * \return SV_OK if function completes without error
    */
   static int LookupIndex(const int parent, const int divchild, const int index);
+
+  const static double GlobalCoords[3][3];
+
+  int ComputeLocalCoordinateSystem(const double vz[3], const double vstart[3],
+                                   double vx[3], double vy[3]);
+
+  int ComputeRotationMatrix(const double vx[3], const double vy[3], const double vz[3],
+                            double rotMatrix[9]);
+
+  int FlipLinePoints(vtkPolyData *pd, const int cellId);
+
 
   /// \brief directions of nodes in graph simplification
   enum DIRECTIONS
@@ -114,7 +125,6 @@ public:
   //Member data needed to build
   vtkPolyData *Lines;
   std::string GroupIdsArrayName;
-  std::multimap<int, int> CriticalPointMap;
   double ReferenceVecs[3][3];
 };
 

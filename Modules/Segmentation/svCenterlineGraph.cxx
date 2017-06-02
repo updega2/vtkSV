@@ -33,6 +33,7 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
+#include "vtkDoubleArray.h"
 #include "vtkIdList.h"
 #include "vtkMath.h"
 #include "vtkPoints.h"
@@ -51,10 +52,12 @@ svCenterlineGraph::svCenterlineGraph()
   this->Lines = vtkPolyData::New();
 }
 
+// ----------------------
+// Constructor
+// ----------------------
 svCenterlineGraph::svCenterlineGraph(int rootId,
                  vtkPolyData *linesPd,
-                 std::string groupIdsArrayName,
-                 std::multimap<int, int> criticalPointMap)
+                 std::string groupIdsArrayName)
 {
   this->NumberOfCells = 0;
   this->NumberOfNodes = 1; // The root
@@ -64,10 +67,13 @@ svCenterlineGraph::svCenterlineGraph(int rootId,
 
   this->Lines = vtkPolyData::New();
   this->Lines->DeepCopy(linesPd);
+  this->Lines->BuildLinks();
   this->GroupIdsArrayName = groupIdsArrayName;
-  this->CriticalPointMap = criticalPointMap;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 svCenterlineGraph::~svCenterlineGraph()
 {
   if (this->Root != NULL)
@@ -82,6 +88,9 @@ svCenterlineGraph::~svCenterlineGraph()
   }
 }
 
+// ----------------------
+// Recurse
+// ----------------------
 int svCenterlineGraph::Recurse(svCenterlineGCell *rootGCell, int(*function)(svCenterlineGCell *currentGCell,
                    void *arg0, void *arg1, void *arg2),
                    void *rec_arg0, void *rec_arg1, void *rec_arg2)
@@ -98,12 +107,18 @@ int svCenterlineGraph::Recurse(svCenterlineGCell *rootGCell, int(*function)(svCe
   return SV_OK;
 }
 
+// ----------------------
+// PrintGraph
+// ----------------------
 int svCenterlineGraph::PrintGraph()
 {
   svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::PrintGCell, NULL, NULL, NULL);
   return SV_OK;
 }
 
+// ----------------------
+// PrintGCell
+// ----------------------
 int svCenterlineGraph::PrintGCell(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2)
 {
   fprintf(stdout, "GCell ID: %d\n", gCell->Id);
@@ -126,6 +141,9 @@ int svCenterlineGraph::PrintGCell(svCenterlineGCell *gCell, void *arg0, void *ar
   return SV_OK;
 }
 
+// ----------------------
+// GetGraphPolyData
+// ----------------------
 int svCenterlineGraph::GetGraphPolyData(vtkPolyData *pd)
 {
   vtkNew(vtkPoints, newPoints);
@@ -147,6 +165,9 @@ int svCenterlineGraph::GetGraphPolyData(vtkPolyData *pd)
   return SV_OK;
 }
 
+// ----------------------
+// InsertGCellPoints
+// ----------------------
 int svCenterlineGraph::InsertGCellPoints(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2)
 {
   vtkPoints *points =
@@ -168,37 +189,48 @@ int svCenterlineGraph::InsertGCellPoints(svCenterlineGCell *gCell, void *arg0, v
   return SV_OK;
 }
 
+// ----------------------
+// BuildGraph
+// ----------------------
 int svCenterlineGraph::BuildGraph()
 {
   fprintf(stdout,"Building graph!!!\n");
 
-  std::list<int> keyVals;
-  vtkSVGeneralUtils::GetValuesFromMap(this->CriticalPointMap, this->Root->GroupId, keyVals);
-  if (keyVals.size() != 0)
+  vtkNew(vtkIdList, connectingGroups);
+  this->GetConnectingLineGroups(this->Root->GroupId, connectingGroups);
+
+  if (connectingGroups->GetNumberOfIds() == 0)
   {
-    std::list<int> children;
-    vtkSVGeneralUtils::GetUniqueNeighbors(this->CriticalPointMap, this->Root->GroupId, keyVals, children);
-    if (children.size() != 0)
-    {
-      std::list<int>::iterator childit = children.begin();
-      this->Root->Children[0] = this->NewCell(*childit, this->Root); ++childit;
-      this->Root->Children[1] = this->NewCell(*childit, this->Root); ++childit;
-      this->NumberOfNodes += 3;
-
-      this->ComputeReferenceVectors(this->Root);
-      this->GetNewBranchDirections(this->Root);
-      this->GrowGraph(this->Root->Children[0]);
-      this->GrowGraph(this->Root->Children[1]);
-    }
+    // Just only this guy
+    fprintf(stdout,"Only one centerlines\n");
+    return SV_OK;
   }
+  else if (connectingGroups->GetNumberOfIds() == 2)
+  {
+    this->Root->Children[0] = this->NewCell(connectingGroups->GetId(0), this->Root);
+    this->Root->Children[1] = this->NewCell(connectingGroups->GetId(1), this->Root);
+    this->NumberOfNodes += 3;
 
-  svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::UpdateCellDirection,
-                   NULL, NULL, NULL);
+    this->ComputeReferenceVectors(this->Root);
+    this->GetNewBranchDirections(this->Root);
+    this->GrowGraph(this->Root->Children[0]);
+    this->GrowGraph(this->Root->Children[1]);
+
+    svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::UpdateCellDirection,
+                     NULL, NULL, NULL);
+  }
+  else
+  {
+    fprintf(stdout,"The root is connected to more than two branches, this is not currently handles\n");
+    return SV_ERROR;
+  }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// GrowGraph
+// ----------------------
 /**
  * @brief
  * @param *pd
@@ -206,39 +238,82 @@ int svCenterlineGraph::BuildGraph()
  */
 int svCenterlineGraph::GrowGraph(svCenterlineGCell *parent)
 {
-  std::list<int> keyVals;
-  vtkSVGeneralUtils::GetValuesFromMap(this->CriticalPointMap, parent->GroupId, keyVals);
-  if (keyVals.size() != 0)
-  {
-    std::list<int> children;
-    vtkSVGeneralUtils::GetUniqueNeighbors(this->CriticalPointMap, parent->GroupId, keyVals, children);
-    if (children.size() > 2)
-    {
-      //fprintf(stdout,"Number of children!: %lu\n", children.size());
-      std::list<int>::iterator childit = children.begin();
-      int count = 0;
-      for (int i=0; childit != children.end(); ++childit)
-      {
-        if (*childit != parent->Parent->Children[0]->GroupId && *childit != parent->Parent->Children[1]->GroupId && *childit != parent->Parent->GroupId)
-        {
-          parent->Children[count] = this->NewCell(*childit, parent);
-          count++;
-        }
-      }
-      this->NumberOfNodes += 3;
-      //fprintf(stdout,"What is the child %d\n", parent->Children[0]->GroupId);
-      //fprintf(stdout,"What is the child %d\n", parent->Children[1]->GroupId);
-      this->GetNewBranchDirections(parent);
+  vtkNew(vtkIdList, connectingGroups);
+  this->GetConnectingLineGroups(parent->GroupId, connectingGroups);
 
-      this->GrowGraph(parent->Children[0]);
-      this->GrowGraph(parent->Children[1]);
+  int count = 0;
+  for (int i=0; i<connectingGroups->GetNumberOfIds(); i++)
+  {
+    int groupId = connectingGroups->GetId(i);
+    if (groupId != parent->Parent->Children[0]->GroupId && groupId != parent->Parent->Children[1]->GroupId && groupId != parent->Parent->GroupId)
+    {
+      parent->Children[count] = this->NewCell(groupId, parent);
+      count++;
+    }
+  }
+  if (count == 2)
+  {
+    this->NumberOfNodes += 3;
+    //fprintf(stdout,"What is the child %d\n", parent->Children[0]->GroupId);
+    //fprintf(stdout,"What is the child %d\n", parent->Children[1]->GroupId);
+    this->GetNewBranchDirections(parent);
+
+    this->GrowGraph(parent->Children[0]);
+    this->GrowGraph(parent->Children[1]);
+  }
+  else if (count == 0)
+  {
+    fprintf(stdout,"Terminating branch\n");
+    return SV_OK;
+  }
+  else
+  {
+    fprintf(stdout,"More than two connecting branches not currently handled\n");
+    return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetConnectingLineGroups
+// ----------------------
+int svCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups)
+{
+  // Get first cell points
+  vtkIdType npts, *pts;
+  int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName.c_str())->LookupValue(groupId);
+  this->Lines->GetCellPoints(cellId, npts, pts);
+
+  // Get connecting
+  vtkNew(vtkIdList, pointCells0);
+  vtkNew(vtkIdList, pointCellsN);
+  this->Lines->GetPointCells(pts[0], pointCells0);
+  this->Lines->GetPointCells(pts[npts-1], pointCellsN);
+
+  for (int i=0; i<pointCells0->GetNumberOfIds(); i++)
+  {
+    if (pointCells0->GetId(i) != cellId)
+    {
+      connectingGroups->InsertNextId(this->Lines->GetCellData()->GetArray(
+        this->GroupIdsArrayName.c_str())->GetTuple1(pointCells0->GetId(i)));
+    }
+  }
+  for (int i=0; i<pointCellsN->GetNumberOfIds(); i++)
+  {
+    if (pointCellsN->GetId(i) != cellId)
+    {
+      connectingGroups->InsertNextId(this->Lines->GetCellData()->GetArray(
+        this->GroupIdsArrayName.c_str())->GetTuple1(pointCellsN->GetId(i)));
     }
   }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// ComputeReferenceVectors
+// ----------------------
 /**
  * @brief
  * @param *pd
@@ -317,7 +392,9 @@ int svCenterlineGraph::ComputeReferenceVectors(svCenterlineGCell *parent)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// GetDirectionVector
+// ----------------------
 /**
  * @brief
  * @param *pd
@@ -353,7 +430,9 @@ int svCenterlineGraph::GetDirectionVector(const int dir, double dirVector[3])
 }
 
 
-//---------------------------------------------------------------------------
+// ----------------------
+// GetNewBranchDirections
+// ----------------------
 /**
  * @brief
  * @param *pd
@@ -472,6 +551,9 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   return SV_OK;
 }
 
+// ----------------------
+// UpdateCellDirection
+// ----------------------
 int svCenterlineGraph::UpdateCellDirection(svCenterlineGCell *gCell, void *arg0,
                                  void *arg1, void *arg2)
 {
@@ -525,6 +607,9 @@ int svCenterlineGraph::UpdateCellDirection(svCenterlineGCell *gCell, void *arg0,
   return SV_OK;
 }
 
+// ----------------------
+// NewCell
+// ----------------------
 svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, svCenterlineGCell *a_Parent)
 {
   svCenterlineGCell *newCell = new svCenterlineGCell;
@@ -540,6 +625,9 @@ svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, svCenterlineGCell *
   return newCell;
 }
 
+// ----------------------
+// NewCell
+// ----------------------
 svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, int a_Dir, double a_StartPt[3], double a_EndPt[3])
 {
   svCenterlineGCell *newCell = new svCenterlineGCell;
@@ -555,6 +643,9 @@ svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, int a_Dir, double a
   return newCell;
 }
 
+// ----------------------
+// GetCell
+// ----------------------
 svCenterlineGCell* svCenterlineGraph::GetCell(const int findId)
 {
   if (findId > this->NumberOfCells)
@@ -565,6 +656,9 @@ svCenterlineGCell* svCenterlineGraph::GetCell(const int findId)
   return this->LookUp(this->Root, findId);
 }
 
+// ----------------------
+// LookUp
+// ----------------------
 svCenterlineGCell* svCenterlineGraph::LookUp(svCenterlineGCell *lookCell, const int findId)
 {
   if (lookCell == NULL)
@@ -589,6 +683,229 @@ svCenterlineGCell* svCenterlineGraph::LookUp(svCenterlineGCell *lookCell, const 
   }
 
   return NULL;
+}
+
+// ----------------------
+// SetLocalCoordinatesOnPoints
+// ----------------------
+int svCenterlineGraph::RefineGraphWithLocalCoordinates()
+{
+  int numSegs   = this->NumberOfCells;
+  int numPoints = this->Lines->GetNumberOfPoints();
+
+  // Set up local arrays
+  vtkNew(vtkDoubleArray, localArrayX);
+  vtkNew(vtkDoubleArray, localArrayY);
+  vtkNew(vtkDoubleArray, localArrayZ);
+  vtkNew(vtkDoubleArray, rotMatrix);
+  localArrayX->SetNumberOfComponents(3);
+  localArrayX->SetNumberOfTuples(numPoints);
+  localArrayY->SetNumberOfComponents(3);
+  localArrayY->SetNumberOfTuples(numPoints);
+  localArrayZ->SetNumberOfComponents(3);
+  localArrayZ->SetNumberOfTuples(numPoints);
+  rotMatrix->SetNumberOfComponents(9);
+  rotMatrix->SetNumberOfTuples(numPoints);
+  for (int i=0; i<3; i++)
+  {
+    localArrayX->FillComponent(i, -1);
+    localArrayY->FillComponent(i, -1);
+    localArrayZ->FillComponent(i, -1);
+  }
+
+  for (int i=0; i<numSegs; i++)
+  {
+    // Corresponding GCell
+    svCenterlineGCell *gCell = this->GetCell(i);
+
+    // The front direction of segment
+    double startVec[3];
+    for (int j=0; j<3; j++)
+      startVec[j] = gCell->FrontDir[j];
+
+    // cell id in the vtkPolyData
+    int cellId = this->Lines->GetCellData()->GetArray(
+     this->GroupIdsArrayName.c_str())->LookupValue(gCell->GroupId);
+
+    // Get Cell points
+    vtkIdType npts, *pts;
+    this->Lines->GetCellPoints(cellId, npts, pts);
+
+    int isTerminating = 0;
+    double endVec[3];
+    if (gCell->Parent == NULL)
+    {
+      // found parent, flip around
+      isTerminating = 1;
+
+      // Check to make sure not already flipped
+      vtkNew(vtkIdList, pointCells);
+      this->Lines->GetPointCells(pts[0], pointCells);
+      if (pointCells->GetNumberOfIds() == 1)
+        this->FlipLinePoints(this->Lines, cellId);
+      this->Lines->GetCellPoints(cellId, npts, pts);
+    }
+    if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
+    {
+      for (int j=0; j<3; j++)
+        endVec[j] = gCell->Children[gCell->AligningChild]->FrontDir[j];
+    }
+    else
+      isTerminating = 1;
+
+    // First vecs
+    double localZ[3], localX[3], localY[3];
+    double pt0[3], pt1[3];
+
+    // Get vec along length
+    this->Lines->GetPoint(pts[0], pt0);
+    this->Lines->GetPoint(pts[1], pt1);
+    vtkMath::Subtract(pt1, pt0, localZ);
+    vtkMath::Normalize(localZ);
+
+    // Compute are temp coordinate system
+    this->ComputeLocalCoordinateSystem(localZ, startVec, localX, localY);
+
+    localArrayX->SetTuple(pts[0], localX);
+    localArrayY->SetTuple(pts[0], localY);
+    localArrayZ->SetTuple(pts[0], localZ);
+
+    double locMat[9];
+    this->ComputeRotationMatrix(localX, localY, localZ, locMat);
+    rotMatrix->SetTuple(pts[0], locMat);
+
+    for (int j=1; j<npts; j++)
+    {
+      this->Lines->GetPoint(pts[j-1], pt0);
+      this->Lines->GetPoint(pts[j], pt1);
+      vtkMath::Subtract(pt1, pt0, localZ);
+      vtkMath::Normalize(localZ);
+
+      localArrayX->GetTuple(pts[j-1], startVec);
+      this->ComputeLocalCoordinateSystem(localZ, startVec, localX, localY);
+
+      localArrayX->SetTuple(pts[j], localX);
+      localArrayY->SetTuple(pts[j], localY);
+      localArrayZ->SetTuple(pts[j], localZ);
+
+      this->ComputeRotationMatrix(localX, localY, localZ, locMat);
+      rotMatrix->SetTuple(pts[j], locMat);
+    }
+
+    if (isTerminating == 0)
+    {
+      // Must test to see if it actually was correct son!
+      double testX[3];
+      localArrayX->GetTuple(pts[npts-1], testX);
+
+      // Get angles
+      double angleVec0[3];
+      vtkMath::Cross(testX, endVec, angleVec0);
+      double ang = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(testX, endVec));
+
+      fprintf(stdout,"JUST WANT TO SEE: %.6f\n", ang);
+      int testDir;
+      if (ang >= 7.0*M_PI/4.0 || ang < M_PI/4.0)
+        testDir = svCenterlineGraph::DT[gCell->Dir][0];
+
+      else if (ang >= M_PI/4.0 && ang < 3.0*M_PI/4.0)
+        testDir = svCenterlineGraph::DT[gCell->Dir][1];
+
+      else if (ang >= 3.0*M_PI/4.0 && ang < 5.0*M_PI/4.0)
+        testDir = svCenterlineGraph::DT[gCell->Dir][2];
+
+      else if (ang >= 5.0*M_PI/4.0 && ang < 7.0*M_PI/4.0)
+        testDir = svCenterlineGraph::DT[gCell->Dir][3];
+      fprintf(stdout,"WHAT: %d %d\n", testDir, gCell->Children[gCell->DivergingChild]->Dir);
+
+    }
+  }
+  return SV_OK;
+}
+
+// ----------------------
+// ComputeLocalCoordinateSystem
+// ----------------------
+int svCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
+                                                               const double vstart[3],
+                                                               double vx[3],
+                                                               double vy[3])
+{
+	double tempArray[3];
+  double tempLength = vtkMath::Dot(vstart, vz);
+	for (int i = 0; i < 3; i++)
+		tempArray[i] = tempLength * vz[i];
+
+  vtkMath::Subtract(vstart, tempArray, vx);
+  vtkMath::Normalize(vx);
+
+  vtkMath::Cross(vz, vx, vy);
+  vtkMath::Normalize(vy);
+
+  return SV_OK;
+}
+
+// ----------------------
+// ComputeRotationMatrix
+// ----------------------
+int svCenterlineGraph::ComputeRotationMatrix(const double vx[3],
+                                                        const double vy[3],
+                                                        const double vz[3],
+                                                        double rotMatrix[9])
+{
+  rotMatrix[0] = vx[0]*this->GlobalCoords[0][0] +
+                 vx[1]*this->GlobalCoords[0][1] +
+                 vx[2]*this->GlobalCoords[0][2];
+  rotMatrix[1] = vx[0]*this->GlobalCoords[1][0] +
+                 vx[1]*this->GlobalCoords[1][1] +
+                 vx[2]*this->GlobalCoords[1][2];
+  rotMatrix[2] = vx[0]*this->GlobalCoords[2][0] +
+                 vx[1]*this->GlobalCoords[2][1] +
+                 vx[2]*this->GlobalCoords[2][2];
+
+  rotMatrix[3] = vy[0]*this->GlobalCoords[0][0] +
+                 vy[1]*this->GlobalCoords[0][1] +
+                 vy[2]*this->GlobalCoords[0][2];
+  rotMatrix[4] = vy[0]*this->GlobalCoords[1][0] +
+                 vy[1]*this->GlobalCoords[1][1] +
+                 vy[2]*this->GlobalCoords[1][2];
+  rotMatrix[5] = vy[0]*this->GlobalCoords[2][0] +
+                 vy[1]*this->GlobalCoords[2][1] +
+                 vy[2]*this->GlobalCoords[2][2];
+
+  rotMatrix[6] = vz[0]*this->GlobalCoords[0][0] +
+                 vz[1]*this->GlobalCoords[0][1] +
+                 vz[2]*this->GlobalCoords[0][2];
+  rotMatrix[7] = vz[0]*this->GlobalCoords[1][0] +
+                 vz[1]*this->GlobalCoords[1][1] +
+                 vz[2]*this->GlobalCoords[1][2];
+  rotMatrix[8] = vz[0]*this->GlobalCoords[2][0] +
+                 vz[1]*this->GlobalCoords[2][1] +
+                 vz[2]*this->GlobalCoords[2][2];
+
+  return SV_OK;
+}
+
+// ----------------------
+// FlipLinePoints
+// ----------------------
+int svCenterlineGraph::FlipLinePoints(vtkPolyData *pd, const int cellId)
+{
+  vtkIdType npts, *pts;
+  pd->GetCellPoints(cellId, npts, pts);
+
+  double *tmpPts = new double[npts];
+  for (int i=0; i<npts; i++)
+    tmpPts[i] = pts[i];
+
+  for (int i=0; i<npts; i++)
+    pts[(npts-1)-i] = tmpPts[i];
+
+  pd->ReplaceCell(cellId, npts, pts);
+  pd->Modified();
+  pd->BuildLinks();
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -684,6 +1001,13 @@ int svCenterlineGraph::LookupIndex(const int parent, const int divchild, const i
 
   return -1;
 }
+
+const double svCenterlineGraph::GlobalCoords[3][3] =
+  {
+    {1.0, 0.0, 0.0},
+    {0.0, 1.0, 0.0},
+    {0.0, 0.0, 1.0},
+  };
 
 // ----------------------
 // DT

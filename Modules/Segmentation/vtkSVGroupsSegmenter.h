@@ -45,6 +45,8 @@
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
+#include "svCenterlineGraph.h"
+
 #include "vtkSVSegmentationModule.h" // For export
 
 class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
@@ -146,6 +148,8 @@ protected:
 
   double CutoffRadiusFactor;
   double ClipValue;
+
+  svCenterlineGraph *CenterlineGraph;
 
 private:
   vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.

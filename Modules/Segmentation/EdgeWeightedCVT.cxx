@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
   // Default values for options
   int usePointArray                     = 0;
   int useCellArray                      = 1;
-  int useGeneratorsArray                 = 0;
+  int useGeneratorsArray                = 0;
   int numberOfRings                     = 2;
   int useTransferredPatchesAsThreshold  = 1;
   int maximumNumberOfIterations         = 1.0e3;

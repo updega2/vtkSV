@@ -48,6 +48,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVPolyBallLine.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
@@ -245,6 +246,26 @@ int vtkSVGroupsSegmenter::PrepFilter()
     vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
     return SV_ERROR;
   }
+
+  this->CenterlineGraph = new svCenterlineGraph(0, this->Centerlines,
+                                                this->GroupIdsArrayName);
+
+  if (this->CenterlineGraph->BuildGraph() != SV_OK)
+  {
+    vtkErrorMacro("Unable to form graph of centerlines");
+    return SV_ERROR;
+  }
+
+  if (this->CenterlineGraph->RefineGraphWithLocalCoordinates() != SV_OK)
+  {
+    vtkErrorMacro("Unable to form graph of centerlines");
+    return SV_ERROR;
+  }
+
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/CenterlineGraph.vtp";
+  vtkNew(vtkPolyData, graphPd);
+  this->CenterlineGraph->GetGraphPolyData(graphPd);
+  vtkSVIOUtils::WriteVTPFile(filename, graphPd);
 
   return SV_OK;
 }

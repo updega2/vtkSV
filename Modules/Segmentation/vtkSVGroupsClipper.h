@@ -45,6 +45,7 @@
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
+
 #include "vtkSVSegmentationModule.h" // For export
 
 class VTKSVSEGMENTATION_EXPORT vtkSVGroupsClipper : public vtkPolyDataAlgorithm

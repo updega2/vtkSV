@@ -328,6 +328,9 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
     localArrayZ->FillComponent(i, -1);
   }
 
+  vtkNew(vtkDoubleArray, startXArray);
+  startXArray->SetNumberOfComponents(3);
+  startXArray->SetNumberOfTuples(numPoints);
   for (int i=0; i<numCells; i++)
   {
     int lineType = lineIndicator->GetTuple1(i);
@@ -378,6 +381,21 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
 
     }
 
+    startXArray->SetTuple(i, startX);
+  }
+
+  for (int i=0; i<numCells; i++)
+  {
+    int lineType = lineIndicator->GetTuple1(i);
+
+    // cell points
+    vtkIdType npts, *pts;
+    centerlinesWorkPd->GetCellPoints(i, npts, pts);
+
+    // start vector
+    double startX[3];
+    startXArray->GetTuple(i, startX);
+
     double localZ[3], localX[3], localY[3];
     double pt0[3], pt1[3];
     for (int j=0; j<npts-1; j++)
@@ -393,6 +411,53 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
         localArrayX->SetTuple(pts[j], localX);
         localArrayY->SetTuple(pts[j], localY);
         localArrayZ->SetTuple(pts[j], localZ);
+        localArrayX->SetTuple(pts[j+1], localX);
+        localArrayY->SetTuple(pts[j+1], localY);
+        localArrayZ->SetTuple(pts[j+1], localZ);
+      }
+      else if (j > (npts-1)/3. && lineType == 3)
+      {
+        vtkNew(vtkIdList, pointCells);
+        centerlinesWorkPd->GetPointCells(pts[npts-1], pointCells);
+        int cellId;
+        for (int k=0; k<pointCells->GetNumberOfIds(); k++)
+        {
+          cellId = pointCells->GetId(k);
+          if (cellId != i)
+            break;
+        }
+        // start
+        localArrayX->GetTuple(pts[j], startX);
+
+        // end
+        double endX[3];
+        startXArray->GetTuple(cellId, endX);
+
+        // See if it aligns
+        double checkDir = vtkMath::Dot(startX, endX);
+        if (checkDir < 0)
+          vtkMath::MultiplyScalar(endX, -1);
+
+        // difference
+        double diff[3];
+        vtkMath::Subtract(endX, startX, diff);
+        vtkMath::Normalize(diff);
+
+        // Get portion left
+        double newX[3];
+        fprintf(stdout,"J: %d NPTS: %d\n", j, npts-1);
+        vtkMath::MultiplyScalar(diff, (j-((npts-1)/3.))/(2.*(npts-1)/3.));
+        fprintf(stdout,"WHAT: %.5f\n", (j-((npts-1)/3.))/(2.*(npts-1)/3.));
+        vtkMath::Add(startX, diff, newX);
+        vtkMath::Normalize(newX);
+
+        // Do the dirt
+        fprintf(stdout,"Branch %d using start of %d\n", i, cellId);
+        fprintf(stdout,"Start X: %.6f %.6f %.6f\n", startX[0], startX[1], startX[2]);
+        fprintf(stdout,"End X:   %.6f %.6f %.6f\n", endX[0], endX[1], endX[2]);
+        fprintf(stdout,"New X:   %.6f %.6f %.6f\n", newX[0], newX[1], newX[2]);
+        this->ComputeLocalCoordinateSystem(localZ, newX, localX, localY);
+
         localArrayX->SetTuple(pts[j+1], localX);
         localArrayY->SetTuple(pts[j+1], localY);
         localArrayZ->SetTuple(pts[j+1], localZ);
@@ -416,6 +481,18 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
   }
 
   int numPolyCells = this->WorkPd->GetNumberOfCells();
+
+  //-----------------------------------------------------------------------V
+  localArrayX->SetName("LocalX");
+  centerlinesWorkPd->GetPointData()->AddArray(localArrayX);
+  localArrayY->SetName("LocalY");
+  centerlinesWorkPd->GetPointData()->AddArray(localArrayY);
+  localArrayZ->SetName("LocalZ");
+  centerlinesWorkPd->GetPointData()->AddArray(localArrayZ);
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/MyTEST.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename, centerlinesWorkPd);
+  //-----------------------------------------------------------------------V
+
 
   vtkNew(vtkIdList, centerlineGroupIds);
   for (int i=0; i<this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples(); i++)

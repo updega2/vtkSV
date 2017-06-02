@@ -62,8 +62,6 @@ public:
   double StartPt[3];
   double EndPt[3];
   double FrontDir[3];
-  double XVec[3];
-  double ZVec[3];
   int CornerPtIds[8];
   int DivergingChild;
   int AligningChild;
