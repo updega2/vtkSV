@@ -122,6 +122,16 @@ public:
    *  because list size is small. */
   static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
 
+  /** \brief Run basic edge weithing cvt with pd */
+  static int RunEdgeWeightedCVT(vtkPolyData *pd);
+
+  /** \brief From three vectors, compute transformation from global to local */
+  static int ComputeRotationMatrix(const double vx[3], const double vy[3],
+                                   const double vz[3], double rotMatrix[9]);
+
+  const static double GlobalCoords[3][3];
+
+
 protected:
   vtkSVGroupsSegmenter();
   ~vtkSVGroupsSegmenter();
@@ -141,6 +151,7 @@ protected:
 
   vtkPolyData *WorkPd;
   vtkPolyData *Centerlines;
+  vtkPolyData *CenterlinesWorkPd;
   vtkIdList *CenterlineGroupIds;
 
   int ClipAllCenterlineGroupIds;

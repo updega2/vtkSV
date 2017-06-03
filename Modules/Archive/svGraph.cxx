@@ -458,7 +458,7 @@ int svGraph::GetNewBranchDirections(svGCell *parent)
   if (parent->GroupId != 0)
   {
     if (vtkMath::Dot(vec3, dotVec) < 0.0)
-      ang2 = ang2 + M_PI;
+      ang2 = 2*M_PI - ang2;
   }
   parent->Children[parent->DivergingChild]->RefAngle = ang2;
 

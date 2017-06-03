@@ -228,25 +228,45 @@ int main(int argc, char *argv[])
   newNormaler->SetUseCellArray(useCellArray);
   newNormaler->Update();
 
-  // Filter
-  vtkNew(vtkSVEdgeWeightedCVT, CVT);
+  //vtkNew(vtkIdList, centerlineGroupIds);
+  //for (int i=0; i<inputPd->GetCellData()->GetArray(groupIdsArrayName.c_str())->GetNumberOfTuples(); i++)
+  //{
+  //  centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(inputPd->GetCellData()->GetArray(groupIdsArrayName.c_str())->GetComponent(i,0))));
+  //}
+  //int numGroups = centerlineGroupIds->GetNumberOfIds();
 
-  // OPERATION
-  std::cout<<"Performing Operation..."<<endl;
-  CVT->SetInputData(newNormaler->GetOutput());
-  CVT->SetGenerators(generatorsPd);
-  CVT->SetUseCellArray(useCellArray);
-  CVT->SetUsePointArray(usePointArray);
-  CVT->SetUseGeneratorsArray(useGeneratorsArray);
-  CVT->SetNumberOfRings(numberOfRings);
-  CVT->SetThreshold(threshold);
-  CVT->SetEdgeWeight(edgeWeight);
-  CVT->SetUseTransferredPatchesAsThreshold(useTransferredPatchesAsThreshold);
-  CVT->SetMaximumNumberOfIterations(maximumNumberOfIterations);
-  CVT->SetPatchIdsArrayName(patchIdsArrayName.c_str());
-  CVT->SetCVTDataArrayName(newCellArrayName.c_str());
-  CVT->SetGeneratorsArrayName(generatorsArrayName.c_str());
-  CVT->Update();
+  //vtkNew(vtkAppendPolyData, appender);
+
+  //for (int i=0; i<numGroups; i++)
+  //{
+  //  int groupId = centerlineGroupIds->GetId(i);
+
+  //  vtkNew(vtkPolyData, better);
+  //  vtkSVGeneralUtils::ThresholdPd(newNormaler->GetOutput(), groupId, groupId, 1, groupIdsArrayName, better);
+    // Filter
+    vtkNew(vtkSVEdgeWeightedCVT, CVT);
+
+    // OPERATION
+    std::cout<<"Performing Operation..."<<endl;
+    CVT->SetInputData(newNormaler->GetOutput());
+    CVT->SetGenerators(generatorsPd);
+    CVT->SetUseCellArray(useCellArray);
+    CVT->SetUsePointArray(usePointArray);
+    CVT->SetUseGeneratorsArray(useGeneratorsArray);
+    CVT->SetNumberOfRings(numberOfRings);
+    CVT->SetThreshold(threshold);
+    CVT->SetEdgeWeight(edgeWeight);
+    CVT->SetUseTransferredPatchesAsThreshold(useTransferredPatchesAsThreshold);
+    CVT->SetMaximumNumberOfIterations(maximumNumberOfIterations);
+    CVT->SetPatchIdsArrayName(patchIdsArrayName.c_str());
+    CVT->SetCVTDataArrayName(newCellArrayName.c_str());
+    CVT->SetGeneratorsArrayName(generatorsArrayName.c_str());
+    CVT->Update();
+
+  //  appender->AddInputData(CVT->GetOutput());
+  //}
+
+  //appender->Update();
 
   // Get output
   vtkNew(vtkPolyData, output);

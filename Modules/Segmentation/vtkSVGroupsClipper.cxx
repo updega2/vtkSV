@@ -524,23 +524,23 @@ int vtkSVGroupsClipper::RunFilter()
   vtkNew(vtkPolyData, finisher);
   finisher->DeepCopy(allCleaner->GetOutput());
 
-  //// Get list of points at boundary between two groups and -1 group
-  //vtkNew(vtkIdList, separateIds);
-  //this->FindGroupSeparatingPoints(finisher, separateIds);
+  // Get list of points at boundary between two groups and -1 group
+  vtkNew(vtkIdList, separateIds);
+  this->FindGroupSeparatingPoints(finisher, separateIds);
 
-  //// Take these point ids, punch holes near them, and fill to give nice
-  //// separation between groups
-  //vtkNew(vtkPoints, newPoints);
-  //this->PunchHoles(finisher, separateIds, newPoints);
+  // Take these point ids, punch holes near them, and fill to give nice
+  // separation between groups
+  vtkNew(vtkPoints, newPoints);
+  this->PunchHoles(finisher, separateIds, newPoints);
 
-  //// Fill and paint regions with group ids
-  //this->FillHoles(finisher, newPoints);
+  // Fill and paint regions with group ids
+  this->FillHoles(finisher, newPoints);
 
-  //// Last clean to remove duplicate points
-  //vtkNew(vtkCleanPolyData, finalCleaner);
-  //finalCleaner->SetInputData(finisher);
-  //finalCleaner->Update();
-  //finisher->DeepCopy(finalCleaner->GetOutput());
+  // Last clean to remove duplicate points
+  vtkNew(vtkCleanPolyData, finalCleaner);
+  finalCleaner->SetInputData(finisher);
+  finalCleaner->Update();
+  finisher->DeepCopy(finalCleaner->GetOutput());
 
   // Finalize
   this->WorkPd->DeepCopy(finisher);

@@ -50,6 +50,16 @@ public:
   /// \brief Evaluate polyball gradient.
   void EvaluateGradient(double x[3], double n[3]);
   //@}
+  //
+  //@{
+  /// \brief Set / get input poly data.
+  vtkSetVector3Macro(LastLocalCoordX, double);
+  vtkGetVector3Macro(LastLocalCoordX, double);
+  vtkSetVector3Macro(LastLocalCoordY, double);
+  vtkGetVector3Macro(LastLocalCoordY, double);
+  vtkSetVector3Macro(LastLocalCoordZ, double);
+  vtkGetVector3Macro(LastLocalCoordZ, double);
+  //@}
 
   //@{
   /// \brief Set / get input poly data.
@@ -82,6 +92,12 @@ public:
   //@}
 
   //@{
+  /// \brief Set / get poly ball radius array name.
+  vtkSetStringMacro(LocalCoordinatesArrayName);
+  vtkGetStringMacro(LocalCoordinatesArrayName);
+  //@}
+
+  //@{
   /// \brief Get the id of the last nearest poly ball center.
   vtkGetMacro(LastPolyBallCellId,vtkIdType);
   vtkGetMacro(LastPolyBallCellSubId,vtkIdType);
@@ -105,6 +121,20 @@ public:
   //@}
 
   //@{
+  /// \brief Use given normal for directional help
+  vtkSetMacro(UseRadiusWeighting,int);
+  vtkGetMacro(UseRadiusWeighting,int);
+  vtkBooleanMacro(UseRadiusWeighting,int);
+  //@}
+
+  //@{
+  /// \brief Use radius information
+  vtkSetMacro(UseLocalCoordinates,int);
+  vtkGetMacro(UseLocalCoordinates,int);
+  vtkBooleanMacro(UseLocalCoordinates,int);
+  //@}
+
+  //@{
   /// \brief Remove end points from centerline possible points to check
   vtkSetMacro(RemoveEndPoints,int);
   vtkGetMacro(RemoveEndPoints,int);
@@ -124,6 +154,7 @@ protected:
   ~vtkSVPolyBallLine();
 
   char* PolyBallRadiusArrayName;
+  char* LocalCoordinatesArrayName;
 
   vtkPolyData* Input;
   vtkIdList* InputCellIds;
@@ -134,12 +165,17 @@ protected:
 
   int UseRadiusInformation;
   int UsePointNormal;
+  int UseRadiusWeighting;
+  int UseLocalCoordinates;
   int RemoveEndPoints;
   int ControlEndPoints;
 
   double LastPolyBallCellPCoord;
   double LastPolyBallCenter[3];
   double LastPolyBallCenterRadius;
+  double LastLocalCoordX[3];
+  double LastLocalCoordY[3];
+  double LastLocalCoordZ[3];
   double PointNormal[3];
 
 private:

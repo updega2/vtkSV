@@ -46,6 +46,7 @@
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
@@ -65,6 +66,16 @@
 #include "vtkXMLPolyDataWriter.h"
 
 // ----------------------
+// GlobalCoords
+// ----------------------
+const double vtkSVGroupsSegmenter::GlobalCoords[3][3] =
+  {
+    {1.0, 0.0, 0.0},
+    {0.0, 1.0, 0.0},
+    {0.0, 0.0, 1.0},
+  };
+
+// ----------------------
 // StandardNewMacro
 // ----------------------
 vtkStandardNewMacro(vtkSVGroupsSegmenter);
@@ -75,6 +86,7 @@ vtkStandardNewMacro(vtkSVGroupsSegmenter);
 vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
 {
   this->WorkPd = vtkPolyData::New();
+  this->CenterlinesWorkPd = vtkPolyData::New();
   this->Centerlines = NULL;
 
   this->CenterlineGroupIdsArrayName = NULL;
@@ -98,6 +110,11 @@ vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
   {
     this->WorkPd->Delete();
     this->WorkPd = NULL;
+  }
+  if (this->CenterlinesWorkPd)
+  {
+    this->CenterlinesWorkPd->Delete();
+    this->CenterlinesWorkPd = NULL;
   }
   if (this->Centerlines)
   {
@@ -149,6 +166,7 @@ int vtkSVGroupsSegmenter::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
+  this->CenterlinesWorkPd->DeepCopy(this->Centerlines);
   // If there is one centerline, we don't need to separate, just return
   // with one group id
   if (this->Centerlines->GetNumberOfCells() == 1)
@@ -194,6 +212,7 @@ int vtkSVGroupsSegmenter::PrepFilter()
     vtkErrorMacro(<< "Centerlines not set.");
     return SV_ERROR;
   }
+  this->CenterlinesWorkPd->DeepCopy(this->Centerlines);
 
   if (!this->ClipAllCenterlineGroupIds && !this->CenterlineGroupIds)
   {
@@ -256,17 +275,14 @@ int vtkSVGroupsSegmenter::PrepFilter()
     return SV_ERROR;
   }
 
-  if (this->CenterlineGraph->RefineGraphWithLocalCoordinates() != SV_OK)
-  {
-    vtkErrorMacro("Unable to form graph of centerlines");
-    return SV_ERROR;
-  }
-
   std::string filename = "/Users/adamupdegrove/Desktop/tmp/CenterlineGraph.vtp";
   vtkNew(vtkPolyData, graphPd);
   this->CenterlineGraph->GetGraphPolyData(graphPd);
   vtkSVIOUtils::WriteVTPFile(filename, graphPd);
 
+  this->CenterlinesWorkPd->DeepCopy(this->CenterlineGraph->Lines);
+  std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/CenterlineDirs.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename2, this->CenterlineGraph->Lines);
   return SV_OK;
 }
 
@@ -277,93 +293,147 @@ int vtkSVGroupsSegmenter::RunFilter()
 {
   // Get data arrays
   vtkDataArray *centerlineGroupIdsArray =
-    this->Centerlines->GetCellData()->GetArray(this->CenterlineGroupIdsArrayName);
-  vtkIntArray *blankingArray =
-    vtkIntArray::SafeDownCast(this->Centerlines->GetCellData()->GetArray(this->BlankingArrayName));
+    this->CenterlinesWorkPd->GetCellData()->GetArray(this->CenterlineGroupIdsArrayName);
 
   // for each group, compute the clipping array, clip, add group ids array and append.
   vtkNew(vtkSVPolyBallLine, groupTubes);
-  groupTubes->SetInput(this->Centerlines);
+  groupTubes->SetInput(this->CenterlinesWorkPd);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
   groupTubes->ControlEndPointsOff();
   groupTubes->UsePointNormalOn();
+  groupTubes->UseRadiusWeightingOn();
+  groupTubes->UseLocalCoordinatesOn();
+  groupTubes->SetLocalCoordinatesArrayName("Local");
 
   double point[3];
   double groupTubeValue;
   vtkIdType groupId;
 
-  // Get all the group ids if clipping all
-  vtkNew(vtkIdList, centerlineGroupIds);
-  int i;
-  if (this->ClipAllCenterlineGroupIds)
-  {
-    for (i=0; i<centerlineGroupIdsArray->GetNumberOfTuples(); i++)
-    {
-      if (blankingArray->GetValue(i) == 1)
-        continue;
-
-      centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(centerlineGroupIdsArray->GetComponent(i,0))));
-    }
-  }
-  else
-    centerlineGroupIds->DeepCopy(this->CenterlineGroupIds);
-
   // Clipping input
   vtkNew(vtkPolyDataNormals, normaler);
   normaler->SetInputData(this->WorkPd);
-  normaler->ComputePointNormalsOn();
-  normaler->ComputeCellNormalsOff();
+  normaler->ComputePointNormalsOff();
+  normaler->ComputeCellNormalsOn();
   normaler->SplittingOff();
   normaler->Update();
 
-  vtkNew(vtkPolyData, clippingInput);
-  clippingInput->DeepCopy(normaler->GetOutput());
-  vtkDataArray *normalsArray =
-    clippingInput->GetPointData()->GetArray("Normals");
+  int numberOfCells = this->WorkPd->GetNumberOfCells();
 
+  this->WorkPd->DeepCopy(normaler->GetOutput());
+  vtkDataArray *normalsArray =
+    this->WorkPd->GetCellData()->GetArray("Normals");
   // Add array for group cell ids on surface
   vtkNew(vtkIntArray, startGroupIds);
   startGroupIds->SetName(this->GroupIdsArrayName);
-  startGroupIds->SetNumberOfTuples(clippingInput->GetNumberOfPoints());
+  startGroupIds->SetNumberOfTuples(numberOfCells);
   startGroupIds->FillComponent(0,-1);
-  clippingInput->GetPointData()->AddArray(startGroupIds);
+  this->WorkPd->GetCellData()->AddArray(startGroupIds);
 
-  // Appender to append all the clipped together
-  vtkNew(vtkAppendPolyData, appendBranches);
-  int numberOfPoints = clippingInput->GetNumberOfPoints();
+  // Add array for new cell normals on surface
+  vtkNew(vtkDoubleArray, newCellNormals);
+  newCellNormals->SetName("CenterlinesBasedCellNormals");
+  newCellNormals->SetNumberOfComponents(3);
+  newCellNormals->SetNumberOfTuples(numberOfCells);
+  this->WorkPd->GetCellData()->AddArray(newCellNormals);
+  this->WorkPd->BuildLinks();
 
   // Loop through points to evaluate function at each point
-  for (int k=0; k<numberOfPoints; k++)
+  for (int k=0; k<numberOfCells; k++)
   {
+    // Get cell point coords
+    double pts[3][3];
+    vtkIdType npts, *ptids;
+    this->WorkPd->GetCellPoints(k, npts, ptids);
+    for (int j=0; j<npts; j++)
+      this->WorkPd->GetPoint(ptids[j], pts[j]);
+
+    // Get center
+    double center[3];
+    vtkTriangle::TriangleCenter(pts[0], pts[1], pts[2], center);
+
     // Evaluate function at point!
-    clippingInput->GetPoint(k,point);
-    double pointNormal[3];
-    normalsArray->GetTuple(k, pointNormal);
-    groupTubes->SetPointNormal(pointNormal);
-    groupTubeValue = groupTubes->EvaluateFunction(point);
+    double cellNormal[3];
+    normalsArray->GetTuple(k, cellNormal);
+    groupTubes->SetPointNormal(cellNormal);
+    groupTubeValue = groupTubes->EvaluateFunction(center);
 
     // Set to very large value if greater than threshold
     if (groupTubeValue > this->CutoffRadiusFactor * this->CutoffRadiusFactor - 1)
       groupTubeValue = VTK_SV_LARGE_DOUBLE;
 
     startGroupIds->SetTuple1(k, centerlineGroupIdsArray->GetTuple1(groupTubes->GetLastPolyBallCellId()));
+
+    // Now get last local coords and use rotation matrix to set new normals
+    double localX[3], localY[3], localZ[3];
+    groupTubes->GetLastLocalCoordX(localX);
+    groupTubes->GetLastLocalCoordY(localY);
+    groupTubes->GetLastLocalCoordZ(localZ);
+
+    // Compute the rotation from global coordinate system to centerlines
+    // local coordinate system
+    double rotMat[9];
+    this->ComputeRotationMatrix(localX, localY, localZ, rotMat);
+
+    // Apply rotation matrix to the normal to get the new normal
+    double newNormal[3];
+    for (int j=0; j<3; j++)
+    {
+      newNormal[j] = rotMat[j*3]*cellNormal[0] +
+                     rotMat[(j*3)+1]*cellNormal[1] +
+                     rotMat[(j*3)+2]*cellNormal[2];
+    }
+    newCellNormals->SetTuple(k, newNormal);
+
   }
 
-  if (this->PassPointGroupsToCells(clippingInput, this->GroupIdsArrayName) != SV_OK)
+  if (this->RunEdgeWeightedCVT(this->WorkPd) != SV_OK)
   {
-    vtkErrorMacro("Couldn't extend group info to cells");
+    vtkErrorMacro("Error in cvt");
     return SV_ERROR;
   }
 
-  if (this->CorrectCellBoundaries(clippingInput, this->GroupIdsArrayName) != SV_OK)
+  if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
 
-  // Finalize
-  this->WorkPd->DeepCopy(clippingInput);
+  return SV_OK;
+}
+
+// ----------------------
+// RunEdgeWeightedCVT
+// ----------------------
+int vtkSVGroupsSegmenter::RunEdgeWeightedCVT(vtkPolyData *pd)
+{
+  // Set up generators
+  vtkNew(vtkPoints, generatorsPts);
+  generatorsPts->SetNumberOfPoints(6);
+  generatorsPts->SetPoint(0, 1.0, 0.0, 0.0);
+  generatorsPts->SetPoint(1, -1.0, 0.0, 0.0);
+  generatorsPts->SetPoint(2, 0.0, 1.0, 0.0);
+  generatorsPts->SetPoint(3, 0.0, -1.0, 0.0);
+  generatorsPts->SetPoint(4, 0.0, 0.0, 1.0);
+  generatorsPts->SetPoint(5, 0.0, 0.0, -1.0);
+
+  vtkNew(vtkPolyData, generatorsPd);
+  generatorsPd->SetPoints(generatorsPts);
+
+  // Run edge weighted cvt
+  vtkNew(vtkSVEdgeWeightedCVT, CVT);
+
+  CVT->SetInputData(pd);
+  CVT->SetGenerators(generatorsPd);
+  CVT->SetNumberOfRings(2);
+  CVT->SetThreshold(2);
+  CVT->SetEdgeWeight(1.0);
+  CVT->SetMaximumNumberOfIterations(1000);
+  CVT->SetPatchIdsArrayName("PatchIds");
+  CVT->SetCVTDataArrayName("CenterlinesBasedCellNormals");
+  CVT->Update();
+
+  pd->DeepCopy(CVT->GetOutput());
 
   return SV_OK;
 }
@@ -581,3 +651,45 @@ void vtkSVGroupsSegmenter::GetMostOccuringVal(vtkIdList *idList, int &output,
 
   output = max_val;
 }
+
+// ----------------------
+// ComputeRotationMatrix
+// ----------------------
+int vtkSVGroupsSegmenter::ComputeRotationMatrix(const double vx[3],
+                                                const double vy[3],
+                                                const double vz[3],
+                                                double rotMatrix[9])
+{
+  rotMatrix[0] = vx[0]*vtkSVGroupsSegmenter::GlobalCoords[0][0] +
+                 vx[1]*vtkSVGroupsSegmenter::GlobalCoords[0][1] +
+                 vx[2]*vtkSVGroupsSegmenter::GlobalCoords[0][2];
+  rotMatrix[1] = vx[0]*vtkSVGroupsSegmenter::GlobalCoords[1][0] +
+                 vx[1]*vtkSVGroupsSegmenter::GlobalCoords[1][1] +
+                 vx[2]*vtkSVGroupsSegmenter::GlobalCoords[1][2];
+  rotMatrix[2] = vx[0]*vtkSVGroupsSegmenter::GlobalCoords[2][0] +
+                 vx[1]*vtkSVGroupsSegmenter::GlobalCoords[2][1] +
+                 vx[2]*vtkSVGroupsSegmenter::GlobalCoords[2][2];
+
+  rotMatrix[3] = vy[0]*vtkSVGroupsSegmenter::GlobalCoords[0][0] +
+                 vy[1]*vtkSVGroupsSegmenter::GlobalCoords[0][1] +
+                 vy[2]*vtkSVGroupsSegmenter::GlobalCoords[0][2];
+  rotMatrix[4] = vy[0]*vtkSVGroupsSegmenter::GlobalCoords[1][0] +
+                 vy[1]*vtkSVGroupsSegmenter::GlobalCoords[1][1] +
+                 vy[2]*vtkSVGroupsSegmenter::GlobalCoords[1][2];
+  rotMatrix[5] = vy[0]*vtkSVGroupsSegmenter::GlobalCoords[2][0] +
+                 vy[1]*vtkSVGroupsSegmenter::GlobalCoords[2][1] +
+                 vy[2]*vtkSVGroupsSegmenter::GlobalCoords[2][2];
+
+  rotMatrix[6] = vz[0]*vtkSVGroupsSegmenter::GlobalCoords[0][0] +
+                 vz[1]*vtkSVGroupsSegmenter::GlobalCoords[0][1] +
+                 vz[2]*vtkSVGroupsSegmenter::GlobalCoords[0][2];
+  rotMatrix[7] = vz[0]*vtkSVGroupsSegmenter::GlobalCoords[1][0] +
+                 vz[1]*vtkSVGroupsSegmenter::GlobalCoords[1][1] +
+                 vz[2]*vtkSVGroupsSegmenter::GlobalCoords[1][2];
+  rotMatrix[8] = vz[0]*vtkSVGroupsSegmenter::GlobalCoords[2][0] +
+                 vz[1]*vtkSVGroupsSegmenter::GlobalCoords[2][1] +
+                 vz[2]*vtkSVGroupsSegmenter::GlobalCoords[2][2];
+
+  return SV_OK;
+}
+

@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
     std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
     // Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
-    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Grouped.vtp";
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Segmented.vtp";
   }
 
   // Call Function to Read File

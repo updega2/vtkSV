@@ -92,13 +92,8 @@ public:
    */
   static int LookupIndex(const int parent, const int divchild, const int index);
 
-  const static double GlobalCoords[3][3];
-
   int ComputeLocalCoordinateSystem(const double vz[3], const double vstart[3],
                                    double vx[3], double vy[3]);
-
-  int ComputeRotationMatrix(const double vx[3], const double vy[3], const double vz[3],
-                            double rotMatrix[9]);
 
   int FlipLinePoints(vtkPolyData *pd, const int cellId);
 

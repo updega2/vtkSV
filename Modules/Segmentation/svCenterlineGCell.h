@@ -59,9 +59,9 @@ public:
   int GroupId;
   int Dir;
   double RefAngle;
+  double RefDirs[3][3];
   double StartPt[3];
   double EndPt[3];
-  double FrontDir[3];
   int CornerPtIds[8];
   int DivergingChild;
   int AligningChild;

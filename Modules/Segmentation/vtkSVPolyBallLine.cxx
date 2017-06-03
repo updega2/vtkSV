@@ -39,6 +39,7 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->InputCellIds = NULL;
   this->InputCellId = -1;
   this->PolyBallRadiusArrayName = NULL;
+  this->LocalCoordinatesArrayName = NULL;
   this->LastPolyBallCellId = -1;
   this->LastPolyBallCellSubId = -1;
   this->LastPolyBallCellPCoord = 0.0;
@@ -46,6 +47,8 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->LastPolyBallCenterRadius = 0.0;
   this->UseRadiusInformation = 1;
   this->UsePointNormal = 0;
+  this->UseRadiusWeighting = 0;
+  this->UseLocalCoordinates = 0;
   this->RemoveEndPoints = 0;
   this->ControlEndPoints = 0;
 }
@@ -93,9 +96,14 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
   double point0[3], point1[3];
   double radius0, radius1;
   double vector0[4], vector1[4], closestPoint[4];
+  double local0[3][3], local1[3][3];
+  double localDiffs[3][3], finalLocal[3][3];;
   double t;
   double num, den;
   vtkDataArray *polyballRadiusArray = NULL;
+  vtkDataArray *localXArray = NULL;
+  vtkDataArray *localYArray = NULL;
+  vtkDataArray *localZArray = NULL;
 
   if (!this->Input)
     {
@@ -124,6 +132,22 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
       vtkErrorMacro(<<"PolyBallRadiusArray with name specified does not exist!");
       return SV_ERROR;
       }
+    }
+
+  if (this->UseLocalCoordinates)
+    {
+    if (!this->LocalCoordinatesArrayName)
+      {
+      vtkErrorMacro("Must provide local coordinates name if using local coordinates");
+      return SV_ERROR;
+      }
+
+    std::string localXName = this->LocalCoordinatesArrayName; localXName = localXName+"X";
+    localXArray = this->Input->GetPointData()->GetArray(localXName.c_str());
+    std::string localYName = this->LocalCoordinatesArrayName; localYName = localYName+"Y";
+    localYArray = this->Input->GetPointData()->GetArray(localYName.c_str());
+    std::string localZName = this->LocalCoordinatesArrayName; localZName = localZName+"Z";
+    localZArray = this->Input->GetPointData()->GetArray(localZName.c_str());
     }
 
   if (this->Input->GetLines()==NULL)
@@ -180,10 +204,10 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     int start = 0;
     int end = npts-1;
     if (this->RemoveEndPoints)
-    {
+      {
       start += 1;
       end -= 1;
-    }
+      }
     for (i=start; i<end; i++)
       {
       this->Input->GetPoint(pts[i],point0);
@@ -218,6 +242,27 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         radius0 = 0.0;
         radius1 = 0.0;
         }
+      if (this->UseLocalCoordinates)
+        {
+        localXArray->GetTuple(pts[i], local0[0]);
+        localYArray->GetTuple(pts[i], local0[1]);
+        localZArray->GetTuple(pts[i], local0[2]);
+        localXArray->GetTuple(pts[i+1], local1[0]);
+        localYArray->GetTuple(pts[i+1], local1[1]);
+        localZArray->GetTuple(pts[i+1], local1[2]);
+        }
+      else
+        {
+        for (int j=0; j<3; j++)
+          {
+          for (int k=0; k<3; k++)
+            {
+            local0[j][k] = 0.0;
+            local1[j][k] = 0.0;
+            }
+          }
+        }
+
       vector0[0] = point1[0] - point0[0];
       vector0[1] = point1[1] - point0[1];
       vector0[2] = point1[2] - point0[2];
@@ -226,6 +271,8 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
       vector1[1] = x[1] - point0[1];
       vector1[2] = x[2] - point0[2];
       vector1[3] = 0.0 - radius0;
+      for (int j=0; j<3; j++)
+        vtkMath::Subtract(local1[j], local0[j], localDiffs[j]);
 
 //       cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<point0[0]<<" "<<point0[1]<<" "<<point0[2]<<" "<<point1[0]<<" "<<point1[1]<<" "<<point1[2]<<" "<<endl;
 
@@ -246,6 +293,11 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         closestPoint[1] = point0[1];
         closestPoint[2] = point0[2];
         closestPoint[3] = radius0;
+        for (int j=0; j<3; j++)
+          {
+          for (int k=0; k<3; k++)
+            finalLocal[j][k] = local0[j][k];
+          }
         }
       else if (1.0-t<VTK_SV_DOUBLE_TOL)
         {
@@ -254,6 +306,11 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         closestPoint[1] = point1[1];
         closestPoint[2] = point1[2];
         closestPoint[3] = radius1;
+        for (int j=0; j<3; j++)
+          {
+          for (int k=0; k<3; k++)
+            finalLocal[j][k] = local1[j][k];
+          }
         }
       else
         {
@@ -261,30 +318,37 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         closestPoint[1] = point0[1] + t * vector0[1];
         closestPoint[2] = point0[2] + t * vector0[2];
         closestPoint[3] = radius0 + t * vector0[3];
+        for (int j=0; j<3; j++)
+          {
+          for (int k=0; k<3; k++)
+            finalLocal[j][k] = local0[j][k] + t * localDiffs[j][k];
+          }
         }
 
       polyballFunctionValue = (x[0]-closestPoint[0])*(x[0]-closestPoint[0]) + (x[1]-closestPoint[1])*(x[1]-closestPoint[1]) + (x[2]-closestPoint[2])*(x[2]-closestPoint[2]) - closestPoint[3]*closestPoint[3];
 
       if (this->UsePointNormal)
-      {
+        {
         double dir0[3];
         vtkMath::Subtract(x, closestPoint, dir0);
         vtkMath::Normalize(dir0);
         double align0 = vtkMath::Dot(this->PointNormal, dir0);
 
         if (align0 <= 0.5)
-        {
+          {
           // We found a false positive
-          polyballFunctionValue = minPolyBallFunctionValue + 1.0;
+          polyballFunctionValue = VTK_SV_LARGE_DOUBLE;
+          }
         }
-        else
+
+      if (this->UseRadiusWeighting && this->UseRadiusInformation)
         {
-          double factor = 1.0;
-          double weight = fabs(radius1 - radius0)*fabs(radius1-radius0);
-          weight = (weight*factor)/svminimum(radius0, radius1);
-          polyballFunctionValue += weight;
+        double factor = 1.0;
+        double weight = fabs(radius1 - radius0)*fabs(radius1-radius0);
+        weight = (weight*factor)/svminimum(radius0, radius1);
+        polyballFunctionValue += weight;
         }
-      }
+
       if (polyballFunctionValue<minPolyBallFunctionValue)
         {
         minPolyBallFunctionValue = polyballFunctionValue;
@@ -295,6 +359,12 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         this->LastPolyBallCenter[1] = closestPoint[1];
         this->LastPolyBallCenter[2] = closestPoint[2];
         this->LastPolyBallCenterRadius = closestPoint[3];
+        for (int j=0; j<3; j++)
+          {
+          this->LastLocalCoordX[j] = finalLocal[0][j];
+          this->LastLocalCoordY[j] = finalLocal[1][j];
+          this->LastLocalCoordZ[j] = finalLocal[2][j];
+          }
         }
       }
     }

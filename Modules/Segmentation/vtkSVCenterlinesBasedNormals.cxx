@@ -265,234 +265,238 @@ int vtkSVCenterlinesBasedNormals::RunFilter()
   vtkNew(vtkPolyData, centerlinesWorkPd);
   centerlinesWorkPd->DeepCopy(this->CenterlinesPd);
 
-  vtkNew(vtkIntArray, lineIndicator);
-  lineIndicator->SetNumberOfTuples(centerlinesWorkPd->GetNumberOfCells());
+  //vtkNew(vtkIntArray, lineIndicator);
+  //lineIndicator->SetNumberOfTuples(centerlinesWorkPd->GetNumberOfCells());
 
-  int numCells =  centerlinesWorkPd->GetNumberOfCells();
-  int numPoints = centerlinesWorkPd->GetNumberOfPoints();
+  //int numCells =  centerlinesWorkPd->GetNumberOfCells();
+  //int numPoints = centerlinesWorkPd->GetNumberOfPoints();
 
-  centerlinesWorkPd->BuildLinks();
-  this->WorkPd->BuildLinks();
-  for (int i=0; i<numCells; i++)
-  {
-    vtkIdType npts, *pts;
-    centerlinesWorkPd->GetCellPoints(i, npts, pts);
+  //centerlinesWorkPd->BuildLinks();
+  //this->WorkPd->BuildLinks();
+  //for (int i=0; i<numCells; i++)
+  //{
+  //  vtkIdType npts, *pts;
+  //  centerlinesWorkPd->GetCellPoints(i, npts, pts);
 
-    vtkNew(vtkIdList, pt0Cells);
-    vtkNew(vtkIdList, ptNCells);
-    centerlinesWorkPd->GetPointCells(pts[0], pt0Cells);
-    centerlinesWorkPd->GetPointCells(pts[npts-1], ptNCells);
+  //  vtkNew(vtkIdList, pt0Cells);
+  //  vtkNew(vtkIdList, ptNCells);
+  //  centerlinesWorkPd->GetPointCells(pts[0], pt0Cells);
+  //  centerlinesWorkPd->GetPointCells(pts[npts-1], ptNCells);
 
-    if (pt0Cells->GetNumberOfIds() == 1 && ptNCells->GetNumberOfIds() == 1)
-    {
-      if (numCells != 1)
-      {
-        vtkErrorMacro("Disconnected centerline, fix centerlines before proceeding!");
-        return SV_ERROR;
-      }
-      lineIndicator->SetTuple1(i, 0);
-    }
-    else if (pt0Cells->GetNumberOfIds() == 1)
-    {
-      // Centerlines is a terminating branch
-      lineIndicator->SetTuple1(i, 1);
-    }
-    else if (ptNCells->GetNumberOfIds() == 1)
-    {
-      // Centerlines is a terminating branch
-      lineIndicator->SetTuple1(i, 2);
-    }
-    else
-    {
-      // Internal centerline
-      lineIndicator->SetTuple1(i, 3);
-    }
-  }
+  //  if (pt0Cells->GetNumberOfIds() == 1 && ptNCells->GetNumberOfIds() == 1)
+  //  {
+  //    if (numCells != 1)
+  //    {
+  //      vtkErrorMacro("Disconnected centerline, fix centerlines before proceeding!");
+  //      return SV_ERROR;
+  //    }
+  //    lineIndicator->SetTuple1(i, 0);
+  //  }
+  //  else if (pt0Cells->GetNumberOfIds() == 1)
+  //  {
+  //    // Centerlines is a terminating branch
+  //    lineIndicator->SetTuple1(i, 1);
+  //  }
+  //  else if (ptNCells->GetNumberOfIds() == 1)
+  //  {
+  //    // Centerlines is a terminating branch
+  //    lineIndicator->SetTuple1(i, 2);
+  //  }
+  //  else
+  //  {
+  //    // Internal centerline
+  //    lineIndicator->SetTuple1(i, 3);
+  //  }
+  //}
 
-  vtkNew(vtkDoubleArray, localArrayX);
-  vtkNew(vtkDoubleArray, localArrayY);
-  vtkNew(vtkDoubleArray, localArrayZ);
-  vtkNew(vtkDoubleArray, rotMatrix);
-  localArrayX->SetNumberOfComponents(3);
-  localArrayX->SetNumberOfTuples(numPoints);
-  localArrayY->SetNumberOfComponents(3);
-  localArrayY->SetNumberOfTuples(numPoints);
-  localArrayZ->SetNumberOfComponents(3);
-  localArrayZ->SetNumberOfTuples(numPoints);
-  rotMatrix->SetNumberOfComponents(9);
-  rotMatrix->SetNumberOfTuples(numPoints);
-  for (int i=0; i<3; i++)
-  {
-    localArrayX->FillComponent(i, -1);
-    localArrayY->FillComponent(i, -1);
-    localArrayZ->FillComponent(i, -1);
-  }
+  //vtkNew(vtkDoubleArray, localArrayX);
+  //vtkNew(vtkDoubleArray, localArrayY);
+  //vtkNew(vtkDoubleArray, localArrayZ);
+  //vtkNew(vtkDoubleArray, rotMatrix);
+  //localArrayX->SetNumberOfComponents(3);
+  //localArrayX->SetNumberOfTuples(numPoints);
+  //localArrayY->SetNumberOfComponents(3);
+  //localArrayY->SetNumberOfTuples(numPoints);
+  //localArrayZ->SetNumberOfComponents(3);
+  //localArrayZ->SetNumberOfTuples(numPoints);
+  //rotMatrix->SetNumberOfComponents(9);
+  //rotMatrix->SetNumberOfTuples(numPoints);
+  //for (int i=0; i<3; i++)
+  //{
+  //  localArrayX->FillComponent(i, -1);
+  //  localArrayY->FillComponent(i, -1);
+  //  localArrayZ->FillComponent(i, -1);
+  //}
 
-  vtkNew(vtkDoubleArray, startXArray);
-  startXArray->SetNumberOfComponents(3);
-  startXArray->SetNumberOfTuples(numPoints);
-  for (int i=0; i<numCells; i++)
-  {
-    int lineType = lineIndicator->GetTuple1(i);
+  //vtkNew(vtkDoubleArray, startXArray);
+  //startXArray->SetNumberOfComponents(3);
+  //startXArray->SetNumberOfTuples(numPoints);
+  //for (int i=0; i<numCells; i++)
+  //{
+  //  int lineType = lineIndicator->GetTuple1(i);
 
-    // cell points
-    vtkIdType npts, *pts;
-    centerlinesWorkPd->GetCellPoints(i, npts, pts);
+  //  // cell points
+  //  vtkIdType npts, *pts;
+  //  centerlinesWorkPd->GetCellPoints(i, npts, pts);
 
-    double startX[3];
-    if (lineType == 0)
-    {
-      startX[0] = 1.0; startX[1] = 0.0; startX[2] = 0.0;
-    }
-    else
-    {
-      if (lineType == 1)
-        this->FlipLinePoints(centerlinesWorkPd, i);
+  //  double startX[3];
+  //  if (lineType == 0)
+  //  {
+  //    startX[0] = 1.0; startX[1] = 0.0; startX[2] = 0.0;
+  //  }
+  //  else
+  //  {
+  //    if (lineType == 1)
+  //      this->FlipLinePoints(centerlinesWorkPd, i);
 
-      // point cells
-      vtkNew(vtkIdList, pointCells);
-      centerlinesWorkPd->GetPointCells(pts[0], pointCells);
+  //    // point cells
+  //    vtkNew(vtkIdList, pointCells);
+  //    centerlinesWorkPd->GetPointCells(pts[0], pointCells);
 
-      if (pointCells->GetNumberOfIds() < 3)
-      {
-        vtkErrorMacro("Incorrect valence of branching centerline point");
-        return SV_ERROR;
-      }
-      else
-      {
+  //    if (pointCells->GetNumberOfIds() < 3)
+  //    {
+  //      vtkErrorMacro("Incorrect valence of branching centerline point");
+  //      return SV_ERROR;
+  //    }
+  //    else
+  //    {
 
-        double verts[3][3];
-        for (int j=0; j<3; j++)
-        {
-          vtkIdType ncpts, *cpts;
-          centerlinesWorkPd->GetCellPoints(pointCells->GetId(j), ncpts, cpts);
+  //      double verts[3][3];
+  //      for (int j=0; j<3; j++)
+  //      {
+  //        vtkIdType ncpts, *cpts;
+  //        centerlinesWorkPd->GetCellPoints(pointCells->GetId(j), ncpts, cpts);
 
-          for (int k=0; k<ncpts; k++)
-          {
-            if (cpts[k] != pts[0])
-            {
-              centerlinesWorkPd->GetPoint(cpts[k], verts[j]);
-            }
-          }
-        }
-        // Compute the start vector
-        this->ComputeStartVector(verts, startX);
-      }
+  //        for (int k=0; k<ncpts; k++)
+  //        {
+  //          if (cpts[k] != pts[0])
+  //          {
+  //            centerlinesWorkPd->GetPoint(cpts[k], verts[j]);
+  //          }
+  //        }
+  //      }
+  //      // Compute the start vector
+  //      this->ComputeStartVector(verts, startX);
+  //    }
 
-    }
+  //  }
 
-    startXArray->SetTuple(i, startX);
-  }
+  //  startXArray->SetTuple(i, startX);
+  //}
 
-  for (int i=0; i<numCells; i++)
-  {
-    int lineType = lineIndicator->GetTuple1(i);
+  //for (int i=0; i<numCells; i++)
+  //{
+  //  int lineType = lineIndicator->GetTuple1(i);
 
-    // cell points
-    vtkIdType npts, *pts;
-    centerlinesWorkPd->GetCellPoints(i, npts, pts);
+  //  // cell points
+  //  vtkIdType npts, *pts;
+  //  centerlinesWorkPd->GetCellPoints(i, npts, pts);
 
-    // start vector
-    double startX[3];
-    startXArray->GetTuple(i, startX);
+  //  // start vector
+  //  double startX[3];
+  //  startXArray->GetTuple(i, startX);
 
-    double localZ[3], localX[3], localY[3];
-    double pt0[3], pt1[3];
-    for (int j=0; j<npts-1; j++)
-    {
-      centerlinesWorkPd->GetPoint(pts[j], pt0);
-      centerlinesWorkPd->GetPoint(pts[j+1], pt1);
-      vtkMath::Subtract(pt1, pt0, localZ);
-      vtkMath::Normalize(localZ);
-      if (j==0)
-      {
-        this->ComputeLocalCoordinateSystem(localZ, startX, localX, localY);
+  //  double localZ[3], localX[3], localY[3];
+  //  double pt0[3], pt1[3];
+  //  for (int j=0; j<npts-1; j++)
+  //  {
+  //    centerlinesWorkPd->GetPoint(pts[j], pt0);
+  //    centerlinesWorkPd->GetPoint(pts[j+1], pt1);
+  //    vtkMath::Subtract(pt1, pt0, localZ);
+  //    vtkMath::Normalize(localZ);
+  //    if (j==0)
+  //    {
+  //      this->ComputeLocalCoordinateSystem(localZ, startX, localX, localY);
 
-        localArrayX->SetTuple(pts[j], localX);
-        localArrayY->SetTuple(pts[j], localY);
-        localArrayZ->SetTuple(pts[j], localZ);
-        localArrayX->SetTuple(pts[j+1], localX);
-        localArrayY->SetTuple(pts[j+1], localY);
-        localArrayZ->SetTuple(pts[j+1], localZ);
-      }
-      else if (j > (npts-1)/3. && lineType == 3)
-      {
-        vtkNew(vtkIdList, pointCells);
-        centerlinesWorkPd->GetPointCells(pts[npts-1], pointCells);
-        int cellId;
-        for (int k=0; k<pointCells->GetNumberOfIds(); k++)
-        {
-          cellId = pointCells->GetId(k);
-          if (cellId != i)
-            break;
-        }
-        // start
-        localArrayX->GetTuple(pts[j], startX);
+  //      localArrayX->SetTuple(pts[j], localX);
+  //      localArrayY->SetTuple(pts[j], localY);
+  //      localArrayZ->SetTuple(pts[j], localZ);
+  //      localArrayX->SetTuple(pts[j+1], localX);
+  //      localArrayY->SetTuple(pts[j+1], localY);
+  //      localArrayZ->SetTuple(pts[j+1], localZ);
+  //    }
+  //    else if (j > (npts-1)/3. && lineType == 3)
+  //    {
+  //      vtkNew(vtkIdList, pointCells);
+  //      centerlinesWorkPd->GetPointCells(pts[npts-1], pointCells);
+  //      int cellId;
+  //      for (int k=0; k<pointCells->GetNumberOfIds(); k++)
+  //      {
+  //        cellId = pointCells->GetId(k);
+  //        if (cellId != i)
+  //          break;
+  //      }
+  //      // start
+  //      localArrayX->GetTuple(pts[j], startX);
 
-        // end
-        double endX[3];
-        startXArray->GetTuple(cellId, endX);
+  //      // end
+  //      double endX[3];
+  //      startXArray->GetTuple(cellId, endX);
 
-        // See if it aligns
-        double checkDir = vtkMath::Dot(startX, endX);
-        if (checkDir < 0)
-          vtkMath::MultiplyScalar(endX, -1);
+  //      // See if it aligns
+  //      double checkDir = vtkMath::Dot(startX, endX);
+  //      if (checkDir < 0)
+  //        vtkMath::MultiplyScalar(endX, -1);
 
-        // difference
-        double diff[3];
-        vtkMath::Subtract(endX, startX, diff);
-        vtkMath::Normalize(diff);
+  //      // difference
+  //      double diff[3];
+  //      vtkMath::Subtract(endX, startX, diff);
+  //      vtkMath::Normalize(diff);
 
-        // Get portion left
-        double newX[3];
-        fprintf(stdout,"J: %d NPTS: %d\n", j, npts-1);
-        vtkMath::MultiplyScalar(diff, (j-((npts-1)/3.))/(2.*(npts-1)/3.));
-        fprintf(stdout,"WHAT: %.5f\n", (j-((npts-1)/3.))/(2.*(npts-1)/3.));
-        vtkMath::Add(startX, diff, newX);
-        vtkMath::Normalize(newX);
+  //      // Get portion left
+  //      double newX[3];
+  //      fprintf(stdout,"J: %d NPTS: %d\n", j, npts-1);
+  //      vtkMath::MultiplyScalar(diff, (j-((npts-1)/3.))/(2.*(npts-1)/3.));
+  //      fprintf(stdout,"WHAT: %.5f\n", (j-((npts-1)/3.))/(2.*(npts-1)/3.));
+  //      vtkMath::Add(startX, diff, newX);
+  //      vtkMath::Normalize(newX);
 
-        // Do the dirt
-        fprintf(stdout,"Branch %d using start of %d\n", i, cellId);
-        fprintf(stdout,"Start X: %.6f %.6f %.6f\n", startX[0], startX[1], startX[2]);
-        fprintf(stdout,"End X:   %.6f %.6f %.6f\n", endX[0], endX[1], endX[2]);
-        fprintf(stdout,"New X:   %.6f %.6f %.6f\n", newX[0], newX[1], newX[2]);
-        this->ComputeLocalCoordinateSystem(localZ, newX, localX, localY);
+  //      // Do the dirt
+  //      fprintf(stdout,"Branch %d using start of %d\n", i, cellId);
+  //      fprintf(stdout,"Start X: %.6f %.6f %.6f\n", startX[0], startX[1], startX[2]);
+  //      fprintf(stdout,"End X:   %.6f %.6f %.6f\n", endX[0], endX[1], endX[2]);
+  //      fprintf(stdout,"New X:   %.6f %.6f %.6f\n", newX[0], newX[1], newX[2]);
+  //      this->ComputeLocalCoordinateSystem(localZ, newX, localX, localY);
 
-        localArrayX->SetTuple(pts[j+1], localX);
-        localArrayY->SetTuple(pts[j+1], localY);
-        localArrayZ->SetTuple(pts[j+1], localZ);
-      }
-      else
-      {
-        localArrayX->GetTuple(pts[j], startX);
-        this->ComputeLocalCoordinateSystem(localZ, startX, localX, localY);
+  //      localArrayX->SetTuple(pts[j+1], localX);
+  //      localArrayY->SetTuple(pts[j+1], localY);
+  //      localArrayZ->SetTuple(pts[j+1], localZ);
+  //    }
+  //    else
+  //    {
+  //      localArrayX->GetTuple(pts[j], startX);
+  //      this->ComputeLocalCoordinateSystem(localZ, startX, localX, localY);
 
-        localArrayX->SetTuple(pts[j+1], localX);
-        localArrayY->SetTuple(pts[j+1], localY);
-        localArrayZ->SetTuple(pts[j+1], localZ);
-      }
+  //      localArrayX->SetTuple(pts[j+1], localX);
+  //      localArrayY->SetTuple(pts[j+1], localY);
+  //      localArrayZ->SetTuple(pts[j+1], localZ);
+  //    }
 
-      double locMat[9];
-      this->ComputeRotationMatrix(localX, localY, localZ, locMat);
-      if (j==0)
-        rotMatrix->SetTuple(pts[j], locMat);
-      rotMatrix->SetTuple(pts[j+1], locMat);
-    }
-  }
+  //    double locMat[9];
+  //    this->ComputeRotationMatrix(localX, localY, localZ, locMat);
+  //    if (j==0)
+  //      rotMatrix->SetTuple(pts[j], locMat);
+  //    rotMatrix->SetTuple(pts[j+1], locMat);
+  //  }
+  //}
 
-  int numPolyCells = this->WorkPd->GetNumberOfCells();
+  //int numPolyCells = this->WorkPd->GetNumberOfCells();
 
-  //-----------------------------------------------------------------------V
-  localArrayX->SetName("LocalX");
-  centerlinesWorkPd->GetPointData()->AddArray(localArrayX);
-  localArrayY->SetName("LocalY");
-  centerlinesWorkPd->GetPointData()->AddArray(localArrayY);
-  localArrayZ->SetName("LocalZ");
-  centerlinesWorkPd->GetPointData()->AddArray(localArrayZ);
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/MyTEST.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename, centerlinesWorkPd);
-  //-----------------------------------------------------------------------V
+  ////-----------------------------------------------------------------------V
+  //localArrayX->SetName("LocalX");
+  //centerlinesWorkPd->GetPointData()->AddArray(localArrayX);
+  //localArrayY->SetName("LocalY");
+  //centerlinesWorkPd->GetPointData()->AddArray(localArrayY);
+  //localArrayZ->SetName("LocalZ");
+  //centerlinesWorkPd->GetPointData()->AddArray(localArrayZ);
+  //std::string filename = "/Users/adamupdegrove/Desktop/tmp/MyTEST.vtp";
+  //vtkSVIOUtils::WriteVTPFile(filename, centerlinesWorkPd);
+  ////-----------------------------------------------------------------------V
 
+  vtkDoubleArray *localArrayX = vtkDoubleArray::SafeDownCast(centerlinesWorkPd->GetPointData()->GetArray("LocalX"));
+  vtkDoubleArray *localArrayY = vtkDoubleArray::SafeDownCast(centerlinesWorkPd->GetPointData()->GetArray("LocalY"));
+  vtkDoubleArray *localArrayZ = vtkDoubleArray::SafeDownCast(centerlinesWorkPd->GetPointData()->GetArray("LocalZ"));
+  vtkDoubleArray *rotMatrix = vtkDoubleArray::SafeDownCast(centerlinesWorkPd->GetPointData()->GetArray("RotationMatrix"));
 
   vtkNew(vtkIdList, centerlineGroupIds);
   for (int i=0; i<this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples(); i++)

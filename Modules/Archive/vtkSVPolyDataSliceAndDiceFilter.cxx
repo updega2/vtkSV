@@ -262,8 +262,6 @@ int vtkSVPolyDataSliceAndDiceFilter::PrepFilter()
     vtkErrorMacro("Unable to form skeleton of polydata");
     return SV_ERROR;
   }
-  this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
-
   return SV_OK;
 }
 
@@ -295,6 +293,10 @@ int vtkSVPolyDataSliceAndDiceFilter::RunFilter()
     }
     fprintf(stdout,"Polycube built...\n");
   }
+
+  // Get Graph at end, just in case updated
+  this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
+
 
   return SV_OK;
 }

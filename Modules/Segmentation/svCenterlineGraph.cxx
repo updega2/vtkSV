@@ -36,6 +36,7 @@
 #include "vtkDoubleArray.h"
 #include "vtkIdList.h"
 #include "vtkMath.h"
+#include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
@@ -216,6 +217,7 @@ int svCenterlineGraph::BuildGraph()
     this->GrowGraph(this->Root->Children[0]);
     this->GrowGraph(this->Root->Children[1]);
 
+    this->RefineGraphWithLocalCoordinates();
     svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::UpdateCellDirection,
                      NULL, NULL, NULL);
   }
@@ -387,7 +389,11 @@ int svCenterlineGraph::ComputeReferenceVectors(svCenterlineGCell *parent)
   vtkMath::Cross(this->ReferenceVecs[2], this->ReferenceVecs[0], this->ReferenceVecs[1]);
   vtkMath::Normalize(this->ReferenceVecs[1]);
 
-  vtkMath::Cross(this->ReferenceVecs[1], this->ReferenceVecs[0], parent->FrontDir);
+  for (int i=0 ; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+      parent->RefDirs[i][j] = this->ReferenceVecs[i][j];
+  }
 
   return SV_OK;
 }
@@ -477,6 +483,10 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   vtkMath::Subtract(secondPts[1], startPts[1], vec2);
   vtkMath::Normalize(vec2);
 
+  double refDirs[3][3];
+  for (int i=0; i<3; i++)
+    refDirs[0][i] = vec0[i];
+
   int maxDir;
   double maxDot = -0.1;
   for (int i=0; i<3; i++)
@@ -502,19 +512,33 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   if (ang0 > ang1)
   {
     vtkMath::Cross(vec0, vec2, vec3);
-    vtkMath::Cross(vec2, vec0, parent->FrontDir);
     parent->DivergingChild = 1;
     parent->AligningChild  = 0;
   }
   else
   {
     vtkMath::Cross(vec0, vec1, vec3);
-    vtkMath::Cross(vec1, vec0, parent->FrontDir);
     parent->DivergingChild = 0;
     parent->AligningChild  = 1;
   }
   parent->Children[parent->AligningChild]->IsAlign  = 1;
   parent->Children[parent->DivergingChild]->IsAlign = 0;
+
+  vtkMath::Normalize(vec3);
+  vtkMath::Cross(vec3, vec0, refDirs[1]);
+  vtkMath::Normalize(refDirs[1]);
+  for (int i=0; i<3; i++)
+    refDirs[2][i] = vec3[i];
+
+  // Now children just in case terminating children
+  for (int i=0; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      parent->Children[0]->RefDirs[i][j] = refDirs[i][j];
+      parent->Children[1]->RefDirs[i][j] = refDirs[i][j];
+    }
+  }
 
   //Check to see orientation with respect to reference vectors. Angle that
   //it makes with reference vector determines the input angle to a
@@ -528,23 +552,19 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
     dotVec[i]   = this->ReferenceVecs[(maxDir+1)%3][i];
   }
 
-  vtkMath::Normalize(vec3);
-  //fprintf(stdout,"This Branch: %.4f %.4f %.4f\n", vec3[0], vec3[1], vec3[2]);
+  fprintf(stdout,"This Branch: %.4f %.4f %.4f\n", vec3[0], vec3[1], vec3[2]);
   double angleVec2[3];
   vtkMath::Cross(vec3, checkVec, angleVec2);
   double ang2 = atan2(vtkMath::Norm(angleVec2), vtkMath::Dot(vec3, checkVec));
   fprintf(stdout,"Dot between vec3 and ref is %.4f\n", vtkMath::Dot(vec3, dotVec));
-  if (parent->GroupId != 0)
-  {
-    if (vtkMath::Dot(vec3, dotVec) < 0.0)
-      ang2 = ang2 + M_PI;
-  }
+
+  if (vtkMath::Dot(vec3, dotVec) < 0.0)
+    ang2 = 2*M_PI - ang2;
   parent->Children[parent->DivergingChild]->RefAngle = ang2;
 
   fprintf(stdout,"Angle check dir: %.4f %.4f %.4f\n", checkVec[0], checkVec[1], checkVec[2]);
   fprintf(stdout,"Dot check dir: %.4f %.4f %.4f\n", dotVec[0], dotVec[1], dotVec[2]);
   fprintf(stdout,"This vec: %.4f %.4f %.4f\n", vec3[0], vec3[1], vec3[2]);
-  fprintf(stdout,"Parent direction: %d\n", parent->Dir);
   fprintf(stdout,"Angle is: %.4f\n", 180*ang2/M_PI);
   fprintf(stdout,"Dot is: %.4f\n", vtkMath::Dot(vec3, dotVec));
 
@@ -697,15 +717,12 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
   vtkNew(vtkDoubleArray, localArrayX);
   vtkNew(vtkDoubleArray, localArrayY);
   vtkNew(vtkDoubleArray, localArrayZ);
-  vtkNew(vtkDoubleArray, rotMatrix);
   localArrayX->SetNumberOfComponents(3);
   localArrayX->SetNumberOfTuples(numPoints);
   localArrayY->SetNumberOfComponents(3);
   localArrayY->SetNumberOfTuples(numPoints);
   localArrayZ->SetNumberOfComponents(3);
   localArrayZ->SetNumberOfTuples(numPoints);
-  rotMatrix->SetNumberOfComponents(9);
-  rotMatrix->SetNumberOfTuples(numPoints);
   for (int i=0; i<3; i++)
   {
     localArrayX->FillComponent(i, -1);
@@ -713,15 +730,20 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
     localArrayZ->FillComponent(i, -1);
   }
 
+  double refVecs[3][3];
   for (int i=0; i<numSegs; i++)
   {
     // Corresponding GCell
     svCenterlineGCell *gCell = this->GetCell(i);
 
     // The front direction of segment
-    double startVec[3];
     for (int j=0; j<3; j++)
-      startVec[j] = gCell->FrontDir[j];
+    {
+      for (int k=0; k<3; k++)
+        refVecs[j][k] = gCell->RefDirs[j][k];
+    }
+    if (gCell->GroupId == 0)
+      fprintf(stdout,"LIKE TO SEE: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
 
     // cell id in the vtkPolyData
     int cellId = this->Lines->GetCellData()->GetArray(
@@ -732,7 +754,7 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
     this->Lines->GetCellPoints(cellId, npts, pts);
 
     int isTerminating = 0;
-    double endVec[3];
+    double endVecs[3][3];
     if (gCell->Parent == NULL)
     {
       // found parent, flip around
@@ -745,81 +767,176 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
         this->FlipLinePoints(this->Lines, cellId);
       this->Lines->GetCellPoints(cellId, npts, pts);
     }
-    if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
+    else if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
     {
       for (int j=0; j<3; j++)
-        endVec[j] = gCell->Children[gCell->AligningChild]->FrontDir[j];
+      {
+        for (int k=0; k<3; k++)
+          endVecs[j][k] = gCell->Children[gCell->DivergingChild]->RefDirs[j][k];
+      }
     }
     else
       isTerminating = 1;
 
     // First vecs
-    double localZ[3], localX[3], localY[3];
+    double tmpX[3];
     double pt0[3], pt1[3];
 
-    // Get vec along length
-    this->Lines->GetPoint(pts[0], pt0);
-    this->Lines->GetPoint(pts[1], pt1);
-    vtkMath::Subtract(pt1, pt0, localZ);
-    vtkMath::Normalize(localZ);
+    //// Compute are temp coordinate system
+    //fprintf(stdout,"THE FIRST VEC: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
+    //fprintf(stdout,"CURIOUS: %.6f\n", vtkMath::Dot(refVecs[1], refVecs[0]));
+    //this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
+    //for (int j=0; j<3; j++)
+    //  refVecs[1][j] = tmpX[j];
 
-    // Compute are temp coordinate system
-    this->ComputeLocalCoordinateSystem(localZ, startVec, localX, localY);
+    if (gCell->Parent == NULL)
+    {
+      localArrayX->SetTuple(pts[0], refVecs[1]);
+      localArrayY->SetTuple(pts[0], refVecs[2]);
+      localArrayZ->SetTuple(pts[0], refVecs[0]);
+    }
 
-    localArrayX->SetTuple(pts[0], localX);
-    localArrayY->SetTuple(pts[0], localY);
-    localArrayZ->SetTuple(pts[0], localZ);
-
-    double locMat[9];
-    this->ComputeRotationMatrix(localX, localY, localZ, locMat);
-    rotMatrix->SetTuple(pts[0], locMat);
+    if (gCell->GroupId == 6)
+      fprintf(stdout,"LIKE TO SEE: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
 
     for (int j=1; j<npts; j++)
     {
       this->Lines->GetPoint(pts[j-1], pt0);
       this->Lines->GetPoint(pts[j], pt1);
-      vtkMath::Subtract(pt1, pt0, localZ);
-      vtkMath::Normalize(localZ);
+      if (gCell->Parent == NULL)
+        vtkMath::Subtract(pt1, pt0, refVecs[0]);
+      else
+        vtkMath::Subtract(pt0, pt1, refVecs[0]);
+      vtkMath::Normalize(refVecs[0]);
 
-      localArrayX->GetTuple(pts[j-1], startVec);
-      this->ComputeLocalCoordinateSystem(localZ, startVec, localX, localY);
+      this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
+      for (int k=0; k<3; k++)
+        refVecs[1][k] = tmpX[k];
 
-      localArrayX->SetTuple(pts[j], localX);
-      localArrayY->SetTuple(pts[j], localY);
-      localArrayZ->SetTuple(pts[j], localZ);
+      localArrayX->SetTuple(pts[j], refVecs[1]);
+      localArrayY->SetTuple(pts[j], refVecs[2]);
+      localArrayZ->SetTuple(pts[j], refVecs[0]);
 
-      this->ComputeRotationMatrix(localX, localY, localZ, locMat);
-      rotMatrix->SetTuple(pts[j], locMat);
     }
 
     if (isTerminating == 0)
     {
-      // Must test to see if it actually was correct son!
-      double testX[3];
-      localArrayX->GetTuple(pts[npts-1], testX);
+      //fprintf(stdout,"FIXING FOR NOT TERMINATING BRANCH\n");
+      //// Must test to see if it actually was correct son!
+      //int maxDir;
+      //double maxDot = -0.1;
+      //for (int j=0; j<3; j++)
+      //{
+      //  double compare = fabs(vtkMath::Dot(refVecs[j], endVecs[0]));
+      //  if (compare > maxDot)
+      //  {
+      //    maxDot = compare;
+      //    maxDir = j;
+      //  }
+      //}
+      //fprintf(stdout,"Apparently the end vec aligns with: %d\n", maxDir);
+
+      double checkVec[3], dotVec[3];
+      for (int j=0; j<3; j++)
+      {
+        //checkVec[j] = refVecs[(maxDir+2)%3][j];
+        //dotVec[j] =   refVecs[(maxDir+1)%3][j];
+        checkVec[j] = refVecs[2][j];
+        dotVec[j] =   refVecs[1][j];
+      }
 
       // Get angles
       double angleVec0[3];
-      vtkMath::Cross(testX, endVec, angleVec0);
-      double ang = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(testX, endVec));
+      vtkMath::Cross(endVecs[2], checkVec, angleVec0);
+      double ang = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(endVecs[2], checkVec));
 
-      fprintf(stdout,"JUST WANT TO SEE: %.6f\n", ang);
-      int testDir;
-      if (ang >= 7.0*M_PI/4.0 || ang < M_PI/4.0)
-        testDir = svCenterlineGraph::DT[gCell->Dir][0];
+      if (vtkMath::Dot(endVecs[2], dotVec) >= 0.0)
+        ang = 2*M_PI - ang;
 
-      else if (ang >= M_PI/4.0 && ang < 3.0*M_PI/4.0)
-        testDir = svCenterlineGraph::DT[gCell->Dir][1];
+      fprintf(stdout,"WHAT THE ANG: %.4f\n", 180*ang/M_PI);
 
-      else if (ang >= 3.0*M_PI/4.0 && ang < 5.0*M_PI/4.0)
-        testDir = svCenterlineGraph::DT[gCell->Dir][2];
+      gCell->Children[gCell->DivergingChild]->RefAngle = ang;
 
-      else if (ang >= 5.0*M_PI/4.0 && ang < 7.0*M_PI/4.0)
-        testDir = svCenterlineGraph::DT[gCell->Dir][3];
-      fprintf(stdout,"WHAT: %d %d\n", testDir, gCell->Children[gCell->DivergingChild]->Dir);
+      //// Get update that needs to happen
+      //maxDir;
+      //maxDot = -0.1;
+      //for (int j=0; j<3; j++)
+      //{
+      //  double compare = fabs(vtkMath::Dot(endVecs[j], refVecs[1]));
+      //  fprintf(stdout,"Dot with Ref %d: %.4f\n", j, compare);
+      //  if (compare > maxDot)
+      //  {
+      //    maxDot = compare;
+      //    maxDir = j;
+      //  }
+      //}
+
+      //fprintf(stdout,"Apparently the ref vec aligns with dir: %d\n", maxDir);
+
+      double projVec[3];
+      for (int j=0; j<3; j++)
+        projVec[j] = endVecs[1][j];
+      //projVec[j] = endVecs[maxDir][j];
+
+      vtkMath::Normalize(projVec);
+      double projDot = vtkMath::Dot(refVecs[1], projVec);
+      vtkMath::MultiplyScalar(projVec, projDot);
+      fprintf(stdout,"This gives us the following vector to proj to: %.6f %.6f %.6f\n", projVec[0], projVec[1], projVec[2]);
+
+      double updateVec[3];
+      vtkMath::Subtract(projVec, refVecs[1], updateVec);
+      fprintf(stdout,"WHAT: %.6f %.6f %.6f\n", updateVec[0], updateVec[1], updateVec[2]);
+      vtkMath::MultiplyScalar(updateVec, 1./(npts-1));
+      fprintf(stdout,"And an update of for each point: %.6f %.6f %.6f\n", updateVec[0], updateVec[1], updateVec[2]);
+
+      double updateRefVecs[3][3];
+      // The front direction of segment
+      for (int j=0; j<3; j++)
+      {
+        for (int k=0; k<3; k++)
+          updateRefVecs[j][k] = gCell->RefDirs[j][k];
+      }
+
+      //Update now
+      for (int j=1; j<npts; j++)
+      {
+        this->Lines->GetPoint(pts[j-1], pt0);
+        this->Lines->GetPoint(pts[j], pt1);
+        if (gCell->Parent == NULL)
+          vtkMath::Subtract(pt1, pt0, updateRefVecs[0]);
+        else
+          vtkMath::Subtract(pt0, pt1, updateRefVecs[0]);
+        vtkMath::Normalize(updateRefVecs[0]);
+
+        this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateRefVecs[1], tmpX, updateRefVecs[2]);
+        for (int k=0; k<3; k++)
+          updateRefVecs[1][k] = tmpX[k] + updateVec[k];
+
+        localArrayX->SetTuple(pts[j], updateRefVecs[1]);
+        localArrayY->SetTuple(pts[j], updateRefVecs[2]);
+        localArrayZ->SetTuple(pts[j], updateRefVecs[0]);
+
+      }
+
+      fprintf(stdout,"ENDED AND WANT TO CHECK: %.6f\n", vtkMath::Dot(updateRefVecs[1], endVecs[1]));
+      for (int j=0; j<3; j++)
+      {
+        for (int k=0; k<3; k++)
+        {
+          gCell->Children[0]->RefDirs[j][k] = updateRefVecs[j][k];
+          gCell->Children[1]->RefDirs[j][k] = updateRefVecs[j][k];
+        }
+      }
 
     }
   }
+
+  localArrayX->SetName("LocalX");
+  localArrayY->SetName("LocalY");
+  localArrayZ->SetName("LocalZ");
+  this->Lines->GetPointData()->AddArray(localArrayX);
+  this->Lines->GetPointData()->AddArray(localArrayY);
+  this->Lines->GetPointData()->AddArray(localArrayZ);
   return SV_OK;
 }
 
@@ -841,47 +958,6 @@ int svCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
 
   vtkMath::Cross(vz, vx, vy);
   vtkMath::Normalize(vy);
-
-  return SV_OK;
-}
-
-// ----------------------
-// ComputeRotationMatrix
-// ----------------------
-int svCenterlineGraph::ComputeRotationMatrix(const double vx[3],
-                                                        const double vy[3],
-                                                        const double vz[3],
-                                                        double rotMatrix[9])
-{
-  rotMatrix[0] = vx[0]*this->GlobalCoords[0][0] +
-                 vx[1]*this->GlobalCoords[0][1] +
-                 vx[2]*this->GlobalCoords[0][2];
-  rotMatrix[1] = vx[0]*this->GlobalCoords[1][0] +
-                 vx[1]*this->GlobalCoords[1][1] +
-                 vx[2]*this->GlobalCoords[1][2];
-  rotMatrix[2] = vx[0]*this->GlobalCoords[2][0] +
-                 vx[1]*this->GlobalCoords[2][1] +
-                 vx[2]*this->GlobalCoords[2][2];
-
-  rotMatrix[3] = vy[0]*this->GlobalCoords[0][0] +
-                 vy[1]*this->GlobalCoords[0][1] +
-                 vy[2]*this->GlobalCoords[0][2];
-  rotMatrix[4] = vy[0]*this->GlobalCoords[1][0] +
-                 vy[1]*this->GlobalCoords[1][1] +
-                 vy[2]*this->GlobalCoords[1][2];
-  rotMatrix[5] = vy[0]*this->GlobalCoords[2][0] +
-                 vy[1]*this->GlobalCoords[2][1] +
-                 vy[2]*this->GlobalCoords[2][2];
-
-  rotMatrix[6] = vz[0]*this->GlobalCoords[0][0] +
-                 vz[1]*this->GlobalCoords[0][1] +
-                 vz[2]*this->GlobalCoords[0][2];
-  rotMatrix[7] = vz[0]*this->GlobalCoords[1][0] +
-                 vz[1]*this->GlobalCoords[1][1] +
-                 vz[2]*this->GlobalCoords[1][2];
-  rotMatrix[8] = vz[0]*this->GlobalCoords[2][0] +
-                 vz[1]*this->GlobalCoords[2][1] +
-                 vz[2]*this->GlobalCoords[2][2];
 
   return SV_OK;
 }
@@ -1001,13 +1077,6 @@ int svCenterlineGraph::LookupIndex(const int parent, const int divchild, const i
 
   return -1;
 }
-
-const double svCenterlineGraph::GlobalCoords[3][3] =
-  {
-    {1.0, 0.0, 0.0},
-    {0.0, 1.0, 0.0},
-    {0.0, 0.0, 1.0},
-  };
 
 // ----------------------
 // DT
