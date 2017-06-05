@@ -41,9 +41,7 @@
 
 svCenterlineGCell::svCenterlineGCell()
 {
-  this->Parent      = NULL;
-  this->Children[0] = NULL;
-  this->Children[1] = NULL;
+  this->Parent   = NULL;
   this->Id       = -1;
   this->GroupId  = -1;
   this->Dir      = -1;
@@ -55,6 +53,7 @@ svCenterlineGCell::svCenterlineGCell()
   {
     this->StartPt[i]  = -1.0;
     this->EndPt[i]    = -1.0;
+    this->StartVec[i] = -1.0;
     for (int j=0; j<3; j++)
       this->RefDirs[i][j] = -1.0;
   }
@@ -64,15 +63,10 @@ svCenterlineGCell::svCenterlineGCell()
 
 svCenterlineGCell::~svCenterlineGCell()
 {
-  if (this->Children[0] != NULL)
+  for (int i=0; i<this->Children.size(); i++)
   {
-    delete this->Children[0];
-    this->Children[0] = NULL;
-  }
-  if (this->Children[1] != NULL)
-  {
-    delete this->Children[1];
-    this->Children[1] = NULL;
+    delete this->Children[i];
+    this->Children[i] = NULL;
   }
 }
 

@@ -341,6 +341,7 @@ int vtkSVGroupsSegmenter::RunFilter()
   this->WorkPd->BuildLinks();
 
   // Loop through points to evaluate function at each point
+  fprintf(stdout,"Computing closest centerline points per cell...\n");
   for (int k=0; k<numberOfCells; k++)
   {
     // Get cell point coords
@@ -991,77 +992,80 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
     allRegions[i].NumberOfCorners = tempCornerPoints.size();
     fprintf(stdout,"NUM CORNS: %d\n", allRegions[i].NumberOfCorners);
 
-    firstCorner = tempCornerPoints[0];
-    allRegions[i].CornerPoints.push_back(firstCorner);
-
-    int count=1;
-    std::vector<int> tempNodes;
-    tempNodes.push_back(firstCorner);
-
-    for (int j=0; j<count; j++)
+    if (allRegions[i].NumberOfCorners != 0)
     {
-      vtkNew(vtkIdList, pointCells);
-      pd->GetPointCells(tempNodes[j], pointCells);
-      for (int k=0; k<pointCells->GetNumberOfIds(); k++)
-      {
-        int cellId =  pointCells->GetId(k);
-        int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(pd, tempNodes[j], cellId);
-        int isBoundaryEdge = vtkSVGroupsSegmenter::CheckBoundaryEdge(pd, arrayName, cellId, tempNodes[j], pointCCWId);
+      firstCorner = tempCornerPoints[0];
+      allRegions[i].CornerPoints.push_back(firstCorner);
 
-        if (tempRegions[cellId][0] == allRegions[i].Index && isBoundaryPoint[pointCCWId] && isBoundaryEdge)
+      int count=1;
+      std::vector<int> tempNodes;
+      tempNodes.push_back(firstCorner);
+
+      for (int j=0; j<count; j++)
+      {
+        vtkNew(vtkIdList, pointCells);
+        pd->GetPointCells(tempNodes[j], pointCells);
+        for (int k=0; k<pointCells->GetNumberOfIds(); k++)
         {
-          tempNodes.push_back(pointCCWId);
-          count++;
-        }
-        else if (tempRegions[cellId][0] == allRegions[i].Index && isCornerPoint[pointCCWId] && isBoundaryEdge)
-        {
-          if (pointCCWId == firstCorner)
+          int cellId =  pointCells->GetId(k);
+          int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(pd, tempNodes[j], cellId);
+          int isBoundaryEdge = vtkSVGroupsSegmenter::CheckBoundaryEdge(pd, arrayName, cellId, tempNodes[j], pointCCWId);
+
+          if (tempRegions[cellId][0] == allRegions[i].Index && isBoundaryPoint[pointCCWId] && isBoundaryEdge)
           {
             tempNodes.push_back(pointCCWId);
-            allRegions[i].BoundaryEdges.push_back(tempNodes);
-
-            tempNodes.clear();
-
-            if (allRegions[i].CornerPoints.size() == allRegions[i].NumberOfCorners)
+            count++;
+          }
+          else if (tempRegions[cellId][0] == allRegions[i].Index && isCornerPoint[pointCCWId] && isBoundaryEdge)
+          {
+            if (pointCCWId == firstCorner)
             {
-              count = -1;
-              break;
+              tempNodes.push_back(pointCCWId);
+              allRegions[i].BoundaryEdges.push_back(tempNodes);
+
+              tempNodes.clear();
+
+              if (allRegions[i].CornerPoints.size() == allRegions[i].NumberOfCorners)
+              {
+                count = -1;
+                break;
+              }
+              else
+              {
+                for (int ii=0; ii<tempCornerPoints.size(); ii++)
+                {
+                  bool tempCount = false;
+                  int tempIndex  = tempCornerPoints[ii];
+
+                  for (int jj=0; jj<allRegions[i].CornerPoints.size(); jj++)
+                  {
+                    if (tempIndex == allRegions[i].CornerPoints[jj])
+                      tempCount = true;
+                  }
+                  if (tempCount == false)
+                  {
+                    firstCorner = tempIndex;
+                    break;
+                  }
+                }
+                allRegions[i].CornerPoints.push_back(firstCorner);
+                tempNodes.push_back(firstCorner);
+                count = 1;
+                j = -1;
+                break;
+              }
             }
             else
             {
-              for (int ii=0; ii<tempCornerPoints.size(); ii++)
-              {
-                bool tempCount = false;
-                int tempIndex  = tempCornerPoints[ii];
-
-                for (int jj=0; jj<allRegions[i].CornerPoints.size(); jj++)
-                {
-                  if (tempIndex == allRegions[i].CornerPoints[jj])
-                    tempCount = true;
-                }
-                if (tempCount == false)
-                {
-                  firstCorner = tempIndex;
-                  break;
-                }
-              }
-              allRegions[i].CornerPoints.push_back(firstCorner);
-              tempNodes.push_back(firstCorner);
+              tempNodes.push_back(pointCCWId);
+              allRegions[i].CornerPoints.push_back(pointCCWId);
+              allRegions[i].BoundaryEdges.push_back(tempNodes);
+              tempNodes.clear();
+              tempNodes.push_back(pointCCWId);
               count = 1;
               j = -1;
               break;
             }
-          }
-          else
-          {
-            tempNodes.push_back(pointCCWId);
-            allRegions[i].CornerPoints.push_back(pointCCWId);
-            allRegions[i].BoundaryEdges.push_back(tempNodes);
-            tempNodes.clear();
-            tempNodes.push_back(pointCCWId);
-            count = 1;
-            j = -1;
-            break;
           }
         }
       }

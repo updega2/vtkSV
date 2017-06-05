@@ -54,7 +54,7 @@ public:
 
   //Member data
   svCenterlineGCell *Parent;
-  svCenterlineGCell *Children[2];
+  std::vector<svCenterlineGCell *> Children;
   int Id;
   int GroupId;
   int Dir;
@@ -62,6 +62,7 @@ public:
   double RefDirs[3][3];
   double StartPt[3];
   double EndPt[3];
+  double StartVec[3];
   int CornerPtIds[8];
   int DivergingChild;
   int AligningChild;

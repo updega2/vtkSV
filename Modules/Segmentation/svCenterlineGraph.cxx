@@ -42,6 +42,8 @@
 #include "vtkSVGlobals.h"
 #include "vtkSmartPointer.h"
 #include "vtkThreshold.h"
+#include "vtkTransform.h"
+#include "vtkTransformPolyDataFilter.h"
 #include "vtkUnstructuredGrid.h"
 
 svCenterlineGraph::svCenterlineGraph()
@@ -51,6 +53,7 @@ svCenterlineGraph::svCenterlineGraph()
   this->Root = NULL;
 
   this->Lines = vtkPolyData::New();
+  this->Graph = vtkMutableDirectedGraph::New();
 }
 
 // ----------------------
@@ -87,6 +90,11 @@ svCenterlineGraph::~svCenterlineGraph()
     this->Lines->Delete();
     this->Lines = NULL;
   }
+  if (this->Graph != NULL)
+  {
+    this->Graph->Delete();
+    this->Graph = NULL;
+  }
 }
 
 // ----------------------
@@ -97,13 +105,10 @@ int svCenterlineGraph::Recurse(svCenterlineGCell *rootGCell, int(*function)(svCe
                    void *rec_arg0, void *rec_arg1, void *rec_arg2)
 {
   function(rootGCell, rec_arg0, rec_arg1, rec_arg2);
-  if (rootGCell->Children[0] != NULL)
+  if (rootGCell->Children.size() != 0)
   {
-    svCenterlineGraph::Recurse(rootGCell->Children[0], function, rec_arg0, rec_arg1, rec_arg2);
-  }
-  if (rootGCell->Children[1] != NULL)
-  {
-    svCenterlineGraph::Recurse(rootGCell->Children[1], function, rec_arg0, rec_arg1, rec_arg2);
+    for (int i=0; i<rootGCell->Children.size(); i++)
+      svCenterlineGraph::Recurse(rootGCell->Children[i], function, rec_arg0, rec_arg1, rec_arg2);
   }
   return SV_OK;
 }
@@ -129,14 +134,11 @@ int svCenterlineGraph::PrintGCell(svCenterlineGCell *gCell, void *arg0, void *ar
     fprintf(stdout, "Parent: %d\n", gCell->Parent->Id);
   else
     fprintf(stdout, "Parent is NULL\n");
-  if(gCell->Children[0] != NULL)
-    fprintf(stdout, "Child 0: %d\n", gCell->Children[0]->Id);
-  else
-    fprintf(stdout, "Child 0: NULL\n");
-  if(gCell->Children[1] != NULL)
-    fprintf(stdout, "Child 1: %d\n", gCell->Children[1]->Id);
-  else
-    fprintf(stdout, "Child 1: NULL\n");
+  if(gCell->Children.size() != 0)
+  {
+    for (int i=0; i<gCell->Children.size(); i++)
+      fprintf(stdout, "Child %d, Id: %d, GroupId: %d\n", i, gCell->Children[i]->Id, gCell->Children[i]->GroupId);
+  }
   fprintf(stdout, "Start Point: %.4f %.4f %.4f\n", gCell->StartPt[0], gCell->StartPt[1], gCell->StartPt[2]);
   fprintf(stdout, "End Point: %.4f %.4f %.4f\n", gCell->EndPt[0], gCell->EndPt[1], gCell->EndPt[2]);
   return SV_OK;
@@ -206,26 +208,22 @@ int svCenterlineGraph::BuildGraph()
     fprintf(stdout,"Only one centerlines\n");
     return SV_OK;
   }
-  else if (connectingGroups->GetNumberOfIds() == 2)
-  {
-    this->Root->Children[0] = this->NewCell(connectingGroups->GetId(0), this->Root);
-    this->Root->Children[1] = this->NewCell(connectingGroups->GetId(1), this->Root);
-    this->NumberOfNodes += 3;
 
-    this->ComputeReferenceVectors(this->Root);
-    this->GetNewBranchDirections(this->Root);
-    this->GrowGraph(this->Root->Children[0]);
-    this->GrowGraph(this->Root->Children[1]);
 
-    this->RefineGraphWithLocalCoordinates();
-    svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::UpdateCellDirection,
-                     NULL, NULL, NULL);
-  }
-  else
-  {
-    fprintf(stdout,"The root is connected to more than two branches, this is not currently handles\n");
-    return SV_ERROR;
-  }
+  for (int i=0; i<connectingGroups->GetNumberOfIds(); i++)
+    this->Root->Children.push_back(this->NewCell(connectingGroups->GetId(i), this->Root));
+
+  this->NumberOfNodes += this->Root->Children.size()+1;
+
+  this->ComputeReferenceVectors(this->Root);
+  this->GetNewBranchDirections(this->Root);
+
+  for (int i=0; i<this->Root->Children.size(); i++)
+    this->GrowGraph(this->Root->Children[i]);
+
+  this->RefineGraphWithLocalCoordinates();
+  svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::UpdateCellDirection,
+                   NULL, NULL, NULL);
 
   return SV_OK;
 }
@@ -247,31 +245,34 @@ int svCenterlineGraph::GrowGraph(svCenterlineGCell *parent)
   for (int i=0; i<connectingGroups->GetNumberOfIds(); i++)
   {
     int groupId = connectingGroups->GetId(i);
-    if (groupId != parent->Parent->Children[0]->GroupId && groupId != parent->Parent->Children[1]->GroupId && groupId != parent->Parent->GroupId)
+    int isChild=1;
+    for (int j=0; j<parent->Parent->Children.size(); j++)
     {
-      parent->Children[count] = this->NewCell(groupId, parent);
+      if (groupId == parent->Parent->Children[j]->GroupId)
+        isChild = 0;
+    }
+    if (groupId == parent->Parent->GroupId)
+      isChild = 0;
+    if (isChild)
+    {
+      parent->Children.push_back(this->NewCell(groupId, parent));
       count++;
     }
   }
-  if (count == 2)
+  if (count > 0)
   {
-    this->NumberOfNodes += 3;
+    this->NumberOfNodes += parent->Children.size()+1;
     //fprintf(stdout,"What is the child %d\n", parent->Children[0]->GroupId);
     //fprintf(stdout,"What is the child %d\n", parent->Children[1]->GroupId);
     this->GetNewBranchDirections(parent);
 
-    this->GrowGraph(parent->Children[0]);
-    this->GrowGraph(parent->Children[1]);
-  }
-  else if (count == 0)
-  {
-    fprintf(stdout,"Terminating branch\n");
-    return SV_OK;
+    for (int i=0; i<parent->Children.size(); i++)
+      this->GrowGraph(parent->Children[i]);
   }
   else
   {
-    fprintf(stdout,"More than two connecting branches not currently handled\n");
-    return SV_ERROR;
+    fprintf(stdout,"Terminating branch\n");
+    return SV_OK;
   }
 
   return SV_OK;
@@ -335,59 +336,62 @@ int svCenterlineGraph::ComputeReferenceVectors(svCenterlineGCell *parent)
   thresholder->GetOutput()->GetPoint(numPts-1, endPt1);
   fprintf(stdout,"End pt 0 is: %.4f %.4f %.4f\n", endPt0[0], endPt0[1], endPt0[2]);
   fprintf(stdout,"End pt 1 is: %.4f %.4f %.4f\n", endPt1[0], endPt1[1], endPt1[2]);
+  vtkMath::Subtract(endPt0, endPt1, this->ReferenceVecs[0]);
+  vtkMath::Normalize(this->ReferenceVecs[0]);
 
-  double startPts[2][3];
-  double secondPts[2][3];
-  for (int i=0; i<2; i++)
+  int numChildren = parent->Children.size();
+  std::vector<double> angs(numChildren);
+  for (int i=0; i<numChildren; i++)
   {
     thresholder->SetInputData(this->Lines);
     thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
     thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
     thresholder->Update();
 
-    thresholder->GetOutput()->GetPoint(0, startPts[i]);
-    thresholder->GetOutput()->GetPoint(1, secondPts[i]);
+    double startPts[3], secondPts[3];
+    thresholder->GetOutput()->GetPoint(0, startPts);
+    thresholder->GetOutput()->GetPoint(1, secondPts);
+
+    vtkMath::Subtract(secondPts, startPts, parent->Children[i]->StartVec);
+    vtkMath::Normalize(parent->Children[i]->StartVec);
+
+    // Get angle between vectors
+    double angleVec[3];
+    vtkMath::Cross(parent->Children[i]->StartVec, this->ReferenceVecs[0], angleVec);
+    angs[i] = atan2(vtkMath::Norm(angleVec), vtkMath::Dot(parent->Children[i]->StartVec, this->ReferenceVecs[0]));
   }
 
-  double vec0[3], vec1[3];
-  vtkMath::Subtract(endPt0, endPt1, this->ReferenceVecs[0]);
-  vtkMath::Normalize(this->ReferenceVecs[0]);
-  vtkMath::Subtract(secondPts[0], startPts[0], vec0);
-  vtkMath::Normalize(vec0);
-  vtkMath::Subtract(secondPts[1], startPts[1], vec1);
-  vtkMath::Normalize(vec1);
-
-  // Get angle between vectors
-  double angleVec0[3], angleVec1[3];
-  vtkMath::Cross(vec0, this->ReferenceVecs[0], angleVec0);
-  double ang0 = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(vec0, this->ReferenceVecs[0]));
-  vtkMath::Cross(vec1, this->ReferenceVecs[0], angleVec1);
-  double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec1, this->ReferenceVecs[0]));
-
-  fprintf(stdout,"Root vec: %.4f %.4f %.4f\n", this->ReferenceVecs[0][0], this->ReferenceVecs[0][1], this->ReferenceVecs[0][2]);
-  fprintf(stdout,"Vec 0: %.4f %.4f %.4f\n", vec0[0], vec0[1], vec0[2]);
-  fprintf(stdout,"Vec 1: %.4f %.4f %.4f\n", vec1[0], vec1[1], vec1[2]);
-  fprintf(stdout,"Angle 0: %4f\n", 180*ang0/M_PI);
-  fprintf(stdout,"Angle 1: %4f\n", 180*ang1/M_PI);
-  if (ang0 > ang1)
+  double minAngle = VTK_SV_LARGE_DOUBLE;
+  double maxAngle = -1.0*VTK_SV_LARGE_DOUBLE;
+  int minChild = 0;
+  int maxChild = 0;
+  for (int i=0; i<numChildren; i++)
   {
-    fprintf(stdout,"Diverging child is %d\n", parent->Children[1]->GroupId);
-    vtkMath::Cross(this->ReferenceVecs[0], vec1, this->ReferenceVecs[2]);
-    parent->DivergingChild = 1;
-    parent->AligningChild  = 0;
+    if (angs[i] < minAngle)
+    {
+      minAngle = angs[i];
+      minChild = i;
+    }
+    if (angs[i] > maxAngle)
+    {
+      maxAngle = angs[i];
+      maxChild = i;
+    }
+    fprintf(stdout,"Vec %d: %.4f %.4f %.4f\n", i, parent->Children[i]->StartVec[0], parent->Children[i]->StartVec[1], parent->Children[i]->StartVec[2]);
+    fprintf(stdout,"Angle %d: %4f\n", i, 180*angs[i]/M_PI);
   }
-  else
-  {
-    fprintf(stdout,"Diverging child is %d\n", parent->Children[0]->GroupId);
-    vtkMath::Cross(this->ReferenceVecs[0], vec0, this->ReferenceVecs[2]);
-    parent->DivergingChild = 0;
-    parent->AligningChild  = 1;
-  }
-  parent->Children[parent->AligningChild]->IsAlign = 1;
-  parent->Children[parent->DivergingChild]->IsAlign = 1;
+  vtkMath::Cross(this->ReferenceVecs[0], parent->Children[minChild]->StartVec, this->ReferenceVecs[2]);
   vtkMath::Normalize(this->ReferenceVecs[2]);
+
+  parent->DivergingChild = minChild;
+  parent->AligningChild  = maxChild;
+
+  parent->Children[parent->AligningChild]->IsAlign = 1;
+  parent->Children[parent->DivergingChild]->IsAlign = 0;
+
   vtkMath::Cross(this->ReferenceVecs[2], this->ReferenceVecs[0], this->ReferenceVecs[1]);
   vtkMath::Normalize(this->ReferenceVecs[1]);
+  fprintf(stdout,"Root vec: %.4f %.4f %.4f\n", this->ReferenceVecs[0][0], this->ReferenceVecs[0][1], this->ReferenceVecs[0][2]);
 
   for (int i=0 ; i<3; i++)
   {
@@ -459,29 +463,9 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   thresholder->GetOutput()->GetPoint(numPts-2, endPt0);
   thresholder->GetOutput()->GetPoint(numPts-1, endPt1);
 
-  double startPts[2][3];
-  double secondPts[2][3];
-  for (int i=0; i<2; i++)
-  {
-    thresholder->SetInputData(this->Lines);
-    thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
-    thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
-    thresholder->Update();
-
-    thresholder->GetOutput()->GetPoint(0, startPts[i]);
-    thresholder->GetOutput()->GetPoint(1, secondPts[i]);
-  }
-  fprintf(stdout,"Determining Angle for Parent %d with children %d %d\n", parent->GroupId,
-                                                                          parent->Children[0]->GroupId,
-                                                                          parent->Children[1]->GroupId);
-
-  double vec0[3], vec1[3], vec2[3];
+  double vec0[3];
   vtkMath::Subtract(endPt0, endPt1, vec0);
   vtkMath::Normalize(vec0);
-  vtkMath::Subtract(secondPts[0], startPts[0], vec1);
-  vtkMath::Normalize(vec1);
-  vtkMath::Subtract(secondPts[1], startPts[1], vec2);
-  vtkMath::Normalize(vec2);
 
   double refDirs[3][3];
   for (int i=0; i<3; i++)
@@ -501,26 +485,55 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   }
   fprintf(stdout,"Direction aligns most with: %d\n", maxDir);
 
-  // Get angle between vectors
-  double angleVec0[3], angleVec1[3];
-  vtkMath::Cross(vec1, vec0, angleVec0);
-  double ang0 = atan2(vtkMath::Norm(angleVec0), vtkMath::Dot(vec1, vec0));
-  vtkMath::Cross(vec2, vec0, angleVec1);
-  double ang1 = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(vec2, vec0));
+  int numChildren = parent->Children.size();
+  std::vector<double> angs(numChildren);
+  for (int i=0; i<numChildren; i++)
+  {
+    thresholder->SetInputData(this->Lines);
+    thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
+    thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
+    thresholder->Update();
+
+    double startPts[3], secondPts[3];
+    thresholder->GetOutput()->GetPoint(0, startPts);
+    thresholder->GetOutput()->GetPoint(1, secondPts);
+
+    vtkMath::Subtract(secondPts, startPts, parent->Children[i]->StartVec);
+    vtkMath::Normalize(parent->Children[i]->StartVec);
+
+    // Get angle between vectors
+    double angleVec[3];
+    vtkMath::Cross(parent->Children[i]->StartVec, vec0, angleVec);
+    angs[i] = atan2(vtkMath::Norm(angleVec), vtkMath::Dot(parent->Children[i]->StartVec, vec0));
+  }
+
+  double minAngle = VTK_SV_LARGE_DOUBLE;
+  double maxAngle = -1.0*VTK_SV_LARGE_DOUBLE;
+  int minChild = 0;
+  int maxChild = 0;
+  for (int i=0; i<numChildren; i++)
+  {
+    if (angs[i] < minAngle)
+    {
+      minAngle = angs[i];
+      minChild = i;
+    }
+    if (angs[i] > maxAngle)
+    {
+      maxAngle = angs[i];
+      maxChild = i;
+    }
+    fprintf(stdout,"Vec %d: %.4f %.4f %.4f\n", i, parent->Children[i]->StartVec[0], parent->Children[i]->StartVec[1], parent->Children[i]->StartVec[2]);
+    fprintf(stdout,"Angle %d: %4f\n", i, 180*angs[i]/M_PI);
+  }
 
   double vec3[3];
-  if (ang0 > ang1)
-  {
-    vtkMath::Cross(vec0, vec2, vec3);
-    parent->DivergingChild = 1;
-    parent->AligningChild  = 0;
-  }
-  else
-  {
-    vtkMath::Cross(vec0, vec1, vec3);
-    parent->DivergingChild = 0;
-    parent->AligningChild  = 1;
-  }
+  vtkMath::Cross(vec0, parent->Children[minChild]->StartVec, vec3);
+  vtkMath::Normalize(vec3);
+
+  parent->DivergingChild = minChild;
+  parent->AligningChild  = maxChild;
+
   parent->Children[parent->AligningChild]->IsAlign  = 1;
   parent->Children[parent->DivergingChild]->IsAlign = 0;
 
@@ -535,8 +548,8 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   {
     for (int j=0; j<3; j++)
     {
-      parent->Children[0]->RefDirs[i][j] = refDirs[i][j];
-      parent->Children[1]->RefDirs[i][j] = refDirs[i][j];
+      for (int k=0; k<parent->Children.size(); k++)
+        parent->Children[k]->RefDirs[i][j] = refDirs[i][j];
     }
   }
 
@@ -553,9 +566,9 @@ int svCenterlineGraph::GetNewBranchDirections(svCenterlineGCell *parent)
   }
 
   fprintf(stdout,"This Branch: %.4f %.4f %.4f\n", vec3[0], vec3[1], vec3[2]);
-  double angleVec2[3];
-  vtkMath::Cross(vec3, checkVec, angleVec2);
-  double ang2 = atan2(vtkMath::Norm(angleVec2), vtkMath::Dot(vec3, checkVec));
+  double checkAngVec[3];
+  vtkMath::Cross(vec3, checkVec, checkAngVec);
+  double ang2 = atan2(vtkMath::Norm(checkAngVec), vtkMath::Dot(vec3, checkVec));
   fprintf(stdout,"Dot between vec3 and ref is %.4f\n", vtkMath::Dot(vec3, dotVec));
 
   if (vtkMath::Dot(vec3, dotVec) < 0.0)
@@ -691,14 +704,14 @@ svCenterlineGCell* svCenterlineGraph::LookUp(svCenterlineGCell *lookCell, const 
   }
   else
   {
-    if (lookCell->Children[0] != NULL)
+    if (lookCell->Children.size() != 0)
     {
-      svCenterlineGCell* foundCell = this->LookUp(lookCell->Children[0], findId);
-      if (foundCell == NULL)
+      for (int i=0; i<lookCell->Children.size(); i++)
       {
-        foundCell = this->LookUp(lookCell->Children[1], findId);
+        svCenterlineGCell* foundCell = this->LookUp(lookCell->Children[i], findId);
+        if (foundCell != NULL)
+          return foundCell;
       }
-      return foundCell;
     }
   }
 
@@ -742,8 +755,6 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
       for (int k=0; k<3; k++)
         refVecs[j][k] = gCell->RefDirs[j][k];
     }
-    if (gCell->GroupId == 0)
-      fprintf(stdout,"LIKE TO SEE: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
 
     // cell id in the vtkPolyData
     int cellId = this->Lines->GetCellData()->GetArray(
@@ -767,7 +778,7 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
         this->FlipLinePoints(this->Lines, cellId);
       this->Lines->GetCellPoints(cellId, npts, pts);
     }
-    else if (gCell->Children[0] != NULL && gCell->Children[1] != NULL)
+    else if (gCell->Children.size() != 0)
     {
       for (int j=0; j<3; j++)
       {
@@ -795,9 +806,6 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
       localArrayY->SetTuple(pts[0], refVecs[2]);
       localArrayZ->SetTuple(pts[0], refVecs[0]);
     }
-
-    if (gCell->GroupId == 6)
-      fprintf(stdout,"LIKE TO SEE: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
 
     for (int j=1; j<npts; j++)
     {
@@ -857,37 +865,86 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
 
       gCell->Children[gCell->DivergingChild]->RefAngle = ang;
 
-      //// Get update that needs to happen
-      //maxDir;
-      //maxDot = -0.1;
-      //for (int j=0; j<3; j++)
-      //{
-      //  double compare = fabs(vtkMath::Dot(endVecs[j], refVecs[1]));
-      //  fprintf(stdout,"Dot with Ref %d: %.4f\n", j, compare);
-      //  if (compare > maxDot)
-      //  {
-      //    maxDot = compare;
-      //    maxDir = j;
-      //  }
-      //}
+      // Get update that needs to happen
+      int maxDir;
+      double maxDot = -0.1;
+      for (int j=0; j<3; j++)
+      {
+        double compare = fabs(vtkMath::Dot(endVecs[j], refVecs[1]));
+        fprintf(stdout,"Dot with Ref %d: %.4f\n", j, compare);
+        if (compare > maxDot)
+        {
+          maxDot = compare;
+          maxDir = j;
+        }
+      }
 
-      //fprintf(stdout,"Apparently the ref vec aligns with dir: %d\n", maxDir);
+      fprintf(stdout,"K WAHT THE EFF group %d with children %d %d\n", gCell->GroupId, gCell->Children[0]->GroupId, gCell->Children[1]->GroupId);
+      fprintf(stdout,"Apparently the ref vec aligns with dir: %d\n", maxDir);
 
       double projVec[3];
       for (int j=0; j<3; j++)
-        projVec[j] = endVecs[1][j];
-      //projVec[j] = endVecs[maxDir][j];
+        projVec[j] = endVecs[maxDir][j];
 
       vtkMath::Normalize(projVec);
       double projDot = vtkMath::Dot(refVecs[1], projVec);
-      vtkMath::MultiplyScalar(projVec, projDot);
-      fprintf(stdout,"This gives us the following vector to proj to: %.6f %.6f %.6f\n", projVec[0], projVec[1], projVec[2]);
+      fprintf(stdout,"FIRST DOT: %.4f\n", projDot);
+      fprintf(stdout,"DOUBLE CHECK ME!!\n");
+      if (maxDir == 1)
+        fprintf(stdout,"OKEY SMOKES: %.4f\n", vtkMath::Dot(refVecs[2], endVecs[2]));
+      else
+        fprintf(stdout,"OKEY SMOKES: %.4f\n", vtkMath::Dot(refVecs[2], endVecs[1]));
 
-      double updateVec[3];
-      vtkMath::Subtract(projVec, refVecs[1], updateVec);
-      fprintf(stdout,"WHAT: %.6f %.6f %.6f\n", updateVec[0], updateVec[1], updateVec[2]);
-      vtkMath::MultiplyScalar(updateVec, 1./(npts-1));
-      fprintf(stdout,"And an update of for each point: %.6f %.6f %.6f\n", updateVec[0], updateVec[1], updateVec[2]);
+      vtkMath::MultiplyScalar(projVec, projDot);
+      vtkMath::Normalize(projVec);
+      fprintf(stdout,"What is the ref vec then: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
+      fprintf(stdout,"This gives us the following vector to proj to: %.6f %.6f %.6f\n", endVecs[maxDir][0], endVecs[maxDir][1], endVecs[maxDir][2]);
+      fprintf(stdout,"This gives us the following vector to proj to: %.6f %.6f %.6f\n", projVec[0], projVec[1], projVec[2]);
+      double angleVec1[3];
+      vtkMath::Cross(refVecs[1], projVec, angleVec1);
+      double updateAngle = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(refVecs[1], projVec));
+      fprintf(stdout,"INITIAL DIFF: %.6f\n", 180.0*updateAngle/M_PI);
+      updateAngle = (180.0*updateAngle/M_PI) * (1./(npts-1));
+
+      if (updateAngle > 45.0)
+        fprintf(stdout,"ERROR: Angle cannot be larger than 45\n");
+
+      double dotCheck;
+      if (maxDir == 1)
+      {
+        dotCheck =  vtkMath::Dot(refVecs[1], endVecs[2]);
+        if (projDot > 0)
+        {
+          if (dotCheck < 0)
+            updateAngle *= -1.0;
+        }
+        else
+        {
+          if (dotCheck > 0)
+            updateAngle *= -1.0;
+        }
+      }
+      else if (maxDir == 2)
+      {
+        dotCheck = vtkMath::Dot(refVecs[1], endVecs[1]);
+        if (projDot > 0)
+        {
+          if (dotCheck > 0)
+            updateAngle *= -1.0;
+        }
+        else
+        {
+          if (dotCheck < 0)
+            updateAngle *= -1.0;
+        }
+      }
+      else
+        fprintf(stdout,"TELL ME BECAUSE THIS SHOULDNT HAPPEN!!!!!!!\n");
+
+      // Check to see if need to add negative to angle
+      if (dotCheck > 0)
+        updateAngle *= -1.0;
+      fprintf(stdout,"OUR UPDATE ANGLE: %.4f\n", updateAngle);
 
       double updateRefVecs[3][3];
       // The front direction of segment
@@ -908,9 +965,11 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
           vtkMath::Subtract(pt0, pt1, updateRefVecs[0]);
         vtkMath::Normalize(updateRefVecs[0]);
 
-        this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateRefVecs[1], tmpX, updateRefVecs[2]);
+        double updateVec[3];
+        this->RotateVecAroundLine(updateRefVecs[1], updateAngle, updateRefVecs[0], updateVec);
+        this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateVec, tmpX, updateRefVecs[2]);
         for (int k=0; k<3; k++)
-          updateRefVecs[1][k] = tmpX[k] + updateVec[k];
+          updateRefVecs[1][k] = tmpX[k];
 
         localArrayX->SetTuple(pts[j], updateRefVecs[1]);
         localArrayY->SetTuple(pts[j], updateRefVecs[2]);
@@ -918,13 +977,13 @@ int svCenterlineGraph::RefineGraphWithLocalCoordinates()
 
       }
 
-      fprintf(stdout,"ENDED AND WANT TO CHECK: %.6f\n", vtkMath::Dot(updateRefVecs[1], endVecs[1]));
+      fprintf(stdout,"ENDED AND WANT TO CHECK: %.6f\n", vtkMath::Dot(updateRefVecs[1], endVecs[maxDir]));
       for (int j=0; j<3; j++)
       {
         for (int k=0; k<3; k++)
         {
-          gCell->Children[0]->RefDirs[j][k] = updateRefVecs[j][k];
-          gCell->Children[1]->RefDirs[j][k] = updateRefVecs[j][k];
+          for (int l=0; l<gCell->Children.size(); l++)
+            gCell->Children[l]->RefDirs[j][k] = updateRefVecs[j][k];
         }
       }
 
@@ -958,6 +1017,41 @@ int svCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
 
   vtkMath::Cross(vz, vx, vy);
   vtkMath::Normalize(vy);
+
+  return SV_OK;
+}
+
+// ----------------------
+// RotateVecAroundLine
+// ----------------------
+int svCenterlineGraph::RotateVecAroundLine(const double inVec[3],
+                                           const double angle,
+                                           const double axis[3],
+                                           double outVec[3])
+{
+  double inPt[3];
+  vtkMath::Subtract(inVec, axis, inPt);
+
+  vtkNew(vtkPoints, tmpPoints);
+  tmpPoints->InsertNextPoint(inPt);
+
+  vtkNew(vtkPolyData, tmpPoly);
+  tmpPoly->SetPoints(tmpPoints);
+
+  vtkNew(vtkTransform, transform);
+  //transform->RotateWXYZ(double angle, double x, double y, double z);
+  transform->RotateWXYZ(angle, axis);
+
+  vtkNew(vtkTransformPolyDataFilter, transformFilter);
+
+  transformFilter->SetTransform(transform);
+  transformFilter->SetInputData(tmpPoly);
+  transformFilter->Update();
+
+  double outPt[3];
+  transformFilter->GetOutput()->GetPoint(0, outPt);
+
+  vtkMath::Add(axis, outPt, outVec);
 
   return SV_OK;
 }

@@ -42,6 +42,7 @@
 
 #include "vtkPolyData.h"
 #include "svCenterlineGCell.h"
+#include "vtkMutableDirectedGraph.h"
 #include "vtkSVParameterizationModule.h" // For exports
 
 #include <map>
@@ -95,6 +96,11 @@ public:
   int ComputeLocalCoordinateSystem(const double vz[3], const double vstart[3],
                                    double vx[3], double vy[3]);
 
+  int RotateVecAroundLine(const double inVec[3],
+                          const double angle,
+                          const double axis[3],
+                          double outVec[3]);
+
   int FlipLinePoints(vtkPolyData *pd, const int cellId);
 
 
@@ -119,6 +125,7 @@ public:
 
   //Member data needed to build
   vtkPolyData *Lines;
+  vtkMutableDirectedGraph *Graph;
   std::string GroupIdsArrayName;
   double ReferenceVecs[3][3];
 };
