@@ -107,7 +107,7 @@ vtkSVSphericalMapper::vtkSVSphericalMapper()
   this->PrevDescent    = vtkFloatArray::New();
   this->CurrDescent    = vtkFloatArray::New();
   this->ConjugateDir   = vtkFloatArray::New();
-  this->EdgeNeighbors  = vtkIntArray::New();
+  this->EdgeNeighbors  = vtkIntArray::New(); this->EdgeNeighbors->SetNumberOfComponents(2);
   this->IsBoundary     = vtkIntArray::New();
   this->HarmonicMap[0] = vtkPolyData::New();
   this->HarmonicMap[1] = vtkPolyData::New();

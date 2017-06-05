@@ -820,7 +820,8 @@ int vtkSVGeneralUtils::CreateEdgeTable(vtkPolyData *pd,
 
         // Insert edge weights and neighboring cells`
         edgeWeights->InsertValue(edgeId, weight);
-        edgeNeighbors->InsertValue(edgeId, neighborCellId);
+        edgeNeighbors->InsertComponent(edgeId, 0, i);
+        edgeNeighbors->InsertComponent(edgeId, 1, neighborCellId);
         if (weight < 0)
         {
           //vtkWarningMacro("Negative weight on edge between cells " << i <<

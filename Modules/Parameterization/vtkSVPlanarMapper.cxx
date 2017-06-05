@@ -67,7 +67,7 @@ vtkSVPlanarMapper::vtkSVPlanarMapper()
   this->PlanarPd      = vtkPolyData::New();
   this->EdgeTable     = vtkEdgeTable::New();
   this->EdgeWeights   = vtkFloatArray::New();
-  this->EdgeNeighbors = vtkIntArray::New();
+  this->EdgeNeighbors = vtkIntArray::New(); this->EdgeNeighbors->SetNumberOfComponents(2);
   this->IsBoundary    = vtkIntArray::New();
   this->Boundaries    = vtkPolyData::New();
   this->BoundaryLoop  = vtkPolyData::New();
@@ -373,7 +373,7 @@ int vtkSVPlanarMapper::SetInternalNodes()
 
         // Get edge info
         vtkIdType edgeId = this->EdgeTable->IsEdge(i, p1);
-        int edgeNeighbor = this->EdgeNeighbors->GetValue(edgeId);
+        int edgeNeighbor = this->EdgeNeighbors->GetComponent(edgeId, 1);
         double weight    = this->EdgeWeights->GetValue(edgeId);
 
         // if no edge neighbor, then we can leave

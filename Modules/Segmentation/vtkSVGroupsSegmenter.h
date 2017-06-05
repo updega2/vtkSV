@@ -49,6 +49,30 @@
 
 #include "vtkSVSegmentationModule.h" // For export
 
+struct Region
+{
+  int Index;
+  int IndexCluster;
+
+  int NumberOfCorners;
+  std::vector<int> CornerPoints;
+
+  std::vector<std::vector<int> > BoundaryEdges;
+
+  int numInteriorVerts;
+  std::vector<int> InteriorVerts;
+
+  int NumberOfElements;
+  std::vector<int> Elements;
+
+};
+struct XYZ
+{
+  double x;
+  double y;
+  double z;
+};
+
 class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
 {
 public:
@@ -129,8 +153,29 @@ public:
   static int ComputeRotationMatrix(const double vx[3], const double vy[3],
                                    const double vz[3], double rotMatrix[9]);
 
+  static int SmoothBoundaries(vtkPolyData *pd, std::string arrayName);
+
+  static int GetRegions(vtkPolyData *pd, std::string arrayName,
+                        std::vector<Region> &allRegions);
+
+  static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
+                                std::vector<Region> allRegions);
+
+  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
+
+  static int CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
+
+  static void SplineKnots(std::vector<int> &u, int n, int t);
+
+  static void SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res);
+
+  static void SplinePoint(const std::vector<int> &u, int n, int t, double v, const std::vector<XYZ> &control, XYZ &output);
+
+  static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
+
   const static double GlobalCoords[3][3];
 
+  std::vector<Region> Polycube;
 
 protected:
   vtkSVGroupsSegmenter();
@@ -143,6 +188,8 @@ protected:
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
+
+  int GetPatches();
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;

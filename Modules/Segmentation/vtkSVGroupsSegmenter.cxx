@@ -50,7 +50,9 @@
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
+#include "vtkSVMathUtils.h"
 #include "vtkSVPolyBallLine.h"
+#include "vtkSVFindSeparateRegions.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
 #include "vtkSphere.h"
@@ -398,6 +400,42 @@ int vtkSVGroupsSegmenter::RunFilter()
     vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
+  if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro("Could not smootho boundaries of surface");
+    return SV_ERROR;
+  }
+  std::vector<Region> groupRegions;
+  if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get group regions");
+    return SV_ERROR;
+  }
+  if (this->CurveFitBoundaries(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
+  {
+    vtkErrorMacro("Could not curve fit boundaries of surface");
+    return SV_ERROR;
+  }
+  if (this->CorrectCellBoundaries(this->WorkPd, "PatchIds") != SV_OK)
+  {
+    vtkErrorMacro("Could not correcto boundaries of surface");
+    return SV_ERROR;
+  }
+  if (this->SmoothBoundaries(this->WorkPd, "PatchIds") != SV_OK)
+  {
+    vtkErrorMacro("Could not smootho boundaries of surface");
+    return SV_ERROR;
+  }
+  if (this->GetRegions(this->WorkPd, "PatchIds", this->Polycube) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get patches");
+    return SV_ERROR;
+  }
+  if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", this->Polycube) != SV_OK)
+  {
+    vtkErrorMacro("Could not curve fit boundaries of surface");
+    return SV_ERROR;
+  }
 
   return SV_OK;
 }
@@ -691,5 +729,626 @@ int vtkSVGroupsSegmenter::ComputeRotationMatrix(const double vx[3],
                  vz[2]*vtkSVGroupsSegmenter::GlobalCoords[2][2];
 
   return SV_OK;
+}
+
+// ----------------------
+// SmoothBoundaries
+// ----------------------
+int vtkSVGroupsSegmenter::SmoothBoundaries(vtkPolyData *pd, std::string arrayName)
+{
+  vtkNew(vtkSVFindSeparateRegions, boundaryFinder);
+  boundaryFinder->SetInputData(pd);
+  boundaryFinder->SetCellArrayName(arrayName.c_str());
+  boundaryFinder->SetOutPointArrayName("SmoothBoundaryPoints");
+  boundaryFinder->Update();
+
+  vtkNew(vtkPolyData, boundaryIndicator);
+  boundaryIndicator->DeepCopy(boundaryFinder->GetOutput());
+  boundaryIndicator->BuildLinks();
+
+  int numPoints = pd->GetNumberOfPoints();
+
+  for (int i=0; i<numPoints; i++)
+  {
+    int val = boundaryIndicator->GetPointData()->
+      GetArray("SmoothBoundaryPoints")->GetTuple1(i);
+    if (val == 1)
+    {
+      vtkNew(vtkIdList, pointCellsValues);
+      vtkSVGeneralUtils::GetPointCellsValues(boundaryIndicator, arrayName.c_str(),
+                                             i, pointCellsValues);
+
+      // boundary edge
+      if (pointCellsValues->GetNumberOfIds() == 2)
+      {
+        vtkNew(vtkIdList, pointCells);
+        pd->GetPointCells(i, pointCells);
+
+        int count[2]; count[0] = 0; count[1] = 0;
+        int cellIds[2][2];
+        for (int j=0; j<pointCells->GetNumberOfIds(); j++)
+        {
+          for (int k=0; k<2; k++)
+          {
+            if (pd->GetCellData()->GetArray(
+              arrayName.c_str())->GetTuple1(pointCells->GetId(j)) == pointCellsValues->GetId(k))
+            {
+              if (count[k] < 2)
+                cellIds[k][count[k]] = pointCells->GetId(j);
+              count[k]++;
+            }
+          }
+        }
+
+        if (count[0] == 2 || count[1] == 2)
+        {
+          vtkNew(vtkIdList, uniquePoints);
+          vtkIdType npts, *pts;
+          if (count[0] == 2 && count[1] == 2)
+          {
+            for (int j=0; j<2; j++)
+            {
+              for (int k=0; k<2; k++)
+              {
+                pd->GetCellPoints(cellIds[j][k], npts, pts);
+                for (int p=0; p<npts; p++)
+                  uniquePoints->InsertUniqueId(pts[p]);
+              }
+            }
+          }
+          else
+          {
+            if (count[0] == 2)
+            {
+              for (int j=0; j<2; j++)
+              {
+                pd->GetCellPoints(cellIds[0][j], npts, pts);
+                for (int p=0; p<npts; p++)
+                  uniquePoints->InsertUniqueId(pts[p]);
+              }
+            }
+            else if (count[1] == 2)
+            {
+              for (int j=0; j<2; j++)
+              {
+                pd->GetCellPoints(cellIds[1][j], npts, pts);
+                for (int p=0; p<npts; p++)
+                  uniquePoints->InsertUniqueId(pts[p]);
+              }
+            }
+          }
+          int numIds = uniquePoints->GetNumberOfIds();
+          double center[3];
+          for (int j=0; j<3; j++)
+            center[j] = 0.0;
+          for (int k=0; k<numIds; k++)
+          {
+            double pt[3];
+            pd->GetPoint(uniquePoints->GetId(k), pt);
+            for (int j=0; j<3; j++)
+              center[j] += pt[j];
+          }
+          for (int j=0; j<3; j++)
+            center[j] = (1./numIds)*center[j];
+
+          pd->GetPoints()->SetPoint(i, center);
+        }
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetRegions
+// ----------------------
+int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
+                                     std::vector<Region> &allRegions)
+{
+
+  int numCells = pd->GetNumberOfCells();
+  std::vector<std::vector<int> > tempRegions(numCells);
+  std::vector<std::vector<int> > directNeighbors(numCells);
+  std::vector<int> numberOfDirectNeighbors(numCells);
+
+  for (int i=0; i<numCells; i++)
+  {
+    int directNeiCount = 0;
+    std::vector<int> neighborCells;
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(i, npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      int ptId0 = pts[j];
+      int ptId1 = pts[(j+1)%npts];
+      vtkNew(vtkIdList, cellEdgeNeighbors);
+      pd->GetCellEdgeNeighbors(i, ptId0, ptId1, cellEdgeNeighbors);
+      directNeiCount += cellEdgeNeighbors->GetNumberOfIds();
+      for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
+        neighborCells.push_back(cellEdgeNeighbors->GetId(k));
+    }
+    directNeighbors[i] = neighborCells;
+    numberOfDirectNeighbors[i] = directNeiCount;
+  }
+
+  for (int i=0; i<numCells; i++)
+  {
+    int regionId = pd->GetCellData()->GetArray(
+      arrayName.c_str())->GetTuple1(i);
+    tempRegions[i].push_back(-1);
+    tempRegions[i].push_back(regionId);
+  }
+
+  int region = 0;
+  for (int i=0; i<numCells; i++)
+  {
+    if (tempRegions[i][0] == -1)
+    {
+      tempRegions[i][0] = region;
+
+      int count=1;
+      std::vector<int> tempIndex;
+      tempIndex.push_back(i);
+
+      for (int j=0; j<count; j++)
+      {
+        for (int k=0; k<numberOfDirectNeighbors[tempIndex[j]]; k++)
+        {
+          int cellId = directNeighbors[tempIndex[j]][k];
+          if (tempRegions[cellId][0] == -1 && tempRegions[i][1] == tempRegions[cellId][1])
+          {
+            tempRegions[cellId][0] = region;
+            tempIndex.push_back(cellId);
+            count++;
+          }
+        }
+      }
+      region++;
+    }
+  }
+
+  int numberOfRegions = region;
+
+  allRegions.resize(numberOfRegions);
+
+  for (int i=0; i<numberOfRegions; i++)
+  {
+    allRegions[i].Index = i;
+    allRegions[i].NumberOfCorners = 0;
+    allRegions[i].NumberOfElements = 0;
+  }
+
+  for (int i=0; i<numCells; i++)
+  {
+    int regionId = tempRegions[i][0];
+    allRegions[regionId].Elements.push_back(i);
+    allRegions[regionId].NumberOfElements++;
+  }
+
+  for (int i=0; i<numberOfRegions; i++)
+  {
+    int cellId = allRegions[i].Elements[0];
+    allRegions[i].IndexCluster = tempRegions[cellId][1];
+  }
+
+  int numPoints = pd->GetNumberOfPoints();
+  std::vector<int> cornerPoints;
+  std::vector<int> isCornerPoint(numPoints);
+  std::vector<int> isBoundaryPoint(numPoints);
+  for (int i=0; i<numPoints; i++)
+  {
+    vtkNew(vtkIdList, pointCellsValues);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(), i, pointCellsValues);
+    if (pointCellsValues->GetNumberOfIds() >= 3)
+    {
+      cornerPoints.push_back(i);
+      isCornerPoint[i] = 1;
+    }
+    else
+      isCornerPoint[i] = 0;
+
+    if (pointCellsValues->GetNumberOfIds() == 2)
+      isBoundaryPoint[i] = 1;
+    else
+      isBoundaryPoint[i] = 0;
+  }
+
+  int numberOfCornerPoints = cornerPoints.size();
+
+  int firstCorner;
+
+  for (int i=0; i<numberOfRegions; i++)
+  {
+    std::vector<int> tempCornerPoints;
+    for (int j=0; j<allRegions[i].NumberOfElements; j++)
+    {
+      int cellId = allRegions[i].Elements[j];
+      vtkIdType npts, *pts;
+      pd->GetCellPoints(cellId, npts, pts);
+      for (int k=0; k<npts; k++)
+      {
+        if (isCornerPoint[pts[k]])
+        {
+          bool kCount = true;
+          for (int kk=0; kk<tempCornerPoints.size(); kk++)
+          {
+            if (pts[k] == tempCornerPoints[kk])
+            {
+              kCount = false;
+            }
+          }
+
+          if (kCount == true)
+          {
+            tempCornerPoints.push_back(pts[k]);
+          }
+        }
+      }
+    }
+
+  fprintf(stdout, "K CHECKING REGIONS AND STUFFS %d\n", i);
+    allRegions[i].NumberOfCorners = tempCornerPoints.size();
+    fprintf(stdout,"NUM CORNS: %d\n", allRegions[i].NumberOfCorners);
+
+    firstCorner = tempCornerPoints[0];
+    allRegions[i].CornerPoints.push_back(firstCorner);
+
+    int count=1;
+    std::vector<int> tempNodes;
+    tempNodes.push_back(firstCorner);
+
+    for (int j=0; j<count; j++)
+    {
+      vtkNew(vtkIdList, pointCells);
+      pd->GetPointCells(tempNodes[j], pointCells);
+      for (int k=0; k<pointCells->GetNumberOfIds(); k++)
+      {
+        int cellId =  pointCells->GetId(k);
+        int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(pd, tempNodes[j], cellId);
+        int isBoundaryEdge = vtkSVGroupsSegmenter::CheckBoundaryEdge(pd, arrayName, cellId, tempNodes[j], pointCCWId);
+
+        if (tempRegions[cellId][0] == allRegions[i].Index && isBoundaryPoint[pointCCWId] && isBoundaryEdge)
+        {
+          tempNodes.push_back(pointCCWId);
+          count++;
+        }
+        else if (tempRegions[cellId][0] == allRegions[i].Index && isCornerPoint[pointCCWId] && isBoundaryEdge)
+        {
+          if (pointCCWId == firstCorner)
+          {
+            tempNodes.push_back(pointCCWId);
+            allRegions[i].BoundaryEdges.push_back(tempNodes);
+
+            tempNodes.clear();
+
+            if (allRegions[i].CornerPoints.size() == allRegions[i].NumberOfCorners)
+            {
+              count = -1;
+              break;
+            }
+            else
+            {
+              for (int ii=0; ii<tempCornerPoints.size(); ii++)
+              {
+                bool tempCount = false;
+                int tempIndex  = tempCornerPoints[ii];
+
+                for (int jj=0; jj<allRegions[i].CornerPoints.size(); jj++)
+                {
+                  if (tempIndex == allRegions[i].CornerPoints[jj])
+                    tempCount = true;
+                }
+                if (tempCount == false)
+                {
+                  firstCorner = tempIndex;
+                  break;
+                }
+              }
+              allRegions[i].CornerPoints.push_back(firstCorner);
+              tempNodes.push_back(firstCorner);
+              count = 1;
+              j = -1;
+              break;
+            }
+          }
+          else
+          {
+            tempNodes.push_back(pointCCWId);
+            allRegions[i].CornerPoints.push_back(pointCCWId);
+            allRegions[i].BoundaryEdges.push_back(tempNodes);
+            tempNodes.clear();
+            tempNodes.push_back(pointCCWId);
+            count = 1;
+            j = -1;
+            break;
+          }
+        }
+      }
+    }
+    fprintf(stdout,"LETS SEE: %d %d\n", tempCornerPoints.size(), allRegions[i].CornerPoints.size());
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetCCWPoint
+// ----------------------
+int vtkSVGroupsSegmenter::GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId)
+{
+	int pointCCW;
+	int position = 0;
+
+  vtkIdType npts, *pts;
+  pd->GetCellPoints(cellId, npts, pts);
+	for (int i = 0; i < npts; i++)
+	{
+		if (pts[i] == pointId)
+		{
+			position = i;
+			break;
+		}
+	}
+
+	if (position == 2)
+	{
+		position = 0;
+		return pts[position];
+	}
+	else
+	{
+		position++;
+		return pts[position];
+	}
+}
+
+// ----------------------
+// CheckBoundaryEdge
+// ----------------------
+int vtkSVGroupsSegmenter::CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1)
+{
+  vtkNew(vtkIdList, cellEdgeNeighbors);
+  pd->GetCellEdgeNeighbors(cellId, pointId0, pointId1, cellEdgeNeighbors);
+
+  vtkNew(vtkIdList, uniqueVals);
+  uniqueVals->InsertNextId(pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId));
+  for (int i=0; i<cellEdgeNeighbors->GetNumberOfIds(); i++)
+  {
+    uniqueVals->InsertUniqueId(pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellEdgeNeighbors->GetId(i)));
+  }
+
+  int isEdge = 0;
+
+  if (uniqueVals->GetNumberOfIds() == 2)
+    isEdge = 1;
+
+  return isEdge;
+}
+
+// ----------------------
+// CurveFitBoundaries
+// ----------------------
+int vtkSVGroupsSegmenter::CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
+                                     std::vector<Region> allRegions)
+{
+  int numRegions = allRegions.size();
+
+  std::vector<int> edgeValueCheck;
+  for (int i=0; i<numRegions; i++)
+  {
+    for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
+    {
+      fprintf(stdout,"Fitting curve edge %d of region %d\n", j, i);
+      int edgeSize = allRegions[i].BoundaryEdges[j].size();
+
+      int edgeValue = 0;
+      for (int k=0; k<edgeSize; k++)
+        edgeValue += allRegions[i].BoundaryEdges[j][k];
+
+      int usedEdge=0;
+      for (int k=0; k<edgeValueCheck.size(); k++)
+      {
+        if (edgeValue == edgeValueCheck[k])
+        {
+          usedEdge = 1;
+          break;
+        }
+      }
+      if (usedEdge == 1)
+        continue;
+      else
+      {
+        edgeValueCheck.push_back(edgeValue);
+      }
+
+      int numPoints = edgeSize-1;
+      std::vector<double> lengthRatio(edgeSize, 0.0);
+
+      std::vector<XYZ> inputNodes(edgeSize);
+      std::vector<XYZ> outputNodes(edgeSize);
+
+      const int sampleSize = 1000;
+      std::vector<XYZ> outputRes(sampleSize);
+
+      for (int k=0; k<edgeSize; k++)
+      {
+        int pointId = allRegions[i].BoundaryEdges[j][k];
+        double pt[3];
+        pd->GetPoint(pointId, pt);
+        inputNodes[k].x = pt[0];
+        inputNodes[k].y = pt[1];
+        inputNodes[k].z = pt[2];
+      }
+
+      int deg = 4;
+      std::vector<int> knots(numPoints+deg+1);
+
+      vtkSVGroupsSegmenter::SplineKnots(knots, numPoints, deg);
+
+      double totalLength = 0.0;
+
+			for (int k = 1; k < edgeSize; k++)
+			{
+
+				int pointId = allRegions[i].BoundaryEdges[j][k];
+				int prevPointId = allRegions[i].BoundaryEdges[j][k-1];
+
+        double pt0[3], pt1[3];
+        pd->GetPoint(pointId, pt0);
+        pd->GetPoint(prevPointId, pt1);
+
+				totalLength += vtkSVMathUtils::Distance(pt0, pt1);
+			}
+
+			double tempLength = 0.0;
+			for (int k = 1; k < edgeSize; k++)
+			{
+				int pointId = allRegions[i].BoundaryEdges[j][k];
+				int prevPointId = allRegions[i].BoundaryEdges[j][k-1];
+
+        double pt0[3], pt1[3];
+        pd->GetPoint(pointId, pt0);
+        pd->GetPoint(prevPointId, pt1);
+
+        tempLength += vtkSVMathUtils::Distance(pt0, pt1);
+
+				lengthRatio[k] = tempLength / totalLength;
+			}
+
+			SplineCurve(inputNodes, numPoints, knots, deg, outputRes, sampleSize);
+
+			double minDist = VTK_SV_LARGE_DOUBLE;
+			int tempCount=0;
+			for (int k = 0; k < edgeSize; k++)
+			{
+				minDist = VTK_SV_LARGE_DOUBLE;
+				int pointId = allRegions[i].BoundaryEdges[j][k];
+        double pt[3];
+        pd->GetPoint(pointId, pt);
+				for (int l = 0; l < sampleSize; l++)
+				{
+          double outputPt[3];
+          outputPt[0] = outputRes[l].x;
+          outputPt[1] = outputRes[l].y;
+          outputPt[2] = outputRes[l].z;
+
+          double dist = vtkSVMathUtils::Distance(pt, outputPt);
+
+					if (dist < minDist)
+					{
+						minDist = dist;;
+						tempCount = l;
+					}
+
+				}
+
+        double newPoint[3];
+        newPoint[0] = outputRes[tempCount].x;
+        newPoint[1] = outputRes[tempCount].y;
+        newPoint[2] = outputRes[tempCount].z;
+
+        pd->GetPoints()->SetPoint(pointId, newPoint);
+			}
+    }
+  }
+  return SV_OK;
+}
+
+void vtkSVGroupsSegmenter::SplineKnots(std::vector<int> &u, int n, int t)
+{
+
+	int j;
+
+	for (j = 0; j <= n+t; j++)
+	{
+
+		if (j < t)
+		{
+			u[j] = 0;
+		}
+		else if (j <= n)
+		{
+			u[j] = j - t + 1;
+		}
+		else if (j > n)
+		{
+			u[j] = n - t + 2;
+		}
+
+	}
+
+}
+
+void vtkSVGroupsSegmenter::SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res)
+{
+
+	int i;
+
+	double interval, increment;
+
+	interval = 0.f;
+	increment = (n - t + 2) / (double)(res-1);
+
+	for (i = 0; i < res-1; i++)
+	{
+
+		SplinePoint(knots, n, t, interval, inp, outp[i]);
+
+		interval += increment;
+	}
+
+	outp[res-1] = inp[n];
+
+}
+
+void vtkSVGroupsSegmenter::SplinePoint(const std::vector<int> &u, int n, int t, double v, const std::vector<XYZ> &control, XYZ &output)
+{
+
+	int k;
+	double b;
+
+	output.x = 0.f;
+	output.y = 0.f;
+	output.z = 0.f;
+
+	for (k = 0; k <= n; k++)
+	{
+		b = SplineBlend(k, t, u, v);
+
+		output.x += control[k].x * b;
+		output.y += control[k].y * b;
+		output.z += control[k].z * b;
+	}
+
+}
+
+double vtkSVGroupsSegmenter::SplineBlend(int k, int t, const std::vector<int> &u, double v)
+{
+
+	double value;
+
+	if (t == 1)
+	{
+		if ((u[k] <= v) && (v < u[k+1]))
+			value = 1;
+		else
+			value = 0;
+	}
+	else
+	{
+		if ((u[k+t-1] == u[k]) && (u[k+t] == u[k+1]))
+			value = 0;
+		else if (u[k+t-1] == u[k])
+			value = (u[k+t] - v) / (u[k+t] - u[k+1]) * SplineBlend(k+1,t-1,u,v);
+		else if (u[k+t] == u[k+1])
+			value = (v - u[k]) / (u[k+t-1] - u[k]) * SplineBlend(k,t-1,u,v);
+		else
+			value = (v - u[k]) / (u[k+t-1] - u[k]) * SplineBlend(k,t-1,u,v) +
+			(u[k+t] - v) / (u[k+t] - u[k+1]) * SplineBlend(k+1,t-1,u,v);
+	}
+
+	return(value);
+
 }
 

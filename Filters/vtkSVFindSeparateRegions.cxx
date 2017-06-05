@@ -232,7 +232,6 @@ int vtkSVFindSeparateRegions::RunFilter()
   // Add array to polydata
   newPointArray->SetName(this->OutPointArrayName);
   this->WorkPd->GetPointData()->AddArray(newPointArray);
-  this->WorkPd->GetPointData()->SetActiveScalars(this->OutPointArrayName);
 
   return SV_OK;
 }
