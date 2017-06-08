@@ -57,12 +57,12 @@ public:
   std::vector<svCenterlineGCell *> Children;
   int Id;
   int GroupId;
-  int Dir;
+  int BranchDir;
   double RefAngle;
   double RefDirs[3][3];
   double StartPt[3];
   double EndPt[3];
-  double StartVec[3];
+  double BranchVec[3];
   int CornerPtIds[8];
   int DivergingChild;
   int AligningChild;

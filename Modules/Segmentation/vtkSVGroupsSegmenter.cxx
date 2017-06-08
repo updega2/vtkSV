@@ -46,6 +46,7 @@
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
 #include "vtkSmartPointer.h"
+#include "vtkSortDataArray.h"
 #include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
@@ -53,6 +54,8 @@
 #include "vtkSVMathUtils.h"
 #include "vtkSVPolyBallLine.h"
 #include "vtkSVFindSeparateRegions.h"
+#include "vtkSVPlanarMapper.h"
+#include "vtkSVPointSetBoundaryMapper.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
 #include "vtkSphere.h"
@@ -88,7 +91,9 @@ vtkStandardNewMacro(vtkSVGroupsSegmenter);
 vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
 {
   this->WorkPd = vtkPolyData::New();
+  this->GraphPd = vtkPolyData::New();
   this->CenterlinesWorkPd = vtkPolyData::New();
+  this->Polycube = vtkUnstructuredGrid::New();
   this->Centerlines = NULL;
 
   this->CenterlineGroupIdsArrayName = NULL;
@@ -122,6 +127,16 @@ vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
   {
     this->Centerlines->Delete();
     this->Centerlines = NULL;
+  }
+  if (this->Polycube)
+  {
+    this->Polycube->Delete();
+    this->Polycube = NULL;
+  }
+  if (this->GraphPd)
+  {
+    this->GraphPd->Delete();
+    this->GraphPd = NULL;
   }
 
   if (this->CenterlineGroupIds)
@@ -278,13 +293,16 @@ int vtkSVGroupsSegmenter::PrepFilter()
   }
 
   std::string filename = "/Users/adamupdegrove/Desktop/tmp/CenterlineGraph.vtp";
-  vtkNew(vtkPolyData, graphPd);
-  this->CenterlineGraph->GetGraphPolyData(graphPd);
-  vtkSVIOUtils::WriteVTPFile(filename, graphPd);
+  this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
+  vtkSVIOUtils::WriteVTPFile(filename, this->GraphPd);
 
   this->CenterlinesWorkPd->DeepCopy(this->CenterlineGraph->Lines);
   std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/CenterlineDirs.vtp";
   vtkSVIOUtils::WriteVTPFile(filename2, this->CenterlineGraph->Lines);
+
+  std::string filename3 = "/Users/adamupdegrove/Desktop/tmp/Polycube.vtu";
+  this->CenterlineGraph->GetPolycube(10.0, 10.0, this->Polycube);
+  vtkSVIOUtils::WriteVTUFile(filename3, this->Polycube);
   return SV_OK;
 }
 
@@ -427,16 +445,54 @@ int vtkSVGroupsSegmenter::RunFilter()
     vtkErrorMacro("Could not smootho boundaries of surface");
     return SV_ERROR;
   }
-  if (this->GetRegions(this->WorkPd, "PatchIds", this->Polycube) != SV_OK)
+  std::vector<Region> patchRegions;
+  if (this->GetRegions(this->WorkPd, "PatchIds", patchRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
   }
-  if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", this->Polycube) != SV_OK)
+  if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", patchRegions) != SV_OK)
   {
     vtkErrorMacro("Could not curve fit boundaries of surface");
     return SV_ERROR;
   }
+
+  // Get final patch ids by adding to group ids
+  vtkNew(vtkIdList, groupIds);
+  for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
+  {
+    int groupVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(i);
+    groupIds->InsertUniqueId(groupVal);
+  }
+  vtkSortDataArray::Sort(groupIds);
+  int numGroups = groupIds->GetNumberOfIds();
+  vtkNew(vtkIdList, addVals);
+  addVals->SetNumberOfIds(numGroups);
+  for (int i=0; i<numGroups; i++)
+    addVals->SetId(i, 6*i);
+
+  vtkNew(vtkIdList, patchVals);
+  for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
+  {
+    int patchVal = this->WorkPd->GetCellData()->GetArray("PatchIds")->GetTuple1(i);
+    int groupVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(i);
+    int newVal = patchVal + (addVals->GetId(groupIds->IsId(groupVal)));
+    this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(i, newVal);
+    patchVals->InsertUniqueId(newVal);
+  }
+
+  // CHECK AND FIX UP OF REGIONS IF BADD!!!
+
+
+  // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+
+  if (this->Parameterize() != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
+
 
   return SV_OK;
 }
@@ -450,8 +506,8 @@ int vtkSVGroupsSegmenter::RunEdgeWeightedCVT(vtkPolyData *pd)
   vtkNew(vtkPoints, generatorsPts);
   generatorsPts->SetNumberOfPoints(6);
   generatorsPts->SetPoint(0, 1.0, 0.0, 0.0);
-  generatorsPts->SetPoint(1, -1.0, 0.0, 0.0);
-  generatorsPts->SetPoint(2, 0.0, 1.0, 0.0);
+  generatorsPts->SetPoint(1, 0.0, 1.0, 0.0);
+  generatorsPts->SetPoint(2, -1.0, 0.0, 0.0);
   generatorsPts->SetPoint(3, 0.0, -1.0, 0.0);
   generatorsPts->SetPoint(4, 0.0, 0.0, 1.0);
   generatorsPts->SetPoint(5, 0.0, 0.0, -1.0);
@@ -918,6 +974,9 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
     allRegions[i].Index = i;
     allRegions[i].NumberOfCorners = 0;
     allRegions[i].NumberOfElements = 0;
+    allRegions[i].Elements.clear();
+    allRegions[i].CornerPoints.clear();
+    allRegions[i].BoundaryEdges.clear();
   }
 
   for (int i=0; i<numCells; i++)
@@ -955,6 +1014,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
       isBoundaryPoint[i] = 0;
   }
 
+  int runCount = 0;
   int numberOfCornerPoints = cornerPoints.size();
 
   int firstCorner;
@@ -1356,3 +1416,109 @@ double vtkSVGroupsSegmenter::SplineBlend(int k, int t, const std::vector<int> &u
 
 }
 
+int vtkSVGroupsSegmenter::Parameterize()
+{
+  std::vector<Region> patches;
+  if (this->GetRegions(this->WorkPd, "PatchIds", patches) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get patches");
+    return SV_ERROR;
+  }
+
+  int numPatches = patches.size();
+
+  for (int i=0; i<numPatches; i++)
+  {
+    int groupId = this->WorkPd->GetCellData()->GetArray(
+     this->GroupIdsArrayName)->GetTuple1(patches[i].Elements[0]);
+
+    // Get same group polycube
+    // translate polygroup to regular spot ya know
+    vtkNew(vtkUnstructuredGrid, rotPolycube);
+    //this->RotateGroupToGlobalAxis(this->Polycube, groupId, rotPolycube);
+
+    // Connect corner points of patches to polycube for boundary
+    vtkNew(vtkPolyData, thresholdPd);
+    thresholdPd->DeepCopy(this->WorkPd);
+    vtkSVGeneralUtils::GiveIds(thresholdPd, "TmpInternalIds");
+    vtkSVGeneralUtils::ThresholdPd(thresholdPd, i, i, 1, "PatchIds");
+
+    // Set up boundary mapper
+    vtkNew(vtkIntArray, boundaryCorners);
+    boundaryCorners->SetNumberOfTuples(patches[i].CornerPoints.size());
+
+    vtkNew(vtkIntArray, paraBoundaryCorners);
+    paraBoundaryCorners->SetNumberOfTuples(patches[i].CornerPoints.size());
+    for (int j=0; j<patches[i].CornerPoints.size(); j++)
+    {
+      int ptId = patches[i].CornerPoints[j];
+
+      // Thresholded pt id
+      int thresholdPtId = thresholdPd->GetPointData()->GetArray(
+        "TmpInternalIds")->LookupValue(ptId);
+      boundaryCorners->SetTuple1(j, thresholdPtId);
+
+      // Paramteric space pt id
+      vtkNew(vtkIdList, patchVals);
+      vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, "PatchIds", ptId, patchVals);
+      int paraPtId;
+      this->FindPointMatchingValues(rotPolycube, "PatchIds", patchVals, paraPtId);
+
+      paraBoundaryCorners->SetTuple1(j, paraPtId);
+    }
+
+    vtkNew(vtkSVPointSetBoundaryMapper, boundaryMapper);
+    boundaryMapper->SetPointSet(rotPolycube);
+    boundaryMapper->SetPointSetBoundaryIds(paraBoundaryCorners);
+    boundaryMapper->SetBoundaryIds(boundaryCorners);
+
+    // Set up parameterizer
+    vtkNew(vtkSVPlanarMapper, mapper);
+    mapper->SetInputData(thresholdPd);
+    mapper->SetBoundaryMapper(boundaryMapper);
+    mapper->Update();
+
+    // translate back to regular polycube spot
+
+
+    // Then we have to think about volume stuff
+
+
+  }
+}
+
+// ----------------------
+// RotateGroupToGlobalAxis
+// ----------------------
+int vtkSVGroupsSegmenter::RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug, int groupId,
+                                                  vtkUnstructuredGrid *rotUg)
+{
+  vtkSVGeneralUtils::ThresholdUg(ug, groupId, groupId, 1, this->GroupIdsArrayName, rotUg);
+
+
+  vtkNew(vtkSVCleanUnstructuredGrid, ugCleaner);
+
+  return SV_OK;
+}
+
+// ----------------------
+// FindPointMatchingValues
+// ----------------------
+int vtkSVGroupsSegmenter::FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId)
+{
+  for (int i=0; i<ps->GetNumberOfPoints(); i++)
+  {
+    vtkNew(vtkIdList, pointCellValues);
+    vtkSVGeneralUtils::GetPointCellsValues(ps, arrayName.c_str(), i, pointCellValues);
+    pointCellValues->IntersectWith(matchingVals);
+
+    if (pointCellValues->GetNumberOfIds() == matchingVals->GetNumberOfIds())
+    {
+      // We found it!
+      returnPtId = i;
+      return SV_OK;
+    }
+  }
+
+  return SV_ERROR;
+}

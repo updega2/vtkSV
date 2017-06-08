@@ -36,13 +36,15 @@ set(SRCS
   vtkSVPlanarMapper.cxx
   vtkSVBoundaryMapper.cxx
   vtkSVSquareBoundaryMapper.cxx
-  vtkSVSuperSquareBoundaryMapper.cxx)
+  vtkSVSuperSquareBoundaryMapper.cxx
+  vtkSVPointSetBoundaryMapper.cxx)
 
 set(HDRS
   vtkSVPlanarMapper.h
   vtkSVBoundaryMapper.h
   vtkSVSquareBoundaryMapper.h
-  vtkSVSuperSquareBoundaryMapper.h)
+  vtkSVSuperSquareBoundaryMapper.h
+  vtkSVPointSetBoundaryMapper.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

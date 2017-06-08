@@ -403,6 +403,45 @@ int vtkSVGeneralUtils::ThresholdPd(vtkPolyData *pd, int minVal,
                                         arrayName);
 }
 
+// ----------------------
+// ThresholdUg
+// ----------------------
+int vtkSVGeneralUtils::ThresholdUg(vtkUnstructuredGrid *ug, int minVal,
+                                   int maxVal, int dataType,
+                                   std::string arrayName)
+{
+  // Set up threshold filter
+  vtkNew(vtkThreshold, thresholder);
+  thresholder->SetInputData(ug);
+  //Set Input Array to 0 port,0 connection, dataType (0 - point, 1 - cell, and Regions is the type name
+  thresholder->SetInputArrayToProcess(0, 0, 0, dataType, arrayName.c_str());
+  thresholder->ThresholdBetween(minVal, maxVal);
+  thresholder->Update();
+
+  // Check to see if the result has points, don't run surface filter
+  if (thresholder->GetOutput()->GetNumberOfPoints() == 0)
+    return SV_ERROR;
+
+  // Set the final ug
+  ug->DeepCopy(thresholder->GetOutput());
+
+  return SV_OK;
+}
+
+// ----------------------
+// ThresholdUg
+// ----------------------
+int vtkSVGeneralUtils::ThresholdUg(vtkUnstructuredGrid *ug, int minVal,
+                                   int maxVal, int dataType,
+                                   std::string arrayName,
+                                   vtkUnstructuredGrid *returnUg)
+{
+  // Simple, call the other implementation
+  returnUg->DeepCopy(ug);
+  return vtkSVGeneralUtils::ThresholdUg(returnUg, minVal, maxVal, dataType,
+                                        arrayName);
+}
+
 
 // ----------------------
 // GetCentroidOfPoints
@@ -437,17 +476,17 @@ int vtkSVGeneralUtils::GetCentroidOfPoints(vtkPoints *points,
 // GetPointCellsValues
 // ----------------------
 /** \details The value is not added to the list of values if it is -1 */
-int vtkSVGeneralUtils::GetPointCellsValues(vtkPolyData *pd, std::string arrayName,
+int vtkSVGeneralUtils::GetPointCellsValues(vtkPointSet *ps, std::string arrayName,
                                            const int pointId, vtkIdList *valList)
 {
   // Get data from pd
   vtkDataArray *valArray =
-    pd->GetCellData()->GetArray(arrayName.c_str());
+    ps->GetCellData()->GetArray(arrayName.c_str());
   valList->Reset();
 
   // Get point cells
   vtkNew(vtkIdList, cellIds);
-  pd->GetPointCells(pointId, cellIds);
+  ps->GetPointCells(pointId, cellIds);
 
   // Loop through and check each point
   for (int i=0; i<cellIds->GetNumberOfIds(); i++)

@@ -32,8 +32,8 @@ set(module vtkSVCommon)
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx vtkSVSparseMatrix.cxx vtkSVMathUtils.cxx vtkSVPolyDataRawReader.cxx vtkSVUnstructuredGridRawReader.cxx vtkSVRawWriter.cxx)
-set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   vtkSVSparseMatrix.h vtkSVMathUtils.h vtkSVGlobals.h vtkSVPolyDataRawReader.h vtkSVUnstructuredGridRawReader.h vtkSVRawWriter.h)
+set(SRCS vtkSVIOUtils.cxx vtkSVGeneralUtils.cxx vtkSVSparseMatrix.cxx vtkSVMathUtils.cxx vtkSVPolyDataRawReader.cxx vtkSVUnstructuredGridRawReader.cxx vtkSVRawWriter.cxx vtkSVCleanUnstructuredGrid.cxx)
+set(HDRS vtkSVIOUtils.h   vtkSVGeneralUtils.h   vtkSVSparseMatrix.h vtkSVMathUtils.h vtkSVGlobals.h vtkSVPolyDataRawReader.h vtkSVUnstructuredGridRawReader.h vtkSVRawWriter.h vtkSVCleanUnstructuredGrid.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

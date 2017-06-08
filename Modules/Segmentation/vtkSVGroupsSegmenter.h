@@ -173,9 +173,10 @@ public:
 
   static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
 
+  static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
+
   const static double GlobalCoords[3][3];
 
-  std::vector<Region> Polycube;
 
 protected:
   vtkSVGroupsSegmenter();
@@ -190,6 +191,7 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int GetPatches();
+  int Parameterize();
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
@@ -197,6 +199,7 @@ protected:
   char *BlankingArrayName;
 
   vtkPolyData *WorkPd;
+  vtkPolyData *GraphPd;
   vtkPolyData *Centerlines;
   vtkPolyData *CenterlinesWorkPd;
   vtkIdList *CenterlineGroupIds;
@@ -208,6 +211,7 @@ protected:
   double ClipValue;
 
   svCenterlineGraph *CenterlineGraph;
+  vtkUnstructuredGrid *Polycube;
 
 private:
   vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.

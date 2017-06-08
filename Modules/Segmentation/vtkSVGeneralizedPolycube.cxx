@@ -63,11 +63,6 @@ vtkSVGeneralizedPolycube::vtkSVGeneralizedPolycube()
   childDirection->SetName("ChildDirection");
   this->GetCellData()->AddArray(childDirection);
 
-  vtkNew(vtkIntArray, corners);
-  corners->SetNumberOfComponents(8);
-  corners->SetName("CornerPtIds");
-  this->GetCellData()->AddArray(corners);
-
   vtkNew(vtkIntArray, pointCorners);
   pointCorners->SetNumberOfComponents(1);
   pointCorners->SetName("CornerPtIds");
@@ -115,71 +110,11 @@ void vtkSVGeneralizedPolycube::Initialize()
 }
 
 // ----------------------
-// SetNumberOfGrids
-// ----------------------
-void vtkSVGeneralizedPolycube::SetNumberOfGrids(const int numberOfGrids)
-{
-  // Make sure we aren't trying to decrease the size
-  int numCurrentGrids = this->GetNumberOfGrids();
-  if (numberOfGrids <= numCurrentGrids)
-  {
-    vtkErrorMacro("Can only increase the number of grids, not decrease");
-    return;
-  }
-
-  // Set up blank ids from points of cells
-  vtkNew(vtkIdList, blankIds);
-  blankIds->SetNumberOfIds(8);
-  for (int i=0; i<8; i++)
-    blankIds->SetId(i, 0);
-
-  // Loop through new number of grids
-  for (int i=numCurrentGrids; i <numberOfGrids; i++)
-  {
-    // Set new cell and data on new cell
-    this->InsertNextCell(VTK_HEXAHEDRON, blankIds);
-    this->GetCellData()->GetArray("CubeType")->InsertNextTuple1(-1);
-    this->GetCellData()->GetArray("ParentDirection")->InsertNextTuple1(-1);
-    this->GetCellData()->GetArray("ChildDirection")->InsertNextTuple1(-1);
-
-    // Set blank cornder ids
-    double blankCorner[8];
-    for (int i=0; i<8; i++)
-      blankCorner[i] = -1;
-
-    // Set more cell data
-    this->GetCellData()->GetArray("CornerPtIds")->InsertNextTuple(blankCorner);
-    double topNormal[3]; topNormal[0] = 0.0; topNormal[1] = 0.0; topNormal[2] = 1.0;
-    this->GetCellData()->GetArray("TopNormal")->InsertNextTuple(topNormal);
-    double rightNormal[3]; rightNormal[0] = 1.0; rightNormal[1] = 0.0; rightNormal[2] = 0.0;
-    this->GetCellData()->GetArray("RightNormal")->InsertNextTuple(rightNormal);
-  }
-
-  // We modified
-  this->Modified();
-}
-
-// ----------------------
 // GetNumberOfGrids
 // ----------------------
 int vtkSVGeneralizedPolycube::GetNumberOfGrids()
 {
   return this->GetNumberOfCells();
-}
-
-// ----------------------
-// InsertGridWithCenter
-// ----------------------
-int vtkSVGeneralizedPolycube::InsertGridWithCenter(const int cellId, const double center[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection)
-{
-  // Inserting, must allocate space if not enough already.
-  if (cellId >= this->GetNumberOfCells())
-    this->SetNumberOfGrids(cellId);
-
-  // Now that there is space, set that grid
-  this->SetGridWithCenter(cellId, center, dims, cubetype, parentdirection, childdirection);
-
-  return SV_OK;
 }
 
 // ----------------------
@@ -198,35 +133,18 @@ int vtkSVGeneralizedPolycube::SetGridWithCenter(const int cellId, const double c
 }
 
 // ----------------------
-// InsertGridWithCenter
-// ----------------------
-int vtkSVGeneralizedPolycube::InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection)
-{
-  // Inserting, must allocate space if not enough already.
-  if (cellId >= this->GetNumberOfCells())
-    this->SetNumberOfGrids(cellId);
-
-  // Now that there is space, set that grid
-  this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
-
-  return SV_OK;
-}
-
-// ----------------------
 // SetGridWithCenter
 // ----------------------
-int vtkSVGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection, const double topNormal[3], const double rightNormal[3], const int corners[8])
+int vtkSVGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3], const int cubetype, const int parentdirection, const int childdirection, const double topNormal[3], const double rightNormal[3], const int numCorners, const int corners[])
 {
   // Set cell data for vectors
   this->GetCellData()->GetArray("TopNormal")->SetTuple(cellId, topNormal);
   this->GetCellData()->GetArray("RightNormal")->SetTuple(cellId, rightNormal);
 
-  // Loop through and set corner pt ids
-  for (int i=0; i<8; i++)
-    this->GetCellData()->GetArray("CornerPtIds")->SetComponent(cellId, i, corners[i]);
-
   // Set the grid
   this->SetGridWithOrigin(cellId, origin, dims, cubetype, parentdirection, childdirection);
+
+  // Get cell points, set corners
 
   return SV_OK;
 }
@@ -293,21 +211,6 @@ int vtkSVGeneralizedPolycube::SetGridWithOrigin(const int cellId, const double o
     points->SetPoint(i, pts[i]);
 
   // Set the grid
-  this->SetGrid(cellId, points, cubetype, parentdirection, childdirection);
-
-  return SV_OK;
-}
-
-// ----------------------
-// InsertGrid
-// ----------------------
-int vtkSVGeneralizedPolycube::InsertGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection)
-{
-  // Inserting, must allocate space if not enough already.
-  if (cellId >= this->GetNumberOfCells())
-    this->SetNumberOfGrids(cellId);
-
-  // Now that there is space, set that grid
   this->SetGrid(cellId, points, cubetype, parentdirection, childdirection);
 
   return SV_OK;

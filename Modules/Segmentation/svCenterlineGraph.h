@@ -41,8 +41,8 @@
 #define svCenterlineGraph_h
 
 #include "vtkPolyData.h"
+#include "vtkUnstructuredGrid.h"
 #include "svCenterlineGCell.h"
-#include "vtkMutableDirectedGraph.h"
 #include "vtkSVParameterizationModule.h" // For exports
 
 #include <map>
@@ -62,36 +62,39 @@ public:
 
   //Member functions
   svCenterlineGCell* NewCell(int a_Id, svCenterlineGCell *a_Parent);
-  svCenterlineGCell* NewCell(int a_Id, int a_Dir, double a_StartPt[3], double a_EndPt[3]);
+  svCenterlineGCell* NewCell(int a_Id, int a_BranchDir);
+  svCenterlineGCell* NewCell(int a_Id, int a_BranchDir, double a_StartPt[3], double a_EndPt[3]);
   svCenterlineGCell* GetCell(const int findId);
   svCenterlineGCell* LookUp(svCenterlineGCell *lookCell, const int findId);
   int BuildGraph();
   int PrintGraph();
+  int GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg);
+  int GetCubeType(svCenterlineGCell *gCell, int &type);
+  int AddBranchCube(vtkPoints *newPoints,
+                    vtkCellArray *cellArray,
+                    vtkPoints *points,
+                    const int groupId,
+                    vtkIntArray *localPtIds,
+                    vtkIntArray *groupIds,
+                    vtkIntArray *patchIds,
+                    const int type);
+  int GetBifurcationPoint(const double startPt[3], const double vec0[3], const double vec1[3], const double vec2[3], const double factor, double returnPt[3]);
   int GrowGraph(svCenterlineGCell *parent);
-  int RefineGraphWithLocalCoordinates();
-  int ComputeReferenceVectors(svCenterlineGCell *parent);
-  int GetNewBranchDirections(svCenterlineGCell *parent);
+  int GetGraphDirections();
+  int GetGraphPoints();
+  int ComputeGlobalReferenceVectors(svCenterlineGCell *parent);
+  int ComputeBranchReferenceVectors(svCenterlineGCell *parent);
+  int GetInitialBranchDirections(svCenterlineGCell *parent);
   int GetGraphPolyData(vtkPolyData *pd);
   int GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups);
 
   //Static Member functions
-  static int GetDirectionVector(const int dir, double dirVector[3]);
   static int Recurse(svCenterlineGCell *rootsvCenterlineGCell,
          int(*function)(svCenterlineGCell *currentsvCenterlineGCell, void *arg0, void *arg1, void *arg2),
          void *rec_arg0, void *rec_arg1, void *rec_arg2);
-  static int UpdateCellDirection(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
   static int PrintGCell(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
   static int InsertGCellPoints(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
 
-   /*
-   * \brief Gets the index on the polycube based on the parent node and diverging
-   * node directions.
-   * \param parent direction of parent (Numbers correspond to DIRECTIONS enum)
-   * \param divchild direction of parent (Numbers correspond to DIRECTIONS enum)
-   * \param index index of cube to get (0-7)
-   * \return SV_OK if function completes without error
-   */
-  static int LookupIndex(const int parent, const int divchild, const int index);
 
   int ComputeLocalCoordinateSystem(const double vz[3], const double vstart[3],
                                    double vx[3], double vy[3]);
@@ -108,15 +111,12 @@ public:
   enum DIRECTIONS
   {
     RIGHT = 0,
+    BACK,
     LEFT,
     FRONT,
-    BACK,
     UP,
     DOWN
   };
-
-  const static int DT[6][4]; ///< \brief Direction Table
-  const static int RT[9][8]; ///< \brief Index Rotation Table
 
   //Member data
   svCenterlineGCell *Root;
@@ -125,7 +125,6 @@ public:
 
   //Member data needed to build
   vtkPolyData *Lines;
-  vtkMutableDirectedGraph *Graph;
   std::string GroupIdsArrayName;
   double ReferenceVecs[3][3];
 };

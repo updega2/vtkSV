@@ -101,19 +101,6 @@ public:
   // Initialize
   void Initialize();
 
-  // Origin is front, left, bottom corner of cube when axis aligned
-  /** \brief insert a grid into the structure. Does not need to be pre-allocated.
-   *  \param cellId Cell to insert.
-   *  \param origin Origin of cube (front, left, bottom corner).
-   *  \param dims The dimensions of the cube, x, y, z.
-   *  \param cubetype CUBE_BRANCH or CUBE_BIFURCATION.
-   *  \param parentdirection RIGHT, LEFT, FRONT, BACK, UP, or DOWN. Needed to retrieve
-   *  correct node order for mapping.
-   *  \param childdirection RIGHT, LEFT, FRONT, BACK, UP, or DOWN. Needed to retrieve
-   *  correct node order for mapping. */
-  int InsertGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
-                        const int cubetype, const int parentdirection, const int childdirection);
-
   /** \brief Set a grid. Must have alread used SetNumberOfGrids() to allocate.
    *  \param cellId Cell to insert.
    *  \param origin Origin of cube (front, left, bottom corner).
@@ -139,19 +126,7 @@ public:
    *  \param rightNormal Vector aligning left to right of cube in the true object physical space.*/
   int SetGridWithOrigin(const int cellId, const double origin[3], const double dims[3],
                         const int cubetype, const int parentdirection, const int childdirection,
-                        const double topNormal[3], const double rightNormal[3], const int corners[4]);
-
-  /** \brief insert a grid into the structure. Does not need to be pre-allocated.
-   *  \param cellId Cell to insert.
-   *  \param center Center of the cube..
-   *  \param dims The dimensions of the cube, x, y, z.
-   *  \param cubetype CUBE_BRANCH or CUBE_BIFURCATION.
-   *  \param parentdirection RIGHT, LEFT, FRONT, BACK, UP, or DOWN. Needed to retrieve
-   *  correct node order for mapping.
-   *  \param childdirection RIGHT, LEFT, FRONT, BACK, UP, or DOWN. Needed to retrieve
-   *  correct node order for mapping. */
-  int InsertGridWithCenter(const int cellId, const double center[3], const double dims[3],
-                        const int cubetype, const int parentdirection, const int childdirection);
+                        const double topNormal[3], const double rightNormal[3], const int numCorners, const int corners[4]);
 
 
   /** \brief Set a grid. Must have alread used SetNumberOfGrids() to allocate.
@@ -166,18 +141,6 @@ public:
   int SetGridWithCenter(const int cellId, const double center[3], const double dims[3],
                         const int cubetype, const int parentdirection, const int childdirection);
 
-
-  /** \brief insert a grid into the structure. Does not need to be pre-allocated.
-   *  \param cellId Cell to insert.
-   *  \param center Center of the cube.
-   *  \param points point set containing 8 points. Need to be ordered according to point
-   *  layout to work for parameterization.
-   *  \param parentdirection RIGHT, LEFT, FRONT, BACK, UP, or DOWN. Needed to retrieve
-   *  correct node order for mapping.
-   *  \param childdirection RIGHT, LEFT, FRONT, BACK, UP, or DOWN. Needed to retrieve
-   *  correct node order for mapping. */
-  int InsertGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection);
-
   /** \brief Set a grid. Must have alread used SetNumberOfGrids() to allocate.
    *  \param cellId Cell to insert.
    *  \param center Center of the cube.
@@ -190,9 +153,6 @@ public:
   int SetGrid(const int cellId, vtkPoints *points, const int cubetype, const int parentdirection, const int childdirection);
 
   int GetGrid(const int cellId, const int spacing, vtkStructuredGrid *gridRepresentation) {return 0;} /**< \brief Unimplemented */
-
-  /** \brief Used to allocate space for certain number of grids. */
-  void SetNumberOfGrids(const int numberOfGrids);
 
   /** \brief Return the number of grids. Should be same as GetNumberOfCells(). */
   int GetNumberOfGrids();

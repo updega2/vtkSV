@@ -54,6 +54,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPlane.h"
 #include "vtkPolyData.h"
+#include "vtkUnstructuredGrid.h"
 
 #include <string>
 #include <sstream>
@@ -172,6 +173,27 @@ public:
   static int ThresholdPd(vtkPolyData *pd, int minVal, int maxVal, int dataType,
                          std::string arrayName, vtkPolyData *returnPd);
 
+  /** \brief Awesome function that is wrapper around vtkThreshold
+   *  \param ug Input ug to threshold, updated in place.
+   *  \param minVal minumum value.
+   *  \param maxVal maximum value.
+   *  \param dataType 0 for point data, 1 for cell data.
+   *  \param arrayName Name of array to be used to threshold ug.
+   *  \return SV_OK */
+  static int ThresholdUg(vtkUnstructuredGrid *ug, int minVal, int maxVal, int dataType,
+                         std::string arrayName);
+
+  /** \brief Awesome function that is wrapper around vtkThreshold
+   *  \param ug Input ug to threshold.
+   *  \param minVal minumum value.
+   *  \param maxVal maximum value.
+   *  \param dataType 0 for point data, 1 for cell data.
+   *  \param arrayName Name of array to be used to threshold ug.
+   *  \param returnPd The resultant thresholded ug
+   *  \return SV_OK */
+  static int ThresholdUg(vtkUnstructuredGrid *ug, int minVal, int maxVal, int dataType,
+                         std::string arrayName, vtkUnstructuredGrid *returnUg);
+
   /** \brief Get centroid of points */
   static int GetCentroidOfPoints(vtkPoints *points, double centroid[3]);
 
@@ -182,7 +204,7 @@ public:
    *  \param pointId The point Id to get array values of.
    *  \param groupIds list of values on cells attached to point.
    *  \return SV_OK */
-  static int GetPointCellsValues(vtkPolyData *pd, std::string arrayName,
+  static int GetPointCellsValues(vtkPointSet *ps, std::string arrayName,
                                 const int pointId, vtkIdList *valList);
 
   /** \brief Perform a cut of the polydata, but with crinkle clip. Uses vtkExtractGeometry
