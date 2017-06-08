@@ -749,9 +749,9 @@ int vtkSVPolyDataToNURBSFilter::MapOpenSliceToBaseDomain(vtkPolyData *slicePd,
 // InterpolateMapOntoTarget
 // ----------------------
 int vtkSVPolyDataToNURBSFilter::InterpolateMapOntoTarget(vtkPolyData *sourceS2Pd,
-                                                            vtkPolyData *targetPd,
-                                                            vtkPolyData *targetS2Pd,
-                                                            vtkPolyData *mappedPd)
+                                                         vtkPolyData *targetPd,
+                                                         vtkPolyData *targetS2Pd,
+                                                         vtkPolyData *mappedPd)
 {
   vtkNew(vtkSVMapInterpolator, interpolator);
   interpolator->SetInputData(0, sourceS2Pd);

@@ -72,6 +72,16 @@ public:
   //@}
 
   //@{
+  /// \brief Indicate which two coordinates to parameterize. Dir2 is stationary dir
+  vtkGetMacro(Dir0, int);
+  vtkSetMacro(Dir0, int);
+  vtkGetMacro(Dir1, int);
+  vtkSetMacro(Dir1, int);
+  vtkGetMacro(Dir2, int);
+  vtkSetMacro(Dir2, int);
+  //@}
+
+  //@{
   /// \details has not effect currently, something to change in future
   enum WEIGHT_TYPE
   {
@@ -133,6 +143,10 @@ private:
   int RemoveInternalIds;
   double Lambda;
   double Mu;
+
+  int Dir0;
+  int Dir1;
+  int Dir2;
 };
 
 #endif

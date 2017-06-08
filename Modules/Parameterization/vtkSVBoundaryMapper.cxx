@@ -240,13 +240,13 @@ int vtkSVBoundaryMapper::GetBoundaryLoop()
   int count = 0;
   vtkIdType startPt = pointIds->LookupValue(
     oPointIds->GetTuple1(this->BoundaryIds->GetValue(0)));
-  //fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
+  fprintf(stdout,"Start Point is!: %d\n", this->BoundaryIds->GetValue(0));
 
   // Set the boundary loop points and point data and allocate space for cells
   this->BoundaryLoop->SetPoints(this->Boundaries->GetPoints());
   this->BoundaryLoop->GetPointData()->PassData(this->Boundaries->GetPointData());
   this->BoundaryLoop->Allocate(this->Boundaries->GetNumberOfCells(), 1000);
-  //fprintf(stdout,"The value on this is!: %lld\n", startPt);
+  fprintf(stdout,"The value on this is!: %lld\n", startPt);
   this->Boundaries->GetPointCells(startPt,cellIds);
 
   // Get starting cell
@@ -271,6 +271,8 @@ int vtkSVBoundaryMapper::GetBoundaryLoop()
       return SV_ERROR;
     }
   }
+  fprintf(stdout,"COMPARE: %lld, %lld\n", this->Boundaries->GetNumberOfPoints(),
+                                          this->BoundaryLoop->GetNumberOfPoints());
 
   return SV_OK;
 }

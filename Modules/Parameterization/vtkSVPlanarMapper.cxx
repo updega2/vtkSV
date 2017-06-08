@@ -81,6 +81,9 @@ vtkSVPlanarMapper::vtkSVPlanarMapper()
   this->Lambda = 0.5;
   this->Mu     = 0.5;
 
+  this->Dir0 = 0;
+  this->Dir1 = 1;
+  this->Dir2 = 2;
 }
 
 // ----------------------
@@ -335,8 +338,8 @@ int vtkSVPlanarMapper::SetBoundaries()
     this->ATutte->SetElement(id, id, 1.0);
 
     // Set right hand side to be point on boundary
-    this->Bu[id] = pt[0];
-    this->Bv[id] = pt[1];
+    this->Bu[id] = pt[this->Dir0];
+    this->Bv[id] = pt[this->Dir1];
   }
 
   return SV_OK;
@@ -349,6 +352,11 @@ int vtkSVPlanarMapper::SetInternalNodes()
 {
   // Get number of points
   int numPoints = this->WorkPd->GetNumberOfPoints();
+
+  vtkNew(vtkPolyData, boundaryPd);
+  boundaryPd->DeepCopy(this->BoundaryMapper->GetOutput());
+  double centroid[3];
+  vtkSVGeneralUtils::GetCentroidOfPoints(boundaryPd->GetPoints(), centroid);
 
   // Loop through points
   for (int i=0; i<numPoints; i++)
@@ -396,8 +404,8 @@ int vtkSVPlanarMapper::SetInternalNodes()
       this->ATutte->SetElement(i, i, tot_tutte_weight);
 
       // Set initial values for solution vector
-      this->Xu[i] = pt[0];
-      this->Xv[i] = pt[1];
+      this->Xu[i] = centroid[this->Dir0]; //pt[this->Dir0];
+      this->Xv[i] = centroid[this->Dir1]; //pt[this->Dir1];
     }
   }
 
@@ -420,12 +428,18 @@ int vtkSVPlanarMapper::SolveSystem()
   vtkSVMathUtils::ConjugateGradient(this->AHarm,  &this->Bv[0], numPoints,
                                     &this->Xv[0], 1.0e-8);
 
+  // Get pt from boundary for stationary dir axis
+  double origPt[3];
+  this->BoundaryMapper->GetOutput()->GetPoint(0, origPt);
+
   for (int i=0; i<numPoints; i++)
   {
+
+    // New pt
     double pt[3];
-    pt[0] = this->Xu[i];
-    pt[1] = this->Xv[i];
-    pt[2] = 0.0;
+    pt[this->Dir0] = this->Xu[i];
+    pt[this->Dir1] = this->Xv[i];
+    pt[this->Dir2] = origPt[this->Dir2];
     this->PlanarPd->GetPoints()->SetPoint(i, pt);
   }
 

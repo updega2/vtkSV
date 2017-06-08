@@ -77,6 +77,7 @@ public:
                     vtkIntArray *localPtIds,
                     vtkIntArray *groupIds,
                     vtkIntArray *patchIds,
+                    vtkDoubleArray *textureCoordinates,
                     const int type);
   int GetBifurcationPoint(const double startPt[3], const double vec0[3], const double vec1[3], const double vec2[3], const double factor, double returnPt[3]);
   int GrowGraph(svCenterlineGCell *parent);

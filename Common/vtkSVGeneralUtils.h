@@ -386,10 +386,12 @@ public:
   //@}
 
   //@{
-  /** \brief Transforms pd with the given rotation matrix.
+  /** \brief Transforms pd or ug with the given rotation matrix.
    *  return SV_OK */
   static int ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMatrix);
   static int ApplyRotationMatrix(vtkPolyData *pd, double rotMatrix[16]);
+  static int ApplyRotationMatrix(vtkUnstructuredGrid *ug, vtkMatrix4x4 *rotMatrix);
+  static int ApplyRotationMatrix(vtkUnstructuredGrid *ug, double rotMatrix[16]);
   //@}
 
   /** \brief Get all angles of a polydata surface.

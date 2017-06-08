@@ -236,6 +236,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
   vtkNew(vtkIntArray, localPtIds); localPtIds->SetName("LocalPointIds");
   vtkNew(vtkIntArray, groupIds); groupIds->SetName("GroupIds");
   vtkNew(vtkIntArray, patchIds); patchIds->SetName("PatchIds");
+  vtkNew(vtkDoubleArray, textureCoordinates);
+  textureCoordinates->SetNumberOfComponents(3);
+  textureCoordinates->SetName("TextureCoordinates");
 
   for (int i=0; i<numSegs; i++)
   {
@@ -278,15 +281,15 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
 
       // extrude up
       vtkMath::MultiplyScalar(workVec, height/2.);
-      vtkMath::Add(gCell->EndPt, workVec, finalPts[0]);
-      vtkMath::Add(endPt0, workVec, finalPts[1]);
-      vtkMath::Add(endPt1, workVec, finalPts[4]);
+      vtkMath::Add(gCell->EndPt, workVec, finalPts[4]);
+      vtkMath::Add(endPt0, workVec, finalPts[0]);
+      vtkMath::Add(endPt1, workVec, finalPts[3]);
 
       // extrude down
       vtkMath::MultiplyScalar(workVec, -1.0);
-      vtkMath::Add(gCell->EndPt, workVec, finalPts[5]);
-      vtkMath::Add(endPt0, workVec, finalPts[6]);
-      vtkMath::Add(endPt1, workVec, finalPts[9]);
+      vtkMath::Add(gCell->EndPt, workVec, finalPts[9]);
+      vtkMath::Add(endPt0, workVec, finalPts[5]);
+      vtkMath::Add(endPt1, workVec, finalPts[8]);
 
       // Now get beginning points
       double endVec[3];
@@ -303,13 +306,13 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
 
       // extrude down
       vtkMath::MultiplyScalar(workVec, height/2.);
-      vtkMath::Add(topPt0, workVec, finalPts[7]);
-      vtkMath::Add(topPt1, workVec, finalPts[8]);
+      vtkMath::Add(topPt0, workVec, finalPts[6]);
+      vtkMath::Add(topPt1, workVec, finalPts[7]);
 
       // extrude up
       vtkMath::MultiplyScalar(workVec, -1.0);
-      vtkMath::Add(topPt0, workVec, finalPts[2]);
-      vtkMath::Add(topPt1, workVec, finalPts[3]);
+      vtkMath::Add(topPt0, workVec, finalPts[1]);
+      vtkMath::Add(topPt1, workVec, finalPts[2]);
 
       for (int j=0; j<numPoints; j++)
         addPoints->InsertNextPoint(finalPts[j]);
@@ -422,7 +425,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     }
 
     this->AddBranchCube(addPoints, allCells, allPoints, gCell->GroupId,
-                        localPtIds, groupIds, patchIds, cubeType);
+                        localPtIds, groupIds, patchIds, textureCoordinates, cubeType);
 
   }
 
@@ -456,6 +459,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
   outUg->GetPointData()->AddArray(localPtIds);
   outUg->GetCellData()->AddArray(groupIds);
   outUg->GetCellData()->AddArray(patchIds);
+  outUg->GetPointData()->SetTCoords(textureCoordinates);
 
   return SV_OK;
 }
@@ -1393,6 +1397,7 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
                                      vtkIntArray *localPtIds,
                                      vtkIntArray *groupIds,
                                      vtkIntArray *patchIds,
+                                     vtkDoubleArray *textureCoordinates,
                                      const int type)
 {
   if (type == 0)
@@ -1434,12 +1439,22 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
       localPtIds->InsertNextTuple1(i);
     }
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.5, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.5, 0.0, 0.0);
 
-    vtkIdType face0[4] = {pI[6], pI[7], pI[2], pI[1]};
-    vtkIdType face1[5] = {pI[5], pI[9], pI[8], pI[7], pI[6]};
-    vtkIdType face2[4] = {pI[4], pI[3], pI[8], pI[9]};
+    vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
+    vtkIdType face1[5] = {pI[8], pI[7], pI[6], pI[5], pI[9]};
+    vtkIdType face2[4] = {pI[3], pI[2], pI[7], pI[8]};
     vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-    vtkIdType face4[4] = {pI[3], pI[2], pI[7], pI[8]};
+    vtkIdType face4[4] = {pI[2], pI[1], pI[6], pI[7]};
 
     cellArray->InsertNextCell(4, face0);
     cellArray->InsertNextCell(5, face1);
@@ -1464,9 +1479,9 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
 
-    vtkIdType face0[4] = {pI[7], pI[8], pI[2], pI[1]};
-    vtkIdType face1[6] = {pI[6], pI[11], pI[10], pI[9], pI[8], pI[7]};
-    vtkIdType face2[4] = {pI[5], pI[4], pI[10], pI[11]};
+    vtkIdType face0[4] = {pI[6], pI[7], pI[1], pI[0]};
+    vtkIdType face1[6] = {pI[10], pI[9], pI[8], pI[7], pI[6], pI[11]};
+    vtkIdType face2[4] = {pI[4], pI[3], pI[9], pI[10]};
     vtkIdType face3[6] = {pI[0], pI[1], pI[2], pI[3], pI[4], pI[5]};
 
     cellArray->InsertNextCell(4, face0);
@@ -1485,9 +1500,9 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
 
-    vtkIdType face0[6] = {pI[4], pI[8], pI[9], pI[5], pI[1], pI[0]};
+    vtkIdType face0[6] = {pI[8], pI[9], pI[5], pI[1], pI[0], pI[4]};
     vtkIdType face1[4] = {pI[11], pI[10], pI[9], pI[8]};
-    vtkIdType face2[6] = {pI[7], pI[3], pI[2], pI[6], pI[10], pI[11]};
+    vtkIdType face2[6] = {pI[3], pI[2], pI[6], pI[10], pI[11], pI[7]};
     vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
 
     cellArray->InsertNextCell(6, face0);
@@ -1506,9 +1521,9 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
 
-    vtkIdType face0[5] = {pI[5], pI[7], pI[3], pI[1], pI[0]};
+    vtkIdType face0[5] = {pI[7], pI[8], pI[1], pI[0], pI[5]};
     vtkIdType face1[5] = {pI[11], pI[10], pI[9], pI[8], pI[7]};
-    vtkIdType face2[5] = {pI[6], pI[4], pI[3], pI[10], pI[11]};
+    vtkIdType face2[5] = {pI[4], pI[3], pI[10], pI[11], pI[6]};
     vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
 
     cellArray->InsertNextCell(5, face0);
@@ -1527,9 +1542,9 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
 
-    vtkIdType face0[5] = {pI[8], pI[9], pI[5], pI[2], pI[1]};
-    vtkIdType face1[5] = {pI[7], pI[11], pI[10], pI[9], pI[8]};
-    vtkIdType face2[5] = {pI[8], pI[9], pI[6], pI[10], pI[11]};
+    vtkIdType face0[5] = {pI[7], pI[8], pI[5], pI[1], pI[0]};
+    vtkIdType face1[5] = {pI[10], pI[9], pI[8], pI[7], pI[11]};
+    vtkIdType face2[5] = {pI[3], pI[2], pI[6], pI[9], pI[10]};
     vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
 
     cellArray->InsertNextCell(5, face0);
@@ -1550,6 +1565,16 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
       localPtIds->InsertNextTuple1(i);
     }
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.5, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.5, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.0);
 
     vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
     vtkIdType face1[5] = {pI[9], pI[8], pI[7], pI[6], pI[5]};

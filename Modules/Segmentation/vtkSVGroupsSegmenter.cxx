@@ -37,6 +37,7 @@
 #include "vtkPoints.h"
 #include "vtkPointLocator.h"
 #include "vtkCellData.h"
+#include "vtkDataSetSurfaceFilter.h"
 #include "vtkIdFilter.h"
 #include "vtkIntArray.h"
 #include "vtkDataSetSurfaceFilter.h"
@@ -45,8 +46,10 @@
 #include "vtkClipPolyData.h"
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
+#include "vtkLinearSubdivisionFilter.h"
 #include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
+#include "vtkSVCleanUnstructuredGrid.h"
 #include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
@@ -56,6 +59,7 @@
 #include "vtkSVFindSeparateRegions.h"
 #include "vtkSVPlanarMapper.h"
 #include "vtkSVPointSetBoundaryMapper.h"
+#include "vtkSVMapInterpolator.h"
 #include "vtkMath.h"
 #include "vtkMergeCells.h"
 #include "vtkSphere.h"
@@ -300,9 +304,10 @@ int vtkSVGroupsSegmenter::PrepFilter()
   std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/CenterlineDirs.vtp";
   vtkSVIOUtils::WriteVTPFile(filename2, this->CenterlineGraph->Lines);
 
+  this->CenterlineGraph->GetPolycube(20.0, 20.0, this->Polycube);
   std::string filename3 = "/Users/adamupdegrove/Desktop/tmp/Polycube.vtu";
-  this->CenterlineGraph->GetPolycube(10.0, 10.0, this->Polycube);
   vtkSVIOUtils::WriteVTUFile(filename3, this->Polycube);
+
   return SV_OK;
 }
 
@@ -1425,23 +1430,48 @@ int vtkSVGroupsSegmenter::Parameterize()
     return SV_ERROR;
   }
 
+  // Extract surface, triangulate, and subdivide polycube
+  vtkNew(vtkPolyData, polycubePd);
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(this->Polycube);
+  surfacer->Update();
+
+  vtkNew(vtkTriangleFilter, triangulator);
+  triangulator->SetInputData(surfacer->GetOutput());
+  triangulator->Update();
+
+  vtkNew(vtkLinearSubdivisionFilter, subdivider);
+  subdivider->SetInputData(triangulator->GetOutput());
+  subdivider->SetNumberOfSubdivisions(4);
+  subdivider->Update();
+  polycubePd->DeepCopy(subdivider->GetOutput());
+  fprintf(stdout,"JUST CHECK: %d\n", polycubePd->GetNumberOfPoints());
+
   int numPatches = patches.size();
+
+  vtkNew(vtkAppendPolyData, appender);
+  vtkNew(vtkAppendPolyData, mapAppender);
 
   for (int i=0; i<numPatches; i++)
   {
     int groupId = this->WorkPd->GetCellData()->GetArray(
      this->GroupIdsArrayName)->GetTuple1(patches[i].Elements[0]);
+    int patchId = this->WorkPd->GetCellData()->GetArray(
+     "PatchIds")->GetTuple1(patches[i].Elements[0]);
+    int patchDir = patchId%6;
 
     // Get same group polycube
     // translate polygroup to regular spot ya know
     vtkNew(vtkUnstructuredGrid, rotPolycube);
-    //this->RotateGroupToGlobalAxis(this->Polycube, groupId, rotPolycube);
+    vtkNew(vtkMatrix4x4, rotMatrix0);
+    vtkNew(vtkMatrix4x4, rotMatrix1);
+    this->RotateGroupToGlobalAxis(this->Polycube, groupId, this->GroupIdsArrayName, rotPolycube, rotMatrix0, rotMatrix1);
 
     // Connect corner points of patches to polycube for boundary
     vtkNew(vtkPolyData, thresholdPd);
     thresholdPd->DeepCopy(this->WorkPd);
     vtkSVGeneralUtils::GiveIds(thresholdPd, "TmpInternalIds");
-    vtkSVGeneralUtils::ThresholdPd(thresholdPd, i, i, 1, "PatchIds");
+    vtkSVGeneralUtils::ThresholdPd(thresholdPd, patchId, patchId, 1, "PatchIds");
 
     // Set up boundary mapper
     vtkNew(vtkIntArray, boundaryCorners);
@@ -1449,9 +1479,13 @@ int vtkSVGroupsSegmenter::Parameterize()
 
     vtkNew(vtkIntArray, paraBoundaryCorners);
     paraBoundaryCorners->SetNumberOfTuples(patches[i].CornerPoints.size());
+    fprintf(stdout,"PATCH: %d\n", patchId);
+
+    fprintf(stdout,"Corner Points: ");
     for (int j=0; j<patches[i].CornerPoints.size(); j++)
     {
       int ptId = patches[i].CornerPoints[j];
+      fprintf(stdout,"%d ", ptId);
 
       // Thresholded pt id
       int thresholdPtId = thresholdPd->GetPointData()->GetArray(
@@ -1461,11 +1495,21 @@ int vtkSVGroupsSegmenter::Parameterize()
       // Paramteric space pt id
       vtkNew(vtkIdList, patchVals);
       vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, "PatchIds", ptId, patchVals);
-      int paraPtId;
-      this->FindPointMatchingValues(rotPolycube, "PatchIds", patchVals, paraPtId);
+      int paraPtId = -1;
+      if (this->FindPointMatchingValues(rotPolycube, "PatchIds", patchVals, paraPtId) != SV_OK)
+      {
+        fprintf(stdout,"Could not find corresponding polycube point id\n");
+        return SV_ERROR;
+      }
 
       paraBoundaryCorners->SetTuple1(j, paraPtId);
     }
+    fprintf(stdout,"\n");
+
+    fprintf(stdout,"Poly Corner Points: ");
+    for (int j=0; j<paraBoundaryCorners->GetNumberOfTuples(); j++)
+      fprintf(stdout,"%.4f ", paraBoundaryCorners->GetTuple1(j));
+    fprintf(stdout,"\n");
 
     vtkNew(vtkSVPointSetBoundaryMapper, boundaryMapper);
     boundaryMapper->SetPointSet(rotPolycube);
@@ -1476,27 +1520,114 @@ int vtkSVGroupsSegmenter::Parameterize()
     vtkNew(vtkSVPlanarMapper, mapper);
     mapper->SetInputData(thresholdPd);
     mapper->SetBoundaryMapper(boundaryMapper);
+    if (patchDir == 0 || patchDir == 2)
+    {
+      mapper->SetDir0(1);
+      mapper->SetDir1(2);
+      mapper->SetDir2(0);
+    }
+    else if (patchDir == 1 || patchDir == 3)
+    {
+      mapper->SetDir0(0);
+      mapper->SetDir1(2);
+      mapper->SetDir2(1);
+    }
+    else if (patchDir == 4 || patchDir == 5)
+    {
+      mapper->SetDir0(0);
+      mapper->SetDir1(1);
+      mapper->SetDir2(2);
+    }
     mapper->Update();
 
+    vtkNew(vtkPolyData, tmpPoly);
+    tmpPoly->DeepCopy(mapper->GetOutput());
+
+    rotMatrix0->Invert();
+    rotMatrix1->Invert();
+
     // translate back to regular polycube spot
+    vtkSVGeneralUtils::ApplyRotationMatrix(tmpPoly, rotMatrix1);
+    vtkSVGeneralUtils::ApplyRotationMatrix(tmpPoly, rotMatrix0);
+
+    std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/Boundary_"+std::to_string(patchId)+".vtp";
+    vtkSVIOUtils::WriteVTPFile(filename2, boundaryMapper->GetOutput());
+    std::string filename4 = "/Users/adamupdegrove/Desktop/tmp/Mapping_"+std::to_string(patchId)+".vtp";
+    vtkSVIOUtils::WriteVTPFile(filename4, mapper->GetOutput());
+
+    appender->AddInputData(tmpPoly);
 
 
     // Then we have to think about volume stuff
+    vtkNew(vtkPolyData, patchPolyPd);
+    vtkSVGeneralUtils::ThresholdPd(polycubePd, patchId, patchId, 1, "PatchIds",
+                                   patchPolyPd);
 
+    vtkNew(vtkPolyData, patchMappedPd);
+    this->InterpolateMapOntoTarget(patchPolyPd, thresholdPd, tmpPoly, patchMappedPd);
+
+    mapAppender->AddInputData(patchMappedPd);
 
   }
+
+  appender->Update();
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Mapping_All.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename, appender->GetOutput());
+
+  mapAppender->Update();
+  std::string filename5 = "/Users/adamupdegrove/Desktop/tmp/Mapped_Out.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename5, mapAppender->GetOutput());
+
+  return SV_OK;
 }
 
 // ----------------------
 // RotateGroupToGlobalAxis
 // ----------------------
-int vtkSVGroupsSegmenter::RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug, int groupId,
-                                                  vtkUnstructuredGrid *rotUg)
+int vtkSVGroupsSegmenter::RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
+                                                  const int thresholdId,
+                                                  std::string arrayName,
+                                                  vtkUnstructuredGrid *rotUg,
+                                                  vtkMatrix4x4 *rotMatrix0,
+                                                  vtkMatrix4x4 *rotMatrix1)
 {
-  vtkSVGeneralUtils::ThresholdUg(ug, groupId, groupId, 1, this->GroupIdsArrayName, rotUg);
+  vtkNew(vtkUnstructuredGrid, thresholdUg);
+  vtkSVGeneralUtils::ThresholdUg(ug, thresholdId, thresholdId, 1, arrayName, thresholdUg);
 
+  double pts[3][3];
+  for (int i=0; i<3; i++)
+  {
+    int ptId = thresholdUg->GetPointData()->GetArray("LocalPointIds")->LookupValue(i);
+    thresholdUg->GetPoint(ptId, pts[i]);
+  }
+
+  double zVec[4], tmpVec[3];
+  vtkMath::Subtract(pts[1], pts[0], zVec);
+  vtkMath::Normalize(zVec);
+  vtkMath::Subtract(pts[1], pts[2], tmpVec);
+  vtkMath::Normalize(tmpVec);
+
+  double yVec[3];
+  vtkMath::Cross(zVec, tmpVec, yVec);
+  vtkMath::Normalize(yVec);
+
+  double realY[3], realZ[3];
+  realY[0] = 0.0; realY[1] = 1.0; realY[2] = 0.0;
+  realZ[0] = 0.0; realZ[1] = 0.0; realZ[2] = 1.0;
+
+  vtkSVGeneralUtils::GetRotationMatrix(yVec, realY, rotMatrix0);
+  double newZVec[4];
+  rotMatrix0->MultiplyPoint(zVec, newZVec);
+
+  vtkSVGeneralUtils::GetRotationMatrix(newZVec, realZ, rotMatrix1);
 
   vtkNew(vtkSVCleanUnstructuredGrid, ugCleaner);
+  ugCleaner->SetInputData(ug);
+  ugCleaner->Update();
+  rotUg->DeepCopy(ugCleaner->GetOutput());
+
+  vtkSVGeneralUtils::ApplyRotationMatrix(rotUg, rotMatrix0);
+  vtkSVGeneralUtils::ApplyRotationMatrix(rotUg, rotMatrix1);
 
   return SV_OK;
 }
@@ -1521,4 +1652,24 @@ int vtkSVGroupsSegmenter::FindPointMatchingValues(vtkPointSet *ps, std::string a
   }
 
   return SV_ERROR;
+}
+
+// ----------------------
+// InterpolateMapOntoTarget
+// ----------------------
+int vtkSVGroupsSegmenter::InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
+                                                         vtkPolyData *targetPd,
+                                                         vtkPolyData *targetBasePd,
+                                                         vtkPolyData *mappedPd)
+{
+  vtkNew(vtkSVMapInterpolator, interpolator);
+  interpolator->SetInputData(0, sourceBasePd);
+  interpolator->SetInputData(1, targetPd);
+  interpolator->SetInputData(2, targetBasePd);
+  interpolator->SetNumSourceSubdivisions(0);
+  interpolator->Update();
+
+  mappedPd->DeepCopy(interpolator->GetOutput());
+
+  return SV_OK;
 }

@@ -61,6 +61,7 @@
 #include "vtkSVMathUtils.h"
 #include "vtkThreshold.h"
 #include "vtkTransform.h"
+#include "vtkTransformFilter.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkTriangleFilter.h"
 #include "vtkDataSet.h"
@@ -1387,6 +1388,53 @@ int vtkSVGeneralUtils::ApplyRotationMatrix(vtkPolyData *pd, vtkMatrix4x4 *rotMat
   // Copy output
   pd->DeepCopy(pdTransformer->GetOutput());
   pd->BuildLinks();
+
+  return SV_OK;
+}
+
+// ----------------------
+// ApplyRotationMatrix
+// ----------------------
+int vtkSVGeneralUtils::ApplyRotationMatrix(vtkUnstructuredGrid *ug, double rotMatrix[16])
+{
+  // Set up transformer
+  vtkSmartPointer<vtkTransform> transformer =
+    vtkSmartPointer<vtkTransform>::New();
+  transformer->SetMatrix(rotMatrix);
+
+  // Transform the polydata
+  vtkSmartPointer<vtkTransformFilter> ugTransformer =
+    vtkSmartPointer<vtkTransformFilter>::New();
+  ugTransformer->SetInputData(ug);
+  ugTransformer->SetTransform(transformer);
+  ugTransformer->Update();
+
+  // Copy output
+  ug->DeepCopy(ugTransformer->GetOutput());
+  ug->BuildLinks();
+  return SV_OK;
+}
+
+// ----------------------
+// ApplyRotationMatrix
+// ----------------------
+int vtkSVGeneralUtils::ApplyRotationMatrix(vtkUnstructuredGrid *ug, vtkMatrix4x4 *rotMatrix)
+{
+  // Set up transformer
+  vtkSmartPointer<vtkTransform> transformer =
+    vtkSmartPointer<vtkTransform>::New();
+  transformer->SetMatrix(rotMatrix);
+
+  // Transform the polydata
+  vtkSmartPointer<vtkTransformFilter> ugTransformer =
+    vtkSmartPointer<vtkTransformFilter>::New();
+  ugTransformer->SetInputData(ug);
+  ugTransformer->SetTransform(transformer);
+  ugTransformer->Update();
+
+  // Copy output
+  ug->DeepCopy(ugTransformer->GetOutput());
+  ug->BuildLinks();
 
   return SV_OK;
 }

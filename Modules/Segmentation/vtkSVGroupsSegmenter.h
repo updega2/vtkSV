@@ -46,6 +46,7 @@
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 #include "svCenterlineGraph.h"
+#include "vtkMatrix4x4.h"
 
 #include "vtkSVSegmentationModule.h" // For export
 
@@ -174,6 +175,17 @@ public:
   static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
+
+  static int RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
+                                     const int thresholdId,
+                                     std::string arrayName,
+                                     vtkUnstructuredGrid *rotUg,
+                                     vtkMatrix4x4 *rotMatrix0,
+                                     vtkMatrix4x4 *rotMatrix1);
+  static int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
+                                      vtkPolyData *targetPd,
+                                      vtkPolyData *targetBasePd,
+                                      vtkPolyData *mappedPd);
 
   const static double GlobalCoords[3][3];
 

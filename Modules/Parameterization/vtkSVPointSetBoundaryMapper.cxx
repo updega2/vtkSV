@@ -204,11 +204,8 @@ int vtkSVPointSetBoundaryMapper::SetBoundary(vtkIntArray *actualIds)
   {
     //fprintf(stdout,"Looping to next point: %d\n", i);
     double currCoords[3], endCoords[3], dir[3];
-    this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1(i), currCoords);
-    if (i == numBoundaryPts-1)
-      this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1(0), endCoords);
-    else
-      this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1(i+1), endCoords);
+    this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1((i)%numBoundaryPts), currCoords);
+    this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1((i+1)%numBoundaryPts), endCoords);
 
     vtkMath::Subtract(endCoords, currCoords, dir);
     vtkMath::Normalize(dir);
@@ -275,7 +272,7 @@ int vtkSVPointSetBoundaryMapper::SetBoundary(vtkIntArray *actualIds)
     newCells->InsertCellPoint(i+1);
   }
   newCells->InsertNextCell(2);
-  newCells->InsertCellPoint(i-1);
+  newCells->InsertCellPoint(i);
   newCells->InsertCellPoint(0);
 
   // Set the points and cells
