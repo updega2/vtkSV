@@ -176,6 +176,8 @@ public:
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
 
+  static int FixRegions(vtkPolyData *pd, std::string arrayName);
+
   static int RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
                                      const int thresholdId,
                                      std::string arrayName,

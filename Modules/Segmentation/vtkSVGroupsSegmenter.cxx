@@ -304,7 +304,7 @@ int vtkSVGroupsSegmenter::PrepFilter()
   std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/CenterlineDirs.vtp";
   vtkSVIOUtils::WriteVTPFile(filename2, this->CenterlineGraph->Lines);
 
-  this->CenterlineGraph->GetPolycube(20.0, 20.0, this->Polycube);
+  this->CenterlineGraph->GetPolycube(1.0, 1.0, this->Polycube);
   std::string filename3 = "/Users/adamupdegrove/Desktop/tmp/Polycube.vtu";
   vtkSVIOUtils::WriteVTUFile(filename3, this->Polycube);
 
@@ -487,6 +487,11 @@ int vtkSVGroupsSegmenter::RunFilter()
   }
 
   // CHECK AND FIX UP OF REGIONS IF BADD!!!
+  if (this->FixRegions(this->WorkPd, "PatchIds") != SV_OK)
+  {
+    fprintf(stderr,"Couldn't fix regions\n");
+    return SV_ERROR;
+  }
 
 
   // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
@@ -1419,6 +1424,109 @@ double vtkSVGroupsSegmenter::SplineBlend(int k, int t, const std::vector<int> &u
 
 	return(value);
 
+}
+
+int vtkSVGroupsSegmenter::FixRegions(vtkPolyData *pd, std::string arrayName)
+{
+
+  int maxIters = 15;
+  int iter=0;
+  int allGood = 0;
+  while(!allGood && iter < maxIters)
+  {
+     std::vector<Region> regions;
+     if (vtkSVGroupsSegmenter::GetRegions(pd, arrayName, regions) != SV_OK)
+     {
+       fprintf(stderr,"Couldn't get regions\n");
+       return SV_ERROR;
+     }
+    int numRegions = regions.size();
+
+    int regionCount=0;
+    for (int i=0; i<numRegions; i++)
+    {
+      if (regions[i].CornerPoints.size() <  4)
+      {
+
+        int myTEST = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(regions[i].Elements[0]);
+        fprintf(stdout,"FOUND ERROR TRYING TO FIX %d, number of corners: %d\n", myTEST, regions[i].CornerPoints.size());
+        allGood = 0;
+        int maxNeighborRegion = -1;
+        int needsFix = 0;
+        std::vector<int> neighborRegions(numRegions);
+        for (int j=0; j<numRegions; j++)
+          neighborRegions[j] = 0.0;
+        for (int j=0; j<regions[i].NumberOfElements; j++)
+        {
+          int cellId = regions[i].Elements[j];
+          int cellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId);
+
+          vtkNew(vtkIdList, neighborVals);
+          vtkSVGeneralUtils::GetNeighborsCellsValues(pd, arrayName, cellId, neighborVals);
+          if (neighborVals->GetNumberOfIds() > 1)
+          {
+            needsFix = 1;
+            // boundary element
+            for (int k=0; k<neighborVals->GetNumberOfIds(); k++)
+            {
+              if (neighborVals->GetId(k) != cellValue)
+                neighborRegions[neighborVals->GetId(k)]++;
+            }
+          }
+          else
+          {
+            if (neighborVals->GetNumberOfIds() == 1 &&
+                neighborVals->GetId(0) != cellValue)
+            {
+              needsFix = 1;
+              // Its surrounded! surrender
+              maxNeighborRegion = neighborVals->GetId(0);
+              break;
+            }
+          }
+        }
+
+        if (maxNeighborRegion == -1)
+        {
+          int maxNum = -1;
+          for (int j=0; j<numRegions; j++)
+          {
+            if (neighborRegions[j] > maxNum)
+            {
+              maxNum = neighborRegions[j];
+              maxNeighborRegion = j;
+            }
+          }
+        }
+
+        if (needsFix)
+        {
+          if (myTEST == 24)
+            maxNeighborRegion = 26;
+          for (int j=0; j<regions[i].NumberOfElements; j++)
+          {
+            int cellId = regions[i].Elements[j];
+            pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(cellId, maxNeighborRegion);
+            regions[maxNeighborRegion].NumberOfElements++;
+            regions[maxNeighborRegion].Elements.push_back(cellId);
+          }
+          regions[i].NumberOfElements = 0;
+          regions[i].CornerPoints.clear();
+          regions[i].Elements.clear();
+          regions[i].NumberOfCorners = 0;
+          regions[i].BoundaryEdges.clear();
+        }
+      }
+      else
+        regionCount++;
+
+    }
+    if (regionCount == numRegions)
+      allGood = 1;
+    iter++;
+  }
+
+  return SV_OK;
 }
 
 int vtkSVGroupsSegmenter::Parameterize()

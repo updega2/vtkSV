@@ -79,6 +79,13 @@ public:
                     vtkIntArray *patchIds,
                     vtkDoubleArray *textureCoordinates,
                     const int type);
+  int FormBifurcation(const double pt0[3], const double pt1[3],
+                      const double pt2[3], const double pt3[3],
+                      const double pt4[3], const double pt5[3],
+                      const double centerPt[3],
+                      const double factor,
+                      double vecs[3][3],
+                      double returnPts[2][3]);
   int GetBifurcationPoint(const double startPt[3], const double vec0[3], const double vec1[3], const double vec2[3], const double factor, double returnPt[3]);
   int GrowGraph(svCenterlineGCell *parent);
   int GetGraphDirections();
@@ -86,6 +93,7 @@ public:
   int ComputeGlobalReferenceVectors(svCenterlineGCell *parent);
   int ComputeBranchReferenceVectors(svCenterlineGCell *parent);
   int GetInitialBranchDirections(svCenterlineGCell *parent);
+  int UpdateBranchDirs(svCenterlineGCell *parent, const int updateDir);
   int GetGraphPolyData(vtkPolyData *pd);
   int GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups);
 

@@ -492,11 +492,51 @@ int vtkSVGeneralUtils::GetPointCellsValues(vtkPointSet *ps, std::string arrayNam
   // Loop through and check each point
   for (int i=0; i<cellIds->GetNumberOfIds(); i++)
   {
-    int groupValue = valArray->GetTuple1(cellIds->GetId(i));
+    int value = valArray->GetTuple1(cellIds->GetId(i));
 
     // Only adding to list if value is not -1
-    if (valList->IsId(groupValue) == -1)
-      valList->InsertNextId(groupValue);
+    if (valList->IsId(value) == -1)
+      valList->InsertNextId(value);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetNeighborCellsValues
+// ----------------------
+/** \details The value is not added to the list of values if it is -1 */
+int vtkSVGeneralUtils::GetNeighborsCellsValues(vtkPolyData *pd, std::string arrayName,
+                                               const int cellId, vtkIdList *valList)
+{
+  // Get data from pd
+  vtkDataArray *valArray =
+    pd->GetCellData()->GetArray(arrayName.c_str());
+  valList->Reset();
+
+  // Get cell points
+  vtkIdType npts, *pts;
+  pd->GetCellPoints(cellId, npts, pts);
+
+  // Loop through points
+  for (int i=0; i<npts; i++)
+  {
+    int ptId0 = pts[i];
+    int ptId1 = pts[(i+1)%npts];
+
+    vtkNew(vtkIdList, cellEdgeNeighbors);
+    pd->GetCellEdgeNeighbors(cellId, ptId0, ptId1, cellEdgeNeighbors);
+
+    // Loop through and check each point
+    for (int j=0; j<cellEdgeNeighbors->GetNumberOfIds(); j++)
+    {
+      int value = valArray->GetTuple1(cellEdgeNeighbors->GetId(j));
+
+      // Only adding to list if value is not -1
+      if (valList->IsId(value) == -1)
+        valList->InsertNextId(value);
+    }
+
   }
 
   return SV_OK;

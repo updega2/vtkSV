@@ -202,10 +202,19 @@ public:
    *  \param pd The full polydata.
    *  \param arrayName Name of array to get cell data of.
    *  \param pointId The point Id to get array values of.
-   *  \param groupIds list of values on cells attached to point.
+   *  \param valList list of values on cells attached to point.
    *  \return SV_OK */
   static int GetPointCellsValues(vtkPointSet *ps, std::string arrayName,
-                                const int pointId, vtkIdList *valList);
+                                 const int pointId, vtkIdList *valList);
+
+  /** \brief For an array of integers on pd, will return a list of values on neighboring cells
+   *  \param pd The full polydata.
+   *  \param arrayName Name of array to get cell data of.
+   *  \param cellId The cell Id to get neighbors values of.
+   *  \param valList list of values on cells attached to point.
+   *  \return SV_OK */
+  static int GetNeighborsCellsValues(vtkPolyData *pd, std::string arrayName,
+                                    const int cellId, vtkIdList *valList);
 
   /** \brief Perform a cut of the polydata, but with crinkle clip. Uses vtkExtractGeometry
    *  \param inPd The pd to cut.

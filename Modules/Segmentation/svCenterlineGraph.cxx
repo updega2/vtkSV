@@ -247,6 +247,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
 
     // cell id in the vtkPolyData
     int groupId = gCell->GroupId;
+    fprintf(stdout,"WHAT GROUP IS THIS: %d\n", groupId);
 
     int cubeType;
     this->GetCubeType(gCell, cubeType);
@@ -261,18 +262,15 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     {
       int numPoints = 10;
       double vecs[3][3];
-      int align = gCell->AligningChild, diver = gCell->DivergingChild;
-      vtkMath::Subtract(gCell->StartPt, gCell->EndPt, vecs[0]);
-      vtkMath::Subtract(gCell->Children[diver]->EndPt, gCell->Children[diver]->StartPt, vecs[1]);
-      vtkMath::Subtract(gCell->Children[align]->EndPt, gCell->Children[align]->StartPt, vecs[2]);
-      for (int j=0; j<3; j++)
-        vtkMath::Normalize(vecs[j]);
+      double endPts[2][3];
+      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      svCenterlineGCell *diver = gCell->Children[gCell->DivergingChild];
 
-      // Get ending bifurcation points
-      double finalPts[10][3];
-      double endPt0[3], endPt1[3];
-      this->GetBifurcationPoint(gCell->EndPt, vecs[0], vecs[1], vecs[2], width/2., endPt0);
-      this->GetBifurcationPoint(gCell->EndPt, vecs[0], vecs[2], vecs[1], width/2., endPt1);
+      this->FormBifurcation(gCell->StartPt, gCell->EndPt,
+                            diver->EndPt, diver->StartPt,
+                            align->EndPt, align->StartPt,
+                            gCell->EndPt,
+                            width/2., vecs, endPts);
 
       // get vector towards top of cube
       double workVec[3];
@@ -280,16 +278,17 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       vtkMath::Normalize(workVec);
 
       // extrude up
+      double finalPts[10][3];
       vtkMath::MultiplyScalar(workVec, height/2.);
       vtkMath::Add(gCell->EndPt, workVec, finalPts[4]);
-      vtkMath::Add(endPt0, workVec, finalPts[0]);
-      vtkMath::Add(endPt1, workVec, finalPts[3]);
+      vtkMath::Add(endPts[0], workVec, finalPts[0]);
+      vtkMath::Add(endPts[1], workVec, finalPts[3]);
 
       // extrude down
       vtkMath::MultiplyScalar(workVec, -1.0);
       vtkMath::Add(gCell->EndPt, workVec, finalPts[9]);
-      vtkMath::Add(endPt0, workVec, finalPts[5]);
-      vtkMath::Add(endPt1, workVec, finalPts[8]);
+      vtkMath::Add(endPts[0], workVec, finalPts[5]);
+      vtkMath::Add(endPts[1], workVec, finalPts[8]);
 
       // Now get beginning points
       double endVec[3];
@@ -320,42 +319,23 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     else if (cubeType == 2)
     {
       int numPoints = 12;
-    }
-    else if (cubeType == 3)
-    {
-      int numPoints = 12;
-    }
-    else if (cubeType == 4)
-    {
-      int numPoints = 12;
-    }
-    else if (cubeType == 5)
-    {
-      int numPoints = 12;
-    }
-    else if (cubeType == 6)
-    {
-      int numPoints = 10;
 
-      double vecs[3][3];
-      svCenterlineGCell *brother, *diver;
-      if (gCell->Parent->Children[0]->Id == gCell->Id)
-        brother = gCell->Parent->Children[1];
+      svCenterlineGCell *brother, *diver, *parent;
+      parent = gCell->Parent;;
+      if (parent->Children[0]->Id == gCell->Id)
+        brother = parent->Children[1];
       else
-        brother = gCell->Parent->Children[0];
-      diver = gCell->Parent->Children[gCell->Parent->DivergingChild];
-
-      vtkMath::Subtract(gCell->EndPt, gCell->StartPt, vecs[0]);
-      vtkMath::Subtract(gCell->Parent->StartPt, gCell->Parent->EndPt, vecs[1]);
-      vtkMath::Subtract(brother->EndPt, brother->StartPt, vecs[2]);
-      for (int j=0; j<3; j++)
-        vtkMath::Normalize(vecs[j]);
+        brother = parent->Children[0];
+      diver = parent->Children[parent->DivergingChild];
 
       // Get ending bifurcation points
-      double finalPts[10][3];
-      double topPt0[3], topPt1[3];
-      this->GetBifurcationPoint(gCell->StartPt, vecs[0], vecs[1], vecs[2], width/2., topPt0);
-      this->GetBifurcationPoint(gCell->StartPt, vecs[0], vecs[2], vecs[1], width/2., topPt1);
+      double vecs[3][3];
+      double topPts[2][3];
+      this->FormBifurcation(gCell->EndPt, gCell->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           gCell->StartPt,
+                           width/2., vecs, topPts);
 
       // get vector towards top of cube
       double diverVec[3];
@@ -366,31 +346,247 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       vtkMath::Normalize(workVec);
 
       // extrude up
+      double finalPts[12][3];
       vtkMath::MultiplyScalar(workVec, height/2.);
       vtkMath::Add(gCell->StartPt, workVec, finalPts[2]);
-      if (gCell->Parent->BranchDir == gCell->BranchDir)
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
       {
-        vtkMath::Add(topPt0, workVec, finalPts[1]);
-        vtkMath::Add(topPt1, workVec, finalPts[3]);
+        vtkMath::Add(topPts[0], workVec, finalPts[1]);
+        vtkMath::Add(topPts[1], workVec, finalPts[3]);
       }
       else
       {
-        vtkMath::Add(topPt0, workVec, finalPts[3]);
-        vtkMath::Add(topPt1, workVec, finalPts[1]);
+        vtkMath::Add(topPts[0], workVec, finalPts[3]);
+        vtkMath::Add(topPts[1], workVec, finalPts[1]);
+      }
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(gCell->StartPt, workVec, finalPts[8]);
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[7]);
+        vtkMath::Add(topPts[1], workVec, finalPts[9]);
+      }
+      else
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[9]);
+        vtkMath::Add(topPts[1], workVec, finalPts[7]);
+      }
+
+      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      svCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
+
+      double endPts[2][3];
+      this->FormBifurcation(gCell->StartPt, gCell->EndPt,
+                            cDiver->EndPt, cDiver->StartPt,
+                            align->EndPt, align->StartPt,
+                            gCell->EndPt,
+                            width/2., vecs, endPts);
+
+      // get vector towards top of cube
+      vtkMath::Cross(vecs[1], vecs[0], workVec);
+      vtkMath::Normalize(workVec);
+
+      // extrude up
+      vtkMath::MultiplyScalar(workVec, height/2.);
+      vtkMath::Add(gCell->EndPt, workVec, finalPts[5]);
+      if (cDiver->BranchDir == RIGHT || cDiver->BranchDir == BACK)
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[0]);
+        vtkMath::Add(endPts[1], workVec, finalPts[4]);
+      }
+      else
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[4]);
+        vtkMath::Add(endPts[1], workVec, finalPts[0]);
+      }
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(gCell->EndPt, workVec, finalPts[11]);
+      if (cDiver->BranchDir == RIGHT || cDiver->BranchDir == BACK)
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[6]);
+        vtkMath::Add(endPts[1], workVec, finalPts[10]);
+      }
+       else
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[10]);
+        vtkMath::Add(endPts[1], workVec, finalPts[6]);
+      }
+
+      for (int j=0; j<numPoints; j++)
+        addPoints->InsertNextPoint(finalPts[j]);
+
+    }
+    else if (cubeType == 3)
+    {
+      int numPoints = 12;
+    }
+    else if (cubeType == 4)
+    {
+      int numPoints = 12;
+
+      svCenterlineGCell *brother, *diver, *parent;
+      parent = gCell->Parent;;
+      if (parent->Children[0]->Id == gCell->Id)
+        brother = parent->Children[1];
+      else
+        brother = parent->Children[0];
+      diver = parent->Children[parent->DivergingChild];
+
+      // Get ending bifurcation points
+      double vecs[3][3];
+      double topPts[2][3];
+      this->FormBifurcation(gCell->EndPt, gCell->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           gCell->StartPt,
+                           height/2., vecs, topPts);
+
+      // get vector towards top of cube
+      double diverVec[3];
+      vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
+      vtkMath::Normalize(diverVec);
+      double workVec[3];
+      vtkMath::Cross(diverVec, vecs[1], workVec);
+      vtkMath::Normalize(workVec);
+
+      // extrude up
+      double finalPts[12][3];
+      vtkMath::MultiplyScalar(workVec, height/2.);
+      vtkMath::Add(gCell->StartPt, workVec, finalPts[2]);
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[1]);
+        vtkMath::Add(topPts[1], workVec, finalPts[3]);
+      }
+      else
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[3]);
+        vtkMath::Add(topPts[1], workVec, finalPts[1]);
+      }
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(gCell->StartPt, workVec, finalPts[9]);
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[8]);
+        vtkMath::Add(topPts[1], workVec, finalPts[10]);
+      }
+      else
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[10]);
+        vtkMath::Add(topPts[1], workVec, finalPts[8]);
+      }
+
+      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      svCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
+
+      double endPts[2][3];
+      this->FormBifurcation(gCell->StartPt, gCell->EndPt,
+                            cDiver->EndPt, cDiver->StartPt,
+                            align->EndPt, align->StartPt,
+                            gCell->EndPt,
+                            height/2., vecs, endPts);
+
+      // get vector towards top of cube
+      vtkMath::Cross(vecs[1], vecs[0], workVec);
+      vtkMath::Normalize(workVec);
+
+      // extrude up
+      vtkMath::MultiplyScalar(workVec, width/2.);
+      vtkMath::Add(gCell->EndPt, workVec, finalPts[5]);
+      if (cDiver->BranchDir == RIGHT || cDiver->BranchDir == FRONT)
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[0]);
+        vtkMath::Add(endPts[1], workVec, finalPts[7]);
+      }
+      else
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[7]);
+        vtkMath::Add(endPts[1], workVec, finalPts[0]);
+      }
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(gCell->EndPt, workVec, finalPts[6]);
+      if (cDiver->BranchDir == RIGHT || cDiver->BranchDir == FRONT)
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[4]);
+        vtkMath::Add(endPts[1], workVec, finalPts[11]);
+      }
+       else
+      {
+        vtkMath::Add(endPts[0], workVec, finalPts[11]);
+        vtkMath::Add(endPts[1], workVec, finalPts[4]);
+      }
+
+      for (int j=0; j<numPoints; j++)
+        addPoints->InsertNextPoint(finalPts[j]);
+    }
+    else if (cubeType == 5)
+    {
+      int numPoints = 12;
+    }
+    else if (cubeType == 6)
+    {
+      int numPoints = 10;
+
+      svCenterlineGCell *brother, *diver, *parent;
+      parent = gCell->Parent;;
+      if (parent->Children[0]->Id == gCell->Id)
+        brother = parent->Children[1];
+      else
+        brother = parent->Children[0];
+      diver = parent->Children[parent->DivergingChild];
+
+      // Get ending bifurcation points
+      double vecs[3][3];
+      double topPts[2][3];
+      this->FormBifurcation(gCell->EndPt, gCell->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           gCell->StartPt,
+                           width/2., vecs, topPts);
+
+      // get vector towards top of cube
+      double diverVec[3];
+      vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
+      vtkMath::Normalize(diverVec);
+      double workVec[3];
+      vtkMath::Cross(diverVec, vecs[1], workVec);
+      vtkMath::Normalize(workVec);
+
+      // extrude up
+      double finalPts[10][3];
+      vtkMath::MultiplyScalar(workVec, height/2.);
+      vtkMath::Add(gCell->StartPt, workVec, finalPts[2]);
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[1]);
+        vtkMath::Add(topPts[1], workVec, finalPts[3]);
+      }
+      else
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[3]);
+        vtkMath::Add(topPts[1], workVec, finalPts[1]);
       }
 
       // extrude down
       vtkMath::MultiplyScalar(workVec, -1.0);
       vtkMath::Add(gCell->StartPt, workVec, finalPts[7]);
-      if (gCell->Parent->BranchDir == gCell->BranchDir)
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
       {
-        vtkMath::Add(topPt0, workVec, finalPts[6]);
-        vtkMath::Add(topPt1, workVec, finalPts[8]);
+        vtkMath::Add(topPts[0], workVec, finalPts[6]);
+        vtkMath::Add(topPts[1], workVec, finalPts[8]);
       }
       else
       {
-        vtkMath::Add(topPt0, workVec, finalPts[8]);
-        vtkMath::Add(topPt1, workVec, finalPts[6]);
+        vtkMath::Add(topPts[0], workVec, finalPts[8]);
+        vtkMath::Add(topPts[1], workVec, finalPts[6]);
       }
 
       // Now get beginning points
@@ -422,6 +618,86 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     else if (cubeType == 7)
     {
       int numPoints = 10;
+
+      svCenterlineGCell *brother, *diver, *parent;
+      parent = gCell->Parent;;
+      if (parent->Children[0]->Id == gCell->Id)
+        brother = parent->Children[1];
+      else
+        brother = parent->Children[0];
+      diver = parent->Children[parent->DivergingChild];
+
+      // Get ending bifurcation points
+      double vecs[3][3];
+      double topPts[2][3];
+      this->FormBifurcation(gCell->EndPt, gCell->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           gCell->StartPt,
+                           width/2., vecs, topPts);
+
+      // get vector towards top of cube
+      double diverVec[3];
+      vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
+      vtkMath::Normalize(diverVec);
+      double workVec[3];
+      vtkMath::Cross(diverVec, vecs[1], workVec);
+      vtkMath::Normalize(workVec);
+
+      // extrude up
+      double finalPts[10][3];
+      vtkMath::MultiplyScalar(workVec, height/2.);
+      vtkMath::Add(gCell->StartPt, workVec, finalPts[4]);
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[7]);
+        vtkMath::Add(topPts[1], workVec, finalPts[1]);
+      }
+      else
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[1]);
+        vtkMath::Add(topPts[1], workVec, finalPts[7]);
+      }
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(gCell->StartPt, workVec, finalPts[5]);
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[8]);
+        vtkMath::Add(topPts[1], workVec, finalPts[2]);
+      }
+      else
+      {
+        vtkMath::Add(topPts[0], workVec, finalPts[2]);
+        vtkMath::Add(topPts[1], workVec, finalPts[8]);
+      }
+
+      // Now get beginning points
+      double endVec[3];
+      vtkMath::Normalize(workVec);
+      vtkMath::Cross(vecs[0], workVec, endVec);
+      vtkMath::Normalize(endVec);
+      vtkMath::MultiplyScalar(endVec, width/2.);
+
+      // Get points to extrude up
+      double endPt0[3], endPt1[3];
+      vtkMath::Add(gCell->EndPt, endVec, endPt0);
+      vtkMath::MultiplyScalar(endVec, -1.0);
+      vtkMath::Add(gCell->EndPt, endVec, endPt1);
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, height/2.);
+      vtkMath::Add(endPt0, workVec, finalPts[9]);
+      vtkMath::Add(endPt1, workVec, finalPts[3]);
+
+      // extrude up
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(endPt0, workVec, finalPts[6]);
+      vtkMath::Add(endPt1, workVec, finalPts[0]);
+
+      for (int j=0; j<numPoints; j++)
+        addPoints->InsertNextPoint(finalPts[j]);
     }
 
     this->AddBranchCube(addPoints, allCells, allPoints, gCell->GroupId,
@@ -446,14 +722,12 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
   for (int i=0; i<numGroups; i++)
     addVals->SetId(i, 6*i);
 
-  vtkNew(vtkIdList, patchVals);
   for (int i=0; i<outUg->GetNumberOfCells(); i++)
   {
     int patchVal = patchIds->GetTuple1(i);
     int groupVal = groupIds->GetTuple1(i);
     int newVal = patchVal + (addVals->GetId(groupVals->IsId(groupVal)));
     patchIds->SetTuple1(i, newVal);
-    patchVals->InsertUniqueId(newVal);
   }
 
   outUg->GetPointData()->AddArray(localPtIds);
@@ -783,7 +1057,6 @@ int svCenterlineGraph::GetInitialBranchDirections(svCenterlineGCell *parent)
         }
       }
       double dotCheck = vtkMath::Dot(parent->Children[i]->RefDirs[maxDir], parent->Children[i]->BranchVec);
-      fprintf(stdout,"WHATS THE DAMAGE: %.4f\n", dotCheck);
       if (maxDir == 1)
       {
         if (dotCheck > 0)
@@ -947,36 +1220,27 @@ int svCenterlineGraph::GetGraphPoints()
       vtkMath::Subtract(gCell->Parent->StartPt, gCell->Parent->EndPt, parentVec);
       vtkMath::Normalize(parentVec);
 
-      // Get rotation matrix from global to ref
-      vtkNew(vtkMatrix4x4, zRot);
-      double X[3]= {1.0, 0.0, 0.0};
-      double Y[3]= {0.0, 1.0, 0.0};
-      double Z[3]= {0.0, 0.0, 1.0};
-      vtkSVGeneralUtils::GetRotationMatrix(Z, parentVec, zRot);
+      // Get rotation matrix from cross to ref
+      double crossVec[3];
+      if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
+        vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
+      if (gCell->BranchDir == BACK || gCell->BranchDir == FRONT)
+        vtkMath::Cross(this->ReferenceVecs[2], parentVec, crossVec);
+      vtkMath::Normalize(crossVec);
 
       // Rotate vec around line
-      fprintf(stdout,"BRANCH %d FINAL DIR %D\n", gCell->GroupId, gCell->BranchDir);
-      double globalVec[3];
-      if (gCell->BranchDir == RIGHT)
-        this->RotateVecAroundLine(Z, -180.0*gCell->RefAngle/M_PI, Y, globalVec);
-      else if (gCell->BranchDir == LEFT)
-        this->RotateVecAroundLine(Z, 180.0*gCell->RefAngle/M_PI, Y, globalVec);
-      else if (gCell->BranchDir == BACK)
-        this->RotateVecAroundLine(Z, -180.0*gCell->RefAngle/M_PI, X, globalVec);
-      else if (gCell->BranchDir == FRONT)
-        this->RotateVecAroundLine(Z, 180.0*gCell->RefAngle/M_PI, X, globalVec);
-      vtkMath::Normalize(globalVec);
-
-      double inPt[4], outPt[4];
-      for (int j=0; j<3; j++)
-        inPt[j] = globalVec[j];
-      inPt[3] = 1.0;
-
-      zRot->MultiplyPoint(inPt, outPt);
-
       double lineDir[3];
-      for (int j=0; j<3; j++)
-        lineDir[j] = outPt[j];
+      if (gCell->BranchDir == RIGHT)
+        this->RotateVecAroundLine(parentVec, 180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
+      else if (gCell->BranchDir == LEFT)
+        this->RotateVecAroundLine(parentVec, -180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
+      else if (gCell->BranchDir == BACK)
+        this->RotateVecAroundLine(parentVec, -180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
+      else if (gCell->BranchDir == FRONT)
+        this->RotateVecAroundLine(parentVec, 180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
+      vtkMath::Normalize(lineDir);
+
+      // Get end point from new direction
       vtkMath::MultiplyScalar(lineDir, length);
       vtkMath::Add(gCell->StartPt, lineDir, gCell->EndPt);
     }
@@ -1148,10 +1412,10 @@ int svCenterlineGraph::GetGraphDirections()
       {
         //double dotCheck = vtkMath::Dot(refVecs[1], endVecs[1]);
         if (projDot > 0)
-          updateDir = 1;
+          updateDir = 3;
         else
         {
-          updateDir = 3;
+          updateDir = 1;
           updateAngle *= -1.0;
         }
       }
@@ -1160,14 +1424,9 @@ int svCenterlineGraph::GetGraphDirections()
         fprintf(stderr,"ERROR: This is incorrect, something wrong in end vectors\n");
         return SV_ERROR;
       }
-      fprintf(stdout,"TOTAL UPDATE: %d\n", gCell->Parent->BranchDir+updateDir);
 
       // update branch dirs
-      for (int j=0; j<gCell->Children.size(); j++)
-      {
-        gCell->Children[j]->BranchDir = (gCell->Parent->BranchDir+gCell->Children[j]->BranchDir+updateDir)%4;
-        fprintf(stdout,"BRANCH %d updated to direction %d\n", gCell->Children[j]->GroupId, gCell->Children[j]->BranchDir);
-      }
+      this->UpdateBranchDirs(gCell, updateDir);
 
       double updateRefVecs[3][3];
       // The front direction of segment
@@ -1225,6 +1484,24 @@ int svCenterlineGraph::GetGraphDirections()
   this->Lines->GetPointData()->AddArray(localArrayX);
   this->Lines->GetPointData()->AddArray(localArrayY);
   this->Lines->GetPointData()->AddArray(localArrayZ);
+  return SV_OK;
+}
+
+// ----------------------
+// UpdateBranchDirs
+// ----------------------
+int svCenterlineGraph::UpdateBranchDirs(svCenterlineGCell *gCell, const int updateDir)
+{
+  if (gCell->Children.size() != 0)
+  {
+    for (int j=0; j<gCell->Children.size(); j++)
+    {
+      gCell->Children[j]->BranchDir = (gCell->Children[j]->BranchDir + updateDir)%4;
+      fprintf(stdout,"BRANCH %d updated to direction %d\n", gCell->Children[j]->GroupId, gCell->Children[j]->BranchDir);
+      this->UpdateBranchDirs(gCell->Children[j], updateDir);
+    }
+  }
+
   return SV_OK;
 }
 
@@ -1348,6 +1625,30 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
     fprintf(stderr,"Cannot currently Polycube for more than bifurcations yet!!!\n");
     return SV_ERROR;
   }
+
+  return SV_OK;
+}
+
+// ----------------------
+// FormBifurcation
+// ----------------------
+int svCenterlineGraph::FormBifurcation(const double pt0[3], const double pt1[3],
+                                       const double pt2[3], const double pt3[3],
+                                       const double pt4[3], const double pt5[3],
+                                       const double centerPt[3],
+                                       const double factor,
+                                       double vecs[3][3],
+                                       double returnPts[2][3])
+{
+  vtkMath::Subtract(pt0, pt1, vecs[0]);
+  vtkMath::Subtract(pt2, pt3, vecs[1]);
+  vtkMath::Subtract(pt4, pt5, vecs[2]);
+  for (int j=0; j<3; j++)
+    vtkMath::Normalize(vecs[j]);
+
+  // Get ending bifurcation points
+  this->GetBifurcationPoint(centerPt, vecs[0], vecs[1], vecs[2], factor, returnPts[0]);
+  this->GetBifurcationPoint(centerPt, vecs[0], vecs[2], vecs[1], factor, returnPts[1]);
 
   return SV_OK;
 }
@@ -1477,7 +1778,22 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     }
     int pI[12];
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
+    {
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
+      localPtIds->InsertNextTuple1(i);
+    }
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.5, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.5, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.5, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.5, 0.0, 0.0);
 
     vtkIdType face0[4] = {pI[6], pI[7], pI[1], pI[0]};
     vtkIdType face1[6] = {pI[10], pI[9], pI[8], pI[7], pI[6], pI[11]};
@@ -1488,6 +1804,12 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     cellArray->InsertNextCell(6, face1);
     cellArray->InsertNextCell(4, face2);
     cellArray->InsertNextCell(6, face3);
+
+    for (int i=0; i<4; i++)
+    {
+      groupIds->InsertNextTuple1(groupId);
+      patchIds->InsertNextTuple1(i);
+    }
   }
   else if (type == 3)
   {
@@ -1519,7 +1841,22 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     }
     int pI[12];
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
+    {
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
+      localPtIds->InsertNextTuple1(i);
+    }
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.5, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.5);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.5);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.5, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.0);
 
     vtkIdType face0[5] = {pI[7], pI[8], pI[1], pI[0], pI[5]};
     vtkIdType face1[5] = {pI[11], pI[10], pI[9], pI[8], pI[7]};
@@ -1530,6 +1867,12 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     cellArray->InsertNextCell(5, face1);
     cellArray->InsertNextCell(5, face2);
     cellArray->InsertNextCell(5, face3);
+
+    for (int i=0; i<4; i++)
+    {
+      groupIds->InsertNextTuple1(groupId);
+      patchIds->InsertNextTuple1(i);
+    }
   }
   else if (type == 5)
   {
@@ -1600,22 +1943,45 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
   {
     if (newPoints->GetNumberOfPoints() != 10)
     {
-      fprintf(stderr,"Must be given 10 points for cube type 6!\n");
+      fprintf(stderr,"Must be given 10 points for cube type 7!\n");
       return SV_ERROR;
     }
     int pI[10];
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
+    {
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
+      localPtIds->InsertNextTuple1(i);
+    }
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.5);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.5);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.0);
 
     vtkIdType face0[5] = {pI[6], pI[7], pI[4], pI[1], pI[0]};
     vtkIdType face1[4] = {pI[9], pI[8], pI[7], pI[6]};
     vtkIdType face2[5] = {pI[3], pI[2], pI[5], pI[8], pI[9]};
     vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
+    vtkIdType face4[4] = {pI[6], pI[0], pI[3], pI[9]};
 
     cellArray->InsertNextCell(5, face0);
     cellArray->InsertNextCell(4, face1);
     cellArray->InsertNextCell(5, face2);
     cellArray->InsertNextCell(4, face3);
+    cellArray->InsertNextCell(4, face4);
+
+    for (int i=0; i<4; i++)
+    {
+      groupIds->InsertNextTuple1(groupId);
+      patchIds->InsertNextTuple1(i);
+    }
+    groupIds->InsertNextTuple1(groupId);
+    patchIds->InsertNextTuple1(5);
   }
 
   return SV_OK;
