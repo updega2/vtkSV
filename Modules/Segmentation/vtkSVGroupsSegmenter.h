@@ -138,6 +138,8 @@ public:
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
   static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
+  static int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
+                                           vtkIdList *targetRegions);
 
   /** \brief Pass an array from points to cells by using the most
    * occuring point value. */
@@ -148,19 +150,28 @@ public:
   static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
 
   /** \brief Run basic edge weithing cvt with pd */
-  static int RunEdgeWeightedCVT(vtkPolyData *pd);
+  static int RunEdgeWeightedCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
 
   /** \brief From three vectors, compute transformation from global to local */
   static int ComputeRotationMatrix(const double vx[3], const double vy[3],
                                    const double vz[3], double rotMatrix[9]);
 
   static int SmoothBoundaries(vtkPolyData *pd, std::string arrayName);
+  static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName,
+                                      vtkIdList *targetRegions);
 
   static int GetRegions(vtkPolyData *pd, std::string arrayName,
                         std::vector<Region> &allRegions);
+  static int GetSpecificRegions(vtkPolyData *pd, std::string arrayName,
+                                std::vector<Region> &allRegions,
+                                vtkIdList *targetRegions);
 
   static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
                                 std::vector<Region> allRegions);
+
+  static int MatchBoundaries(vtkPolyData *pd, std::string checkArrayName,
+                             std::string fitArrayName,
+                             std::vector<Region> allRegions);
 
   static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
 
@@ -176,7 +187,7 @@ public:
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
 
-  static int FixRegions(vtkPolyData *pd, std::string arrayName);
+  static int FixSpecificRegions(vtkPolyData *pd, std::string arrayName, vtkIdList *targetRegions, const int noEndRegions);
 
   static int RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
                                      const int thresholdId,
@@ -205,6 +216,13 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int GetPatches();
+  int FixEndPatches();
+  int CheckEndPatches(std::vector<Region> endRegions,
+                      std::vector<int> &individualFix,
+                      std::vector<int> &wholePatchFix);
+  int FixGroups();
+  int FixPatchesByGroup();
+  int FixPatchesWithPolycube();
   int Parameterize();
 
   char *CenterlineGroupIdsArrayName;

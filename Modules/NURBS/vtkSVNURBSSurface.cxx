@@ -56,6 +56,7 @@ vtkSVNURBSSurface::vtkSVNURBSSurface()
   this->UDegree                = 0;
   this->VDegree                = 0;
   this->UClamped               = 1;
+  this->VClamped               = 1;
   this->UClosed                = 0;
   this->VClosed                = 0;
 

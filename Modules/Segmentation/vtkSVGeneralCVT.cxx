@@ -73,11 +73,6 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     this->WorkPd->Delete();
     this->WorkPd = NULL;
   }
-  if (this->Generators != NULL)
-  {
-    this->Generators->UnRegister(this);
-    this->Generators = NULL;
-  }
   if (this->WorkGenerators != NULL)
   {
     this->WorkGenerators->Delete();
@@ -100,11 +95,6 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     this->GeneratorsArrayName = NULL;
   }
 
-  if (this->PatchIdsArray != NULL)
-  {
-    this->PatchIdsArray->Delete();
-    this->PatchIdsArray = NULL;
-  }
 }
 
 // ----------------------

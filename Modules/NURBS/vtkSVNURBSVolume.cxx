@@ -37,6 +37,7 @@
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
+#include "vtkSVCleanUnstructuredGrid.h"
 #include "vtkSVGlobals.h"
 
 // ----------------------
@@ -49,6 +50,32 @@ vtkStandardNewMacro(vtkSVNURBSVolume);
 // ----------------------
 vtkSVNURBSVolume::vtkSVNURBSVolume()
 {
+  this->NumberOfUControlPoints = 0;
+  this->NumberOfVControlPoints = 0;
+  this->NumberOfWControlPoints = 0;
+  this->NumberOfUKnotPoints    = 0;
+  this->NumberOfVKnotPoints    = 0;
+  this->NumberOfWKnotPoints    = 0;
+  this->UDegree                = 0;
+  this->VDegree                = 0;
+  this->WDegree                = 0;
+  this->UClamped               = 1;
+  this->VClamped               = 1;
+  this->WClamped               = 1;
+  this->UClosed                = 0;
+  this->VClosed                = 0;
+  this->WClosed                = 0;
+
+  this->ControlPointGrid    = vtkSVControlGrid::New();
+
+  for (int i=0; i<3; i++)
+    this->UVWKnotVectors[i] = vtkDoubleArray::New();
+
+  this->UKnotVector = this->UVWKnotVectors[0];
+  this->VKnotVector = this->UVWKnotVectors[1];
+  this->WKnotVector = this->UVWKnotVectors[2];
+
+  this->VolumeRepresentation = vtkUnstructuredGrid::New();
 }
 
 // ----------------------
@@ -56,6 +83,22 @@ vtkSVNURBSVolume::vtkSVNURBSVolume()
 // ----------------------
 vtkSVNURBSVolume::~vtkSVNURBSVolume()
 {
+  if (this->ControlPointGrid != NULL)
+  {
+    this->ControlPointGrid->Delete();
+  }
+  for (int i=0; i<2; i++)
+  {
+    if (this->UVWKnotVectors[i] != NULL)
+    {
+      this->UVWKnotVectors[i]->Delete();
+    }
+  }
+
+  if (this->VolumeRepresentation != NULL)
+  {
+    this->VolumeRepresentation->Delete();
+  }
 }
 
 // ----------------------
@@ -88,6 +131,24 @@ void vtkSVNURBSVolume::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 void vtkSVNURBSVolume::DeepCopy(vtkSVNURBSVolume *src)
 {
+  this->Superclass::DeepCopy(src);
+
+  this->SetNumberOfUControlPoints(src->GetNumberOfUControlPoints());
+  this->SetNumberOfVControlPoints(src->GetNumberOfVControlPoints());
+  this->SetNumberOfWControlPoints(src->GetNumberOfWControlPoints());
+  this->SetNumberOfUKnotPoints(src->GetNumberOfUKnotPoints());
+  this->SetNumberOfVKnotPoints(src->GetNumberOfVKnotPoints());
+  this->SetNumberOfWKnotPoints(src->GetNumberOfWKnotPoints());
+  this->SetUDegree(src->GetUDegree());
+  this->SetVDegree(src->GetVDegree());
+  this->SetWDegree(src->GetWDegree());
+
+  this->ControlPointGrid->DeepCopy(src->GetControlPointGrid());
+  this->UKnotVector->DeepCopy(src->GetUKnotVector());
+  this->VKnotVector->DeepCopy(src->GetVKnotVector());
+  this->WKnotVector->DeepCopy(src->GetWKnotVector());
+
+  this->VolumeRepresentation->DeepCopy(src->GetVolumeRepresentation());
 }
 
 // ----------------------
@@ -114,3 +175,220 @@ vtkSVNURBSVolume* vtkSVNURBSVolume::GetData(vtkInformationVector* v, int i)
   return vtkSVNURBSVolume::GetData(v->GetInformationObject(i));
 }
 
+// ----------------------
+// GenerateVolumeRepresentation
+// ----------------------
+int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
+		                                                const double vSpacing,
+                                                    const double wSpacing)
+{
+  // Get number of control points and knots
+  int dim[3];
+  this->ControlPointGrid->GetDimensions(dim);
+  this->NumberOfUControlPoints = dim[0];
+  this->NumberOfVControlPoints = dim[1];
+  this->NumberOfWControlPoints = dim[2];
+  this->NumberOfUKnotPoints = this->UKnotVector->GetNumberOfTuples();
+  this->NumberOfVKnotPoints = this->VKnotVector->GetNumberOfTuples();
+  this->NumberOfWKnotPoints = this->WKnotVector->GetNumberOfTuples();
+  int nUCon  = this->NumberOfUControlPoints;
+  int nVCon  = this->NumberOfVControlPoints;
+  int nWCon  = this->NumberOfWControlPoints;
+  int nUKnot = this->NumberOfUKnotPoints;
+  int nVKnot = this->NumberOfVKnotPoints;
+  int nWKnot = this->NumberOfWKnotPoints;
+  if (nUCon == 0 || nVCon == 0 || nWCon == 0)
+  {
+    vtkErrorMacro("No control points");
+    return SV_ERROR;
+  }
+  if (nUKnot == 0 || nVKnot == 0 || nWKnot == 0)
+  {
+    vtkErrorMacro("No knot points");
+    return SV_ERROR;
+  }
+
+  // Using clamped formula for degree of curve
+  int p = nUKnot - nUCon - 1;
+  int q = nVKnot - nVCon - 1;
+  int r = nWKnot - nWCon - 1;
+
+  //If nCon - 1 < p, not possible with clamping
+  //If nCon - 1 = p, bezier with clamping
+  //If nCon - 1 > p, fantastic
+
+  // U direction!
+  // -----------------------------------------------------------------------
+  int numUDiv = ceil(1.0/uSpacing);
+  vtkNew(vtkDoubleArray, uEvals);
+  vtkSVNURBSUtils::LinSpace(0, 1, numUDiv, uEvals);
+
+  // Get sparse array for Nu
+  vtkNew(vtkSparseArray<double>, Nus);
+  Nus->Resize(numUDiv, p+2);
+
+  // Get sparse array for basis functions
+  vtkNew(vtkSparseArray<double>, NUfinal);
+  NUfinal->Resize(numUDiv, nUCon);
+
+  // Loop through control points
+  for (int i=0; i<nUCon; i++)
+  {
+    if (vtkSVNURBSUtils::BasisEvaluationVec(this->UKnotVector, p,
+                                       i, uEvals, Nus) != SV_OK)
+    {
+      return SV_ERROR;
+    }
+    // for each sampling get the final basis functions
+    for (int j=0; j<numUDiv; j++)
+    {
+      NUfinal->SetValue(j, i, Nus->GetValue(j, 0));
+    }
+  }
+
+  // Last value should be 1
+  NUfinal->SetValue(numUDiv-1, nUCon-1, 1.0);
+
+  // V direction!
+  // -----------------------------------------------------------------------
+  int numVDiv = ceil(1.0/vSpacing);
+  vtkNew(vtkDoubleArray, vEvals);
+  vtkSVNURBSUtils::LinSpace(0, 1, numVDiv, vEvals);
+
+  // Get sparse array for Nv
+  vtkNew(vtkSparseArray<double>, Nvs);
+  Nvs->Resize(numVDiv, q+2);
+
+  // Get sparse array for basis functions
+  vtkNew(vtkSparseArray<double>, NVfinal);
+  NVfinal->Resize(numVDiv, nVCon);
+
+  // Loop through control points
+  for (int i=0; i<nVCon; i++)
+  {
+    // Evaluate the basis functions
+    if (vtkSVNURBSUtils::BasisEvaluationVec(this->VKnotVector, q,
+                                       i, vEvals, Nvs) != SV_OK)
+    {
+      return SV_ERROR;
+    }
+    // for each sampling get the final basis functions
+    double ratVal = 0.0;
+    for (int j=0; j<numVDiv; j++)
+    {
+      NVfinal->SetValue(j, i, Nvs->GetValue(j, 0));
+    }
+  }
+
+  // Last value should be 1
+  NVfinal->SetValue(numVDiv-1, nVCon-1, 1.0);
+
+  // W direction!
+  // -----------------------------------------------------------------------
+  int numWDiv = ceil(1.0/wSpacing);
+  vtkNew(vtkDoubleArray, wEvals);
+  vtkSVNURBSUtils::LinSpace(0, 1, numWDiv, wEvals);
+
+  // Get sparse array for Nw
+  vtkNew(vtkSparseArray<double>, Nws);
+  Nws->Resize(numWDiv, r+2);
+
+  // Get sparse array for basis functions
+  vtkNew(vtkSparseArray<double>, NWfinal);
+  NWfinal->Resize(numWDiv, nWCon);
+
+  // Loop through control points
+  for (int i=0; i<nWCon; i++)
+  {
+    if (vtkSVNURBSUtils::BasisEvaluationVec(this->WKnotVector, r,
+                                       i, wEvals, Nws) != SV_OK)
+    {
+      return SV_ERROR;
+    }
+    // for each sampling get the final basis functions
+    for (int j=0; j<numWDiv; j++)
+    {
+      NWfinal->SetValue(j, i, Nws->GetValue(j, 0));
+    }
+  }
+
+  // Last value should be 1
+  NWfinal->SetValue(numWDiv-1, nWCon-1, 1.0);
+
+
+  //TODO HERER
+  vtkNew(vtkSparseArray<double>, NVfinalT);
+  vtkSVNURBSUtils::MatrixTranspose(NVfinal, 0, NVfinalT);
+  //Get the physical points on the surface!
+  // -----------------------------------------------------------------------
+  // When dealing with the rational of NURBS, need to multiply points by
+  // weights when sending through matrix multiplication. However, still need
+  // fourth spot in point, weight vector because in the end, we will need
+  // to divide by the total weight
+  vtkNew(vtkDenseArray<double>, tmpControlGrid);
+  vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(this->ControlPointGrid, tmpControlGrid);
+
+  // Do first matrix multiply with u basis functions
+  vtkNew(vtkDenseArray<double>, tmpUGrid);
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, 1, tmpControlGrid, 1, 4, tmpUGrid) != SV_OK)
+  {
+    fprintf(stderr, "Error in matrix multiply\n");
+    return SV_ERROR;
+  }
+  // Do second matrix multiply with v basis functions
+  vtkNew(vtkDenseArray<double>, tmpVGrid);
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 4, NVfinalT, 0, 1, tmpVGrid) != SV_OK)
+  {
+    fprintf(stderr, "Error in matrix multiply\n");
+    return SV_ERROR;
+  }
+
+  // Set up final grid of points
+  vtkNew(vtkStructuredGrid, finalGrid);
+  vtkNew(vtkPoints, tmpVPoints);
+  finalGrid->SetPoints(tmpVPoints);
+  vtkSVNURBSUtils::TypedArrayToStructuredGridRational(tmpVGrid, finalGrid);
+
+  // Get grid connectivity for pointset
+  vtkNew(vtkCellArray, volumeCells);
+  this->GetStructuredGridConnectivity(numUDiv, numVDiv, numWDiv, volumeCells);
+
+  // Update the volume representation
+  this->VolumeRepresentation->SetPoints(finalGrid->GetPoints());
+  this->VolumeRepresentation->SetCells(VTK_HEXAHEDRON, volumeCells);
+
+  // Clean the volume in case of duplicate points (closed volume)
+  vtkNew(vtkSVCleanUnstructuredGrid, cleaner);
+  cleaner->SetInputData(this->VolumeRepresentation);
+  cleaner->Update();
+
+  // Get clean output and build links
+  this->VolumeRepresentation->DeepCopy(cleaner->GetOutput());
+  this->VolumeRepresentation->BuildLinks();
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetStructuredGridConnectivity
+// ----------------------
+int vtkSVNURBSVolume::GetStructuredGridConnectivity(const int numXPoints, const int numYPoints, const int numZPoints, vtkCellArray *connectivity)
+{
+  connectivity->Reset();
+  vtkNew(vtkIdList, ptIds);
+  ptIds->SetNumberOfIds(4);
+  for (int i=0; i< numXPoints - 1; i++)
+  {
+    for (int j=0; j< numYPoints - 1; j++)
+    {
+      int ptId = i+ j*numXPoints;
+      ptIds->SetId(0, ptId);
+      ptIds->SetId(1, ptId+1);
+      ptIds->SetId(2, ptId+numXPoints+1);
+      ptIds->SetId(3, ptId+numXPoints);
+      connectivity->InsertNextCell(ptIds);
+    }
+  }
+
+  return SV_OK;
+}

@@ -247,10 +247,12 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
 
     // cell id in the vtkPolyData
     int groupId = gCell->GroupId;
-    fprintf(stdout,"WHAT GROUP IS THIS: %d\n", groupId);
 
     int cubeType;
     this->GetCubeType(gCell, cubeType);
+
+    fprintf(stdout,"GROUP: %d\n", groupId);
+    fprintf(stdout,"CUBE TYPE: %d\n", cubeType);
 
     vtkNew(vtkPoints, addPoints);
 
@@ -345,6 +347,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       vtkMath::Cross(diverVec, vecs[1], workVec);
       vtkMath::Normalize(workVec);
 
+      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(workVec, -1.0);
+
       // extrude up
       double finalPts[12][3];
       vtkMath::MultiplyScalar(workVec, height/2.);
@@ -387,6 +392,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       // get vector towards top of cube
       vtkMath::Cross(vecs[1], vecs[0], workVec);
       vtkMath::Normalize(workVec);
+
+      if (cDiver->BranchDir == LEFT || cDiver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(workVec, -1.0);
 
       // extrude up
       vtkMath::MultiplyScalar(workVec, height/2.);
@@ -453,6 +461,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       vtkMath::Cross(diverVec, vecs[1], workVec);
       vtkMath::Normalize(workVec);
 
+      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(workVec, -1.0);
+
       // extrude up
       double finalPts[12][3];
       vtkMath::MultiplyScalar(workVec, height/2.);
@@ -495,6 +506,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       // get vector towards top of cube
       vtkMath::Cross(vecs[1], vecs[0], workVec);
       vtkMath::Normalize(workVec);
+
+      if (cDiver->BranchDir == LEFT || cDiver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(workVec, -1.0);
 
       // extrude up
       vtkMath::MultiplyScalar(workVec, width/2.);
@@ -563,6 +577,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       // extrude up
       double finalPts[10][3];
       vtkMath::MultiplyScalar(workVec, height/2.);
+      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(workVec, -1.0);
+
       vtkMath::Add(gCell->StartPt, workVec, finalPts[2]);
       if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
       {
@@ -643,6 +660,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       double workVec[3];
       vtkMath::Cross(diverVec, vecs[1], workVec);
       vtkMath::Normalize(workVec);
+
+      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(workVec, -1.0);
 
       // extrude up
       double finalPts[10][3];

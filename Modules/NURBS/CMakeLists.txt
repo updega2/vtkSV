@@ -33,9 +33,9 @@ set(module vtkSVNURBS)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS vtkSVNURBSUtils.cxx vtkSVControlGrid.cxx vtkSVNURBSCurve.cxx vtkSVNURBSSurface.cxx vtkSVNURBSVolume.cxx
-  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx vtkSVNURBSCurveCollection.cxx vtkSVNURBSSurfaceCollection.cxx)
+  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx vtkSVLoftNURBSVolume.cxx vtkSVNURBSCurveCollection.cxx vtkSVNURBSSurfaceCollection.cxx)
 set(HDRS vtkSVNURBSUtils.h   vtkSVControlGrid.h   vtkSVNURBSCurve.h   vtkSVNURBSSurface.h vtkSVNURBSVolume.h
-  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h vtkSVNURBSCurveCollection.h vtkSVNURBSSurfaceCollection.h)
+  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h vtkSVLoftNURBSVolume.h vtkSVNURBSCurveCollection.h vtkSVNURBSSurfaceCollection.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

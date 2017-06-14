@@ -116,7 +116,6 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
     this->DistanceFunction->SetInput(this->Generators);
     this->DistanceFunction->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     this->DistanceFunction->SetUseRadiusInformation(this->UseRadiusInformation);
-    this->DistanceFunction->ControlEndPointsOff();
     this->DistanceFunction->UsePointNormalOn();
 
     // Get all the different ids

@@ -442,6 +442,52 @@ public:
                                      const int extractDirection,
                                      vtkSVNURBSSurfaceCollection *surface);
 
+  // Volume functions
+  /** \brief Get the control points of a volume given the input data points
+   *  an approximating array of paramter values, control point weights (equal
+   *  is best), and a knot span.
+   *  \param points The input data points to fit given in the correct order.
+   *  \param U The array of approximating paramter values in the u direction.
+   *  \param V The array of approximating paramter values in the v direction.
+   *  \param W The array of approximating paramter values in the w direction.
+   *  \param uWeights Array of weights for the control points. Suggest equal
+   *  values.
+   *  \param vWeights Array of weights for the control points. Suggest equal
+   *  values.
+   *  \param wWeights Array of weights for the control points. Suggest equal
+   *  values.
+   *  \param uKnots The knot span to use for basis function evaluation in the
+   *  u direction.
+   *  \param vKnots The knot span to use for basis function evaluation in the
+   *  v direction.
+   *  \param wKnots The knot span to use for basis function evaluation in the
+   *  w direction.
+   *  \param p The degree of the volume in the u direction to use for fitting.
+   *  \param q The degree of the volume in the v direction to use for fitting.
+   *  \param r The degree of the volume in the v direction to use for fitting.
+   *  \param kutype The type of knot span to be used in the u direction. Used
+   *  primarily if the end derivatives need to be specified.
+   *  \param kvtype The type of knot span to be used in the v direction. Used
+   *  primarily if the end derivatives need to be specified.
+   *  \param kwtype The type of knot span to be used in the v direction. Used
+   *  primarily if the end derivatives need to be specified.
+   *  \return cPoints The control points of the fit volume. */
+  static int GetControlPointsOfVolume(vtkStructuredGrid *points,
+                                       vtkDoubleArray *U,
+                                       vtkDoubleArray *V, vtkDoubleArray *W,
+                                       vtkDoubleArray *uWeights,
+                                       vtkDoubleArray *vWeights,
+                                       vtkDoubleArray *wWeights,
+                                       vtkDoubleArray *uKnots,
+                                       vtkDoubleArray *vKnots,
+                                       vtkDoubleArray *wKnots,
+                                       const int p, const int q,
+                                       const int r,
+                                       std::string kutype,
+                                       std::string kvtype,
+                                       std::string kwtype,
+                                       vtkStructuredGrid *cPoints);
+
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,
                                const int p, vtkDoubleArray *knots);
   static int AddDerivativePoints(vtkTypedArray<double> *points,

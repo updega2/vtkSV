@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include "vtkSVLoftNURBSSurface.h"
+#include "vtkSVLoftNURBSVolume.h"
 
 #include "vtkAlgorithmOutput.h"
 #include "vtkCellData.h"
@@ -37,7 +37,7 @@
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkPolyData.h"
+#include "vtkUnstructuredGrid.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkSVGlobals.h"
@@ -52,51 +52,62 @@
 // ----------------------
 // StandardNewMacro
 // ----------------------
-vtkStandardNewMacro(vtkSVLoftNURBSSurface);
+vtkStandardNewMacro(vtkSVLoftNURBSVolume);
 
 // ----------------------
 // Constructor
 // ----------------------
-vtkSVLoftNURBSSurface::vtkSVLoftNURBSSurface()
+vtkSVLoftNURBSVolume::vtkSVLoftNURBSVolume()
 {
   this->UserManagedInputs = 0;
   this->UDegree = 2;
   this->VDegree = 2;
+  this->WDegree = 2;
 
-  this->PolyDataUSpacing = 0.1;
-  this->PolyDataVSpacing = 0.1;
+  this->UnstructuredGridUSpacing = 0.1;
+  this->UnstructuredGridVSpacing = 0.1;
+  this->UnstructuredGridWSpacing = 0.1;
 
   this->StartUDerivatives = vtkDoubleArray::New();
   this->StartVDerivatives = vtkDoubleArray::New();
+  this->StartWDerivatives = vtkDoubleArray::New();
   this->EndUDerivatives   = vtkDoubleArray::New();
   this->EndVDerivatives   = vtkDoubleArray::New();
+  this->EndWDerivatives   = vtkDoubleArray::New();
 
   this->StartUDerivatives->SetNumberOfComponents(3);
   this->StartUDerivatives->SetNumberOfTuples(1);
   this->StartVDerivatives->SetNumberOfComponents(3);
   this->StartVDerivatives->SetNumberOfTuples(1);
+  this->StartWDerivatives->SetNumberOfComponents(3);
+  this->StartWDerivatives->SetNumberOfTuples(1);
   this->EndUDerivatives->SetNumberOfComponents(3);
   this->EndUDerivatives->SetNumberOfTuples(1);
   this->EndVDerivatives->SetNumberOfComponents(3);
   this->EndVDerivatives->SetNumberOfTuples(1);
+  this->EndWDerivatives->SetNumberOfComponents(3);
+  this->EndWDerivatives->SetNumberOfTuples(1);
 
-  this->Surface = vtkSVNURBSSurface::New();
+  this->InputGrid = NULL;
+  this->Volume = vtkSVNURBSVolume::New();
 
   this->UKnotSpanType        = NULL;
   this->VKnotSpanType        = NULL;
+  this->WKnotSpanType        = NULL;
 
   this->UParametricSpanType = NULL;
   this->VParametricSpanType = NULL;
+  this->WParametricSpanType = NULL;
 }
 
 // ----------------------
 // Destructor
 // ----------------------
-vtkSVLoftNURBSSurface::~vtkSVLoftNURBSSurface()
+vtkSVLoftNURBSVolume::~vtkSVLoftNURBSVolume()
 {
-  if (this->Surface != NULL)
+  if (this->Volume != NULL)
   {
-    this->Surface->Delete();
+    this->Volume->Delete();
   }
   if (this->StartUDerivatives != NULL)
   {
@@ -106,6 +117,10 @@ vtkSVLoftNURBSSurface::~vtkSVLoftNURBSSurface()
   {
     this->StartVDerivatives->Delete();
   }
+  if (this->StartWDerivatives != NULL)
+  {
+    this->StartWDerivatives->Delete();
+  }
   if (this->EndUDerivatives != NULL)
   {
     this->EndUDerivatives->Delete();
@@ -113,6 +128,10 @@ vtkSVLoftNURBSSurface::~vtkSVLoftNURBSSurface()
   if (this->EndVDerivatives != NULL)
   {
     this->EndVDerivatives->Delete();
+  }
+  if (this->EndWDerivatives != NULL)
+  {
+    this->EndWDerivatives->Delete();
   }
 
   if (this->UKnotSpanType != NULL)
@@ -125,6 +144,11 @@ vtkSVLoftNURBSSurface::~vtkSVLoftNURBSSurface()
     delete [] this->VKnotSpanType;
     this->VKnotSpanType = NULL;
   }
+  if (this->WKnotSpanType != NULL)
+  {
+    delete [] this->WKnotSpanType;
+    this->WKnotSpanType = NULL;
+  }
   if (this->UParametricSpanType != NULL)
   {
     delete [] this->UParametricSpanType;
@@ -135,12 +159,17 @@ vtkSVLoftNURBSSurface::~vtkSVLoftNURBSSurface()
     delete [] this->VParametricSpanType;
     this->VParametricSpanType = NULL;
   }
+  if (this->WParametricSpanType != NULL)
+  {
+    delete [] this->WParametricSpanType;
+    this->WParametricSpanType = NULL;
+  }
 }
 
 // ----------------------
 // AddInputData
 // ----------------------
-void vtkSVLoftNURBSSurface::AddInputData(vtkPolyData *ds)
+void vtkSVLoftNURBSVolume::AddInputData(vtkUnstructuredGrid *ds)
 {
   if (this->UserManagedInputs)
     {
@@ -154,7 +183,7 @@ void vtkSVLoftNURBSSurface::AddInputData(vtkPolyData *ds)
 // ----------------------
 // RemoveInputData
 // ----------------------
-void vtkSVLoftNURBSSurface::RemoveInputData(vtkPolyData *ds)
+void vtkSVLoftNURBSVolume::RemoveInputData(vtkUnstructuredGrid *ds)
 {
   if (this->UserManagedInputs)
     {
@@ -181,7 +210,7 @@ void vtkSVLoftNURBSSurface::RemoveInputData(vtkPolyData *ds)
 // ----------------------
 // SetNumberOfInputs
 // ----------------------
-void vtkSVLoftNURBSSurface::SetNumberOfInputs(int num)
+void vtkSVLoftNURBSVolume::SetNumberOfInputs(int num)
 {
   if (!this->UserManagedInputs)
     {
@@ -197,8 +226,8 @@ void vtkSVLoftNURBSSurface::SetNumberOfInputs(int num)
 // ----------------------
 // SetInputDataByNumber
 // ----------------------
-void vtkSVLoftNURBSSurface::
-SetInputDataByNumber(int num, vtkPolyData* input)
+void vtkSVLoftNURBSVolume::
+SetInputDataByNumber(int num, vtkUnstructuredGrid* input)
 {
   vtkTrivialProducer* tp = vtkTrivialProducer::New();
   tp->SetOutput(input);
@@ -209,7 +238,7 @@ SetInputDataByNumber(int num, vtkPolyData* input)
 // ----------------------
 // SetInputConnectionByNumber
 // ----------------------
-void vtkSVLoftNURBSSurface::
+void vtkSVLoftNURBSVolume::
 SetInputConnectionByNumber(int num,vtkAlgorithmOutput *input)
 {
   if (!this->UserManagedInputs)
@@ -227,27 +256,32 @@ SetInputConnectionByNumber(int num,vtkAlgorithmOutput *input)
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVLoftNURBSSurface::RequestData(
+int vtkSVLoftNURBSVolume::RequestData(
     vtkInformation *vtkNotUsed(request),
     vtkInformationVector **inputVector,
     vtkInformationVector *outputVector)
 {
   // get the info object
   // get the ouptut
-  vtkPolyData *output = vtkPolyData::GetData(outputVector, 0);
+  vtkUnstructuredGrid *output = vtkUnstructuredGrid::GetData(outputVector, 0);
 
   // Get number of inputs
   int numInputs = inputVector[0]->GetNumberOfInformationObjects();
 
   // Set up input vector
-  vtkPolyData** inputs = new vtkPolyData*[numInputs];
+  vtkUnstructuredGrid** inputs = new vtkUnstructuredGrid*[numInputs];
   for (int idx = 0; idx < numInputs; ++idx)
     {
-    inputs[idx] = vtkPolyData::GetData(inputVector[0],idx);
+    inputs[idx] = vtkUnstructuredGrid::GetData(inputVector[0],idx);
     }
 
+  if (this->InputGrid == NULL)
+  {
+    vtkErrorMacro("Need to set the input grid");
+    return SV_ERROR;
+  }
   // TODO: Need to make sure knot span and parameteric span types are set
-  if (this->LoftNURBS(inputs,numInputs,output) != SV_OK)
+  if (this->LoftNURBS(this->InputGrid,numInputs,output) != SV_OK)
   {
     vtkErrorMacro("Could not loft surface");
     delete [] inputs;
@@ -261,7 +295,7 @@ int vtkSVLoftNURBSSurface::RequestData(
 // ----------------------
 // RequestUpdateExtent
 // ----------------------
-int vtkSVLoftNURBSSurface::RequestUpdateExtent(
+int vtkSVLoftNURBSVolume::RequestUpdateExtent(
     vtkInformation *vtkNotUsed(request),
     vtkInformationVector **inputVector,
     vtkInformationVector *outputVector)
@@ -332,16 +366,16 @@ int vtkSVLoftNURBSSurface::RequestUpdateExtent(
 // ----------------------
 // GetInput
 // ----------------------
-vtkPolyData *vtkSVLoftNURBSSurface::GetInput(int idx)
+vtkUnstructuredGrid *vtkSVLoftNURBSVolume::GetInput(int idx)
 {
-  return vtkPolyData::SafeDownCast(
+  return vtkUnstructuredGrid::SafeDownCast(
     this->GetExecutive()->GetInputData(0, idx));
 }
 
 // ----------------------
 // PrintSelf
 // ----------------------
-void vtkSVLoftNURBSSurface::PrintSelf(ostream& os,
+void vtkSVLoftNURBSVolume::PrintSelf(ostream& os,
     vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -361,12 +395,12 @@ void vtkSVLoftNURBSSurface::PrintSelf(ostream& os,
   for (int i=0; i<this->EndUDerivatives->GetNumberOfTuples(); i++)
   {
     double tup[3]; this->EndUDerivatives->GetTuple(i, tup);
-    os << indent << "End V Derivative " << i << ": " << tup[0] << " ";
+    os << indent << "End U Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
   os << "\n";
 
-  os << indent << "V Degree: " << this->UDegree << "\n";
+  os << indent << "V Degree: " << this->VDegree << "\n";
   os << indent << "V Knot span type: " << this->VKnotSpanType << "\n";
   os << indent << "V Parametric values span type: " << this->VParametricSpanType << "\n";
   for (int i=0; i<this->StartVDerivatives->GetNumberOfTuples(); i++)
@@ -381,12 +415,28 @@ void vtkSVLoftNURBSSurface::PrintSelf(ostream& os,
     os << indent << "End V Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
+
+  os << indent << "W Degree: " << this->WDegree << "\n";
+  os << indent << "W Knot span type: " << this->WKnotSpanType << "\n";
+  os << indent << "W Parametric values span type: " << this->WParametricSpanType << "\n";
+  for (int i=0; i<this->StartWDerivatives->GetNumberOfTuples(); i++)
+  {
+    double tup[3]; this->StartWDerivatives->GetTuple(i, tup);
+    os << indent << "Start W Derivative " << i << ": " << tup[0] << " ";
+    os << tup[1] << " " << tup[2] << "\n";
+  }
+  for (int i=0; i<this->EndWDerivatives->GetNumberOfTuples(); i++)
+  {
+    double tup[3]; this->EndWDerivatives->GetTuple(i, tup);
+    os << indent << "End W Derivative " << i << ": " << tup[0] << " ";
+    os << tup[1] << " " << tup[2] << "\n";
+  }
 }
 
 // ----------------------
 // FillInputPortInformation
 // ----------------------
-int vtkSVLoftNURBSSurface::FillInputPortInformation(
+int vtkSVLoftNURBSVolume::FillInputPortInformation(
     int port, vtkInformation *info)
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
@@ -400,25 +450,29 @@ int vtkSVLoftNURBSSurface::FillInputPortInformation(
 // ----------------------
 // LoftNURBS
 // ----------------------
-int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
-    vtkPolyData *outputPD)
+int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
+    vtkUnstructuredGrid *outputPD)
 {
   // Get number of control points and degree
   int nUCon = numInputs;
-  int nVCon = inputs[0]->GetNumberOfPoints();
+  int nVCon = 0; inputs->GetNumberOfPoints();
+  int nWCon = 0; inputs->GetNumberOfPoints();
   int p     = this->UDegree;
   int q     = this->VDegree;
+  int r     = this->WDegree;
 
   // Get knot span and parametric span types
   std::string kutype = this->UKnotSpanType;
   std::string kvtype = this->VKnotSpanType;
+  std::string kwtype = this->WKnotSpanType;
   std::string putype = this->UParametricSpanType;
   std::string pvtype = this->VParametricSpanType;
+  std::string pwtype = this->WParametricSpanType;
 
   // Make sure input dimensions make sense
   for (int i=0; i<nUCon; i++)
   {
-    if (nVCon != inputs[i]->GetNumberOfPoints())
+    if (nVCon != 1; inputs->GetNumberOfPoints())
     {
       vtkErrorMacro("Input segments do not have the same number of points, cannot loft");
       return SV_ERROR;
@@ -436,12 +490,17 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
     vtkErrorMacro("Need to either decrease degree given or number of inputs in V direction");
     return SV_ERROR;
   }
+  if (r > nWCon)
+  {
+    vtkErrorMacro("Need to either decrease degree given or number of inputs in V direction");
+    return SV_ERROR;
+  }
 
   // Set the temporary control points
   vtkNew(vtkPoints, tmpPoints);
   tmpPoints->SetNumberOfPoints(nUCon);
   for (int i=0; i<nUCon; i++)
-    tmpPoints->SetPoint(i, inputs[i]->GetPoint(0));
+    tmpPoints->SetPoint(i, inputs->GetPoint(0));
 
   // Get the input point set u representation
   vtkNew(vtkDoubleArray, U);
@@ -464,7 +523,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   //
   // Get the input point set v representation
   vtkNew(vtkDoubleArray, V);
-  if (vtkSVNURBSUtils::GetUs(inputs[0]->GetPoints(), pvtype, V) != SV_OK)
+  if (vtkSVNURBSUtils::GetUs(inputs->GetPoints(), pvtype, V) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -481,56 +540,74 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   //fprintf(stdout,"Y knots\n");
   //vtkSVNURBSUtils::PrintArray(vKnots);
 
-  // Convert input to structured grid
-  vtkNew(vtkStructuredGrid, inputPoints);
-  if (vtkSVNURBSUtils::PolyDatasToStructuredGrid(inputs, numInputs, inputPoints) != SV_OK)
+  // Get the input point set v representation
+  vtkNew(vtkDoubleArray, W);
+  if (vtkSVNURBSUtils::GetUs(inputs->GetPoints(), pvtype, W) != SV_OK)
+  {
     return SV_ERROR;
-
-  // Get derivatives in fomrat we need
-  vtkNew(vtkDoubleArray, DU0); DU0->DeepCopy(this->StartUDerivatives);
-  vtkNew(vtkDoubleArray, DUN); DUN->DeepCopy(this->EndUDerivatives);
-  if (!strncmp(kutype.c_str(), "derivative", 10))
-  {
-    // Get default derivatives if we need!
-    if (DU0->GetNumberOfTuples() == 1 ||
-        DUN->GetNumberOfTuples() == 1)
-    {
-      this->GetDefaultDerivatives(inputPoints, 0, DU0, DUN);
-    }
   }
+  //fprintf(stdout,"W:\n");
+  //vtkSVNURBSUtils::PrintArray(W);
 
-  // Get derivatives in format we need
-  vtkNew(vtkDoubleArray, DV0); DV0->DeepCopy(this->StartVDerivatives);
-  vtkNew(vtkDoubleArray, DVN); DVN->DeepCopy(this->EndVDerivatives);
-  if (!strncmp(kvtype.c_str(), "derivative", 10))
+  // Get the knots in the w direction
+  vtkNew(vtkDoubleArray, wKnots);
+  if (vtkSVNURBSUtils::GetKnots(W, r, kwtype, wKnots) != SV_OK)
   {
-    // Get default derivatives if we need!
-    if (DV0->GetNumberOfTuples() == 1 ||
-        DVN->GetNumberOfTuples() == 1)
-    {
-      this->GetDefaultDerivatives(inputPoints, 1, DV0, DVN);
-    }
+    fprintf(stderr,"Error getting knots\n");
+    return SV_ERROR;
   }
+  //fprintf(stdout,"Y knots\n");
+  //vtkSVNURBSUtils::PrintArray(vKnots);
+
+  //// Get derivatives in fomrat we need
+  //vtkNew(vtkDoubleArray, DU0); DU0->DeepCopy(this->StartUDerivatives);
+  //vtkNew(vtkDoubleArray, DUN); DUN->DeepCopy(this->EndUDerivatives);
+  //if (!strncmp(kutype.c_str(), "derivative", 10))
+  //{
+  //  // Get default derivatives if we need!
+  //  if (DU0->GetNumberOfTuples() == 1 ||
+  //      DUN->GetNumberOfTuples() == 1)
+  //  {
+  //    this->GetDefaultDerivatives(inputs, 0, DU0, DUN);
+  //  }
+  //}
+
+  //// Get derivatives in format we need
+  //vtkNew(vtkDoubleArray, DV0); DV0->DeepCopy(this->StartVDerivatives);
+  //vtkNew(vtkDoubleArray, DVN); DVN->DeepCopy(this->EndVDerivatives);
+  //if (!strncmp(kvtype.c_str(), "derivative", 10))
+  //{
+  //  // Get default derivatives if we need!
+  //  if (DV0->GetNumberOfTuples() == 1 ||
+  //      DVN->GetNumberOfTuples() == 1)
+  //  {
+  //    this->GetDefaultDerivatives(inputs, 1, DV0, DVN);
+  //  }
+  //}
 
   // Get the control points of surface, lengthy operation in vtkSVNURBSUtils
   vtkNew(vtkStructuredGrid, cPoints);
   vtkNew(vtkDoubleArray, uWeights);
   vtkNew(vtkDoubleArray, vWeights);
-  if (vtkSVNURBSUtils::GetControlPointsOfSurface(inputPoints, U, V, uWeights, vWeights,
-                                               uKnots, vKnots, p, q, kutype, kvtype,
-                                               DU0, DUN, DV0, DVN, cPoints) != SV_OK)
+  vtkNew(vtkDoubleArray, wWeights);
+  if (vtkSVNURBSUtils::GetControlPointsOfVolume(inputs, U, V, W,
+                                                uWeights, vWeights, wWeights,
+                                                uKnots, vKnots, wKnots,
+                                                p, q, r, kutype, kvtype, kwtype,
+                                                cPoints) != SV_OK)
   {
     return SV_ERROR;
   }
 
   // Set the knot vectors and control points
-  this->Surface->SetKnotVector(uKnots, 0);
-  this->Surface->SetKnotVector(vKnots, 1);
-  this->Surface->SetControlPoints(cPoints);
+  this->Volume->SetKnotVector(uKnots, 0);
+  this->Volume->SetKnotVector(vKnots, 1);
+  //this->Volume->SetKnotVector(wKnots, 2);
+  this->Volume->SetControlPoints(cPoints);
 
-  // Get the polydata representation from the NURBS Surface
-  this->Surface->GeneratePolyDataRepresentation(this->PolyDataUSpacing, this->PolyDataVSpacing);
-  outputPD->DeepCopy(this->Surface->GetSurfaceRepresentation());
+  // Get the polydata representation from the NURBS Volume
+  this->Volume->GenerateVolumeRepresentation(this->UnstructuredGridUSpacing, this->UnstructuredGridVSpacing, this->UnstructuredGridWSpacing);
+  outputPD->DeepCopy(this->Volume->GetVolumeRepresentation());
 
   return SV_OK;
 }
@@ -538,53 +615,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
 // ----------------------
 // GetDefaultDerivatives
 // ----------------------
-int vtkSVLoftNURBSSurface::GetDefaultDerivatives(vtkStructuredGrid *input, const int comp, vtkDoubleArray *D0out, vtkDoubleArray *DNout)
+int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const int comp, vtkDoubleArray *D0out, vtkDoubleArray *DNout)
 {
-  // Get dimensions
-  int dim[3];
-  input->GetDimensions(dim);
-
-  // Get number of values and derivatives from dim
-  int numVals   = dim[comp];
-  int numDerivs = dim[-1*(comp-1)];
-
-  // Set number of tuples for derivatives
-  D0out->SetNumberOfTuples(numDerivs);
-  DNout->SetNumberOfTuples(numDerivs);
-  for (int i=0; i<numDerivs; i++)
-  {
-    int pos[3]; pos[2] = 0;
-    pos[-1*(comp-1)] = i;
-
-    // Get the point id
-    double pt0[3]; pos[comp] = 0;
-    int ptId = vtkStructuredData::ComputePointId(dim, pos);
-    input->GetPoint(ptId, pt0);
-
-    // Get the point id
-    double pt1[3]; pos[comp] = 1;
-    ptId = vtkStructuredData::ComputePointId(dim, pos);
-    input->GetPoint(ptId, pt1);
-
-    // Get the point id
-    double ptnm1[3]; pos[comp] = numVals - 1;
-    ptId = vtkStructuredData::ComputePointId(dim, pos);
-    input->GetPoint(ptId, ptnm1);
-
-    // Get the point id
-    double ptnm2[3]; pos[comp] = numVals - 2;
-    ptId = vtkStructuredData::ComputePointId(dim, pos);
-    input->GetPoint(ptId, ptnm2);
-
-    // From point ids, compute vectors at ends of data
-    double D0[3], DN[3];
-    vtkMath::Subtract(pt1, pt0, D0);
-    vtkMath::Subtract(ptnm1, ptnm2, DN);
-
-    // Set tuples
-    D0out->SetTuple(i, D0);
-    DNout->SetTuple(i, DN);
-  }
-
   return SV_OK;
 }

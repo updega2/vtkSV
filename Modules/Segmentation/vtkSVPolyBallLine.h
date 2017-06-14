@@ -29,6 +29,7 @@ Version:   $Revision: 1.4 $
 #include "vtkImplicitFunction.h"
 #include "vtkSVSegmentationModule.h" // For export
 #include "vtkPolyData.h"
+#include "vtkPointLocator.h"
 #include "vtkIdList.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVPolyBallLine : public vtkImplicitFunction
@@ -140,18 +141,20 @@ public:
   vtkGetMacro(RemoveEndPoints,int);
   vtkBooleanMacro(RemoveEndPoints,int);
   //@}
-  //@{
-  /// \brief Remove end points from centerline possible points to check
-  vtkSetMacro(ControlEndPoints,int);
-  vtkGetMacro(ControlEndPoints,int);
-  vtkBooleanMacro(ControlEndPoints,int);
-  //@}
 
   static double ComplexDot(double x[4], double y[4]);
+
+  void BuildLocator();
 
 protected:
   vtkSVPolyBallLine();
   ~vtkSVPolyBallLine();
+
+  int FindBifurcationCellId(const int ptId, vtkIdList *cellIds,
+                            const double surfacePt[3],
+                            const double closestPt[3],
+                            const double parameter,
+                            int &bestCellId);
 
   char* PolyBallRadiusArrayName;
   char* LocalCoordinatesArrayName;
@@ -159,6 +162,8 @@ protected:
   vtkPolyData* Input;
   vtkIdList* InputCellIds;
   vtkIdType InputCellId;
+
+  vtkPointLocator *PointLocator;
 
   vtkIdType LastPolyBallCellId;
   vtkIdType LastPolyBallCellSubId;
@@ -168,7 +173,6 @@ protected:
   int UseRadiusWeighting;
   int UseLocalCoordinates;
   int RemoveEndPoints;
-  int ControlEndPoints;
 
   double LastPolyBallCellPCoord;
   double LastPolyBallCenter[3];

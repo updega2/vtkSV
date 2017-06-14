@@ -2245,6 +2245,151 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
 }
 
 // ----------------------
+// GetControlPointOfVolume
+// ----------------------
+int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
+                                              vtkDoubleArray *U,
+                                              vtkDoubleArray *V, vtkDoubleArray *W,
+                                              vtkDoubleArray *uWeights,
+                                              vtkDoubleArray *vWeights,
+                                              vtkDoubleArray *wWeights,
+                                              vtkDoubleArray *uKnots,
+                                              vtkDoubleArray *vKnots,
+                                              vtkDoubleArray *wKnots,
+                                              const int p, const int q,
+                                              const int r,
+                                              std::string kutype,
+                                              std::string kvtype,
+                                              std::string kwtype,
+                                              vtkStructuredGrid *cPoints)
+{
+  int dim[3];
+  points->GetDimensions(dim);
+  int nUCon = dim[0];
+  int nVCon = dim[1];
+
+  vtkNew(vtkSparseArray<double>, NPUTmp);
+  vtkNew(vtkSparseArray<double>, NPUFinal);
+  if( vtkSVNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != SV_OK)
+  {
+    return SV_ERROR;
+  }
+  NPUTmp->SetValue(NPUTmp->GetExtents()[0].GetSize()-1, NPUTmp->GetExtents()[1].GetSize()-1, 1.0);
+
+  vtkNew(vtkSparseArray<double>, NPVTmp);
+  vtkNew(vtkSparseArray<double>, NPVFinal);
+  if( vtkSVNURBSUtils::GetPBasisFunctions(V, vKnots, q, NPVTmp) != SV_OK)
+  {
+    return SV_ERROR;
+  }
+  NPVTmp->SetValue(NPVTmp->GetExtents()[0].GetSize()-1, NPVTmp->GetExtents()[1].GetSize()-1, 1.0);
+
+  vtkNew(vtkSparseArray<double>, NPWTmp);
+  vtkNew(vtkSparseArray<double>, NPWFinal);
+  if( vtkSVNURBSUtils::GetPBasisFunctions(W, wKnots, r, NPWTmp) != SV_OK)
+  {
+    return SV_ERROR;
+  }
+  NPWTmp->SetValue(NPWTmp->GetExtents()[0].GetSize()-1, NPWTmp->GetExtents()[1].GetSize()-1, 1.0);
+
+  vtkNew(vtkDenseArray<double>, pointMatTmp);
+  vtkNew(vtkDenseArray<double>, pointMatFinal);
+  vtkSVNURBSUtils::StructuredGridToTypedArray(points, pointMatTmp);
+
+  //if (!strncmp(kvtype.c_str(), "derivative", 10)
+  //    || !strncmp(kutype.c_str(), "derivative", 10))
+  //{
+  //  vtkNew(vtkDenseArray<double>, DU0Vec);
+  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DU0, DU0Vec);
+  //  vtkNew(vtkDenseArray<double>, DUNVec);
+  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DUN, DUNVec);
+  //  vtkNew(vtkDenseArray<double>, DV0Vec);
+  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DV0, DV0Vec);
+  //  vtkNew(vtkDenseArray<double>, DVNVec);
+  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DVN, DVNVec);
+  //  vtkSVNURBSUtils::SetSurfaceEndDerivatives(NPUTmp, NPVTmp, pointMatTmp, p, q,
+  //                                          kutype, kvtype,
+  //                                          DU0Vec, DUNVec, DV0Vec, DVNVec, U, V,
+  //                                          uKnots, vKnots,
+  //                                          NPUFinal, NPVFinal, pointMatFinal);
+  //}
+  //else
+  //{
+    vtkSVNURBSUtils::DeepCopy(NPUTmp, NPUFinal);
+    vtkSVNURBSUtils::DeepCopy(NPVTmp, NPVFinal);
+    vtkSVNURBSUtils::DeepCopy(NPWTmp, NPWFinal);
+    vtkSVNURBSUtils::DeepCopy(pointMatTmp, pointMatFinal);
+  //}
+
+  //fprintf(stdout,"Basis functions U:\n");
+  //vtkSVNURBSUtils::PrintMatrix(NPUFinal);
+  vtkNew(vtkSparseArray<double>, NPUinv);
+  if (vtkSVNURBSUtils::InvertSystem(NPUFinal, NPUinv) != SV_OK)
+  {
+    fprintf(stderr,"System could not be inverted\n");
+    return SV_ERROR;
+  }
+
+  //fprintf(stdout,"Basis functions V:\n");
+  //vtkSVNURBSUtils::PrintMatrix(NPVFinal);
+  vtkNew(vtkSparseArray<double>, NPVinv);
+  if (vtkSVNURBSUtils::InvertSystem(NPVFinal, NPVinv) != SV_OK)
+  {
+    fprintf(stderr,"System could not be inverted\n");
+    return SV_ERROR;
+  }
+
+  //fprintf(stdout,"Basis functions W:\n");
+  //vtkSVNURBSUtils::PrintMatrix(NPWFinal);
+  vtkNew(vtkSparseArray<double>, NPWinv);
+  if (vtkSVNURBSUtils::InvertSystem(NPWFinal, NPWinv) != SV_OK)
+  {
+    fprintf(stderr,"System could not be inverted\n");
+    return SV_ERROR;
+  }
+
+
+  //fprintf(stdout,"Inverted system U:\n");
+  //vtkSVNURBSUtils::PrintMatrix(NPUinv);
+  //fprintf(stdout,"Inverted system V:\n");
+  //vtkSVNURBSUtils::PrintMatrix(NPVinv);
+  //fprintf(stdout,"Inverted system W:\n");
+  //vtkSVNURBSUtils::PrintMatrix(NPWinv);
+  vtkNew(vtkDenseArray<double>, tmpUGrid);
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, 1, pointMatFinal, 1, 3, tmpUGrid) != SV_OK)
+  {
+    fprintf(stderr, "Error in matrix multiply\n");
+    return SV_ERROR;
+  }
+  vtkNew(vtkDenseArray<double>, tmpUGridT);
+  vtkSVNURBSUtils::MatrixTranspose(tmpUGrid, 1, tmpUGridT);
+  vtkNew(vtkDenseArray<double>, tmpVGrid);
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, 1, tmpUGridT, 1, 3, tmpVGrid) != SV_OK)
+  {
+    fprintf(stderr, "Error in matrix multiply\n");
+    return SV_ERROR;
+  }
+  vtkNew(vtkDenseArray<double>, tmpVGridT);
+  vtkSVNURBSUtils::MatrixTranspose(tmpVGrid, 1, tmpVGridT);
+  vtkNew(vtkDenseArray<double>, tmpWGrid);
+  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPWinv, 0, 1, tmpVGridT, 1, 3, tmpWGrid) != SV_OK)
+  {
+    fprintf(stderr, "Error in matrix multiply\n");
+    return SV_ERROR;
+  }
+
+  vtkNew(vtkPoints, finalPoints);
+  cPoints->SetPoints(finalPoints);
+  vtkNew(vtkDenseArray<double>, tmpWGridT);
+  vtkSVNURBSUtils::MatrixTranspose(tmpWGrid, 1, tmpWGridT);
+  vtkSVNURBSUtils::TypedArrayToStructuredGrid(tmpWGridT, cPoints);
+  //fprintf(stdout,"Final structured grid of control points\n");
+  //vtkSVNURBSUtils::PrintStructuredGrid(cPoints);
+
+  return SV_OK;
+}
+
+// ----------------------
 // SetSurfaceEndDerivatives
 // ----------------------
 int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTypedArray<double> *NPV,

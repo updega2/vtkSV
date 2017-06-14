@@ -115,8 +115,9 @@ public:
   /** \brief Function to generate polydata representation of nurbs surface. Stored
    *  in VolumeRepresentation.
    *  \param uSpacing Sets the spacing to sample the NURBS at in the u parameter direction.
+   *  \param vSpacing Sets the spacing to sample the NURBS at in the v parameter direction.
    *  \param vSpacing Sets the spacing to sample the NURBS at in the v parameter direction. */
-  int GenerateUnstructuredGridRepresentation(const double uSpacing, const double vSpacing) {return 0;} /**< \brief Unimplemented */
+  int GenerateVolumeRepresentation(const double uSpacing, const double vSpacing, const double wSpacing);
 
   //Functions to set control points/knots/etc.
   void SetControlPoints(vtkStructuredGrid *points2d) {;} /**< \brief Unimplemented */
@@ -166,7 +167,7 @@ public:
 
   /** \brief Get structured grid connectivity.
    *  \param connectivity empty cell array to be filled with a structured grid connectivity. */
-  int GetStructuredGridConnectivity(const int numXPoints, const int numYPoints, vtkCellArray *connectivity) {return 0;} /**< \brief Unimplemented */
+  int GetStructuredGridConnectivity(const int numXPoints, const int numYPoints, const int numZPoints, vtkCellArray *connectivity);
 
   // Description:
   // Retrieve an instance of this class from an information object.
