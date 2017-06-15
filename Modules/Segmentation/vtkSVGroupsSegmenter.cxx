@@ -31,6 +31,7 @@
 #include "vtkSVGroupsSegmenter.h"
 #include "vtkAppendPolyData.h"
 #include "vtkExecutive.h"
+#include "vtkCellArray.h"
 #include "vtkCellLocator.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkPointData.h"
@@ -2870,10 +2871,10 @@ int vtkSVGroupsSegmenter::Parameterize()
     vtkSVGeneralUtils::ApplyRotationMatrix(tmpPoly, rotMatrix1);
     vtkSVGeneralUtils::ApplyRotationMatrix(tmpPoly, rotMatrix0);
 
-    std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/Boundary_"+std::to_string(patchId)+".vtp";
-    vtkSVIOUtils::WriteVTPFile(filename2, boundaryMapper->GetOutput());
-    std::string filename4 = "/Users/adamupdegrove/Desktop/tmp/Mapping_"+std::to_string(patchId)+".vtp";
-    vtkSVIOUtils::WriteVTPFile(filename4, mapper->GetOutput());
+    //std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/Boundary_"+std::to_string(patchId)+".vtp";
+    //vtkSVIOUtils::WriteVTPFile(filename2, boundaryMapper->GetOutput());
+    //std::string filename4 = "/Users/adamupdegrove/Desktop/tmp/Mapping_"+std::to_string(patchId)+".vtp";
+    //vtkSVIOUtils::WriteVTPFile(filename4, mapper->GetOutput());
 
     appender->AddInputData(tmpPoly);
   }

@@ -24,6 +24,7 @@ Version:   $Revision: 1.5 $
 #include "vtkPointLocator.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVGeneralUtils.h"
 
