@@ -30,6 +30,7 @@
 
 #include "vtkSVNURBSVolume.h"
 
+#include "vtkAppendFilter.h"
 #include "vtkArrayExtents.h"
 #include "vtkArrayRange.h"
 #include "vtkCellArray.h"
@@ -176,6 +177,52 @@ vtkSVNURBSVolume* vtkSVNURBSVolume::GetData(vtkInformation* info)
 vtkSVNURBSVolume* vtkSVNURBSVolume::GetData(vtkInformationVector* v, int i)
 {
   return vtkSVNURBSVolume::GetData(v->GetInformationObject(i));
+}
+
+// ----------------------
+// SetUKnotVector
+// ----------------------
+int vtkSVNURBSVolume::SetUKnotVector(vtkDoubleArray *knots)
+{
+  this->UKnotVector->DeepCopy(knots);
+  this->NumberOfUKnotPoints = this->UKnotVector->GetNumberOfTuples();
+  return SV_OK;
+}
+
+// ----------------------
+// SetVKnotVector
+// ----------------------
+int vtkSVNURBSVolume::SetVKnotVector(vtkDoubleArray *knots)
+{
+  this->VKnotVector->DeepCopy(knots);
+  this->NumberOfVKnotPoints = this->VKnotVector->GetNumberOfTuples();
+  return SV_OK;
+}
+
+// ----------------------
+// SetWKnotVector
+// ----------------------
+int vtkSVNURBSVolume::SetWKnotVector(vtkDoubleArray *knots)
+{
+  this->WKnotVector->DeepCopy(knots);
+  this->NumberOfVKnotPoints = this->WKnotVector->GetNumberOfTuples();
+  return SV_OK;
+}
+
+// ----------------------
+// SetControlPointGrid
+// ----------------------
+int vtkSVNURBSVolume::SetControlPointGrid(vtkSVControlGrid *controlPoints)
+{
+  this->ControlPointGrid->DeepCopy(controlPoints);
+  int dim[3];
+  controlPoints->GetDimensions(dim);
+  this->ControlPointGrid->SetDimensions(dim);
+  this->NumberOfUControlPoints = dim[0];
+  this->NumberOfVControlPoints = dim[1];
+  this->NumberOfWControlPoints = dim[2];
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -389,45 +436,18 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
   vtkSVNURBSUtils::TypedArrayToStructuredGridRational(fullGrid, finalGrid);
 
   // Get grid connectivity for pointset
-  vtkNew(vtkCellArray, volumeCells);
-  this->GetStructuredGridConnectivity(numUDiv, numVDiv, numWDiv, volumeCells);
-
-  // Update the volume representation
-  this->VolumeRepresentation->SetPoints(finalGrid->GetPoints());
-  this->VolumeRepresentation->SetCells(VTK_HEXAHEDRON, volumeCells);
+  vtkNew(vtkAppendFilter, converter);
+  converter->SetInputData(finalGrid);
+  converter->Update();
 
   // Clean the volume in case of duplicate points (closed volume)
   vtkNew(vtkSVCleanUnstructuredGrid, cleaner);
-  cleaner->SetInputData(this->VolumeRepresentation);
+  cleaner->SetInputData(converter->GetOutput());
   cleaner->Update();
 
   // Get clean output and build links
   this->VolumeRepresentation->DeepCopy(cleaner->GetOutput());
   this->VolumeRepresentation->BuildLinks();
-
-  return SV_OK;
-}
-
-// ----------------------
-// GetStructuredGridConnectivity
-// ----------------------
-int vtkSVNURBSVolume::GetStructuredGridConnectivity(const int numXPoints, const int numYPoints, const int numZPoints, vtkCellArray *connectivity)
-{
-  connectivity->Reset();
-  vtkNew(vtkIdList, ptIds);
-  ptIds->SetNumberOfIds(4);
-  for (int i=0; i< numXPoints - 1; i++)
-  {
-    for (int j=0; j< numYPoints - 1; j++)
-    {
-      int ptId = i+ j*numXPoints;
-      ptIds->SetId(0, ptId);
-      ptIds->SetId(1, ptId+1);
-      ptIds->SetId(2, ptId+numXPoints+1);
-      ptIds->SetId(3, ptId+numXPoints);
-      connectivity->InsertNextCell(ptIds);
-    }
-  }
 
   return SV_OK;
 }

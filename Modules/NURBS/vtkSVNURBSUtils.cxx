@@ -5890,6 +5890,7 @@ int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTyped
         double val = matrix->GetValue(i, j, k);
 
         vtkArrayCoordinates loc;
+        loc.SetDimensions(4);
         loc.SetCoordinate(dim0, i);
         loc.SetCoordinate(dim1, j);
         loc.SetCoordinate(dim2, comp2);

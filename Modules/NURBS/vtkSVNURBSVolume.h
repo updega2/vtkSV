@@ -127,9 +127,9 @@ public:
   void UpdateCurve() {} /**< \brief Unimplemented */
   int IncreaseDegree(const int degree, const int dim) {return 0;} /**< \brief Unimplemented */
 
-  int SetUKnotVector(vtkDoubleArray *knots) {return 0;} /**< \brief Unimplemented */
-  int SetVKnotVector(vtkDoubleArray *kntos) {return 0;} /**< \brief Unimplemented */
-  int SetWKnotVector(vtkDoubleArray *kntos) {return 0;} /**< \brief Unimplemented */
+  int SetUKnotVector(vtkDoubleArray *knots);
+  int SetVKnotVector(vtkDoubleArray *knots);
+  int SetWKnotVector(vtkDoubleArray *knots);
 
   /** \brief Insert a knot certain number of times. */
   int InsertKnot(const double newKnot, const int dim, const int numberOfInserts) {return 0;} /**< \brief Unimplemented */
@@ -141,7 +141,7 @@ public:
   int GetKnot(const int index, const int dim, double &knotVal) {return 0;} /**< \brief Unimplemented */
   int GetKnots(const int indices, const int dim, vtkDoubleArray *knotVals) {return 0;} /**< \brief Unimplemented */
 
-  int SetControlPointGrid(vtkSVControlGrid *controlPoints) {return 0;} /**< \brief Unimplemented */
+  int SetControlPointGrid(vtkSVControlGrid *controlPoints);
 
   int SetControlPoint(const int index, const int dim, const double coordinate[3], const double weight) {return 0;} /**< \brief Unimplemented */
   int SetControlPoints(vtkIntArray *indices, const int dim, vtkPoints *coordinates, vtkDoubleArray *weights) {return 0;} /**< \brief Unimplemented */
@@ -164,10 +164,6 @@ public:
   int GetVMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots) {return 0;} /**< \brief Unimplemented */
   int GetWMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots) {return 0;} /**< \brief Unimplemented */
   int GetMultiplicity(const int dim, vtkIntArray *multiplicity, vtkDoubleArray *singleKnots) {return 0;} /**< /brief Unimplemented */
-
-  /** \brief Get structured grid connectivity.
-   *  \param connectivity empty cell array to be filled with a structured grid connectivity. */
-  int GetStructuredGridConnectivity(const int numXPoints, const int numYPoints, const int numZPoints, vtkCellArray *connectivity);
 
   // Description:
   // Retrieve an instance of this class from an information object.

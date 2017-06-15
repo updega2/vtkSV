@@ -130,7 +130,7 @@ public:
 
   /** \brief Functions to set the U and V direction knot spans. */
   int SetUKnotVector(vtkDoubleArray *knots);
-  int SetVKnotVector(vtkDoubleArray *kntos);
+  int SetVKnotVector(vtkDoubleArray *knots);
 
   /** \brief Insert a knot certain number of times. */
   int InsertKnot(const double newKnot, const int dim, const int numberOfInserts);
