@@ -30,6 +30,8 @@
 
 #include "vtkSVNURBSVolume.h"
 
+#include "vtkArrayExtents.h"
+#include "vtkArrayRange.h"
 #include "vtkCellArray.h"
 #include "vtkCleanPolyData.h"
 #include "vtkSVNURBSUtils.h"
@@ -87,7 +89,7 @@ vtkSVNURBSVolume::~vtkSVNURBSVolume()
   {
     this->ControlPointGrid->Delete();
   }
-  for (int i=0; i<2; i++)
+  for (int i=0; i<3; i++)
   {
     if (this->UVWKnotVectors[i] != NULL)
     {
@@ -118,6 +120,7 @@ void vtkSVNURBSVolume::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "V Degree: " << this->VDegree << "\n";
   os << indent << "V Clamped: " << this->VClamped << "\n";
   os << indent << "V Closed: " << this->VClosed << "\n";
+  os << "\n";
   os << indent << "Number of control points in w direction: " << this->NumberOfWControlPoints << "\n";
   os << indent << "Number of knot points in w direction: " << this->NumberOfWKnotPoints << "\n";
   os << indent << "W Degree: " << this->WDegree << "\n";
@@ -319,35 +322,73 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
   //TODO HERER
   vtkNew(vtkSparseArray<double>, NVfinalT);
   vtkSVNURBSUtils::MatrixTranspose(NVfinal, 0, NVfinalT);
+
+  vtkNew(vtkSparseArray<double>, NWfinalT);
+  vtkSVNURBSUtils::MatrixTranspose(NWfinal, 0, NWfinalT);
   //Get the physical points on the surface!
   // -----------------------------------------------------------------------
   // When dealing with the rational of NURBS, need to multiply points by
   // weights when sending through matrix multiplication. However, still need
   // fourth spot in point, weight vector because in the end, we will need
   // to divide by the total weight
-  vtkNew(vtkDenseArray<double>, tmpControlGrid);
-  vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(this->ControlPointGrid, tmpControlGrid);
+  vtkArrayExtents size;
+  size.SetDimensions(4);
+  size.SetExtent(0, vtkArrayRange(0, numUDiv));
+  size.SetExtent(1, vtkArrayRange(0, numVDiv));
+  size.SetExtent(2, vtkArrayRange(0, nWCon));
+  size.SetExtent(3, vtkArrayRange(0, 4));
+  vtkNew(vtkDenseArray<double>, tmpW);
+  tmpW->Resize(size);
 
-  // Do first matrix multiply with u basis functions
-  vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, 1, tmpControlGrid, 1, 4, tmpUGrid) != SV_OK)
+  for (int i=0; i<nWCon; i++)
   {
-    fprintf(stderr, "Error in matrix multiply\n");
-    return SV_ERROR;
-  }
-  // Do second matrix multiply with v basis functions
-  vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 4, NVfinalT, 0, 1, tmpVGrid) != SV_OK)
-  {
-    fprintf(stderr, "Error in matrix multiply\n");
-    return SV_ERROR;
+    vtkNew(vtkDenseArray<double>, tmpControlGrid);
+    vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(this->ControlPointGrid, 0, 1, 2, i, tmpControlGrid);
+
+    // Do first matrix multiply with u basis functions
+    vtkNew(vtkDenseArray<double>, tmpUGrid);
+    if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, 1, tmpControlGrid, 1, 4, tmpUGrid) != SV_OK)
+    {
+      fprintf(stderr, "Error in matrix multiply\n");
+      return SV_ERROR;
+    }
+    // Do second matrix multiply with v basis functions
+    vtkNew(vtkDenseArray<double>, tmpVGrid);
+    if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 4, NVfinalT, 0, 1, tmpVGrid) != SV_OK)
+    {
+      fprintf(stderr, "Error in matrix multiply\n");
+      return SV_ERROR;
+    }
+
+    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVGrid, tmpW, 0, 1, 2, i);
   }
 
+  size.SetExtent(0, vtkArrayRange(0, numUDiv));
+  size.SetExtent(1, vtkArrayRange(0, numVDiv));
+  size.SetExtent(2, vtkArrayRange(0, numWDiv));
+  size.SetExtent(3, vtkArrayRange(0, 4));
+  vtkNew(vtkDenseArray<double>, fullGrid);
+  fullGrid->Resize(size);
+  for (int i=0; i<numUDiv; i++)
+  {
+    vtkNew(vtkDenseArray<double>, tmpWGrid);
+    //vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmpW, 1, 2, 0, i, tmpWGrid);  TODO
+
+    // Do second matrix multiply with v basis functions
+    vtkNew(vtkDenseArray<double>, tmpVWGrid);
+    if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpWGrid, 1, 4, NWfinalT, 0, 1, tmpVWGrid) != SV_OK)
+    {
+      fprintf(stderr, "Error in matrix multiply\n");
+      return SV_ERROR;
+    }
+
+    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVWGrid, fullGrid, 1, 2, 0, i);
+  }
   // Set up final grid of points
   vtkNew(vtkStructuredGrid, finalGrid);
   vtkNew(vtkPoints, tmpVPoints);
   finalGrid->SetPoints(tmpVPoints);
-  vtkSVNURBSUtils::TypedArrayToStructuredGridRational(tmpVGrid, finalGrid);
+  //vtkSVNURBSUtils::TypedArrayToStructuredGridRational(fullGrid, finalGrid);  TODO
 
   // Get grid connectivity for pointset
   vtkNew(vtkCellArray, volumeCells);

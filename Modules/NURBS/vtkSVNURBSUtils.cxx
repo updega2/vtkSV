@@ -5669,6 +5669,56 @@ int vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid, vtkT
 }
 
 // ----------------------
+// ControlGridToTypedArray
+// ----------------------
+int vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid,  const int dim0, const int dim1, const int dim2, const int comp2, vtkTypedArray<double> *output)
+{
+  int dim[3];
+  grid->GetDimensions(dim);
+  //Get weights
+  vtkDataArray *weights = grid->GetPointData()->GetArray("Weights");
+  if (weights == NULL)
+  {
+    fprintf(stderr,"No weights on control point grid\n");
+    return SV_ERROR;
+  }
+
+  //2D array with third dimensions the coordinates + weights
+  output->Resize(dim[dim0], dim[dim1], 4);
+
+  for (int i=0; i<dim[dim0]; i++)
+  {
+    for (int j=0; j<dim[dim1]; j++)
+    {
+      int pos[3]; pos[dim2] = comp2;
+      pos[dim0] = i;
+      pos[dim1] = j;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      double pw[4];
+
+      grid->GetPoint(ptId, pw);
+      pw[3] = weights->GetTuple1(ptId);
+
+      // This needs to be noted! We are doing this for the reationality of
+      // NURBS. Multiplying point by weight, but also keeping the fourth
+      // location so that in the end we have a sum of the weights as well.
+      vtkMath::MultiplyScalar(pw, pw[3]);
+
+      for (int k=0; k<4; k++)
+      {
+        vtkArrayCoordinates loc;
+        loc.SetCoordinate(dim0, i);
+        loc.SetCoordinate(dim1, j);
+        loc.SetCoordinate(dim2, k);
+        output->SetValue(loc, pw[k]);
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
 // PointsToTypedArray
 // ----------------------
 int vtkSVNURBSUtils::PointsToTypedArray(vtkPoints *points, vtkTypedArray<double> *output)
@@ -5779,6 +5829,76 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
   }
 
     return SV_OK;
+}
+
+// ----------------------
+// SetMatrixOfDim4Grid
+// ----------------------
+int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2)
+{
+  int matrixDims = matrix->GetDimensions();
+  int mdim[3];
+  for (int i=0; i<3; i++)
+  {
+    mdim[i] = matrix->GetExtents()[i].GetSize();
+  }
+  if (matrixDims > 3)
+  {
+    fprintf(stderr,"More than 3 Dimensions are not supported\n");
+    return SV_ERROR;
+  }
+  if (mdim[2] != 4)
+  {
+    fprintf(stderr,"Third dimension should have xyz coordinates, fourth weight\n");
+    return SV_ERROR;
+  }
+
+  int gridDims = grid->GetDimensions();
+  int gdim[4];
+  for (int i=0; i<4; i++)
+  {
+    gdim[i] = grid->GetExtents()[i].GetSize();
+  }
+  if (gridDims > 4)
+  {
+    fprintf(stderr,"More than 4 Dimensions are not supported\n");
+    return SV_ERROR;
+  }
+  if (gdim[3] != 4)
+  {
+    fprintf(stderr,"Fourth dimension should have xyz coordinates, fourth weight\n");
+    return SV_ERROR;
+  }
+
+  if (mdim[0] != gdim[dim0])
+  {
+    fprintf(stderr,"Setting %d dimension of grid with size %d, but given matrix with first dimension %d\n", dim0, gdim[dim0], mdim[0]);
+  }
+
+  if (mdim[1] != gdim[dim1])
+  {
+    fprintf(stderr,"Setting %d dimension of grid with size %d, but given matrix with first dimension %d\n", dim1, gdim[dim1], mdim[1]);
+  }
+
+  for (int i=0; i<mdim[0]; i++)
+  {
+    for (int j=0; j<mdim[1]; j++)
+    {
+      for (int k=0; k<4; k++)
+      {
+        double val = matrix->GetValue(i, j, k);
+
+        vtkArrayCoordinates loc;
+        loc.SetCoordinate(dim0, i);
+        loc.SetCoordinate(dim1, j);
+        loc.SetCoordinate(dim2, comp2);
+        loc.SetCoordinate(3, k);
+        grid->SetValue(loc, val);
+      }
+    }
+  }
+
+  return SV_OK;
 }
 
 // ----------------------

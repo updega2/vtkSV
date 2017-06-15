@@ -206,7 +206,7 @@ protected:
     { vtkErrorMacro( << "AddInput() must be called with a vtkUnstructuredGrid not a vtkDataObject."); };
 
   //Function to run the intersection on intersecting polydatas
-  int LoftNURBS(vtkStructuredGrid *inputs,int numInputs,vtkUnstructuredGrid *outputPD);
+  int LoftNURBS(vtkStructuredGrid *inputs,int numInputs,vtkUnstructuredGrid *outputUG);
 
   //User defined booleans for filter management
   int UserManagedInputs;

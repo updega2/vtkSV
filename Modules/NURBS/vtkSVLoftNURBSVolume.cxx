@@ -451,12 +451,14 @@ int vtkSVLoftNURBSVolume::FillInputPortInformation(
 // LoftNURBS
 // ----------------------
 int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
-    vtkUnstructuredGrid *outputPD)
+    vtkUnstructuredGrid *outputUG)
 {
   // Get number of control points and degree
-  int nUCon = numInputs;
-  int nVCon = 0; inputs->GetNumberOfPoints();
-  int nWCon = 0; inputs->GetNumberOfPoints();
+  int dim[3];
+  inputs->GetDimensions(dim);
+  int nUCon = dim[0];
+  int nVCon = dim[1];
+  int nWCon = dim[2];
   int p     = this->UDegree;
   int q     = this->VDegree;
   int r     = this->WDegree;
@@ -468,16 +470,6 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   std::string putype = this->UParametricSpanType;
   std::string pvtype = this->VParametricSpanType;
   std::string pwtype = this->WParametricSpanType;
-
-  // Make sure input dimensions make sense
-  for (int i=0; i<nUCon; i++)
-  {
-    if (nVCon != 1; inputs->GetNumberOfPoints())
-    {
-      vtkErrorMacro("Input segments do not have the same number of points, cannot loft");
-      return SV_ERROR;
-    }
-  }
 
   // Check that the number of inputs enough for degree
   if (p > nUCon)
@@ -497,14 +489,18 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   }
 
   // Set the temporary control points
-  vtkNew(vtkPoints, tmpPoints);
-  tmpPoints->SetNumberOfPoints(nUCon);
+  vtkNew(vtkPoints, tmpUPoints);
+  tmpUPoints->SetNumberOfPoints(nUCon);
   for (int i=0; i<nUCon; i++)
-    tmpPoints->SetPoint(i, inputs->GetPoint(0));
+  {
+    int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
+    int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    tmpUPoints->SetPoint(i, inputs->GetPoint(ptId));
+  }
 
   // Get the input point set u representation
   vtkNew(vtkDoubleArray, U);
-  if (vtkSVNURBSUtils::GetUs(tmpPoints, putype, U) != SV_OK)
+  if (vtkSVNURBSUtils::GetUs(tmpUPoints, putype, U) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -521,9 +517,17 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   //fprintf(stdout,"X knots\n");
   //vtkSVNURBSUtils::PrintArray(uKnots);
   //
+  vtkNew(vtkPoints, tmpVPoints);
+  tmpVPoints->SetNumberOfPoints(nVCon);
+  for (int i=0; i<nVCon; i++)
+  {
+    int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
+    int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    tmpVPoints->SetPoint(i, inputs->GetPoint(ptId));
+  }
   // Get the input point set v representation
   vtkNew(vtkDoubleArray, V);
-  if (vtkSVNURBSUtils::GetUs(inputs->GetPoints(), pvtype, V) != SV_OK)
+  if (vtkSVNURBSUtils::GetUs(tmpVPoints, pvtype, V) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -540,9 +544,17 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   //fprintf(stdout,"Y knots\n");
   //vtkSVNURBSUtils::PrintArray(vKnots);
 
+  vtkNew(vtkPoints, tmpWPoints);
+  tmpWPoints->SetNumberOfPoints(nWCon);
+  for (int i=0; i<nWCon; i++)
+  {
+    int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
+    int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    tmpWPoints->SetPoint(i, inputs->GetPoint(ptId));
+  }
   // Get the input point set v representation
   vtkNew(vtkDoubleArray, W);
-  if (vtkSVNURBSUtils::GetUs(inputs->GetPoints(), pvtype, W) != SV_OK)
+  if (vtkSVNURBSUtils::GetUs(tmpWPoints, pwtype, W) != SV_OK)
   {
     return SV_ERROR;
   }
@@ -602,12 +614,12 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   // Set the knot vectors and control points
   this->Volume->SetKnotVector(uKnots, 0);
   this->Volume->SetKnotVector(vKnots, 1);
-  //this->Volume->SetKnotVector(wKnots, 2);
+  this->Volume->SetKnotVector(wKnots, 2);
   this->Volume->SetControlPoints(cPoints);
 
   // Get the polydata representation from the NURBS Volume
   this->Volume->GenerateVolumeRepresentation(this->UnstructuredGridUSpacing, this->UnstructuredGridVSpacing, this->UnstructuredGridWSpacing);
-  outputPD->DeepCopy(this->Volume->GetVolumeRepresentation());
+  outputUG->DeepCopy(this->Volume->GetVolumeRepresentation());
 
   return SV_OK;
 }

@@ -514,6 +514,7 @@ public:
   static int PolyDatasToStructuredGrid(vtkPolyData **inputs, const int numInputs, vtkStructuredGrid *points);
   static int StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkTypedArray<double> *output);
   static int ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid, vtkTypedArray<double> *output);
+  static int ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid, const int dim0, const int dim1, const int dim2, const int comp2, vtkTypedArray<double> *output);
   static int TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vtkStructuredGrid *output);
   static int TypedArrayToStructuredGridRational(vtkTypedArray<double> *array, vtkStructuredGrid *output);
   static int PointsToTypedArray(vtkPoints *points, vtkTypedArray<double> *output);
@@ -523,6 +524,7 @@ public:
   static int VectorToMatrix(double *matVec, const int nr, const int nc, vtkTypedArray<double> *mat);
   static int PointMatrixToVectors(vtkTypedArray<double> *mat, double **matVecs);
   static int VectorsToPointMatrix(double **matVecs, const int nr, const int nc, const int np,  vtkTypedArray<double> *mat);
+  static int SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2);
   static int DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double> *output);
 
   //Matrix and vector math
