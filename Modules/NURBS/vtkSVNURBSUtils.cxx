@@ -5707,6 +5707,7 @@ int vtkSVNURBSUtils::ControlGridToTypedArraySPECIAL(vtkSVControlGrid *grid,  con
       for (int k=0; k<4; k++)
       {
         vtkArrayCoordinates loc;
+        loc.SetDimensions(3);
         loc.SetCoordinate(dim0, i);
         loc.SetCoordinate(dim1, j);
         loc.SetCoordinate(dim2, k);
@@ -5902,50 +5903,144 @@ int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTyped
 }
 
 // ----------------------
-// TypedArrayToControlGrid
+// GetMatrixOfDim4Grid
+// ----------------------
+int vtkSVNURBSUtils::GetMatrixOfDim4Grid(vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, vtkTypedArray<double> *matrix)
+{
+  int gridDims = grid->GetDimensions();
+  int gdim[4];
+  for (int i=0; i<4; i++)
+  {
+    gdim[i] = grid->GetExtents()[i].GetSize();
+  }
+  if (gridDims > 4)
+  {
+    fprintf(stderr,"More than 4 Dimensions are not supported\n");
+    return SV_ERROR;
+  }
+  if (gdim[3] != 4)
+  {
+    fprintf(stderr,"Fourth dimension should have xyz coordinates, fourth weight\n");
+    return SV_ERROR;
+  }
+
+  matrix->Resize(gdim[dim0], gdim[dim1], 4);
+
+  for (int i=0; i<gdim[dim0]; i++)
+  {
+    for (int j=0; j<gdim[dim1]; j++)
+    {
+      for (int k=0; k<4; k++)
+      {
+        vtkArrayCoordinates loc;
+        loc.SetDimensions(4);
+        loc.SetCoordinate(dim0, i);
+        loc.SetCoordinate(dim1, j);
+        loc.SetCoordinate(dim2, comp2);
+        loc.SetCoordinate(3, k);
+        double val = grid->GetValue(loc);
+
+        matrix->SetValue(i, j, k, val);
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// TypedArrayToStructuredGridRational
 // ----------------------
 int vtkSVNURBSUtils::TypedArrayToStructuredGridRational(vtkTypedArray<double> *array, vtkStructuredGrid *output)
 {
   int dims = array->GetDimensions();
   //2D array with third dimensions the coordinates
-  int dim[3];
-  for (int i=0; i<3; i++)
+  int dim[4];
+  for (int i=0; i<dims; i++)
   {
     dim[i] = array->GetExtents()[i].GetSize();
   }
 
-  if (dims > 3)
+  if (dims == 2)
   {
-    fprintf(stderr,"3 Dimensions are not yet supported\n");
-    return SV_ERROR;
+    if (dim[1] != 4)
+    {
+      fprintf(stderr,"Second dimension should have xyz coordinates and weight\n");
+      return SV_ERROR;
+    }
+    dim[1] = 1; dim[2] = 1;
   }
-  if (dim[2] != 4)
+  else if (dims == 3)
   {
-    fprintf(stderr,"Third dimension should have xyz coordinates, fourth weight\n");
+    if (dim[2] != 4)
+    {
+      fprintf(stderr,"Third dimension should have xyz coordinates and weight\n");
+      return SV_ERROR;
+    }
+    dim[2] = 1;
+  }
+  else if (dims == 4)
+  {
+    if (dim[3] != 4)
+    {
+      fprintf(stderr,"Fourth dimension should have xyz coordinates and weight\n");
+      return SV_ERROR;
+    }
+  }
+  else
+  {
+    fprintf(stderr,"This dimension not supported\n");
     return SV_ERROR;
   }
 
-  output->SetDimensions(dim[0], dim[1], 1);
-  output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]);
+  output->SetDimensions(dim[0], dim[1], dim[2]);
+  output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]*dim[2]);
 
-  //2D array with third dimensions the coordinates
+  //ND array with third dimensions the coordinates
   for (int i=0; i<dim[0]; i++)
   {
     for (int j=0; j<dim[1]; j++)
     {
-      int pos[3]; pos[2] =0;
-      pos[0] = i;
-      pos[1] = j;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      double pt[3];
-      for (int k=0; k<3; k++)
+      for (int k=0; k<dim[2]; k++)
       {
-        pt[k] = array->GetValue(i, j, k);
-      }
-      double weight_total = array->GetValue(i, j, 3);
-      vtkMath::MultiplyScalar(pt, 1./weight_total);
+        int pos[3];
+        pos[0] = i;
+        pos[1] = j;
+        pos[2] = k;
+        int ptId = vtkStructuredData::ComputePointId(dim, pos);
 
-      output->GetPoints()->SetPoint(ptId, pt);
+        double pt[3];
+        vtkArrayCoordinates loc;
+        loc.SetDimensions(dims);
+        loc.SetCoordinate(0, i);
+        if (dims == 3)
+          loc.SetCoordinate(1, j);
+        if (dims == 4)
+        {
+          loc.SetCoordinate(1, j);
+          loc.SetCoordinate(2, k);
+        }
+        for (int l=0; l<3; l++)
+        {
+          if (dims == 2)
+            loc.SetCoordinate(1, l);
+          if (dims == 3)
+            loc.SetCoordinate(2, l);
+          if (dims == 4)
+            loc.SetCoordinate(3, l);
+          pt[l] = array->GetValue(loc);
+        }
+        if (dims == 2)
+          loc.SetCoordinate(1, 3);
+        if (dims == 3)
+          loc.SetCoordinate(2, 3);
+        if (dims == 4)
+          loc.SetCoordinate(3, 3);
+        double weight_total = array->GetValue(loc);
+        vtkMath::MultiplyScalar(pt, 1./weight_total);
+
+        output->GetPoints()->SetPoint(ptId, pt);
+      }
     }
   }
 

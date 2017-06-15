@@ -117,13 +117,13 @@ int TestConjugateGradient(int argc, char *argv[])
   if (TestSolve() != SV_OK)
   {
     fprintf(stdout,"Incorrect system solve\n");
-    return SV_ERROR;
+    EXIT_FAILURE;
   }
 
   if (TestMinimize() != SV_OK)
   {
     fprintf(stdout,"Didn't minimize system\n");
-    return SV_ERROR;
+    EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;

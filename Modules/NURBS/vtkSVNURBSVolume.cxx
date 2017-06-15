@@ -318,8 +318,6 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
   // Last value should be 1
   NWfinal->SetValue(numWDiv-1, nWCon-1, 1.0);
 
-
-  //TODO HERER
   vtkNew(vtkSparseArray<double>, NVfinalT);
   vtkSVNURBSUtils::MatrixTranspose(NVfinal, 0, NVfinalT);
 
@@ -372,7 +370,7 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
   for (int i=0; i<numUDiv; i++)
   {
     vtkNew(vtkDenseArray<double>, tmpWGrid);
-    //vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmpW, 1, 2, 0, i, tmpWGrid);  TODO
+    vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmpW, 1, 2, 0, i, tmpWGrid);
 
     // Do second matrix multiply with v basis functions
     vtkNew(vtkDenseArray<double>, tmpVWGrid);
@@ -388,7 +386,7 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
   vtkNew(vtkStructuredGrid, finalGrid);
   vtkNew(vtkPoints, tmpVPoints);
   finalGrid->SetPoints(tmpVPoints);
-  //vtkSVNURBSUtils::TypedArrayToStructuredGridRational(fullGrid, finalGrid);  TODO
+  vtkSVNURBSUtils::TypedArrayToStructuredGridRational(fullGrid, finalGrid);
 
   // Get grid connectivity for pointset
   vtkNew(vtkCellArray, volumeCells);
