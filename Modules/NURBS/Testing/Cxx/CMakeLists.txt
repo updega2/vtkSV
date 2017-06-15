@@ -39,7 +39,8 @@ vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestSurfaceKnotRefinement.cxx,NO_DATA
   TestSurfaceRemoveKnot.cxx,NO_DATA,NO_VALID,NO_OUTPUT
   TestSurfaceBezierExtraction.cxx,NO_DATA
-  TestSurfaceIncreaseDegree.cxx,NO_DATA)
+  TestSurfaceIncreaseDegree.cxx,NO_DATA
+  TestCylinderVolume.cxx,NO_DATA)
 
 vtk_test_cxx_executable(${vtk-module}CxxTests tests
   RENDERING_FACTORY)
