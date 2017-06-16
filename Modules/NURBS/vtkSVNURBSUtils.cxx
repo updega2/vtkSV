@@ -2267,6 +2267,7 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
   points->GetDimensions(dim);
   int nUCon = dim[0];
   int nVCon = dim[1];
+  int nWCon = dim[2];
 
   vtkNew(vtkSparseArray<double>, NPUTmp);
   vtkNew(vtkSparseArray<double>, NPUFinal);
@@ -2348,41 +2349,80 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
     return SV_ERROR;
   }
 
-
   //fprintf(stdout,"Inverted system U:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPUinv);
   //fprintf(stdout,"Inverted system V:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPVinv);
   //fprintf(stdout,"Inverted system W:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPWinv);
-  vtkNew(vtkDenseArray<double>, tmpUGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, 1, pointMatFinal, 1, 3, tmpUGrid) != SV_OK)
+
+  vtkNew(vtkSparseArray<double>, NPVinvT);
+  vtkSVNURBSUtils::MatrixTranspose(NPVinv, 0, NPVinvT);
+
+  vtkNew(vtkSparseArray<double>, NPWinvT);
+  vtkSVNURBSUtils::MatrixTranspose(NPWinv, 0, NPWinvT);
+
+  int numUDiv = NPUinv->GetExtents()[0].GetSize();
+  int numVDiv = NPVinv->GetExtents()[0].GetSize();
+  int numWDiv = NPWinv->GetExtents()[0].GetSize();
+
+  vtkArrayExtents size;
+  size.SetDimensions(4);
+  size.SetExtent(0, vtkArrayRange(0, numUDiv));
+  size.SetExtent(1, vtkArrayRange(0, numVDiv));
+  size.SetExtent(2, vtkArrayRange(0, nWCon));
+  size.SetExtent(3, vtkArrayRange(0, 3));
+  vtkNew(vtkDenseArray<double>, tmpW);
+  tmpW->Resize(size);
+
+  for (int i=0; i<nWCon; i++)
   {
-    fprintf(stderr, "Error in matrix multiply\n");
-    return SV_ERROR;
+    vtkNew(vtkDenseArray<double>, tmpWMat);
+    vtkSVNURBSUtils::GetMatrixOfDim4Grid(pointMatFinal, 0, 1, 2, i, 3, tmpWMat);
+
+    vtkNew(vtkDenseArray<double>, tmpUGrid);
+    if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, 1, tmpWMat, 1, 3, tmpUGrid) != SV_OK)
+    {
+      fprintf(stderr, "Error in matrix multiply\n");
+      return SV_ERROR;
+    }
+
+    vtkNew(vtkDenseArray<double>, tmpVGrid);
+    if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 3, NPVinvT, 0, 1, tmpVGrid) != SV_OK)
+    {
+      fprintf(stderr, "Error in matrix multiply\n");
+      return SV_ERROR;
+    }
+
+    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVGrid, tmpW, 0, 1, 2, i, 3);
   }
-  vtkNew(vtkDenseArray<double>, tmpUGridT);
-  vtkSVNURBSUtils::MatrixTranspose(tmpUGrid, 1, tmpUGridT);
-  vtkNew(vtkDenseArray<double>, tmpVGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPVinv, 0, 1, tmpUGridT, 1, 3, tmpVGrid) != SV_OK)
+
+  size.SetExtent(0, vtkArrayRange(0, numUDiv));
+  size.SetExtent(1, vtkArrayRange(0, numVDiv));
+  size.SetExtent(2, vtkArrayRange(0, numWDiv));
+  size.SetExtent(3, vtkArrayRange(0, 3));
+  vtkNew(vtkDenseArray<double>, fullGrid);
+  fullGrid->Resize(size);
+
+  for (int i=0; i<numUDiv; i++)
   {
-    fprintf(stderr, "Error in matrix multiply\n");
-    return SV_ERROR;
-  }
-  vtkNew(vtkDenseArray<double>, tmpVGridT);
-  vtkSVNURBSUtils::MatrixTranspose(tmpVGrid, 1, tmpVGridT);
-  vtkNew(vtkDenseArray<double>, tmpWGrid);
-  if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPWinv, 0, 1, tmpVGridT, 1, 3, tmpWGrid) != SV_OK)
-  {
-    fprintf(stderr, "Error in matrix multiply\n");
-    return SV_ERROR;
+    vtkNew(vtkDenseArray<double>, tmpWGrid);
+    vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmpW, 1, 2, 0, i, 3, tmpWGrid);
+
+    // Do second matrix multiply with v basis functions
+    vtkNew(vtkDenseArray<double>, tmpVWGrid);
+    if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpWGrid, 1, 3, NPWinvT, 0, 1, tmpVWGrid) != SV_OK)
+    {
+      fprintf(stderr, "Error in matrix multiply\n");
+      return SV_ERROR;
+    }
+
+    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVWGrid, fullGrid, 1, 2, 0, i, 3);
   }
 
   vtkNew(vtkPoints, finalPoints);
   cPoints->SetPoints(finalPoints);
-  vtkNew(vtkDenseArray<double>, tmpWGridT);
-  vtkSVNURBSUtils::MatrixTranspose(tmpWGrid, 1, tmpWGridT);
-  vtkSVNURBSUtils::TypedArrayToStructuredGrid(tmpWGridT, cPoints);
+  vtkSVNURBSUtils::TypedArrayToStructuredGrid(fullGrid, cPoints);
   //fprintf(stdout,"Final structured grid of control points\n");
   //vtkSVNURBSUtils::PrintStructuredGrid(cPoints);
 
@@ -4596,7 +4636,7 @@ int vtkSVNURBSUtils::AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<
 int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double> *output)
 {
   int dims = input->GetDimensions();
-  int dim[3];
+  int dim[4];
   for (int i=0; i<dims; i++)
   {
     dim[i] = input->GetExtents()[i].GetSize();
@@ -4613,6 +4653,18 @@ int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double
   {
     output->Resize(dim[0], dim[1], dim[2]);
   }
+  else if (dims == 4)
+  {
+    vtkArrayExtents size;
+    size.SetDimensions(4);
+    size.SetExtent(0, vtkArrayRange(0, dim[0]));
+    size.SetExtent(1, vtkArrayRange(0, dim[1]));
+    size.SetExtent(2, vtkArrayRange(0, dim[2]));
+    size.SetExtent(3, vtkArrayRange(0, dim[3]));
+
+    output->Resize(size);
+  }
+
 
   for (int i=0; i<dim[0]; i++)
   {
@@ -4634,8 +4686,26 @@ int vtkSVNURBSUtils::DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double
         {
           for (int k=0; k<dim[2]; k++)
           {
-            double val = input->GetValue(i, j, k);
-            output->SetValue(i, j, k, val);
+            if (dims == 3)
+            {
+              double val = input->GetValue(i, j, k);
+              output->SetValue(i, j, k, val);
+            }
+            else
+            {
+              for (int l=0; l<dim[3]; l++)
+              {
+                vtkArrayCoordinates loc;
+                loc.SetDimensions(4);
+                loc.SetCoordinate(0, i);
+                loc.SetCoordinate(1, j);
+                loc.SetCoordinate(2, k);
+                loc.SetCoordinate(3, l);
+
+                double val = input->GetValue(loc);
+                output->SetValue(loc, val);
+              }
+            }
           }
         }
       }
@@ -5577,6 +5647,44 @@ int vtkSVNURBSUtils::SetMatrixComp(vtkTypedArray<double> *vec,  const int loc, c
   return SV_OK;
 }
 
+//// ----------------------
+//// StructuredGridToTypedArray
+//// ----------------------
+//int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkTypedArray<double> *output)
+//{
+//  int dim[3];
+//  grid->GetDimensions(dim);
+//
+//  if (dim[2] != 1)
+//  {
+//    fprintf(stderr,"3 Dimensions are not yet supported\n");
+//    return SV_ERROR;
+//  }
+//
+//  //2D array with third dimensions the coordinates
+//  output->Resize(dim[0], dim[1], 3);
+//
+//  for (int i=0; i<dim[0]; i++)
+//  {
+//    for (int j=0; j<dim[1]; j++)
+//    {
+//      int pos[3]; pos[2] =0;
+//      pos[0] = i;
+//      pos[1] = j;
+//      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+//      double pt[3];
+//
+//      grid->GetPoint(ptId, pt);
+//      for (int k=0; k<3; k++)
+//      {
+//        output->SetValue(i, j, k, pt[k]);
+//      }
+//    }
+//  }
+//
+//  return SV_OK;
+//}
+
 // ----------------------
 // StructuredGridToTypedArray
 // ----------------------
@@ -5585,29 +5693,55 @@ int vtkSVNURBSUtils::StructuredGridToTypedArray(vtkStructuredGrid *grid, vtkType
   int dim[3];
   grid->GetDimensions(dim);
 
-  if (dim[2] != 1)
+  int dims;
+  if (dim[2] == 1 && dim[1] == 1 && dim[0] != 1)
+    dims = 1;
+  else if (dim[2] == 1 && dim[1] != 1 && dim[0] != 1)
+    dims = 2;
+  else if (dim[2] != 1 && dim[1] != 1 && dim[0] != 1)
+    dims = 3;
+  else
   {
-    fprintf(stderr,"3 Dimensions are not yet supported\n");
+    fprintf(stderr,"Please provide a regular structured grid\n");
     return SV_ERROR;
   }
 
   //2D array with third dimensions the coordinates
-  output->Resize(dim[0], dim[1], 3);
+  vtkArrayExtents size;
+  size.SetDimensions(dims+1);
+  for (int i=0; i<dims; i++)
+    size.SetExtent(i, vtkArrayRange(0, dim[i]));
+  size.SetExtent(dims, vtkArrayRange(0, 3));
+
+  output->Resize(size);
 
   for (int i=0; i<dim[0]; i++)
   {
     for (int j=0; j<dim[1]; j++)
     {
-      int pos[3]; pos[2] =0;
-      pos[0] = i;
-      pos[1] = j;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      double pt[3];
-
-      grid->GetPoint(ptId, pt);
-      for (int k=0; k<3; k++)
+      for (int k=0; k<dim[2]; k++)
       {
-        output->SetValue(i, j, k, pt[k]);
+        int pos[3];
+        pos[0] = i;
+        pos[1] = j;
+        pos[2] = k;
+        int ptId = vtkStructuredData::ComputePointId(dim, pos);
+        double pt[3];
+
+        grid->GetPoint(ptId, pt);
+        vtkArrayCoordinates loc;
+        loc.SetDimensions(dims+1);
+        loc.SetCoordinate(0, i);
+        if (dims >= 2)
+         loc.SetCoordinate(1, j);
+        if (dims == 3)
+         loc.SetCoordinate(2, k);
+
+        for (int l=0; l<3; l++)
+        {
+          loc.SetCoordinate(dims, l);
+          output->SetValue(loc, pt[l]);
+        }
       }
     }
   }
@@ -5792,40 +5926,75 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
 {
   int dims = array->GetDimensions();
   //2D array with third dimensions the coordinates
-  int dim[3];
-  for (int i=0; i<3; i++)
+  int dim[4];
+  for (int i=0; i<dims; i++)
   {
     dim[i] = array->GetExtents()[i].GetSize();
   }
 
-  if (dims > 3)
+  if (dims == 2)
   {
-    fprintf(stderr,"3 Dimensions are not yet supported\n");
-    return SV_ERROR;
+    if (dim[1] != 3)
+    {
+      fprintf(stderr,"Second dimension should have xyz coordinates\n");
+      return SV_ERROR;
+    }
+    dim[1] = 1; dim[2] = 1;
   }
-  if (dim[2] != 3)
+  else if (dims == 3)
   {
-    fprintf(stderr,"Third dimension should have xyz coordinates\n");
+    if (dim[2] != 3)
+    {
+      fprintf(stderr,"Third dimension should have xyz coordinates\n");
+      return SV_ERROR;
+    }
+    dim[2] = 1;
+  }
+  else if (dims == 4)
+  {
+    if (dim[3] != 3)
+    {
+      fprintf(stderr,"Fourth dimension should have xyz coordinates\n");
+      return SV_ERROR;
+    }
+  }
+  else
+  {
+    fprintf(stderr,"This dimension not supported\n");
     return SV_ERROR;
   }
 
-  output->SetDimensions(dim[0], dim[1], 1);
-  output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]);
+  output->SetDimensions(dim[0], dim[1], dim[2]);
+  output->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]*dim[2]);
 
   for (int i=0; i<dim[0]; i++)
   {
     for (int j=0; j<dim[1]; j++)
     {
-      int pos[3]; pos[2] =0;
-      pos[0] = i;
-      pos[1] = j;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      double pt[3];
-      for (int k=0; k<3; k++)
+      for (int k=0; k<dim[2]; k++)
       {
-        pt[k] = array->GetValue(i, j, k);
+        int pos[3];
+        pos[0] = i;
+        pos[1] = j;
+        pos[2] = k;
+        int ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+        double pt[3];
+        vtkArrayCoordinates loc;
+        loc.SetDimensions(dims);
+        loc.SetCoordinate(0, i);
+        if (dims >= 3)
+          loc.SetCoordinate(1, j);
+        if (dims == 4)
+          loc.SetCoordinate(2, k);
+
+        for (int l=0; l<3; l++)
+        {
+          loc.SetCoordinate(dims-1, l);
+          pt[l] = array->GetValue(loc);
+        }
+        output->GetPoints()->SetPoint(ptId, pt);
       }
-      output->GetPoints()->SetPoint(ptId, pt);
     }
   }
 
@@ -5835,7 +6004,7 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGrid(vtkTypedArray<double> *array, vt
 // ----------------------
 // SetMatrixOfDim4Grid
 // ----------------------
-int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2)
+int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, const int num3)
 {
   int matrixDims = matrix->GetDimensions();
   int mdim[3];
@@ -5848,9 +6017,9 @@ int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTyped
     fprintf(stderr,"More than 3 Dimensions are not supported\n");
     return SV_ERROR;
   }
-  if (mdim[2] != 4)
+  if (mdim[2] != num3)
   {
-    fprintf(stderr,"Third dimension should have xyz coordinates, fourth weight\n");
+    fprintf(stderr,"Third dimension doesn't match\n");
     return SV_ERROR;
   }
 
@@ -5865,9 +6034,9 @@ int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTyped
     fprintf(stderr,"More than 4 Dimensions are not supported\n");
     return SV_ERROR;
   }
-  if (gdim[3] != 4)
+  if (gdim[3] != num3)
   {
-    fprintf(stderr,"Fourth dimension should have xyz coordinates, fourth weight\n");
+    fprintf(stderr,"Fourth dimension doesn't match %d\n", gdim[3]);
     return SV_ERROR;
   }
 
@@ -5885,7 +6054,7 @@ int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTyped
   {
     for (int j=0; j<mdim[1]; j++)
     {
-      for (int k=0; k<4; k++)
+      for (int k=0; k<num3; k++)
       {
         double val = matrix->GetValue(i, j, k);
 
@@ -5906,7 +6075,7 @@ int vtkSVNURBSUtils::SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTyped
 // ----------------------
 // GetMatrixOfDim4Grid
 // ----------------------
-int vtkSVNURBSUtils::GetMatrixOfDim4Grid(vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, vtkTypedArray<double> *matrix)
+int vtkSVNURBSUtils::GetMatrixOfDim4Grid(vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, const int num3, vtkTypedArray<double> *matrix)
 {
   int gridDims = grid->GetDimensions();
   int gdim[4];
@@ -5919,19 +6088,19 @@ int vtkSVNURBSUtils::GetMatrixOfDim4Grid(vtkTypedArray<double> *grid, const int 
     fprintf(stderr,"More than 4 Dimensions are not supported\n");
     return SV_ERROR;
   }
-  if (gdim[3] != 4)
+  if (gdim[3] != num3)
   {
-    fprintf(stderr,"Fourth dimension should have xyz coordinates, fourth weight\n");
+    fprintf(stderr,"Fourth dimension should have not equal\n");
     return SV_ERROR;
   }
 
-  matrix->Resize(gdim[dim0], gdim[dim1], 4);
+  matrix->Resize(gdim[dim0], gdim[dim1], num3);
 
   for (int i=0; i<gdim[dim0]; i++)
   {
     for (int j=0; j<gdim[dim1]; j++)
     {
-      for (int k=0; k<4; k++)
+      for (int k=0; k<num3; k++)
       {
         vtkArrayCoordinates loc;
         loc.SetDimensions(4);
@@ -6014,29 +6183,17 @@ int vtkSVNURBSUtils::TypedArrayToStructuredGridRational(vtkTypedArray<double> *a
         vtkArrayCoordinates loc;
         loc.SetDimensions(dims);
         loc.SetCoordinate(0, i);
-        if (dims == 3)
+        if (dims >= 3)
           loc.SetCoordinate(1, j);
         if (dims == 4)
-        {
-          loc.SetCoordinate(1, j);
           loc.SetCoordinate(2, k);
-        }
+
         for (int l=0; l<3; l++)
         {
-          if (dims == 2)
-            loc.SetCoordinate(1, l);
-          if (dims == 3)
-            loc.SetCoordinate(2, l);
-          if (dims == 4)
-            loc.SetCoordinate(3, l);
+          loc.SetCoordinate(dims-1, l);
           pt[l] = array->GetValue(loc);
         }
-        if (dims == 2)
-          loc.SetCoordinate(1, 3);
-        if (dims == 3)
-          loc.SetCoordinate(2, 3);
-        if (dims == 4)
-          loc.SetCoordinate(3, 3);
+        loc.SetCoordinate(dims-1, 3);
         double weight_total = array->GetValue(loc);
         vtkMath::MultiplyScalar(pt, 1./weight_total);
 

@@ -617,7 +617,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   this->Volume->SetKnotVector(wKnots, 2);
   this->Volume->SetControlPoints(cPoints);
 
-  // Get the polydata representation from the NURBS Volume
+  // Get the unstructuredgird representation from the NURBS Volume
   this->Volume->GenerateVolumeRepresentation(this->UnstructuredGridUSpacing, this->UnstructuredGridVSpacing, this->UnstructuredGridWSpacing);
   outputUG->DeepCopy(this->Volume->GetVolumeRepresentation());
 

@@ -524,8 +524,8 @@ public:
   static int VectorToMatrix(double *matVec, const int nr, const int nc, vtkTypedArray<double> *mat);
   static int PointMatrixToVectors(vtkTypedArray<double> *mat, double **matVecs);
   static int VectorsToPointMatrix(double **matVecs, const int nr, const int nc, const int np,  vtkTypedArray<double> *mat);
-  static int GetMatrixOfDim4Grid(vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, vtkTypedArray<double> *matrix);
-  static int SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2);
+  static int GetMatrixOfDim4Grid(vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, const int num3, vtkTypedArray<double> *matrix);
+  static int SetMatrixOfDim4Grid(vtkTypedArray<double> *matrix, vtkTypedArray<double> *grid, const int dim0, const int dim1, const int dim2, const int comp2, const int num3);
   static int DeepCopy(vtkTypedArray<double> *input, vtkTypedArray<double> *output);
 
   //Matrix and vector math

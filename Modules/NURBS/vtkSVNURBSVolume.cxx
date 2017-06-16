@@ -210,6 +210,27 @@ int vtkSVNURBSVolume::SetWKnotVector(vtkDoubleArray *knots)
 }
 
 // ----------------------
+// SetKnotVector
+// ----------------------
+void vtkSVNURBSVolume::SetKnotVector(vtkDoubleArray *knotVector, const int dim)
+{
+  // Get number of knots
+  int nKnot = knotVector->GetNumberOfTuples();
+
+  // Copy knots
+  this->UVWKnotVectors[dim]->DeepCopy(knotVector);
+
+  // Update number of knots
+  if (dim == 0)
+    this->NumberOfUKnotPoints = nKnot;
+  else if (dim == 1)
+    this->NumberOfVKnotPoints = nKnot;
+  else
+    this->NumberOfWKnotPoints = nKnot;
+}
+
+
+// ----------------------
 // SetControlPointGrid
 // ----------------------
 int vtkSVNURBSVolume::SetControlPointGrid(vtkSVControlGrid *controlPoints)
@@ -224,6 +245,32 @@ int vtkSVNURBSVolume::SetControlPointGrid(vtkSVControlGrid *controlPoints)
 
   return SV_OK;
 }
+
+// ----------------------
+// SetControlPoints
+// ----------------------
+void vtkSVNURBSVolume::SetControlPoints(vtkStructuredGrid *points3d)
+{
+  // Get dimensions
+  int dim[3];
+  points3d->GetDimensions(dim);
+
+  // Set points from structured grid
+  this->ControlPointGrid->SetPoints(points3d->GetPoints());
+  this->ControlPointGrid->SetDimensions(dim);
+
+  // Set weigths in u and v direction
+  this->ControlPointGrid->GetPointData()->GetArray("Weights")
+    ->SetNumberOfTuples(dim[0]*dim[1]*dim[2]);
+  this->ControlPointGrid->GetPointData()->GetArray("Weights")
+    ->FillComponent(0, 1.0);
+
+  // Update number of control points
+  this->NumberOfUControlPoints = dim[0];
+  this->NumberOfVControlPoints = dim[1];
+  this->NumberOfWControlPoints = dim[2];
+}
+
 
 // ----------------------
 // GenerateVolumeRepresentation
@@ -405,7 +452,7 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
       return SV_ERROR;
     }
 
-    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVGrid, tmpW, 0, 1, 2, i);
+    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVGrid, tmpW, 0, 1, 2, i, 4);
   }
 
   size.SetExtent(0, vtkArrayRange(0, numUDiv));
@@ -417,7 +464,7 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
   for (int i=0; i<numUDiv; i++)
   {
     vtkNew(vtkDenseArray<double>, tmpWGrid);
-    vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmpW, 1, 2, 0, i, tmpWGrid);
+    vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmpW, 1, 2, 0, i, 4, tmpWGrid);
 
     // Do second matrix multiply with v basis functions
     vtkNew(vtkDenseArray<double>, tmpVWGrid);
@@ -427,7 +474,7 @@ int vtkSVNURBSVolume::GenerateVolumeRepresentation(const double uSpacing,
       return SV_ERROR;
     }
 
-    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVWGrid, fullGrid, 1, 2, 0, i);
+    vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpVWGrid, fullGrid, 1, 2, 0, i, 4);
   }
   // Set up final grid of points
   vtkNew(vtkStructuredGrid, finalGrid);

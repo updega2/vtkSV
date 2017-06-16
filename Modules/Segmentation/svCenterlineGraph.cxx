@@ -202,8 +202,8 @@ int svCenterlineGraph::BuildGraph()
   if (connectingGroups->GetNumberOfIds() == 0)
   {
     // Just only this guy
-    fprintf(stdout,"Only one centerlines\n");
-    return SV_OK;
+    fprintf(stdout,"Only one centerline\n");
+    //return SV_OK;
   }
 
 
@@ -213,7 +213,8 @@ int svCenterlineGraph::BuildGraph()
   this->NumberOfNodes += this->Root->Children.size()+1;
 
   this->ComputeGlobalReferenceVectors(this->Root);
-  this->ComputeBranchReferenceVectors(this->Root);
+  if (this->Root->Children.size() != 0)
+    this->ComputeBranchReferenceVectors(this->Root);
 
   for (int i=0; i<this->Root->Children.size(); i++)
     this->GrowGraph(this->Root->Children[i]);
@@ -259,6 +260,56 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     if (cubeType == 0)
     {
       int numPoints = 8;
+
+      double finalPts[8][3];
+
+      // get vector towards top of cube
+      double workVec[3];
+      vtkMath::Cross(gCell->RefDirs[1], gCell->RefDirs[0], workVec);
+      vtkMath::Normalize(workVec);
+
+      // Get beginning points
+      double endVec[3];
+      vtkMath::Normalize(workVec);
+      vtkMath::Cross(gCell->RefDirs[0], workVec, endVec);
+      vtkMath::Normalize(endVec);
+      vtkMath::MultiplyScalar(endVec, width/2.);
+
+      // Get points to extrude up
+      double topPt0[3], topPt1[3];
+      vtkMath::Add(gCell->StartPt, endVec, topPt0);
+      vtkMath::MultiplyScalar(endVec, -1.0);
+      vtkMath::Add(gCell->StartPt, endVec, topPt1);
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, height/2.);
+      vtkMath::Add(topPt0, workVec, finalPts[1]);
+      vtkMath::Add(topPt1, workVec, finalPts[2]);
+
+      // extrude up
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(topPt0, workVec, finalPts[5]);
+      vtkMath::Add(topPt1, workVec, finalPts[6]);
+
+      // Get points to extrude up
+      double endPt0[3], endPt1[3];
+      vtkMath::MultiplyScalar(endVec, -1.0);
+      vtkMath::Add(gCell->EndPt, endVec, endPt0);
+      vtkMath::MultiplyScalar(endVec, -1.0);
+      vtkMath::Add(gCell->EndPt, endVec, endPt1);
+
+      // extrude down
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(endPt0, workVec, finalPts[0]);
+      vtkMath::Add(endPt1, workVec, finalPts[3]);
+
+      // extrude up
+      vtkMath::MultiplyScalar(workVec, -1.0);
+      vtkMath::Add(endPt0, workVec, finalPts[4]);
+      vtkMath::Add(endPt1, workVec, finalPts[7]);
+
+      for (int j=0; j<numPoints; j++)
+        addPoints->InsertNextPoint(finalPts[j]);
     }
     else if (cubeType == 1)
     {
@@ -870,56 +921,65 @@ int svCenterlineGraph::ComputeGlobalReferenceVectors(svCenterlineGCell *parent)
   vtkMath::Normalize(this->ReferenceVecs[0]);
 
   int numChildren = parent->Children.size();
-  for (int i=0; i<numChildren; i++)
+  if (numChildren != 0)
   {
-    thresholder->SetInputData(this->Lines);
-    thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
-    thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
-    thresholder->Update();
-
-    double startPts[3], secondPts[3];
-    thresholder->GetOutput()->GetPoint(0, startPts);
-    thresholder->GetOutput()->GetPoint(1, secondPts);
-
-    vtkMath::Subtract(secondPts, startPts, parent->Children[i]->BranchVec);
-    vtkMath::Normalize(parent->Children[i]->BranchVec);
-
-    // Get angle between vectors
-    double angleVec[3];
-    vtkMath::Cross(parent->Children[i]->BranchVec, this->ReferenceVecs[0], angleVec);
-    parent->Children[i]->RefAngle = atan2(vtkMath::Norm(angleVec), vtkMath::Dot(parent->Children[i]->BranchVec, this->ReferenceVecs[0]));
-  }
-
-  double minAngle = VTK_SV_LARGE_DOUBLE;
-  double maxAngle = -1.0*VTK_SV_LARGE_DOUBLE;
-  int minChild = 0;
-  int maxChild = 0;
-  for (int i=0; i<numChildren; i++)
-  {
-    if (parent->Children[i]->RefAngle < minAngle)
+    for (int i=0; i<numChildren; i++)
     {
-      minAngle = parent->Children[i]->RefAngle;
-      minChild = i;
+      thresholder->SetInputData(this->Lines);
+      thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
+      thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
+      thresholder->Update();
+
+      double startPts[3], secondPts[3];
+      thresholder->GetOutput()->GetPoint(0, startPts);
+      thresholder->GetOutput()->GetPoint(1, secondPts);
+
+      vtkMath::Subtract(secondPts, startPts, parent->Children[i]->BranchVec);
+      vtkMath::Normalize(parent->Children[i]->BranchVec);
+
+      // Get angle between vectors
+      double angleVec[3];
+      vtkMath::Cross(parent->Children[i]->BranchVec, this->ReferenceVecs[0], angleVec);
+      parent->Children[i]->RefAngle = atan2(vtkMath::Norm(angleVec), vtkMath::Dot(parent->Children[i]->BranchVec, this->ReferenceVecs[0]));
     }
-    if (parent->Children[i]->RefAngle > maxAngle)
+
+    double minAngle = VTK_SV_LARGE_DOUBLE;
+    double maxAngle = -1.0*VTK_SV_LARGE_DOUBLE;
+    int minChild = 0;
+    int maxChild = 0;
+    for (int i=0; i<numChildren; i++)
     {
-      maxAngle = parent->Children[i]->RefAngle;
-      maxChild = i;
+      if (parent->Children[i]->RefAngle < minAngle)
+      {
+        minAngle = parent->Children[i]->RefAngle;
+        minChild = i;
+      }
+      if (parent->Children[i]->RefAngle > maxAngle)
+      {
+        maxAngle = parent->Children[i]->RefAngle;
+        maxChild = i;
+      }
+      fprintf(stdout,"Vec %d: %.4f %.4f %.4f\n", i, parent->Children[i]->BranchVec[0], parent->Children[i]->BranchVec[1], parent->Children[i]->BranchVec[2]);
+      fprintf(stdout,"Angle %d: %4f\n", i, 180*parent->Children[i]->RefAngle/M_PI);
     }
-    fprintf(stdout,"Vec %d: %.4f %.4f %.4f\n", i, parent->Children[i]->BranchVec[0], parent->Children[i]->BranchVec[1], parent->Children[i]->BranchVec[2]);
-    fprintf(stdout,"Angle %d: %4f\n", i, 180*parent->Children[i]->RefAngle/M_PI);
+    vtkMath::Cross(this->ReferenceVecs[0], parent->Children[minChild]->BranchVec, this->ReferenceVecs[2]);
+    vtkMath::Normalize(this->ReferenceVecs[2]);
+
+    parent->DivergingChild = minChild;
+    parent->AligningChild  = maxChild;
+
+    parent->Children[parent->AligningChild]->IsAlign = 1;
+    for (int i=0; i<numChildren; i++)
+    {
+      if (i != parent->AligningChild)
+        parent->Children[i]->IsAlign = 0;
+    }
   }
-  vtkMath::Cross(this->ReferenceVecs[0], parent->Children[minChild]->BranchVec, this->ReferenceVecs[2]);
-  vtkMath::Normalize(this->ReferenceVecs[2]);
-
-  parent->DivergingChild = minChild;
-  parent->AligningChild  = maxChild;
-
-  parent->Children[parent->AligningChild]->IsAlign = 1;
-  for (int i=0; i<numChildren; i++)
+  else
   {
-    if (i != parent->AligningChild)
-      parent->Children[i]->IsAlign = 0;
+    double xVec[3]; xVec[0] = 1.0; xVec[1] = 0.0; xVec[2] = 0.0;
+    vtkMath::Cross(this->ReferenceVecs[0], xVec, this->ReferenceVecs[2]);
+    vtkMath::Normalize(this->ReferenceVecs[2]);
   }
 
   vtkMath::Cross(this->ReferenceVecs[2], this->ReferenceVecs[0], this->ReferenceVecs[1]);
@@ -1730,7 +1790,18 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     }
     int pI[8];
     for (int i=0; i<newPoints->GetNumberOfPoints(); i++)
+    {
       pI[i] = points->InsertNextPoint(newPoints->GetPoint(i));
+      localPtIds->InsertNextTuple1(i);
+    }
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 1.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 1.0);
+    textureCoordinates->InsertNextTuple3(1.0, 0.0, 0.0);
+    textureCoordinates->InsertNextTuple3(1.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 1.0, 0.0);
+    textureCoordinates->InsertNextTuple3(0.0, 0.0, 0.0);
 
     vtkIdType face0[4] = {pI[4], pI[5], pI[1], pI[0]};
     vtkIdType face1[4] = {pI[7], pI[6], pI[5], pI[4]};
@@ -1745,6 +1816,12 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
     cellArray->InsertNextCell(4, face3);
     cellArray->InsertNextCell(4, face4);
     cellArray->InsertNextCell(4, face5);
+
+    for (int i=0; i<6; i++)
+    {
+      groupIds->InsertNextTuple1(groupId);
+      patchIds->InsertNextTuple1(i);
+    }
 
   }
   else if (type == 1)

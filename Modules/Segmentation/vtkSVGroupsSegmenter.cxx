@@ -189,19 +189,6 @@ int vtkSVGroupsSegmenter::RequestData(
 
   this->WorkPd->DeepCopy(input);
   this->CenterlinesWorkPd->DeepCopy(this->Centerlines);
-  // If there is one centerline, we don't need to separate, just return
-  // with one group id
-  if (this->Centerlines->GetNumberOfCells() == 1)
-  {
-    output->DeepCopy(input);
-    vtkIntArray *groupIdsArray = vtkIntArray::New();
-    groupIdsArray->SetName(this->GroupIdsArrayName);
-    groupIdsArray->SetNumberOfTuples(output->GetNumberOfCells());
-    groupIdsArray->FillComponent(0,0);
-    output->GetCellData()->AddArray(groupIdsArray);
-    groupIdsArray->Delete();
-    return SV_OK;
-  }
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)
@@ -557,14 +544,14 @@ int vtkSVGroupsSegmenter::RunFilter()
     //return SV_ERROR;
   }
 
-  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //if (this->Parameterize() != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  if (this->Parameterize() != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
 
   return SV_OK;

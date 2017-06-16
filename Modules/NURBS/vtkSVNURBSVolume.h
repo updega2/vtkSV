@@ -120,8 +120,8 @@ public:
   int GenerateVolumeRepresentation(const double uSpacing, const double vSpacing, const double wSpacing);
 
   //Functions to set control points/knots/etc.
-  void SetControlPoints(vtkStructuredGrid *points2d) {;} /**< \brief Unimplemented */
-  void SetKnotVector(vtkDoubleArray *knotVector, const int dim) {;} /**< /brief Unimplemented */
+  void SetControlPoints(vtkStructuredGrid *points3d);
+  void SetKnotVector(vtkDoubleArray *knotVector, const int dim);
 
   //Functions to manipulate the geometry
   void UpdateCurve() {} /**< \brief Unimplemented */

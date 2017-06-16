@@ -94,6 +94,8 @@ public:
   vtkSetMacro(UDegree, int);
   vtkGetMacro(VDegree, int);
   vtkSetMacro(VDegree, int);
+  vtkGetMacro(WDegree, int);
+  vtkSetMacro(WDegree, int);
   //@}
 
   //@{
@@ -102,6 +104,8 @@ public:
   vtkGetStringMacro(UKnotSpanType);
   vtkSetStringMacro(VKnotSpanType);
   vtkGetStringMacro(VKnotSpanType);
+  vtkSetStringMacro(WKnotSpanType);
+  vtkGetStringMacro(WKnotSpanType);
   //@}
 
   //@{
@@ -110,6 +114,8 @@ public:
   vtkGetStringMacro(UParametricSpanType);
   vtkSetStringMacro(VParametricSpanType);
   vtkGetStringMacro(VParametricSpanType);
+  vtkSetStringMacro(WParametricSpanType);
+  vtkGetStringMacro(WParametricSpanType);
   //@}
 
   /// \brief Get the nurbs surface
