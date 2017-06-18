@@ -393,7 +393,7 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
 }
 
 // ----------------------
-// GetPointsOnTargetBoundary
+// GetPointOnTargetBoundary
 // ----------------------
 int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, double returnPt[3])
 {
@@ -445,6 +445,9 @@ int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, 
   }
   else
   {
+    fprintf(stdout,"numBoundaryPts: %d\n", numBoundaryPts);
+    fprintf(stdout,"srcPtId: %d\n", srcPtId);
+    fprintf(stdout,"targCellId: %d\n", targCellId);
     vtkErrorMacro("Boundaries do not match well enough");
     return SV_ERROR;
   }

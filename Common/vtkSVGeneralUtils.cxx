@@ -325,7 +325,7 @@ int vtkSVGeneralUtils::GiveIds(vtkPolyData *inPd,
 }
 
 // ----------------------
-// GiveIds
+// IteratePoint
 // ----------------------
 int vtkSVGeneralUtils::IteratePoint(vtkPolyData *pd, int &pointId, int &prevCellId)
 {

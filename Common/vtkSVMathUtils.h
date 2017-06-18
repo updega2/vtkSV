@@ -133,8 +133,8 @@ public:
   //@{
   /** \brief Get distance between two 3D points, very simple
    *  \return the unsigned distance */
-  static double Distance(double pt0[3], double pt1[3]);
-  static double Distance(double pt0[], double pt1[], const int size);
+  static double Distance(const double pt0[3], const double pt1[3]);
+  static double Distance(const double pt0[], const double pt1[], const int size);
   //@}
 
   /** \brief Dot product between each tuple of two data arrays.

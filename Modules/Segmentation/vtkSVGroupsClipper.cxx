@@ -265,12 +265,14 @@ int vtkSVGroupsClipper::RunFilter()
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
+  groupTubes->BuildLocator();
 
   // For non group ids
   vtkNew(vtkSVPolyBallLine, nonGroupTubes);
   nonGroupTubes->SetInput(this->Centerlines);
   nonGroupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   nonGroupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
+  nonGroupTubes->BuildLocator();
 
   double point[3];
   double groupTubeValue, nonGroupTubeValue, tubeDifferenceValue;

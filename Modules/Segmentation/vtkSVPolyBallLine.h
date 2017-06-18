@@ -154,6 +154,7 @@ protected:
                             const double surfacePt[3],
                             const double closestPt[3],
                             const double parameter,
+                            const double radius,
                             int &bestCellId);
 
   char* PolyBallRadiusArrayName;

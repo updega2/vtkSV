@@ -228,7 +228,7 @@ double vtkSVMathUtils::ComputeTriangleArea(double pt0[3], double pt1[3],
 // ----------------------
 // Distance
 // ----------------------
-double vtkSVMathUtils::Distance(double pt0[3], double pt1[3])
+double vtkSVMathUtils::Distance(const double pt0[3], const double pt1[3])
 {
   return sqrt(pow(pt1[0] - pt0[0], 2.0) +
               pow(pt1[1] - pt0[1], 2.0) +
@@ -238,7 +238,7 @@ double vtkSVMathUtils::Distance(double pt0[3], double pt1[3])
 // ----------------------
 // Distance
 // ----------------------
-double vtkSVMathUtils::Distance(double pt0[3], double pt1[3], const int size)
+double vtkSVMathUtils::Distance(const double pt0[3], const double pt1[3], const int size)
 {
   double val = 0.0;
   for (int i=0; i<size; i++)

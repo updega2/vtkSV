@@ -200,9 +200,32 @@ int main(int argc, char *argv[])
   CVT->SetUseRadiusInformation(useRadiusInfo);
   CVT->Update();
 
+  // Call Function to Read File
+  // Filter
+  vtkNew(vtkSVCenterlinesEdgeWeightedCVT, CVT2);
+
+  // OPERATION
+  std::cout<<"Performing Operation..."<<endl;
+  CVT2->SetInputData(CVT->GetOutput());
+  CVT2->SetGenerators(centerlinesPd);
+  CVT2->SetNumberOfRings(numberOfRings);
+  CVT2->SetThreshold(threshold);
+  CVT2->SetEdgeWeight(edgeWeight);
+  CVT2->SetMaximumNumberOfIterations(maximumNumberOfIterations);
+  CVT2->SetPatchIdsArrayName(patchIdsArrayName.c_str());
+  CVT2->SetCVTDataArrayName(cvtDataArrayName.c_str());
+  CVT2->SetGroupIdsArrayName(groupIdsArrayName.c_str());
+  CVT2->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
+  CVT2->SetBlankingArrayName(blankingArrayName.c_str());
+  CVT2->SetUseRadiusInformation(useRadiusInfo);
+  CVT2->SetUseBifurcationInformation(0);
+  CVT2->SetUseCurvatureWeight(0);
+  CVT2->SetNoInitialization(1);
+  CVT2->Update();
+
   // Get output
   vtkNew(vtkPolyData, output);
-  output = CVT->GetOutput();
+  output = CVT2->GetOutput();
 
   // Write Files
   std::cout<<"Writing Files..."<<endl;

@@ -73,6 +73,19 @@ public:
   vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
+  //@{
+  /// \brief Get/Set the radius information
+  vtkSetMacro(UseBifurcationInformation,int);
+  vtkGetMacro(UseBifurcationInformation,int);
+  vtkBooleanMacro(UseBifurcationInformation,int);
+  //@}
+  //@{
+
+  /// \brief Get/Set the radius information
+  vtkSetMacro(UseCurvatureWeight,int);
+  vtkGetMacro(UseCurvatureWeight,int);
+  vtkBooleanMacro(UseCurvatureWeight,int);
+  //@}
 protected:
   vtkSVCenterlinesEdgeWeightedCVT();
   ~vtkSVCenterlinesEdgeWeightedCVT();
@@ -83,6 +96,8 @@ protected:
   int UpdateGenerators();
   int GetClosestGenerator(const int evalId, int &newGenerator);
   double GetEdgeWeightedDistance(const int generatorId, const int evalId);
+  int FindGoodCellNeighbors(const int ptId,
+                            vtkIdList *cellIds);
 
 private:
   vtkSVCenterlinesEdgeWeightedCVT(const vtkSVCenterlinesEdgeWeightedCVT&);  // Not implemented.
@@ -90,7 +105,11 @@ private:
 
   vtkSVPolyBallLine *DistanceFunction;
 
+  std::vector<std::vector<int> > IsGoodNeighborCell;
+
   int UseRadiusInformation;
+  int UseBifurcationInformation;
+  int UseCurvatureWeight;
 
   char *GroupIdsArrayName;
   char *BlankingArrayName;

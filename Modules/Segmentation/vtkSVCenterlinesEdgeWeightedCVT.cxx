@@ -57,6 +57,8 @@ vtkSVCenterlinesEdgeWeightedCVT::vtkSVCenterlinesEdgeWeightedCVT()
   this->CenterlineRadiusArrayName =   NULL;
 
   this->UseRadiusInformation = 1;
+  this->UseBifurcationInformation = 1;
+  this->UseCurvatureWeight = 1;
 }
 
 // ----------------------
@@ -102,6 +104,30 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeConnectivity()
 {
   this->Superclass::InitializeConnectivity();
 
+  int numCells = this->WorkGenerators->GetNumberOfCells();
+  int numPoints = this->WorkGenerators->GetNumberOfPoints();
+  this->IsGoodNeighborCell.resize(numCells, std::vector<int>(this->MaximumNumberOfNeighborPatches));
+
+  if (this->UseBifurcationInformation)
+  {
+    for (int i=0; i<numPoints; i++)
+    {
+      vtkNew(vtkIdList, pointCells);
+      this->WorkGenerators->GetPointCells(i, pointCells);
+      if (pointCells->GetNumberOfIds() > 1)
+        this->FindGoodCellNeighbors(i, pointCells);
+    }
+  }
+  else
+  {
+    for (int i=0; i<numCells; i++)
+    {
+      for (int j=0; j<this->MaximumNumberOfNeighborPatches; j++)
+          this->IsGoodNeighborCell[i][j] = 1;
+    }
+  }
+
+
   return SV_OK;
 }
 
@@ -113,16 +139,17 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
   if (this->UseCellArray)
   {
     // Tube function
-    this->DistanceFunction->SetInput(this->Generators);
+    this->DistanceFunction->SetInput(this->WorkGenerators);
     this->DistanceFunction->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     this->DistanceFunction->SetUseRadiusInformation(this->UseRadiusInformation);
     this->DistanceFunction->UsePointNormalOn();
+    this->DistanceFunction->BuildLocator();
 
     // Get all the different ids
     vtkNew(vtkIdList, centerlineGroupIds);
-    for (int i=0; i<this->Generators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples(); i++)
+    for (int i=0; i<this->WorkGenerators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetNumberOfTuples(); i++)
     {
-      centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(this->Generators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetComponent(i,0))));
+      centerlineGroupIds->InsertUniqueId(static_cast<vtkIdType>(vtkMath::Round(this->WorkGenerators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetComponent(i,0))));
     }
     int numGenerators = centerlineGroupIds->GetNumberOfIds();
 
@@ -150,18 +177,11 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
 
       vtkNew(vtkIdList, groupId);
       groupId->SetNumberOfIds(1);
-      for (int j=0; j<numGenerators; j++)
-      {
-        groupId->SetId(0, j);
-        this->DistanceFunction->SetInputCellIds(groupId);
 
-        double dist = this->DistanceFunction->EvaluateFunction(center);
-        if (dist < minDist)
-        {
-          minDist = dist;
-          cellGenerator = j;
-        }
-      }
+      double dist = this->DistanceFunction->EvaluateFunction(center);
+      int lastCellId = this->DistanceFunction->GetLastPolyBallCellId();
+      cellGenerator = this->WorkGenerators->GetCellData()->GetArray(
+          this->GroupIdsArrayName)->GetTuple1(lastCellId);
 
       this->PatchIdsArray->SetTuple1(i, cellGenerator);
     }
@@ -188,9 +208,12 @@ int vtkSVCenterlinesEdgeWeightedCVT::UpdateGenerators()
 int vtkSVCenterlinesEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &newGenerator)
 {
   // Get current generator
-  int numGenerators = this->Generators->GetNumberOfPoints();
+  int numGenerators = this->WorkGenerators->GetNumberOfPoints();
   int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
   newGenerator =  currGenerator;
+
+  // GroupIds
+  vtkDataArray *groupIds = this->WorkGenerators->GetCellData()->GetArray(this->GroupIdsArrayName);
 
   // Current minimum to beat is current generator
   double minDist = this->GetEdgeWeightedDistance(newGenerator, evalId);
@@ -201,7 +224,9 @@ int vtkSVCenterlinesEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &
     // Check to make sure not zero elements or the same genrator
     if (this->NeighborPatchesNumberOfElements[evalId][i] != 0)
     {
-      if (currGenerator != this->NeighborPatchesIds[evalId][i])
+      int cellId =         groupIds->LookupValue(currGenerator);
+      int neighborCellId = groupIds->LookupValue(this->NeighborPatchesIds[evalId][i]);
+      if (currGenerator != this->NeighborPatchesIds[evalId][i] && this->IsGoodNeighborCell[cellId][neighborCellId] == 1)
       {
         // Test this generator
         int neighborGenerator = this->NeighborPatchesIds[evalId][i];
@@ -225,16 +250,13 @@ int vtkSVCenterlinesEdgeWeightedCVT::GetClosestGenerator(const int evalId, int &
 // ----------------------
 double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, const int evalId)
 {
-  // Tube function
-  vtkNew(vtkIdList, groupId);
-  groupId->InsertNextId(generatorId);
-  this->DistanceFunction->SetInputCellIds(groupId);
-  double pointNormal[3];
-  this->CVTDataArray->GetTuple(evalId, pointNormal);
-  this->DistanceFunction->SetPointNormal(pointNormal);
-
   // Current generator
   int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
+
+  // Current cell normal
+  vtkDataArray *cellNormals = this->WorkPd->GetCellData()->GetArray("Normals");
+  double currNormal[3];
+  cellNormals->GetTuple(evalId, currNormal);
 
   // Get cell point coords
   double pts[3][3];
@@ -248,7 +270,7 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
   vtkTriangle::TriangleCenter(pts[0], pts[1], pts[2], center);
 
   // Calculate the edge weight distance
-  double edgeWeightedDist = this->DistanceFunction->EvaluateFunction(center);
+  double edgeWeightedDist = 1.0;
 
   // Get the generator patch id
   int i;
@@ -260,6 +282,26 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
     }
   }
 
+  double totalWeight = 0.0;
+  for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
+  {
+    int neighborId = this->Neighbors[evalId][i];
+    int neighborGenerator = this->PatchIdsArray->GetTuple1(neighborId);
+    if (neighborGenerator == generatorId)
+    {
+      double normal[3];
+      cellNormals->GetTuple(neighborId, normal);
+
+      double crossVec[3];
+      vtkMath::Cross(currNormal, normal, crossVec);
+      double ang = atan2(vtkMath::Norm(crossVec), vtkMath::Dot(currNormal, normal));
+
+      totalWeight += ang/SV_PI;
+    }
+  }
+  if (this->UseCurvatureWeight)
+    this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
+
   // Get the edge weighted portion
   double edgeWeighting = 0.0;
   if (currGenerator == generatorId)
@@ -270,6 +312,7 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
   {
     edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
   }
+  //}
 
   // Divide by the number of neighboring cells
   edgeWeighting /= this->NumberOfNeighbors[evalId];
@@ -280,5 +323,139 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
   edgeWeightedDist = sqrt(edgeWeightedDist);
 
   return edgeWeightedDist;
+  return SV_OK;
+}
+
+// ----------------------
+// FindGoodCellNeighbors
+// ----------------------
+int vtkSVCenterlinesEdgeWeightedCVT::FindGoodCellNeighbors(const int ptId,
+                                                           vtkIdList *cellIds)
+{
+  vtkNew(vtkIdList, checkIds);
+  vtkNew(vtkIdList, cellList);
+
+  for (int i=0; i<cellIds->GetNumberOfIds(); i++)
+  {
+    vtkIdType npts, *pts;
+    this->WorkGenerators->GetCellPoints(cellIds->GetId(i), npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      if (pts[j] == ptId)
+      {
+        if (j == 0)
+        {
+          checkIds->InsertNextId(pts[j+1]);
+          cellList->InsertNextId(cellIds->GetId(i));
+        }
+        if (j == npts-1)
+        {
+          checkIds->InsertNextId(pts[j-1]);
+          cellList->InsertNextId(cellIds->GetId(i));
+        }
+      }
+    }
+  }
+
+  double pt0[3];
+  this->WorkGenerators->GetPoint(ptId, pt0);
+
+  double bigAngle = -1.0;
+  int bigPoint = 0;
+  for (int i=0; i<checkIds->GetNumberOfIds(); i++)
+  {
+    double pt1[3];
+    this->WorkGenerators->GetPoint(checkIds->GetId(i), pt1);
+
+    double vec0[3];
+    vtkMath::Subtract(pt1, pt0, vec0);
+    vtkMath::Normalize(vec0);
+
+    double angleSum = 0.0;
+    for (int j=0; j<checkIds->GetNumberOfIds(); j++)
+    {
+      if (i != j)
+      {
+        double pt2[3];
+        this->WorkGenerators->GetPoint(checkIds->GetId(j), pt2);
+
+        double vec1[3];
+        vtkMath::Subtract(pt2, pt0, vec1);
+        vtkMath::Normalize(vec1);
+
+        double crossVec[3];
+        vtkMath::Cross(vec0, vec1, crossVec);
+
+        double ang = 180.0*atan2(vtkMath::Norm(crossVec), vtkMath::Dot(vec0, vec1))/SV_PI;
+        angleSum += ang;
+      }
+    }
+    if (angleSum > bigAngle)
+    {
+      bigAngle = angleSum;
+      bigPoint = i;
+    }
+  }
+
+  std::vector<double> angles;
+  std::vector<int> cells;
+  std::vector<int> points;
+
+  double pt1[3];
+  this->WorkGenerators->GetPoint(checkIds->GetId(bigPoint), pt1);
+  angles.push_back(180.0);
+  cells.push_back(cellList->GetId(bigPoint));
+  points.push_back(checkIds->GetId(bigPoint));
+
+  double vec0[3];
+  vtkMath::Subtract(pt1, pt0, vec0);
+  vtkMath::Normalize(vec0);
+
+  for (int i=0; i<checkIds->GetNumberOfIds(); i++)
+  {
+    if (i != bigPoint)
+    {
+      double pt2[3];
+      this->WorkGenerators->GetPoint(checkIds->GetId(i), pt2);
+
+      double vec1[3];
+      vtkMath::Subtract(pt2, pt0, vec1);
+      vtkMath::Normalize(vec1);
+
+      double crossVec[3];
+      vtkMath::Cross(vec0, vec1, crossVec);
+
+      double ang = 180.0*atan2(vtkMath::Norm(crossVec), vtkMath::Dot(vec0, vec1))/SV_PI;
+      angles.push_back(ang);
+      cells.push_back(cellList->GetId(i));
+      points.push_back(checkIds->GetId(i));
+    }
+  }
+
+  int rootCellId = cells[0];
+  for (int i=0; i<angles.size(); i++)
+  {
+    int cellId = cells[i];
+    if (angles[i] < 135.0)
+    {
+      this->IsGoodNeighborCell[rootCellId][cellId] = 1;
+      this->IsGoodNeighborCell[cellId][rootCellId] = 1;
+    }
+    else
+    {
+      this->IsGoodNeighborCell[rootCellId][cellId] = 0;
+      this->IsGoodNeighborCell[cellId][rootCellId] = 0;
+      for (int j=1; j<angles.size(); j++)
+      {
+        if (i != j)
+        {
+          int otherCellId = cells[j];
+          this->IsGoodNeighborCell[otherCellId][cellId] = 1;
+          this->IsGoodNeighborCell[cellId][otherCellId] = 1;
+        }
+      }
+    }
+  }
+
   return SV_OK;
 }

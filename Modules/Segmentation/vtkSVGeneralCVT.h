@@ -107,6 +107,13 @@ public:
   //@}
 
   //@{
+  /// \brief Set a maximum number of iterations that can be run to prevent
+  /// an infinite loop.
+  vtkGetMacro(NoInitialization, int);
+  vtkSetMacro(NoInitialization, int);
+  //@}
+
+  //@{
   /// \brief Set a threshold criteria. Default is 2 transferred patchs.
   vtkGetMacro(Threshold, double);
   vtkSetMacro(Threshold, double);
@@ -137,8 +144,8 @@ protected:
   vtkPolyData *Generators; // Polydata used during filter processing
   vtkPolyData *WorkGenerators; // Polydata used during filter processing
 
-  vtkDoubleArray *CVTDataArray;  // Array on input containing info to patch
-  vtkDoubleArray *GeneratorsArray;  // If using array on generators, the array
+  vtkDataArray *CVTDataArray;  // Array on input containing info to patch
+  vtkDataArray *GeneratorsArray;  // If using array on generators, the array
   vtkIntArray    *PatchIdsArray; // Patch ids array
 
   char *CVTDataArrayName; // Array name on input with data to patch
@@ -152,6 +159,7 @@ protected:
 
   double Threshold; // Threshold to stop at
   int MaximumNumberOfIterations; // Max iterations
+  int NoInitialization; // No generator initialization, useful if array already set on input
 
 
 private:

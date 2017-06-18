@@ -469,7 +469,7 @@ int vtkSVNURBSSurface::SetControlPointGrid(vtkSVControlGrid *controlPoints)
   this->NumberOfUControlPoints = dim[0];
   this->NumberOfVControlPoints = dim[1];
 
-  return SV_OK;
+ return SV_OK;
 }
 
 // ----------------------

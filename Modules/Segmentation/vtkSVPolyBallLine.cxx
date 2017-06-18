@@ -25,6 +25,7 @@ Version:   $Revision: 1.5 $
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
+#include "vtkSVMathUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVGeneralUtils.h"
 
@@ -173,7 +174,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     return SV_ERROR;
     }
 
-  this->Input->BuildCells();
+  this->Input->BuildLinks();
 #if (VTK_MAJOR_VERSION <= 5)
   this->Input->Update();
 #endif
@@ -369,9 +370,9 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
        if (polyballFunctionValue<minPolyBallFunctionValue)
         {
           if (tmpList->GetNumberOfIds() > 1)
-            this->FindBifurcationCellId(ptId0, tmpList, x, closestPoint, t, cellId);
+            this->FindBifurcationCellId(ptId0, tmpList, x, closestPoint, t, radius0, cellId);
           else if (tmpList2->GetNumberOfIds() > 1)
-            this->FindBifurcationCellId(ptId1, tmpList2, x, closestPoint, 1-t, cellId);
+            this->FindBifurcationCellId(ptId1, tmpList2, x, closestPoint, 1-t, radius1, cellId);
         minPolyBallFunctionValue = polyballFunctionValue;
         this->LastPolyBallCellId = cellId;
         this->LastPolyBallCellSubId = i;
@@ -413,12 +414,13 @@ void vtkSVPolyBallLine::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 // ----------------------
-// GetExcludingCellIds
+// FindBifurcationCellId
 // ----------------------
 int vtkSVPolyBallLine::FindBifurcationCellId(const int ptId, vtkIdList *cellIds,
                                               const double surfacePt[3],
                                               const double closestPt[3],
                                               const double parameter,
+                                              const double radius,
                                               int &bestCellId)
 {
   vtkNew(vtkIdList, checkIds);
@@ -534,9 +536,22 @@ int vtkSVPolyBallLine::FindBifurcationCellId(const int ptId, vtkIdList *cellIds,
   vtkMath::Subtract(surfacePt, closestPt, surfVec);
   vtkMath::Normalize(surfVec);
 
+  double lineDist = vtkSVMathUtils::Distance(closestPt, pt0);
+
   for (int i=0; i<angles.size(); i++)
   {
-    if (!isAligning[i] && cells[i] == bestCellId && parameter < 0.7)
+    int doIt = 0;
+    if (this->UseRadiusInformation)
+    {
+      if (lineDist < radius)
+        doIt = 1;
+    }
+    else
+    {
+      if (parameter < 0.75)
+        doIt = 1;
+    }
+    if (!isAligning[i] && cells[i] == bestCellId && doIt)
     {
       double pt2[3];
       this->Input->GetPoint(points[i], pt2);

@@ -61,6 +61,7 @@ vtkSVGeneralCVT::vtkSVGeneralCVT()
 
   this->MaximumNumberOfIterations = 1.0e2;
   this->UseTransferredPatchesAsThreshold = 1;
+  this->NoInitialization = 0;
 }
 
 // ----------------------
@@ -77,6 +78,19 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
   {
     this->WorkGenerators->Delete();
     this->WorkGenerators = NULL;
+  }
+  if (this->Generators != NULL)
+  {
+    this->Generators->Delete();
+    this->Generators = NULL;
+  }
+  if (this->NoInitialization == 0)
+  {
+    if (this->PatchIdsArray != NULL)
+    {
+      this->PatchIdsArray->Delete();
+      this->PatchIdsArray = NULL;
+    }
   }
 
   if (this->CVTDataArrayName != NULL)
@@ -201,7 +215,7 @@ int vtkSVGeneralCVT::PrepFilter()
       return SV_ERROR;
     }
 
-    this->CVTDataArray = vtkDoubleArray::SafeDownCast(this->WorkPd->GetCellData()->GetArray(this->CVTDataArrayName));
+    this->CVTDataArray = this->WorkPd->GetCellData()->GetArray(this->CVTDataArrayName);
   }
   else if (this->UsePointArray)
   {
@@ -212,9 +226,17 @@ int vtkSVGeneralCVT::PrepFilter()
       strcpy(this->PatchIdsArrayName, "PatchIds");
     }
 
-    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->PatchIdsArrayName) != SV_OK)
+    if (this->NoInitialization == 1)
     {
-      this->PatchIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetPointData()->GetArray(this->PatchIdsArrayName));
+      if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->PatchIdsArrayName) != SV_OK)
+      {
+        this->PatchIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetPointData()->GetArray(this->PatchIdsArrayName));
+      }
+      else
+      {
+        vtkErrorMacro("No array named "<< this->PatchIdsArrayName << "on input.");
+        return SV_ERROR;
+      }
     }
     else
     {
@@ -236,7 +258,7 @@ int vtkSVGeneralCVT::PrepFilter()
       return SV_ERROR;
     }
 
-    this->CVTDataArray = vtkDoubleArray::SafeDownCast(this->WorkPd->GetPointData()->GetArray(this->CVTDataArrayName));
+    this->CVTDataArray = this->WorkPd->GetPointData()->GetArray(this->CVTDataArrayName);
   }
   else
   {
@@ -279,10 +301,13 @@ int vtkSVGeneralCVT::PrepFilter()
 // ----------------------
 int vtkSVGeneralCVT::RunFilter()
 {
-  if (this->InitializeGenerators() != SV_OK)
+  if (this->NoInitialization == 0)
   {
-    vtkErrorMacro("Unable to initialize CVT connectivity");
-    return SV_ERROR;
+    if (this->InitializeGenerators() != SV_OK)
+    {
+      vtkErrorMacro("Unable to initialize CVT connectivity");
+      return SV_ERROR;
+    }
   }
 
   if (this->InitializeConnectivity() != SV_OK)

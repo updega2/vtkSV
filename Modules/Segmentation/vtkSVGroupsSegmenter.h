@@ -44,6 +44,8 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
+#include "vtkStructuredGrid.h"
+#include "vtkUnstructuredGrid.h"
 #include "vtkIdList.h"
 #include "svCenterlineGraph.h"
 #include "vtkMatrix4x4.h"
@@ -223,7 +225,11 @@ protected:
   int FixGroups();
   int FixPatchesByGroup();
   int FixPatchesWithPolycube();
-  int Parameterize();
+  int Parameterize(vtkPolyData *fullMapPd);
+  int FormParametricHexMesh(vtkStructuredGrid *paraHexMesh);
+  int MapVolume(vtkStructuredGrid *paraHexMesh,
+                vtkPolyData *fullMapPd,
+                vtkStructuredGrid *realHexMesh);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
