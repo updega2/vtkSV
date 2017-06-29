@@ -526,7 +526,7 @@ int vtkSVPolyBallLine::FindBifurcationCellId(const int ptId, vtkIdList *cellIds,
   std::vector<int> isAligning;
   for (int i=0; i<angles.size(); i++)
   {
-    if (angles[i] < 135.0)
+    if (angles[i] < 90.0)
       isAligning.push_back(0);
     else
       isAligning.push_back(1);

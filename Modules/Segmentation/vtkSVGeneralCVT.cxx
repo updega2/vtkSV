@@ -84,14 +84,14 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     this->Generators->Delete();
     this->Generators = NULL;
   }
-  if (this->NoInitialization == 0)
-  {
-    if (this->PatchIdsArray != NULL)
-    {
-      this->PatchIdsArray->Delete();
-      this->PatchIdsArray = NULL;
-    }
-  }
+  //if (this->NoInitialization == 0)
+  //{
+  //  if (this->PatchIdsArray != NULL)
+  //  {
+  //    this->PatchIdsArray->Delete();
+  //    this->PatchIdsArray = NULL;
+  //  }
+  //}
 
   if (this->CVTDataArrayName != NULL)
   {

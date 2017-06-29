@@ -34,12 +34,12 @@ set(module vtkSVSegmentation)
 # Core SRCS and HDRS
 set(SRCS
   vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesBasedNormals.cxx
-  vtkSVCenterlinesEdgeWeightedCVT.cxx
+  vtkSVCenterlinesEdgeWeightedCVT.cxx vtkSVEdgeWeightedSmoother.cxx
   vtkSVPolyBallLine.cxx vtkSVGroupsClipper.cxx vtkSVGroupsSegmenter.cxx svCenterlineGraph.cxx svCenterlineGCell.cxx)
 
 set(HDRS
   vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesBasedNormals.h
-  vtkSVCenterlinesEdgeWeightedCVT.h
+  vtkSVCenterlinesEdgeWeightedCVT.h vtkSVEdgeWeightedSmoother.h
   vtkSVPolyBallLine.h vtkSVGroupsClipper.h vtkSVGroupsSegmenter.h svCenterlineGraph.h svCenterlineGCell.h)
 #------------------------------------------------------------------------------
 
