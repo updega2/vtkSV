@@ -536,9 +536,20 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
+    vtkNew(vtkIdList, noEndPatches);
+    noEndPatches->SetNumberOfIds(4);
+    for (int j=0; j<4; j++)
+      noEndPatches->SetId(j, j);
+
+    if (this->CorrectSpecificCellBoundaries(branchPd, "PatchIds", noEndPatches) != SV_OK)
+    {
+      vtkErrorMacro("Could not correcto boundaries of surface");
+      return SV_ERROR;
+    }
+
     if (this->MatchEndPatches(branchPd) != SV_OK)
     {
-      vtkErrorMacro("Error fixing end patches");
+      vtkErrorMacro("Error matching end patches");
       return SV_ERROR;
     }
 
@@ -615,51 +626,51 @@ int vtkSVGroupsSegmenter::RunFilter()
   // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
   // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  vtkNew(vtkPolyData, fullMapPd);
-  if (this->Parameterize(fullMapPd) != SV_OK)
-  {
-    fprintf(stderr,"WRONG\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkPolyData, fullMapPd);
+  //if (this->Parameterize(fullMapPd) != SV_OK)
+  //{
+  //  fprintf(stderr,"WRONG\n");
+  //  return SV_ERROR;
+  //}
 
-  if (this->Centerlines->GetNumberOfCells() == 1)
-  {
-    vtkNew(vtkStructuredGrid, paraHexMesh);
-    if (this->FormParametricHexMesh(paraHexMesh) != SV_OK)
-    {
-      fprintf(stderr,"Couldn't do the dirt\n");
-      return SV_ERROR;
-    }
+  //if (this->Centerlines->GetNumberOfCells() == 1)
+  //{
+  //  vtkNew(vtkStructuredGrid, paraHexMesh);
+  //  if (this->FormParametricHexMesh(paraHexMesh) != SV_OK)
+  //  {
+  //    fprintf(stderr,"Couldn't do the dirt\n");
+  //    return SV_ERROR;
+  //  }
 
-    vtkNew(vtkStructuredGrid, realHexMesh);
-    if (this->MapVolume(paraHexMesh, fullMapPd, realHexMesh) != SV_OK)
-    {
-      fprintf(stderr,"Couldn't do the dirt\n");
-      return SV_ERROR;
-    }
-    // Set up the volume
-    vtkNew(vtkUnstructuredGrid, emptyGrid);
-    vtkNew(vtkSVLoftNURBSVolume, lofter);
-    lofter->SetInputData(emptyGrid);
-    lofter->SetInputGrid(realHexMesh);
-    lofter->SetUDegree(2);
-    lofter->SetVDegree(2);
-    lofter->SetWDegree(2);
-    lofter->SetUnstructuredGridUSpacing(0.1);
-    lofter->SetUnstructuredGridVSpacing(0.01);
-    lofter->SetUnstructuredGridWSpacing(0.1);
-    lofter->SetUKnotSpanType("average");
-    lofter->SetUParametricSpanType("chord");
-    lofter->SetVKnotSpanType("average");
-    lofter->SetVParametricSpanType("chord");
-    lofter->SetWKnotSpanType("average");
-    lofter->SetWParametricSpanType("chord");
-    lofter->Update();
+  //  vtkNew(vtkStructuredGrid, realHexMesh);
+  //  if (this->MapVolume(paraHexMesh, fullMapPd, realHexMesh) != SV_OK)
+  //  {
+  //    fprintf(stderr,"Couldn't do the dirt\n");
+  //    return SV_ERROR;
+  //  }
+  //  // Set up the volume
+  //  vtkNew(vtkUnstructuredGrid, emptyGrid);
+  //  vtkNew(vtkSVLoftNURBSVolume, lofter);
+  //  lofter->SetInputData(emptyGrid);
+  //  lofter->SetInputGrid(realHexMesh);
+  //  lofter->SetUDegree(2);
+  //  lofter->SetVDegree(2);
+  //  lofter->SetWDegree(2);
+  //  lofter->SetUnstructuredGridUSpacing(0.1);
+  //  lofter->SetUnstructuredGridVSpacing(0.01);
+  //  lofter->SetUnstructuredGridWSpacing(0.1);
+  //  lofter->SetUKnotSpanType("average");
+  //  lofter->SetUParametricSpanType("chord");
+  //  lofter->SetVKnotSpanType("average");
+  //  lofter->SetVParametricSpanType("chord");
+  //  lofter->SetWKnotSpanType("average");
+  //  lofter->SetWParametricSpanType("chord");
+  //  lofter->Update();
 
-    std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
-    vtkSVIOUtils::WriteVTUFile(filename, lofter->GetOutput());
+  //  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
+  //  vtkSVIOUtils::WriteVTUFile(filename, lofter->GetOutput());
 
-  }
+  //}
 
 
   return SV_OK;
@@ -2091,7 +2102,7 @@ int vtkSVGroupsSegmenter::CurveFitBoundaries(vtkPolyData *pd, std::string arrayN
 
 					if (dist < minDist)
 					{
-						minDist = dist;;
+						minDist = dist;
 						tempCount = l;
 					}
 
@@ -2255,7 +2266,7 @@ int vtkSVGroupsSegmenter::FixEndPatches(vtkPolyData *pd)
         vtkSVGeneralUtils::GetNeighborsCellsValues(pd, "PatchIds",
                                                    cellId,
                                                    neighborValues);
-        int newCellValue = -1;;
+        int newCellValue = -1;
         for (int k=0; k<neighborValues->GetNumberOfIds(); k++)
         {
           if (neighborValues->GetId(k) != removeCellValue)
@@ -2790,7 +2801,7 @@ int vtkSVGroupsSegmenter::FixSpecificRegions(vtkPolyData *pd, std::string arrayN
         if (regions[i].NumberOfElements < minBadElements->GetId(regions[i].IndexCluster))
         {
           minBadElements->SetId(regions[i].IndexCluster, regions[i].NumberOfElements);
-          removePatchIds->SetId(regions[i].IndexCluster, i);;
+          removePatchIds->SetId(regions[i].IndexCluster, i);
         }
       }
     }
@@ -3058,7 +3069,7 @@ int vtkSVGroupsSegmenter::Parameterize(vtkPolyData *fullMapPd)
 
   if (tmpPd->GetNumberOfPoints() != this->WorkPd->GetNumberOfPoints() ||
       tmpPd->GetNumberOfCells() != this->WorkPd->GetNumberOfCells())
-    fprintf(stderr,"SOMETING WENT WRONG\n");
+    fprintf(stderr,"SOMETHING WENT WRONG\n");
 
   vtkNew(vtkPoints, fullMapPoints); fullMapPoints->SetNumberOfPoints(tmpPd->GetNumberOfPoints());
   vtkNew(vtkCellArray, fullMapCells);
@@ -3630,7 +3641,7 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *pd)
     if (ccwCount == cwCount && ccwCount != 0)
     {
       fprintf(stderr,"THIS IS ALSO A BIG PROBLEM\n");
-      return SV_ERROR;
+      //return SV_ERROR;
     }
 
     int stopCount;
@@ -3638,7 +3649,7 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *pd)
     int startPoint;
     int secondPoint;
     int opposPoint;
-    if (ccwCount <= cwCount )
+    if (ccwCount < cwCount )
     {
       stopCount = ccwCount;
       slicePoint = ccwInteriorEdges[j][stopCount];
@@ -3679,7 +3690,7 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *pd)
         {
           int cellId = pointCells->GetId(l);
           int nextPoint;
-          if (ccwCount <= cwCount)
+          if (ccwCount < cwCount)
             nextPoint = vtkSVGroupsSegmenter::GetCWPoint(pd, tempNodes[k], cellId);
           else
             nextPoint = vtkSVGroupsSegmenter::GetCCWPoint(pd, tempNodes[k], cellId);
@@ -3841,8 +3852,11 @@ int vtkSVGroupsSegmenter::SplitBoundary(vtkPolyData *pd,
     if (currLength > currDiv * divLength)
     {
       currDiv++;
+      if (currDiv == 3)
+        break;
+
       if (slicePoints->GetTuple1(ptId0) == -1)
-        slicePoints->SetTuple1(ptId1, groupId);
+        slicePoints->SetTuple1(ptId1, 1);
     }
   }
 
