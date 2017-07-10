@@ -560,33 +560,6 @@ int vtkSVGroupsSegmenter::RunFilter()
   this->WorkPd->GetPointData()->RemoveArray("TmpInternalIds");
   this->WorkPd->BuildLinks();
 
-  ////vtkNew(vtkIdList, targetPatches);
-  ////targetPatches->SetNumberOfIds(4);
-  ////for (int i=0; i<4; i++)
-  ////  targetPatches->SetId(i, i);
-  ////if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  ////{
-  ////  vtkErrorMacro("Could not correcto boundaries of surface");
-  ////  return SV_ERROR;
-  ////}
-
-  ////if (this->SmoothSpecificBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  ////{
-  ////  vtkErrorMacro("Could not smootho boundaries of surface");
-  ////  return SV_ERROR;
-  ////}
-  ////std::vector<Region> patchRegions;
-  ////if (this->GetSpecificRegions(this->WorkPd, "PatchIds", patchRegions, targetPatches) != SV_OK)
-  ////{
-  ////  vtkErrorMacro("Couldn't get patches");
-  ////  return SV_ERROR;
-  ////}
-  ////if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", patchRegions) != SV_OK)
-  ////{
-  ////  vtkErrorMacro("Could not curve fit boundaries of surface");
-  ////  return SV_ERROR;
-  ////}
-
   vtkNew(vtkIdList, addVals);
   addVals->SetNumberOfIds(numGroups);
   for (int i=0; i<numGroups; i++)
@@ -602,90 +575,91 @@ int vtkSVGroupsSegmenter::RunFilter()
     patchVals->InsertUniqueId(newVal);
   }
 
-  //if (this->FixPatchesByGroup() != SV_OK)
-  //{
-  //  fprintf(stderr,"Couldn't fix patches\n");
-  //  //return SV_ERROR;
-  //}
-  //if (this->FixPatchesWithPolycube() != SV_OK)
-  //{
-  //  fprintf(stderr,"Couldn't fix patches\n");
-  //  //return SV_ERROR;
-  //}
+  std::vector<Region> finalRegions;
+  vtkNew(vtkIdList, targetPatches);
+  targetPatches->SetNumberOfIds(numGroups*4);
+  for (int i=0; i<numGroups; i++)
+  {
+    for (int j=0; j<4; j++)
+      targetPatches->SetId(4*i+j, 6*i+j);
+  }
+  if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Could not correcto boundaries of surface");
+    return SV_ERROR;
+  }
 
-  //std::vector<Region> finalRegions;
-  //targetPatches->Reset();
-  //targetPatches->SetNumberOfIds(numGroups*4);
-  //for (int i=0; i<numGroups; i++)
-  //{
-  //  for (int j=0; j<4; j++)
-  //    targetPatches->SetId(4*i+j, 6*i+j);
-  //}
-  //if (this->GetSpecificRegions(this->WorkPd, "PatchIds", finalRegions, targetPatches) != SV_OK)
-  //{
-  //  vtkErrorMacro("Couldn't get patches");
-  //  return SV_ERROR;
-  //}
-  //if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", finalRegions) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not curve fit boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  if (this->SmoothSpecificBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Could not smootho boundaries of surface");
+    return SV_ERROR;
+  }
+  if (this->GetSpecificRegions(this->WorkPd, "PatchIds", finalRegions, targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get patches");
+    return SV_ERROR;
+  }
+  if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", finalRegions) != SV_OK)
+  {
+    vtkErrorMacro("Could not curve fit boundaries of surface");
+    return SV_ERROR;
+  }
 
-  //if (this->FixPatchesWithPolycube() != SV_OK)
-  //{
-  //  fprintf(stderr,"POOP WEINER CAKE SAUCE\n");
-  //  //return SV_ERROR;
-  //}
+  // For checking purposes
+  if (this->FixPatchesWithPolycube() != SV_OK)
+  {
+    fprintf(stderr,"Couldn't fix patches\n");
+    return SV_ERROR;
+  }
 
-  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //vtkNew(vtkPolyData, fullMapPd);
-  //if (this->Parameterize(fullMapPd) != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkPolyData, fullMapPd);
+  if (this->Parameterize(fullMapPd) != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
-  //if (this->Centerlines->GetNumberOfCells() == 1)
-  //{
-  //  vtkNew(vtkStructuredGrid, paraHexMesh);
-  //  if (this->FormParametricHexMesh(paraHexMesh) != SV_OK)
-  //  {
-  //    fprintf(stderr,"Couldn't do the dirt\n");
-  //    return SV_ERROR;
-  //  }
+  if (this->Centerlines->GetNumberOfCells() == 1)
+  {
+    vtkNew(vtkStructuredGrid, paraHexMesh);
+    if (this->FormParametricHexMesh(paraHexMesh) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't do the dirt\n");
+      return SV_ERROR;
+    }
 
-  //  vtkNew(vtkStructuredGrid, realHexMesh);
-  //  if (this->MapVolume(paraHexMesh, fullMapPd, realHexMesh) != SV_OK)
-  //  {
-  //    fprintf(stderr,"Couldn't do the dirt\n");
-  //    return SV_ERROR;
-  //  }
-  //  // Set up the volume
-  //  vtkNew(vtkUnstructuredGrid, emptyGrid);
-  //  vtkNew(vtkSVLoftNURBSVolume, lofter);
-  //  lofter->SetInputData(emptyGrid);
-  //  lofter->SetInputGrid(realHexMesh);
-  //  lofter->SetUDegree(2);
-  //  lofter->SetVDegree(2);
-  //  lofter->SetWDegree(2);
-  //  lofter->SetUnstructuredGridUSpacing(0.1);
-  //  lofter->SetUnstructuredGridVSpacing(0.01);
-  //  lofter->SetUnstructuredGridWSpacing(0.1);
-  //  lofter->SetUKnotSpanType("average");
-  //  lofter->SetUParametricSpanType("chord");
-  //  lofter->SetVKnotSpanType("average");
-  //  lofter->SetVParametricSpanType("chord");
-  //  lofter->SetWKnotSpanType("average");
-  //  lofter->SetWParametricSpanType("chord");
-  //  lofter->Update();
+    vtkNew(vtkStructuredGrid, realHexMesh);
+    if (this->MapVolume(paraHexMesh, fullMapPd, realHexMesh) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't do the dirt\n");
+      return SV_ERROR;
+    }
+    // Set up the volume
+    vtkNew(vtkUnstructuredGrid, emptyGrid);
+    vtkNew(vtkSVLoftNURBSVolume, lofter);
+    lofter->SetInputData(emptyGrid);
+    lofter->SetInputGrid(realHexMesh);
+    lofter->SetUDegree(2);
+    lofter->SetVDegree(2);
+    lofter->SetWDegree(2);
+    lofter->SetUnstructuredGridUSpacing(0.1);
+    lofter->SetUnstructuredGridVSpacing(0.01);
+    lofter->SetUnstructuredGridWSpacing(0.1);
+    lofter->SetUKnotSpanType("average");
+    lofter->SetUParametricSpanType("chord");
+    lofter->SetVKnotSpanType("average");
+    lofter->SetVParametricSpanType("chord");
+    lofter->SetWKnotSpanType("average");
+    lofter->SetWParametricSpanType("chord");
+    lofter->Update();
 
-  //  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
-  //  vtkSVIOUtils::WriteVTUFile(filename, lofter->GetOutput());
+    std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
+    vtkSVIOUtils::WriteVTUFile(filename, lofter->GetOutput());
 
-  //}
+  }
 
 
   return SV_OK;
@@ -2994,8 +2968,6 @@ int vtkSVGroupsSegmenter::Parameterize(vtkPolyData *fullMapPd)
     paraBoundaryCorners->SetNumberOfTuples(patches[i].CornerPoints.size());
     fprintf(stdout,"PATCH: %d\n", patchId);
 
-    if (patches[i].CornerPoints.size()  > 6)
-      fprintf(stdout,"FUCKING TELL ME!!!\n");
     fprintf(stdout,"Corner Points: ");
     for (int j=0; j<patches[i].CornerPoints.size(); j++)
     {
