@@ -171,14 +171,22 @@ public:
   static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
                                 std::vector<Region> allRegions);
 
+  static int SplitUpBoundaries(vtkPolyData *pd, std::string arrayName,
+                               std::vector<Region> allRegions);
+
+  static int SplitBoundary(vtkPolyData *pd, std::vector<int> boundary,
+                           int numDivs, int groupId);
+
   static int MatchBoundaries(vtkPolyData *pd, std::string checkArrayName,
                              std::string fitArrayName,
                              std::vector<Region> allRegions);
 
   static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
+  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
 
   static int CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
 
+  static int CheckCellValuesEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
   static void SplineKnots(std::vector<int> &u, int n, int t);
 
   static void SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res);
@@ -218,8 +226,10 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int GetPatches();
-  int FixEndPatches();
-  int CheckEndPatches(std::vector<Region> endRegions,
+  int FixEndPatches(vtkPolyData *pd);
+  int MatchEndPatches(vtkPolyData *pd);
+  int CheckEndPatches(vtkPolyData *pd,
+                      std::vector<Region> endRegions,
                       std::vector<int> &individualFix,
                       std::vector<int> &wholePatchFix);
   int FixGroups();

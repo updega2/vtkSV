@@ -1540,6 +1540,7 @@ int svCenterlineGraph::GetGraphDirections()
       }
 
       double finalCheck = fabs(vtkMath::Dot(updateRefVecs[1], endVecs[maxDir]));
+      fprintf(stdout,"Final check: %.4f\n", finalCheck);
       if (finalCheck < 0.9)
       {
         fprintf(stderr,"ERROR: The vector was not updated to correct ending vector\n");
