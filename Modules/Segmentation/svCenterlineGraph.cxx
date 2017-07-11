@@ -219,8 +219,10 @@ int svCenterlineGraph::BuildGraph()
   for (int i=0; i<this->Root->Children.size(); i++)
     this->GrowGraph(this->Root->Children[i]);
 
-  this->GetGraphDirections();
-  this->GetGraphPoints();
+  if (this->GetGraphDirections() != SV_OK)
+    return SV_ERROR;
+  if (this->GetGraphPoints() != SV_OK)
+    return SV_ERROR;
 
   return SV_OK;
 }
@@ -249,10 +251,9 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     // cell id in the vtkPolyData
     int groupId = gCell->GroupId;
 
+    fprintf(stdout,"GROUP: %d\n", groupId);
     int cubeType;
     this->GetCubeType(gCell, cubeType);
-
-    fprintf(stdout,"GROUP: %d\n", groupId);
     fprintf(stdout,"CUBE TYPE: %d\n", cubeType);
 
     vtkNew(vtkPoints, addPoints);
@@ -1496,7 +1497,8 @@ int svCenterlineGraph::GetGraphPoints()
       length += vtkSVMathUtils::Distance(pt0, pt1);
     }
 
-    if (gCell->Parent == NULL)
+    svCenterlineGCell *parent = gCell->Parent;
+    if (parent == NULL)
     {
       this->Lines->GetPoint(pts[0], gCell->EndPt);
       double lineDir[3];
@@ -1508,29 +1510,87 @@ int svCenterlineGraph::GetGraphPoints()
     else
     {
       for (int j=0; j<3; j++)
-        gCell->StartPt[j] = gCell->Parent->EndPt[j];
-      double parentVec[3];
-      vtkMath::Subtract(gCell->Parent->StartPt, gCell->Parent->EndPt, parentVec);
-      vtkMath::Normalize(parentVec);
+        gCell->StartPt[j] = parent->EndPt[j];
 
       // Get rotation matrix from cross to ref
-      double crossVec[3];
-      if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
-        vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
-      if (gCell->BranchDir == BACK || gCell->BranchDir == FRONT)
-        vtkMath::Cross(this->ReferenceVecs[2], parentVec, crossVec);
-      vtkMath::Normalize(crossVec);
+      double rotateVec[3];
+      vtkMath::Subtract(parent->StartPt, parent->EndPt, rotateVec);
+      vtkMath::Normalize(rotateVec);
 
-      // Rotate vec around line
+      double crossVec[3];
       double lineDir[3];
-      if (gCell->BranchDir == RIGHT)
-        this->RotateVecAroundLine(parentVec, 180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
-      else if (gCell->BranchDir == LEFT)
-        this->RotateVecAroundLine(parentVec, -180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
-      else if (gCell->BranchDir == BACK)
-        this->RotateVecAroundLine(parentVec, -180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
-      else if (gCell->BranchDir == FRONT)
-        this->RotateVecAroundLine(parentVec, 180.0*gCell->RefAngle/M_PI, crossVec, lineDir);
+
+      svCenterlineGCell *grandParent = parent->Parent;
+      if (grandParent == NULL)
+      {
+        double parentVec[3];
+        vtkMath::Subtract(parent->StartPt, parent->EndPt, parentVec);
+        vtkMath::Normalize(parentVec);
+
+        vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
+        vtkMath::Normalize(crossVec);
+
+        // Rotate vec around line
+        if (gCell->BranchDir == RIGHT)
+          this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+        else if (gCell->BranchDir == LEFT)
+          this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+      }
+      else
+      {
+        double grandParentVec[3];
+        vtkMath::Subtract(grandParent->StartPt, grandParent->EndPt, grandParentVec);
+        vtkMath::Normalize(grandParentVec);
+
+        double parentVec[3];
+        vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
+        vtkMath::Normalize(parentVec);
+
+
+        int parentType;
+        this->GetCubeType(parent, parentType);
+
+        if (parentType == 4 || parentType == 5)
+        {
+          double tempVec[3];
+          if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
+          {
+            if (parent->BranchDir == RIGHT)
+              vtkMath::Cross(grandParentVec, parentVec, tempVec);
+            else
+              vtkMath::Cross(parentVec, grandParentVec, tempVec);
+          }
+          else
+          {
+            if (parent->BranchDir == RIGHT)
+              vtkMath::Cross(parentVec, grandParentVec, tempVec);
+            else
+              vtkMath::Cross(grandParentVec, parentVec, tempVec);
+          }
+          vtkMath::Normalize(tempVec);
+          vtkMath::Cross(parentVec, tempVec, crossVec);
+          vtkMath::Normalize(crossVec);
+
+          // Rotate vec around line
+          if (gCell->BranchDir == RIGHT)
+            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else if (gCell->BranchDir == LEFT)
+            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else if (gCell->BranchDir == BACK)
+            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else if (gCell->BranchDir == FRONT)
+            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+        }
+        else
+        {
+          vtkMath::Cross(grandParentVec, parentVec, crossVec);
+          vtkMath::Normalize(crossVec);
+          if (gCell->BranchDir == parent->BranchDir)
+            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else
+            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+        }
+      }
       vtkMath::Normalize(lineDir);
 
       // Get end point from new direction
@@ -1689,28 +1749,41 @@ int svCenterlineGraph::GetGraphDirections()
         return SV_ERROR;
       }
 
+      fprintf(stdout,"MAX DIR: %d\n", maxDir);
       int updateDir;
       if (maxDir == 1)
       {
-        //double dotCheck =  vtkMath::Dot(refVecs[1], endVecs[2]);
+        double dotCheck =  vtkMath::Dot(refVecs[1], endVecs[2]);
+        fprintf(stdout,"DOT CHECK: %.4f\n", dotCheck);
         if (projDot > 0)
         {
           updateDir = 0;
-          updateAngle *= -1.0;
+          if (dotCheck >= 0)
+            updateAngle *= -1.0;
         }
         else
+        {
           updateDir = 2;
+          if (dotCheck < 0)
+            updateAngle *= -1.0;
+        }
       }
       else if (maxDir == 2)
       {
-        //double dotCheck = vtkMath::Dot(refVecs[1], endVecs[1]);
+        double dotCheck = vtkMath::Dot(refVecs[1], endVecs[1]);
+        fprintf(stdout,"DOT CHECK: %.4f\n", dotCheck);
         if (projDot > 0)
         {
           updateDir = 3;
-          updateAngle *= -1.0;
+          if (dotCheck < 0)
+            updateAngle *= -1.0;
         }
         else
+        {
           updateDir = 1;
+          if (dotCheck >= 0)
+            updateAngle *= -1.0;
+        }
       }
       else
       {
@@ -1758,7 +1831,7 @@ int svCenterlineGraph::GetGraphDirections()
       {
         fprintf(stderr,"ERROR: The vector was not updated to correct ending vector\n");
         fprintf(stderr,"The checking dot is %.6f\n", finalCheck);
-        //return SV_ERROR;
+        return SV_ERROR;
       }
       for (int j=0; j<3; j++)
       {
@@ -1792,7 +1865,8 @@ int svCenterlineGraph::UpdateBranchDirs(svCenterlineGCell *gCell, const int upda
     {
       gCell->Children[j]->BranchDir = (gCell->Children[j]->BranchDir + updateDir)%4;
       fprintf(stdout,"BRANCH %d updated to direction %d\n", gCell->Children[j]->GroupId, gCell->Children[j]->BranchDir);
-      this->UpdateBranchDirs(gCell->Children[j], updateDir);
+      fprintf(stdout,"UPDATE WAS: %d\n", updateDir);
+      //this->UpdateBranchDirs(gCell->Children[j], updateDir);
     }
   }
 
@@ -1902,14 +1976,14 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
     else
     {
       if ((gCell->BranchDir + gCell->Children[gCell->DivergingChild]->BranchDir)%2 == 0)
-        type = 5;
-      else
         type = 3;
+      else
+        type = 5;
     }
   }
   else if (gCell->Children.size() == 0)
   {
-    if ((gCell->Parent->BranchDir + gCell->BranchDir)%2 == 0)
+    if ((gCell->BranchDir)%2 == 0)
       type = 6;
     else
       type = 7;

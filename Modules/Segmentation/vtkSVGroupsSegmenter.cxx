@@ -254,31 +254,31 @@ int vtkSVGroupsSegmenter::PrepFilter()
     return SV_OK;
   }
 
-  if (!this->BlankingArrayName)
-  {
-    vtkDebugMacro("Blanking Array Name not given, setting to Blanking");
-    this->BlankingArrayName = new char[strlen("Blanking") + 1];
-    strcpy(this->BlankingArrayName, "Blanking");
-  }
+  //if (!this->BlankingArrayName)
+  //{
+  //  vtkDebugMacro("Blanking Array Name not given, setting to Blanking");
+  //  this->BlankingArrayName = new char[strlen("Blanking") + 1];
+  //  strcpy(this->BlankingArrayName, "Blanking");
+  //}
 
-  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->BlankingArrayName) != SV_OK)
-  {
-    vtkErrorMacro(<< "BlankingArrayName with name specified does not exist");
-    return SV_ERROR;
-  }
+  //if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->BlankingArrayName) != SV_OK)
+  //{
+  //  vtkErrorMacro(<< "BlankingArrayName with name specified does not exist");
+  //  return SV_ERROR;
+  //}
 
-  if (!this->CenterlineRadiusArrayName)
-  {
-    vtkDebugMacro("Centerline radius Array Name not given, setting to MaximumInscribedSphereRadius");
-    this->CenterlineRadiusArrayName = new char[strlen("MaximumInscribedSphereRadius") + 1];
-    strcpy(this->CenterlineRadiusArrayName, "MaximumInscribedSphereRadius");
-  }
+  //if (!this->CenterlineRadiusArrayName)
+  //{
+  //  vtkDebugMacro("Centerline radius Array Name not given, setting to MaximumInscribedSphereRadius");
+  //  this->CenterlineRadiusArrayName = new char[strlen("MaximumInscribedSphereRadius") + 1];
+  //  strcpy(this->CenterlineRadiusArrayName, "MaximumInscribedSphereRadius");
+  //}
 
-  if (!this->Centerlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
-  {
-    vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
-    return SV_ERROR;
-  }
+  //if (!this->Centerlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
+  //{
+  //  vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
+  //  return SV_ERROR;
+  //}
 
   this->CenterlineGraph = new svCenterlineGraph(0, this->Centerlines,
                                                 this->GroupIdsArrayName);
@@ -626,12 +626,12 @@ int vtkSVGroupsSegmenter::RunFilter()
   // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
   // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //vtkNew(vtkPolyData, fullMapPd);
-  //if (this->Parameterize(fullMapPd) != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkPolyData, fullMapPd);
+  if (this->Parameterize(fullMapPd) != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
   //if (this->Centerlines->GetNumberOfCells() == 1)
   //{
