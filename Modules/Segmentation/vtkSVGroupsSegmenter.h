@@ -240,6 +240,7 @@ protected:
   int MapVolume(vtkStructuredGrid *paraHexMesh,
                 vtkPolyData *fullMapPd,
                 vtkStructuredGrid *realHexMesh);
+  int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
