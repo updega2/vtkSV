@@ -235,8 +235,9 @@ protected:
   int FixGroups();
   int FixPatchesByGroup();
   int FixPatchesWithPolycube();
-  int Parameterize(vtkPolyData *fullMapPd);
-  int FormParametricHexMesh(vtkStructuredGrid *paraHexMesh);
+  int ParameterizeSurface(vtkPolyData *fullMapPd);
+  int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
+  int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh);
   int MapVolume(vtkStructuredGrid *paraHexMesh,
                 vtkPolyData *fullMapPd,
                 vtkStructuredGrid *realHexMesh);
