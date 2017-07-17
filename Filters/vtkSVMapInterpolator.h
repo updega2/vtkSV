@@ -106,7 +106,7 @@ protected:
 
   /** \brief Finds the boundary of the given polydata and fills integery
    *  array with boolean values indicating whether point is boundary or not. */
-  int FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary);
+  int FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary, int &hasBoundary);
 
   /** \brief special function to move boundary points to target if needed. */
   int MoveBoundaryPoints();

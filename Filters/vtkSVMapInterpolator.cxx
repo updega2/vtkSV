@@ -289,12 +289,17 @@ int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
 int vtkSVMapInterpolator::MatchBoundaries()
 {
   // Find boundary of target base domain
-  if (this->FindBoundary(this->TargetBaseDomainPd, this->TargetBoundary) != SV_OK)
+  int targetHasBoundary=0;
+  if (this->FindBoundary(this->TargetBaseDomainPd, this->TargetBoundary, targetHasBoundary) != SV_OK)
     return SV_ERROR;
 
   // Find boundary of source base domain
-  if (this->FindBoundary(this->SourceBaseDomainPd, this->SourceBoundary) != SV_OK)
+  int sourceHasBoundary=0;
+  if (this->FindBoundary(this->SourceBaseDomainPd, this->SourceBoundary, sourceHasBoundary) != SV_OK)
     return SV_ERROR;
+
+  if (targetHasBoundary && sourceHasBoundary)
+    this->HasBoundary = 1;
 
   // If boundary indicated then do spcial matching technique
   if (this->HasBoundary == 1)
@@ -309,8 +314,11 @@ int vtkSVMapInterpolator::MatchBoundaries()
 // ----------------------
 // FindBoundary
 // ----------------------
-int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
+int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary, int &hasBoundary)
 {
+  // Set has boundary to 0
+  hasBoundary = 0;
+
   // Get number of points and cells
   int numPoints = pd->GetNumberOfPoints();
   int numCells = pd->GetNumberOfCells();
@@ -342,7 +350,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary)
       {
         isBoundary->SetValue(p0, 1);
         isBoundary->SetValue(p1, 1);
-        this->HasBoundary = 1;
+        hasBoundary = 1;
       }
     }
   }

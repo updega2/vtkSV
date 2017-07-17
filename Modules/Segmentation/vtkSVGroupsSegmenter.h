@@ -238,10 +238,17 @@ protected:
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
   int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh);
-  int MapVolume(vtkStructuredGrid *paraHexMesh,
-                vtkPolyData *fullMapPd,
-                vtkStructuredGrid *realHexMesh);
+  int DeleteInteriorPoints(vtkPolyData *pdWithInterior, vtkPolyData *pdWithoutInterior);
+  int MapVolume(vtkStructuredGrid *paraHexVolume,
+                vtkPolyData *mappedSurface,
+                vtkStructuredGrid *mappedVolume);
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
+  int PushStructuredGridTopBottom(vtkStructuredGrid *paraHexMesh,
+                                  const double pt0[3],
+                                  const double pt1[3],
+                                  const double pt2[3],
+                                  const double pt3[3],
+                                  const int isBottom);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;

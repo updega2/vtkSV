@@ -3114,85 +3114,157 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
 // ----------------------
 int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume)
 {
-  if (this->CenterlinesWorkPd->GetNumberOfCells() == 1)
+  // Get all group ids
+  vtkNew(vtkIdList, groupIds);
+  for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
   {
-    // Get all group ids
-    vtkNew(vtkIdList, groupIds);
-    for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
-    {
-      int groupVal = this->WorkPd->GetCellData()->GetArray(
-          this->GroupIdsArrayName)->GetTuple1(i);
-      groupIds->InsertUniqueId(groupVal);
-    }
-    vtkSortDataArray::Sort(groupIds);
-    int numGroups = groupIds->GetNumberOfIds();
-
-    for (int i=0; i<numGroups; i++)
-    {
-      int groupId = groupIds->GetId(i);
-      vtkNew(vtkPolyData, branchMapPd);
-      vtkSVGeneralUtils::ThresholdPd(fullMapPd, groupId, groupId, 1, this->GroupIdsArrayName, branchMapPd);
-
-      // Extract surface of polycube
-      vtkNew(vtkPolyData, polycubePd);
-      vtkNew(vtkDataSetSurfaceFilter, surfacer);
-      surfacer->SetInputData(this->Polycube);
-      surfacer->Update();
-
-      polycubePd->DeepCopy(surfacer->GetOutput());
-
-      vtkNew(vtkPolyData, branchPolycube);
-      vtkSVGeneralUtils::ThresholdPd(polycubePd, groupId, groupId, 1, this->GroupIdsArrayName, branchPolycube);
-
-      branchPolycube->BuildLinks();
-
-      vtkNew(vtkStructuredGrid, paraHexMesh);
-      if (this->FormParametricHexMesh(branchPolycube, paraHexMesh) != SV_OK)
-      {
-        fprintf(stderr,"Couldn't do the dirt\n");
-        return SV_ERROR;
-      }
-
-      vtkNew(vtkStructuredGrid, realHexMesh);
-      if (this->MapVolume(paraHexMesh, branchMapPd, realHexMesh) != SV_OK)
-      {
-        fprintf(stderr,"Couldn't do the dirt\n");
-        return SV_ERROR;
-      }
-
-      int smoothIters = 500;
-      if (this->SmoothStructuredGrid(realHexMesh, smoothIters) != SV_OK)
-      {
-        fprintf(stderr,"Couldn't smooth volume\n");
-        return SV_ERROR;
-      }
-
-      // Set up the volume
-      vtkNew(vtkUnstructuredGrid, emptyGrid);
-      vtkNew(vtkSVLoftNURBSVolume, lofter);
-      lofter->SetInputData(emptyGrid);
-      lofter->SetInputGrid(realHexMesh);
-      lofter->SetUDegree(2);
-      lofter->SetVDegree(2);
-      lofter->SetWDegree(2);
-      lofter->SetUnstructuredGridUSpacing(0.1);
-      lofter->SetUnstructuredGridVSpacing(0.01);
-      lofter->SetUnstructuredGridWSpacing(0.1);
-      lofter->SetUKnotSpanType("average");
-      lofter->SetUParametricSpanType("chord");
-      lofter->SetVKnotSpanType("average");
-      lofter->SetVParametricSpanType("chord");
-      lofter->SetWKnotSpanType("average");
-      lofter->SetWParametricSpanType("chord");
-      lofter->Update();
-
-      std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
-      vtkSVIOUtils::WriteVTUFile(filename, lofter->GetOutput());
-
-      loftedVolume->DeepCopy(lofter->GetOutput());
-    }
-
+    int groupVal = this->WorkPd->GetCellData()->GetArray(
+        this->GroupIdsArrayName)->GetTuple1(i);
+    groupIds->InsertUniqueId(groupVal);
   }
+  vtkSortDataArray::Sort(groupIds);
+  int numGroups = groupIds->GetNumberOfIds();
+
+  vtkNew(vtkAppendFilter, appender);
+
+  std::vector<vtkSmartPointer<vtkStructuredGrid> > paraHexVolumes(numGroups);
+
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = groupIds->GetId(i);
+    vtkNew(vtkPolyData, branchMapPd);
+    vtkSVGeneralUtils::ThresholdPd(fullMapPd, groupId, groupId, 1, this->GroupIdsArrayName, branchMapPd);
+
+    vtkNew(vtkPolyData, branchPd);
+    vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1, this->GroupIdsArrayName, branchPd);
+
+    // Extract surface of polycube
+    vtkNew(vtkPolyData, polycubePd);
+    vtkNew(vtkDataSetSurfaceFilter, surfacer);
+    surfacer->SetInputData(this->Polycube);
+    surfacer->Update();
+
+    polycubePd->DeepCopy(surfacer->GetOutput());
+
+    vtkNew(vtkPolyData, branchPolycube);
+    vtkSVGeneralUtils::ThresholdPd(polycubePd, groupId, groupId, 1, this->GroupIdsArrayName, branchPolycube);
+
+    branchPolycube->BuildLinks();
+
+    vtkNew(vtkStructuredGrid, paraHexMesh);
+    if (this->FormParametricHexMesh(branchPolycube, paraHexMesh) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't do the dirt\n");
+      return SV_ERROR;
+    }
+    vtkNew(vtkIntArray, groupIdsArray);
+    groupIdsArray->SetNumberOfTuples(paraHexMesh->GetNumberOfCells());
+    groupIdsArray->SetName(this->GroupIdsArrayName);
+    groupIdsArray->FillComponent(0, groupId);
+
+    paraHexMesh->GetCellData()->AddArray(groupIdsArray);
+
+    vtkNew(vtkIdFilter, ider);
+    ider->SetInputData(paraHexMesh);
+    ider->SetIdsArrayName("TmpInternalIds");
+    ider->Update();
+
+    appender->AddInputData(ider->GetOutput());
+    paraHexVolumes[i] = vtkSmartPointer<vtkStructuredGrid>::New();
+    paraHexVolumes[i]->DeepCopy(ider->GetOutput());
+  }
+  appender->Update();
+
+  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_PARA.vtu";
+  vtkSVIOUtils::WriteVTUFile(filename, appender->GetOutput());
+
+  vtkNew(vtkUnstructuredGrid, paraHexVolume);
+  paraHexVolume->DeepCopy(appender->GetOutput());
+
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(paraHexVolume);
+  surfacer->Update();
+
+  vtkNew(vtkPolyData, paraHexSurface);
+  paraHexSurface->DeepCopy(surfacer->GetOutput());
+
+  vtkNew(vtkSVCleanUnstructuredGrid, cleaner);
+  cleaner->SetInputData(paraHexVolume);
+  cleaner->Update();
+
+  vtkNew(vtkDataSetSurfaceFilter, surfacer2);
+  surfacer2->SetInputData(cleaner->GetOutput());
+  surfacer2->Update();
+
+  vtkNew(vtkPolyData, cleanSurface);
+  cleanSurface->DeepCopy(surfacer2->GetOutput());
+
+  this->DeleteInteriorPoints(paraHexSurface, surfacer2->GetOutput());
+
+  vtkNew(vtkPolyData, mappedPd);
+  this->InterpolateMapOntoTarget(paraHexSurface, this->WorkPd, fullMapPd, mappedPd);
+
+  std::string filenamer = "/Users/adamupdegrove/Desktop/tmp/DOUBLE_CHECK.vtp";
+  vtkSVIOUtils::WriteVTPFile(filenamer, mappedPd);
+
+  vtkNew(vtkAppendFilter, loftAppender);
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = groupIds->GetId(i);
+
+    vtkNew(vtkPolyData, mappedBranch);
+    vtkSVGeneralUtils::ThresholdPd(mappedPd, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
+
+    vtkNew(vtkStructuredGrid, realHexMesh);
+    if (this->MapVolume(paraHexVolumes[i], mappedBranch, realHexMesh) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't do the dirt\n");
+      return SV_ERROR;
+    }
+
+    int smoothIters = 500;
+    if (this->SmoothStructuredGrid(realHexMesh, smoothIters) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't smooth volume\n");
+      return SV_ERROR;
+    }
+
+    vtkNew(vtkIntArray, groupIdsArray);
+    groupIdsArray->SetNumberOfTuples(realHexMesh->GetNumberOfCells());
+    groupIdsArray->SetName(this->GroupIdsArrayName);
+    groupIdsArray->FillComponent(0, groupId);
+    realHexMesh->GetCellData()->AddArray(groupIdsArray);
+
+    loftAppender->AddInputData(realHexMesh);
+  }
+
+  //  // Set up the volume
+  //  vtkNew(vtkUnstructuredGrid, emptyGrid);
+  //  vtkNew(vtkSVLoftNURBSVolume, lofter);
+  //  lofter->SetInputData(emptyGrid);
+  //  lofter->SetInputGrid(realHexMesh);
+  //  lofter->SetUDegree(2);
+  //  lofter->SetVDegree(2);
+  //  lofter->SetWDegree(2);
+  //  lofter->SetUnstructuredGridUSpacing(0.1);
+  //  lofter->SetUnstructuredGridVSpacing(0.01);
+  //  lofter->SetUnstructuredGridWSpacing(0.1);
+  //  lofter->SetUKnotSpanType("average");
+  //  lofter->SetUParametricSpanType("chord");
+  //  lofter->SetVKnotSpanType("average");
+  //  lofter->SetVParametricSpanType("chord");
+  //  lofter->SetWKnotSpanType("average");
+  //  lofter->SetWParametricSpanType("chord");
+  //  lofter->Update();
+
+  //  loftAppender->AddInputData(lofter->GetOutput());
+  //}
+
+  loftAppender->Update();
+  loftedVolume->DeepCopy(loftAppender->GetOutput());
+
+  filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
+  vtkSVIOUtils::WriteVTUFile(filename, loftedVolume);
 
   return SV_OK;
 }
@@ -3202,13 +3274,21 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 // ----------------------
 int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh)
 {
-  // GetFace 0, side face
+  // GetFace 0, right side face
   vtkIdType f0npts, *f0PtIds;
   polycubePd->GetCellPoints(0, f0npts, f0PtIds);
 
   // GetFace 1, face underneath
   vtkIdType f1npts, *f1PtIds;
   polycubePd->GetCellPoints(1, f1npts, f1PtIds);
+
+  // GetFace 2, left side face
+  vtkIdType f2npts, *f2PtIds;
+  polycubePd->GetCellPoints(2, f2npts, f2PtIds);
+
+  // GetFace 3, face on top
+  vtkIdType f3npts, *f3PtIds;
+  polycubePd->GetCellPoints(3, f3npts, f3PtIds);
 
   // bottom lower left corner
   double pt0[3];
@@ -3222,9 +3302,9 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   double pt2[3];
   polycubePd->GetPoint(f0PtIds[1], pt2);
 
-  // top upper right corner
+  // top lower right corner
   double pt3[3];
-  polycubePd->GetPoint(f0PtIds[2], pt3);
+  polycubePd->GetPoint(f2PtIds[0], pt3);
 
   // Set boundary
 
@@ -3238,9 +3318,9 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   vtkMath::Subtract(pt2, pt1, l_vec);
   vtkMath::Normalize(l_vec);
 
-  double h = vtkSVMathUtils::Distance(pt3, pt2);
+  double h = vtkSVMathUtils::Distance(pt3, pt0);
   double h_vec[3];
-  vtkMath::Subtract(pt3, pt2, h_vec);
+  vtkMath::Subtract(pt3, pt0, h_vec);
   vtkMath::Normalize(h_vec);
 
   int w_div = 11;
@@ -3282,12 +3362,360 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     }
   }
 
-  vtkNew(vtkAppendFilter, converter);
-  converter->SetInputData(paraHexMesh);
-  converter->Update();
+  if (f0npts==4)
+  {
+    if (f1npts==5)
+    {
+      double pt4[3];
+      polycubePd->GetPoint(f1PtIds[1], pt4);
 
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_PARA.vtu";
-  vtkSVIOUtils::WriteVTUFile(filename, converter->GetOutput());
+      double pt5[3];
+      polycubePd->GetPoint(f1PtIds[2], pt5);
+
+      double tmpVec[3];
+      vtkMath::Subtract(pt5, pt4, tmpVec);
+      vtkMath::Normalize(tmpVec);
+
+      double test_dot = vtkMath::Dot(tmpVec, l_vec);
+      if (test_dot < 1.0e-6 && test_dot > -1.0e-6)
+      {
+        double bottomLeftPt[3];
+        polycubePd->GetPoint(f1PtIds[0], bottomLeftPt);
+
+        double bottomRightPt[3];
+        polycubePd->GetPoint(f1PtIds[3], bottomRightPt);
+
+        double bottomMidPt0[3];
+        polycubePd->GetPoint(f1PtIds[4], bottomMidPt0);
+
+        double bottomMidPt1[3];
+        polycubePd->GetPoint(f3PtIds[4], bottomMidPt1);
+
+        this->PushStructuredGridTopBottom(paraHexMesh, bottomLeftPt, bottomRightPt, bottomMidPt0, bottomMidPt1, 1);
+      }
+      else
+      {
+        double topLeftPt[3];
+        polycubePd->GetPoint(f1PtIds[1], topLeftPt);
+
+        double topRightPt[3];
+        polycubePd->GetPoint(f1PtIds[3], topRightPt);
+
+        double topMidPt0[3];
+        polycubePd->GetPoint(f1PtIds[2], topMidPt0);
+
+        double topMidPt1[3];
+        polycubePd->GetPoint(f3PtIds[2], topMidPt1);
+
+        this->PushStructuredGridTopBottom(paraHexMesh, topLeftPt, topRightPt, topMidPt0, topMidPt1, 0);
+      }
+    }
+    else if (f1npts==6)
+    {
+      double topPt0[3];
+      polycubePd->GetPoint(f1PtIds[2], topPt0);
+
+      double topPt1[3];
+      polycubePd->GetPoint(f3PtIds[2], topPt1);
+
+      //this->PushStructuredGridTopBottom(paraHexMesh, topPt0, topPt1, 0);
+
+      double bottomPt0[3];
+      polycubePd->GetPoint(f1PtIds[5], bottomPt0);
+
+      double bottomPt1[3];
+      polycubePd->GetPoint(f3PtIds[5], bottomPt1);
+
+      //this->PushStructuredGridTopBottom(paraHexMesh, bottomPt0, bottomPt1, 1);
+    }
+  }
+  else if (f0npts==5)
+  {
+    if (f1npts==4)
+    {
+      double sidePt[3];
+      polycubePd->GetPoint(f0PtIds[2], sidePt);
+      //this->ExtendTopSideOfStructuredGrid(paraHexMesh, sidePt);
+    }
+    else if (f1npts==5)
+    {
+      double pt4[3];
+      polycubePd->GetPoint(f1PtIds[1], pt4);
+
+      double pt5[3];
+      polycubePd->GetPoint(f1PtIds[2], pt5);
+
+      double tmpVec[3];
+      vtkMath::Subtract(pt5, pt4, tmpVec);
+      vtkMath::Normalize(tmpVec);
+
+      double test_dot = vtkMath::Dot(tmpVec, l_vec);
+      if (test_dot < 1.0e-6 && test_dot > -1.0e-6)
+      {
+        double bottomPt0[3];
+        polycubePd->GetPoint(f1PtIds[4], bottomPt0);
+
+        double bottomPt1[3];
+        polycubePd->GetPoint(f3PtIds[4], bottomPt1);
+
+        //this->PushStructuredGridTopBottom(paraHexMesh, bottomPt0, bottomPt1, 1);
+
+        double topSidePt0[3];
+        polycubePd->GetPoint(f2PtIds[2], topSidePt0);
+
+        double topSidePt1[3];
+        polycubePd->GetPoint(f0PtIds[2], topSidePt1);
+
+        //this->ExtendTopSideOfStructuredGrid(paraHexMesh, topSidePt0, topSidePt1);
+      }
+      else
+      {
+        double topPt[3];
+        polycubePd->GetPoint(f3PtIds[2], topPt);
+        //this->PushStructuredGridTopBottom(paraHexMesh, pt5, topPt, 0);
+
+        double bottomSidePt0[3];
+        polycubePd->GetPoint(f2PtIds[4], bottomSidePt0);
+
+        double bottomSidePt1[3];
+        polycubePd->GetPoint(f0PtIds[4], bottomSidePt1);
+
+        //this->ExtendBottomSideOfStructuredGrid(paraHexMesh, bottomSidePt0, bottomSidePt1);
+      }
+    }
+  }
+  else if (f0npts==6)
+  {
+    if (f1npts==4)
+    {
+      double topSidePt0[3];
+      polycubePd->GetPoint(f2PtIds[2], topSidePt0);
+
+      double topSidePt1[3];
+      polycubePd->GetPoint(f0PtIds[2], topSidePt1);
+
+      //this->ExtendTopSideOfStructuredGrid(paraHexMesh, topSidePt0, topSidePt1);
+
+      double bottomSidePt0[3];
+      polycubePd->GetPoint(f2PtIds[5], bottomSidePt0);
+
+      double bottomSidePt1[3];
+      polycubePd->GetPoint(f0PtIds[5], bottomSidePt1);
+      //this->ExtendBottomSideOfStructuredGird(paraHexMesh, bottomSidePt0, bottomSidePt1);
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// PushStructuredGridTopBottom
+// ----------------------
+int vtkSVGroupsSegmenter::PushStructuredGridTopBottom(vtkStructuredGrid *paraHexMesh,
+                                                      const double pt0[3],
+                                                      const double pt1[3],
+                                                      const double pt2[3],
+                                                      const double pt3[3],
+                                                      const int isBottom)
+{
+  int dim[3];
+  paraHexMesh->GetDimensions(dim);
+
+  int h_div = dim[2];
+  double h = vtkSVMathUtils::Distance(pt3, pt2);
+  double h_dist = h/(h_div-1);
+
+  double h_vec[3];
+  vtkMath::Subtract(pt3, pt2, h_vec);
+  vtkMath::Normalize(h_vec);
+
+  int w_div = dim[0];
+  int half_w_div = floor(w_div/2.0);
+
+  // Set new bottom extend points in the middle
+  int pos[3];
+  pos[0]= half_w_div;
+
+  if (isBottom)
+    pos[1] = 0;
+  else
+    pos[1] = dim[1]-1;
+
+  for (int i=0; i<h_div; i++)
+  {
+    pos[2] = i;
+    int ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+    double z_vec[3];
+    for (int j=0; j<3; j++)
+      z_vec[j] = h_vec[j]*i*h_dist;
+
+    double newPt[3];
+    vtkMath::Add(pt2, z_vec, newPt);
+
+    // New point in middle
+    paraHexMesh->GetPoints()->SetPoint(ptId, newPt);
+
+    // New point on 0 side
+    double firstPt[3];
+    vtkMath::Add(pt0, z_vec, firstPt);
+
+    pos[0] = 0;
+    int firstPtId = vtkStructuredData::ComputePointId(dim, pos);
+
+    paraHexMesh->GetPoints()->SetPoint(firstPtId, firstPt);
+
+    double first_w = vtkSVMathUtils::Distance(newPt, firstPt);
+    double first_w_dist = first_w/(half_w_div);
+
+    double first_w_vec[3];
+    vtkMath::Subtract(newPt, firstPt, first_w_vec);
+    vtkMath::Normalize(first_w_vec);
+
+    for (int j=0; j<half_w_div; j++)
+    {
+      pos[0] = j;
+
+      double x_vec[3];
+      for (int k=0; k<3; k++)
+        x_vec[k] = first_w_vec[k]*j*first_w_dist;
+
+      double inPt[3];
+      vtkMath::Add(firstPt, x_vec, inPt);
+
+      int newPtId = vtkStructuredData::ComputePointId(dim, pos);
+      paraHexMesh->GetPoints()->SetPoint(newPtId, inPt);
+    }
+
+    //New point on end side
+    double lastPt[3];
+    vtkMath::Add(pt1, z_vec, lastPt);
+
+    pos[0] = dim[0]-1;
+    int lastPtId = vtkStructuredData::ComputePointId(dim, pos);
+
+    paraHexMesh->GetPoints()->SetPoint(lastPtId, lastPt);
+
+    double last_w = vtkSVMathUtils::Distance(lastPt, newPt);
+    double last_w_dist = last_w/(half_w_div);
+
+    double last_w_vec[3];
+    vtkMath::Subtract(lastPt, newPt, last_w_vec);
+    vtkMath::Normalize(last_w_vec);
+
+    for (int j=0; j<half_w_div; j++)
+    {
+      pos[0] = half_w_div+j;
+
+      double x_vec[3];
+      for (int k=0; k<3; k++)
+        x_vec[k] = last_w_vec[k]*j*last_w_dist;
+
+      double inPt[3];
+      vtkMath::Add(newPt, x_vec, inPt);
+
+      int newPtId = vtkStructuredData::ComputePointId(dim, pos);
+      paraHexMesh->GetPoints()->SetPoint(newPtId, inPt);
+    }
+  }
+
+  int l_div = dim[1];
+
+  for (int i=0; i<w_div; i++)
+  {
+    for (int j=0; j<h_div; j++)
+    {
+      pos[0] = i; pos[2] = j;
+
+      pos[1] = 0;
+      int firstPtId = vtkStructuredData::ComputePointId(dim, pos);
+
+      double firstPt[3];
+      paraHexMesh->GetPoint(firstPtId, firstPt);
+
+      pos[1] = dim[1]-1;
+      int lastPtId = vtkStructuredData::ComputePointId(dim, pos);
+
+      double lastPt[3];
+      paraHexMesh->GetPoint(lastPtId, lastPt);
+
+      double l = vtkSVMathUtils::Distance(lastPt, firstPt);
+      double l_dist = l/(l_div-1);
+
+      double l_vec[3];
+      vtkMath::Subtract(lastPt, firstPt, l_vec);
+      vtkMath::Normalize(l_vec);
+
+      for (int k=0; k<l_div; k++)
+      {
+        pos[1] = k;
+
+        double y_vec[3];
+        for (int l=0; l<3; l++)
+          y_vec[l] = l_vec[l]*k*l_dist;
+
+        double inPt[3];
+        vtkMath::Add(firstPt, y_vec, inPt);
+
+        int newPtId = vtkStructuredData::ComputePointId(dim, pos);
+        paraHexMesh->GetPoints()->SetPoint(newPtId, inPt);
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// DeleteInteriorPoints
+// ----------------------
+int vtkSVGroupsSegmenter::DeleteInteriorPoints(vtkPolyData *pdWithInterior,
+                                               vtkPolyData *pdWithoutInterior)
+{
+  pdWithInterior->BuildLinks();
+
+  vtkNew(vtkPointLocator, locator);
+  locator->SetDataSet(pdWithoutInterior);
+  locator->BuildLocator();
+
+  int numPoints = pdWithInterior->GetNumberOfPoints();
+  std::vector<int> deletePoint(numPoints, 0);
+  for (int i=0; i<numPoints; i++)
+  {
+    double pt0[3];
+    pdWithInterior->GetPoint(i, pt0);
+
+    int ptId = locator->FindClosestPoint(pt0);
+
+    double pt1[3];
+    pdWithoutInterior->GetPoint(ptId, pt1);
+
+    double dist = vtkSVMathUtils::Distance(pt0, pt1);
+
+    if (dist > 1.0e-3)
+      deletePoint[i] = 1;
+  }
+
+  int numCells = pdWithInterior->GetNumberOfCells();
+
+  for (int i=0; i<numCells; i++)
+  {
+    vtkIdType *pts, npts;
+    pdWithInterior->GetCellPoints(i, npts, pts);
+
+    int deleteCell = 0;
+
+    for (int j=0; j<npts; j++)
+    {
+      if (deletePoint[pts[j]] == 1)
+        deleteCell = 1;
+    }
+
+    if (deleteCell)
+      pdWithInterior->DeleteCell(i);
+  }
+
+  pdWithInterior->RemoveDeletedCells();
 
   return SV_OK;
 }
@@ -3295,48 +3723,33 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 // ----------------------
 // MapVolume
 // ----------------------
-int vtkSVGroupsSegmenter::MapVolume(vtkStructuredGrid *paraHexMesh,
-                                    vtkPolyData *fullMapPd,
-                                    vtkStructuredGrid *realHexMesh)
+int vtkSVGroupsSegmenter::MapVolume(vtkStructuredGrid *paraHexVolume,
+                                    vtkPolyData *mappedSurface,
+                                    vtkStructuredGrid *mappedVolume)
 {
-  vtkNew(vtkAppendFilter, converter);
-  converter->SetInputData(paraHexMesh);
-  converter->Update();
-
-  vtkNew(vtkIdFilter, ider);
-  ider->SetInputData(converter->GetOutput());
-  ider->SetIdsArrayName("TmpInternalIds");
-  ider->Update();
-
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(ider->GetOutput());
-  surfacer->Update();
-
-  vtkNew(vtkPolyData, polycubePd);
-  polycubePd->DeepCopy(surfacer->GetOutput());
-
-  vtkNew(vtkPolyData, mappedPd);
-  this->InterpolateMapOntoTarget(polycubePd, this->WorkPd, fullMapPd, mappedPd);
-
-  std::string filenamer = "/Users/adamupdegrove/Desktop/tmp/DOUBLE_CHECK.vtp";
-  vtkSVIOUtils::WriteVTPFile(filenamer, mappedPd);
-
   // Now lets try volume
-  vtkDataArray *parameIds = ider->GetOutput()->GetPointData()->GetArray("TmpInternalIds");
-  vtkDataArray *mappedIds = mappedPd->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *volumeIds = paraHexVolume->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *mappedIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds");
 
   int dim[3];
-  paraHexMesh->GetDimensions(dim);
-  realHexMesh->SetDimensions(dim);
+  paraHexVolume->GetDimensions(dim);
+  mappedVolume->SetDimensions(dim);
   vtkNew(vtkPoints, realHexMeshPoints);
-  realHexMesh->SetPoints(realHexMeshPoints);
-  realHexMesh->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]*dim[2]);
+  mappedVolume->SetPoints(realHexMeshPoints);
+  mappedVolume->GetPoints()->SetNumberOfPoints(dim[0]*dim[1]*dim[2]);
 
-  int pos[3];
   double first_para_xpt[3], first_para_ypt[3], first_para_zpt[3];
   double last_para_xpt[3], last_para_ypt[3], last_para_zpt[3];
   double first_real_xpt[3], first_real_ypt[3], first_real_zpt[3];
   double last_real_xpt[3], last_real_ypt[3], last_real_zpt[3];
+
+  // TODO!!!!!!
+  // Check all six boundaries first!
+
+  int numPoints = dim[0]*dim[1]*dim[2];
+  std::vector<int> boundarySet(numPoints, 0);
+
+  int pos[3];
 
   for (int i=0; i<dim[0]; i++)
   {
@@ -3344,53 +3757,286 @@ int vtkSVGroupsSegmenter::MapVolume(vtkStructuredGrid *paraHexMesh,
     {
       for (int k=0; k<dim[2]; k++)
       {
+        pos[0] = i; pos[1] = j; pos[2] = k;
+        if (i == 0 || i == dim[0]-1)
+        {
+          int ptId = vtkStructuredData::ComputePointId(dim, pos);
+          double para_pt[3];
+          paraHexVolume->GetPoint(ptId, para_pt);
+          int realId = mappedIds->LookupValue(ptId);
+
+          if (realId == -1)
+          {
+            boundarySet[ptId] = 1;
+            pos[1] = 0;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, first_para_ypt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, first_real_ypt);
+
+            pos[1] = dim[1]-1;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, last_para_ypt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, last_real_ypt);
+
+            double para_y_dist = vtkSVMathUtils::Distance(para_pt, first_para_ypt)/vtkSVMathUtils::Distance(last_para_ypt, first_para_ypt);
+            double yvec[3];
+            vtkMath::Subtract(last_real_ypt, first_real_ypt, yvec);
+            vtkMath::Normalize(yvec);
+            vtkMath::MultiplyScalar(yvec, para_y_dist);
+
+            double newPt0[3];
+            vtkMath::Add(first_real_ypt, yvec, newPt0);
+
+            pos[1] = j; pos[2] = 0;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, first_para_zpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, first_real_zpt);
+
+            pos[2] = dim[2]-1;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, last_para_zpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, last_real_zpt);
+
+            double para_z_dist = vtkSVMathUtils::Distance(para_pt, first_para_zpt)/vtkSVMathUtils::Distance(last_para_zpt, first_para_zpt);
+            double zvec[3];
+            vtkMath::Subtract(last_real_zpt, first_real_zpt, zvec);
+            vtkMath::Normalize(zvec);
+            vtkMath::MultiplyScalar(zvec, para_z_dist);
+
+            double newPt1[3];
+            vtkMath::Add(first_real_zpt, zvec, newPt1);
+
+            double newPt[3];
+            vtkMath::Add(newPt0, newPt1, newPt);
+            vtkMath::MultiplyScalar(newPt, 1./2);
+
+            pos[0] = i; pos[1] = j; pos[2] = k;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+            mappedVolume->GetPoints()->SetPoint(ptId, newPt);
+          }
+        }
+        if (j == 0 || j == dim[1]-1)
+        {
+          int ptId = vtkStructuredData::ComputePointId(dim, pos);
+          double para_pt[3];
+          paraHexVolume->GetPoint(ptId, para_pt);
+          int realId = mappedIds->LookupValue(ptId);
+
+          if (realId == -1)
+          {
+            boundarySet[ptId] = 1;
+            pos[0] = 0;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, first_para_xpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, first_real_xpt);
+
+            pos[0] = dim[0]-1;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, last_para_xpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, last_real_xpt);
+
+            double para_x_dist = vtkSVMathUtils::Distance(para_pt, first_para_xpt)/vtkSVMathUtils::Distance(last_para_xpt, first_para_xpt);
+            double xvec[3];
+            vtkMath::Subtract(last_real_xpt, first_real_xpt, xvec);
+            vtkMath::Normalize(xvec);
+            vtkMath::MultiplyScalar(xvec, para_x_dist);
+
+            double newPt0[3];
+            vtkMath::Add(first_real_xpt, xvec, newPt0);
+
+            pos[0] = i; pos[2] = 0;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, first_para_zpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, first_real_zpt);
+
+            pos[2] = dim[2]-1;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, last_para_zpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, last_real_zpt);
+
+            double para_z_dist = vtkSVMathUtils::Distance(para_pt, first_para_zpt)/vtkSVMathUtils::Distance(last_para_zpt, first_para_zpt);
+            double zvec[3];
+            vtkMath::Subtract(last_real_zpt, first_real_zpt, zvec);
+            vtkMath::Normalize(zvec);
+            vtkMath::MultiplyScalar(zvec, para_z_dist);
+
+            double newPt1[3];
+            vtkMath::Add(first_real_zpt, zvec, newPt1);
+
+            double newPt[3];
+            vtkMath::Add(newPt0, newPt1, newPt);
+            vtkMath::MultiplyScalar(newPt, 1./2);
+
+            pos[0] = i; pos[1] = j; pos[2] = k;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+            mappedVolume->GetPoints()->SetPoint(ptId, newPt);
+          }
+        }
+        if (k == 0 || k == dim[2]-1)
+        {
+          int ptId = vtkStructuredData::ComputePointId(dim, pos);
+          double para_pt[3];
+          paraHexVolume->GetPoint(ptId, para_pt);
+          int realId = mappedIds->LookupValue(ptId);
+
+          if (realId == -1)
+          {
+            boundarySet[ptId] = 1;
+            pos[0] = 0;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, first_para_xpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, first_real_xpt);
+
+            pos[0] = dim[0]-1;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, last_para_xpt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, last_real_xpt);
+
+            double para_x_dist = vtkSVMathUtils::Distance(para_pt, first_para_xpt)/vtkSVMathUtils::Distance(last_para_xpt, first_para_xpt);
+            double xvec[3];
+            vtkMath::Subtract(last_real_xpt, first_real_xpt, xvec);
+            vtkMath::Normalize(xvec);
+            vtkMath::MultiplyScalar(xvec, para_x_dist);
+
+            double newPt0[3];
+            vtkMath::Add(first_real_xpt, xvec, newPt0);
+
+            pos[0] = i; pos[1] = 0;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, first_para_ypt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, first_real_ypt);
+
+            pos[1] = dim[1]-1;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+            paraHexVolume->GetPoint(ptId, last_para_ypt);
+            realId = mappedIds->LookupValue(ptId);
+
+            mappedSurface->GetPoint(realId, last_real_ypt);
+
+            double para_y_dist = vtkSVMathUtils::Distance(para_pt, first_para_ypt)/vtkSVMathUtils::Distance(last_para_ypt, first_para_ypt);
+            double yvec[3];
+            vtkMath::Subtract(last_real_ypt, first_real_ypt, yvec);
+            vtkMath::Normalize(yvec);
+            vtkMath::MultiplyScalar(yvec, para_y_dist);
+
+            double newPt1[3];
+            vtkMath::Add(first_real_ypt, yvec, newPt1);
+
+            double newPt[3];
+            vtkMath::Add(newPt0, newPt1, newPt);
+            vtkMath::MultiplyScalar(newPt, 1./2);
+
+            pos[0] = i; pos[1] = j; pos[2] = k;
+            ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+            mappedVolume->GetPoints()->SetPoint(ptId, newPt);
+          }
+        }
+      }
+    }
+  }
+
+
+  for (int i=0; i<dim[0]; i++)
+  {
+    for (int j=0; j<dim[1]; j++)
+    {
+      for (int k=0; k<dim[2]; k++)
+      {
+        pos[0] = i; pos[1] = j; pos[2] = k;
+        int ptId = vtkStructuredData::ComputePointId(dim, pos);
+        if(boundarySet[ptId] == 1)
+          continue;
+
         pos[0] = 0; pos[1] = j; pos[2] = k;
         int x0PtId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(x0PtId, first_para_xpt);
-        int transId = parameIds->GetTuple1(x0PtId);
+        paraHexVolume->GetPoint(x0PtId, first_para_xpt);
+        int transId = volumeIds->GetTuple1(x0PtId);
         int realXId0 = mappedIds->LookupValue(transId);
-        mappedPd->GetPoint(realXId0, first_real_xpt);
+        if (realXId0 == -1)
+          mappedVolume->GetPoint(x0PtId, first_real_xpt);
+        else
+          mappedSurface->GetPoint(realXId0, first_real_xpt);
 
         pos[0] = dim[0]-1; pos[1] = j; pos[2] = k;
         int x1PtId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(x1PtId, last_para_xpt);
-        transId = parameIds->GetTuple1(x1PtId);
+        paraHexVolume->GetPoint(x1PtId, last_para_xpt);
+        transId = volumeIds->GetTuple1(x1PtId);
         int realXId1 = mappedIds->LookupValue(transId);
-        mappedPd->GetPoint(realXId1, last_real_xpt);
+        if (realXId1 == -1)
+          mappedVolume->GetPoint(x1PtId, last_real_xpt);
+        else
+          mappedSurface->GetPoint(realXId1, last_real_xpt);
 
         pos[0] = i; pos[1] = 0; pos[2] = k;
         int y0PtId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(y0PtId, first_para_ypt);
-        transId = parameIds->GetTuple1(y0PtId);
+        paraHexVolume->GetPoint(y0PtId, first_para_ypt);
+        transId = volumeIds->GetTuple1(y0PtId);
         int realYId0 = mappedIds->LookupValue(transId);
-        mappedPd->GetPoint(realYId0, first_real_ypt);
+        if (realYId0 == -1)
+          mappedVolume->GetPoint(y0PtId, first_real_ypt);
+        else
+          mappedSurface->GetPoint(realYId0, first_real_ypt);
 
         pos[0] = i; pos[1] = dim[1]-1; pos[2] = k;
         int y1PtId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(y1PtId, last_para_ypt);
-        transId = parameIds->GetTuple1(y1PtId);
+        paraHexVolume->GetPoint(y1PtId, last_para_ypt);
+        transId = volumeIds->GetTuple1(y1PtId);
         int realYId1 = mappedIds->LookupValue(transId);
-        mappedPd->GetPoint(realYId1, last_real_ypt);
+        if (realYId1 == -1)
+          mappedVolume->GetPoint(y1PtId, last_real_ypt);
+        else
+          mappedSurface->GetPoint(realYId1, last_real_ypt);
 
         pos[0] = i; pos[1] = j; pos[2] = 0;
         int z0PtId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(z0PtId, first_para_zpt);
-        transId = parameIds->GetTuple1(z0PtId);
+        paraHexVolume->GetPoint(z0PtId, first_para_zpt);
+        transId = volumeIds->GetTuple1(z0PtId);
         int realZId0 = mappedIds->LookupValue(transId);
-        mappedPd->GetPoint(realZId0, first_real_zpt);
+        if (realZId0 == -1)
+          mappedVolume->GetPoint(z0PtId, first_real_zpt);
+        else
+          mappedSurface->GetPoint(realZId0, first_real_zpt);
 
         pos[0] = i; pos[1] = j; pos[2] = dim[2]-1;
         int z1PtId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(z1PtId, last_para_zpt);
-        transId = parameIds->GetTuple1(z1PtId);
+        paraHexVolume->GetPoint(z1PtId, last_para_zpt);
+        transId = volumeIds->GetTuple1(z1PtId);
         int realZId1 = mappedIds->LookupValue(transId);
-        mappedPd->GetPoint(realZId1, last_real_zpt);
+        if (realZId1 == -1)
+          mappedSurface->GetPoint(z1PtId, last_real_zpt);
+        else
+          mappedSurface->GetPoint(realZId1, last_real_zpt);
 
         pos[0] = i; pos[1] = j; pos[2] = k;
 
         double para_pt[3];
-        int ptId = vtkStructuredData::ComputePointId(dim, pos);
-        paraHexMesh->GetPoint(ptId, para_pt);
+        ptId = vtkStructuredData::ComputePointId(dim, pos);
+        paraHexVolume->GetPoint(ptId, para_pt);
 
         double real_xpt[3], real_ypt[3], real_zpt[3], real_pt[3];
         double para_x_dist = vtkSVMathUtils::Distance(para_pt, first_para_xpt)/vtkSVMathUtils::Distance(last_para_xpt, first_para_xpt);
@@ -3443,13 +4089,13 @@ int vtkSVGroupsSegmenter::MapVolume(vtkStructuredGrid *paraHexMesh,
           vtkMath::MultiplyScalar(real_pt, 1./2);
         }
 
-        realHexMesh->GetPoints()->SetPoint(ptId, real_pt);
+        mappedVolume->GetPoints()->SetPoint(ptId, real_pt);
       }
     }
   }
 
   vtkNew(vtkAppendFilter, myConverter);
-  myConverter->SetInputData(realHexMesh);
+  myConverter->SetInputData(mappedVolume);
   myConverter->Update();
 
   std::string filename = "/Users/adamupdegrove/Desktop/tmp/DUMB.vtu";
