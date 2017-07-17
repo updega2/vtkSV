@@ -237,18 +237,44 @@ protected:
   int FixPatchesWithPolycube();
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
-  int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh);
-  int DeleteInteriorPoints(vtkPolyData *pdWithInterior, vtkPolyData *pdWithoutInterior);
+  int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
+                            const int w_div, const int l_div, const int h_div);
+  int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
+                           vtkPolyData *pdWithCleanInterior,
+                           vtkPolyData *pdWithoutInterior,
+                           std::vector<int> &ptMap,
+                           std::vector<std::vector<int> > &invPtMap);
+  int GetVolumePointMap(vtkUnstructuredGrid *ugAll,
+                        vtkUnstructuredGrid *ugClean,
+                        std::vector<int> &ptMap);
+  int MapInteriorBoundary(vtkStructuredGrid *paraHexVolume,
+                          vtkPolyData *mappedSurface,
+                          const std::vector<int> ptMap);
+  int FixInteriorBoundary(vtkPolyData *mappedSurface,
+                          const std::vector<std::vector<int> > invPtMap);
+  int FixVolume(vtkUnstructuredGrid *mappedVolume,
+                vtkUnstructuredGrid *cleanVolume,
+                const std::vector<int> ptMap);
   int MapVolume(vtkStructuredGrid *paraHexVolume,
                 vtkPolyData *mappedSurface,
                 vtkStructuredGrid *mappedVolume);
+  int ConvertUGToSG(vtkUnstructuredGrid *ug,
+                    vtkStructuredGrid *sg,
+                    const int w_div, const int l_div, const int h_div);
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
-  int PushStructuredGridTopBottom(vtkStructuredGrid *paraHexMesh,
-                                  const double pt0[3],
-                                  const double pt1[3],
-                                  const double pt2[3],
-                                  const double pt3[3],
-                                  const int isBottom);
+  int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters);
+  int PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh,
+                              const double pt0[3],
+                              const double pt1[3],
+                              const double pt2[3],
+                              const double pt3[3],
+                              const int isBottom);
+  int PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh,
+                              const double pt0[3],
+                              const double pt1[3],
+                              const double pt2[3],
+                              const double pt3[3],
+                              const int isBottom);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
