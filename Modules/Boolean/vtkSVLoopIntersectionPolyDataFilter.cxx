@@ -142,7 +142,11 @@ public:
 
   /// \brief Temporarily moving here to try some stuff out
   static int IntersectPlaneWithLine(double p1[3], double p2[3], double *ppts[3],
-                                    double& t, double x[3]);
+                                    double& t, double x[3], double tol);
+#if VTKSV_DELAUNAY_TYPE == TRIANGLE
+  static int TRIANGLEIntersectPlaneWithLine(double p1[3], double p2[3], double *ppts[3],
+                                    double& t, double x[3], double tol);
+#endif
 
   /// \brief Runs the split mesh for the designated input surface
   int SplitMesh(int inputIndex, vtkPolyData *output,
@@ -231,7 +235,6 @@ public:
   /// \brief Map from cell ID to intersection line.
   IntersectionMapType *IntersectionMap[2];
   IntersectionMapType *IntersectionPtsMap[2];
-  IntersectionMapType *PointMapper;
 
   /// \brief Map from point to an edge on which it resides, the ID of the
   /// cell, and the ID of the line.
@@ -266,10 +269,9 @@ vtkSVLoopIntersectionPolyDataFilter::Impl::Impl() :
     this->IntersectionPtsMap[i]   = new IntersectionMapType();
     this->PointEdgeMap[i]         = new PointEdgeMapType();
     }
-  this->PointMapper               = new IntersectionMapType();
   this->SplittingPD               = vtkPolyData::New();
   this->TransformSign = 0;
-  this->Tolerance = 1e-6;
+  this->Tolerance = 1e-3;
 }
 
 // ----------------------
@@ -283,7 +285,6 @@ vtkSVLoopIntersectionPolyDataFilter::Impl::~Impl()
     delete this->IntersectionPtsMap[i];
     delete this->PointEdgeMap[i];
     }
-  delete this->PointMapper;
   this->SplittingPD->Delete();
 }
 
@@ -351,9 +352,60 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
 
             int coplanar = 0;
             double outpt0[3], outpt1[3];
+            double tri_outpt0[3], tri_outpt1[3];
             double surfaceid[2];
+            double tri_surfaceid[2];
+            int tri_intersects =
+              vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection
+              (triPts0[0], triPts0[1], triPts0[2],
+               triPts1[0], triPts1[1], triPts1[2],
+               coplanar, tri_outpt0, tri_outpt1, tri_surfaceid, tolerance);
             int intersects =
               vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection
+              (triPts0[0], triPts0[1], triPts0[2],
+               triPts1[0], triPts1[1], triPts1[2],
+               coplanar, outpt0, outpt1, surfaceid, tolerance);
+
+            if (tri_intersects != intersects)
+            {
+              fprintf(stdout,"DIFFFFFFFFFFFFFFFFFFFFFFF INNNN INTERRRRRRRRRRRRRR\n");
+              fprintf(stdout,"MESH 0 CELL: %d\n", cellId0);
+              fprintf(stdout,"MESH 1 CELL: %d\n", cellId1);
+              fprintf(stdout,"TRIANGLE SAYS INTERSECTS!: %d\n", tri_intersects);
+              fprintf(stdout,"OTHERONE SAYS INTERSECTS!: %d\n", intersects);
+            }
+            if (intersects)
+            {
+              if (surfaceid[0] != tri_surfaceid[0] || surfaceid[1] != tri_surfaceid[1])
+              {
+                fprintf(stdout,"DIFFFFFFFFFFFFFFFFFFFFFFF INNNN IDDDDDDDDDDDDSSSSSSSSS\n");
+                fprintf(stdout,"MESH 0 CELL: %d\n", cellId0);
+                fprintf(stdout,"MESH 1 CELL: %d\n", cellId1);
+                fprintf(stdout,"TRIANGLE SURF IDS:         %.2f %.2f\n", tri_surfaceid[0], tri_surfaceid[1]);
+                fprintf(stdout,"OTHERONE SURF IDS:         %.2f %.2f\n", surfaceid[0], surfaceid[1]);
+              }
+              if (tri_outpt0[0] != outpt0[0] || tri_outpt0[1] != outpt0[1] || tri_outpt0[2] != outpt0[2])
+              {
+                fprintf(stdout,"DIFFFFFFFFFFFFFFFFFFFFFFF COORROOOOOORDS 00000000\n");
+                fprintf(stdout,"MESH 0 CELL: %d\n", cellId0);
+                fprintf(stdout,"MESH 1 CELL: %d\n", cellId1);
+              }
+              if (tri_outpt1[0] != outpt1[0] || tri_outpt1[1] != outpt1[1] || tri_outpt1[2] != outpt1[2])
+              {
+                fprintf(stdout,"DIFFFFFFFFFFFFFFFFFFFFFFF COORROOOOOORDS 11111111\n");
+                fprintf(stdout,"MESH 0 CELL: %d\n", cellId0);
+                fprintf(stdout,"MESH 1 CELL: %d\n", cellId1);
+              }
+
+              //fprintf(stdout,"TRIANGLE OUT PT 0: %.6f %.6f %.6f\n", tri_outpt0[0], tri_outpt0[1], tri_outpt0[2]);
+              //fprintf(stdout,"OTHERONE OUT PT 0: %.6f %.6f %.6f\n", outpt0[0], outpt0[1], outpt0[2]);
+              //fprintf(stdout,"\n");
+              //fprintf(stdout,"TRIANGLE OUT PT 1: %.6f %.6f %.6f\n", tri_outpt1[0], tri_outpt1[1], tri_outpt1[2]);
+              //fprintf(stdout,"OTHERONE OUT PT 1: %.6f %.6f %.6f\n", outpt1[0], outpt1[1], outpt1[2]);
+            }
+            fprintf(stdout,"\n\n\n");
+            intersects =
+              vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection
               (triPts0[0], triPts0[1], triPts0[2],
                triPts1[0], triPts1[1], triPts1[2],
                coplanar, outpt0, outpt1, surfaceid, tolerance);
@@ -367,6 +419,10 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
               continue;
               }
 
+              if (cellId0 == 3 && cellId1 == 8)
+              {
+                fprintf(stdout,"FFFIN TELL ME\n");
+              }
             //If actual intersection, add point and cell to edge, line,
             //and surface maps!
             if (intersects)
@@ -377,6 +433,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
               int unique[2];
               unique[0] = pointMerger->InsertUniquePoint(outpt0, ptId0);
               unique[1] = pointMerger->InsertUniquePoint(outpt1, ptId1);
+
 
               int addline = 1;
               if (ptId0 == ptId1)
@@ -491,16 +548,17 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
                     m1p1++;
                     }
                   }
-                //Special cases caught by tolerance and not from the Point
-                //Merger
-                if (m0p0 > 0 && m1p0 > 0)
-                  {
-                  intersectionSurfaceId->InsertValue(ptId0, 3);
-                  }
-                if (m0p1 > 0 && m1p1 > 0)
-                  {
-                  intersectionSurfaceId->InsertValue(ptId1, 3);
-                  }
+                ////Special cases of points on edges
+                //if (m0p0 > 0 && m1p0 > 0)
+                //  {
+                //    fprintf(stdout,"HAPPENING!!!\n");
+                //  intersectionSurfaceId->InsertValue(ptId0, 3);
+                //  }
+                //if (m0p1 > 0 && m1p1 > 0)
+                //  {
+                //    fprintf(stdout,"HAPPENING!!!\n");
+                //  intersectionSurfaceId->InsertValue(ptId1, 3);
+                //  }
                 }
               //Add information about origin surface to std::maps for
               //checks later
@@ -900,70 +958,66 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
             vtkGenericWarningMacro(<< "invalid point read 5");
             }
           interLines->GetPoint(linePtIds[k], xyz);
-          ptIterLower = this->PointMapper->lower_bound(linePtIds[k]);
-          ptIterUpper = this->PointMapper->upper_bound(linePtIds[k]);
 
           //Find all points within this neighbor cell
-          while (ptIterLower != ptIterUpper)
+          vtkIdType mappedPtId = linePtIds[k];
+          cellIterLower = this->IntersectionPtsMap[inputIndex]->
+            lower_bound(mappedPtId);
+          cellIterUpper = this->IntersectionPtsMap[inputIndex]->
+            upper_bound(mappedPtId);
+
+          //Check all cell values associated with this point
+          while (cellIterLower != cellIterUpper)
             {
-            vtkIdType mappedPtId = ptIterLower->second;
-            cellIterLower = this->IntersectionPtsMap[inputIndex]->
-              lower_bound(mappedPtId);
-            cellIterUpper = this->IntersectionPtsMap[inputIndex]->
-              upper_bound(mappedPtId);
-            //Check all cell values associated with this point
-            while (cellIterLower != cellIterUpper)
+            fprintf(stdout,"SHOULD BE IN HERE\n");
+            vtkIdType checkCellId = cellIterLower->second;
+
+            //If this cell id is the same as the current cell id, this
+            //means the point is a split edge, need to add to list!!
+            if (checkCellId == cellId)
               {
-              vtkIdType checkCellId = cellIterLower->second;
-
-              //If this cell id is the same as the current cell id, this
-              //means the point is a split edge, need to add to list!!
-              if (checkCellId == cellId)
+              int unique=0;
+              if (ptIdMap.find(linePtIds[k]) == ptIdMap.end())
                 {
-                int unique=0;
-                if (ptIdMap.find(linePtIds[k]) == ptIdMap.end())
+                unique = merger->InsertUniquePoint(xyz,
+                    ptIdMap[ linePtIds[k] ]);
+                }
+
+              else
+                {
+                //Point is less than 3, original cell point
+                if (ptIdMap[ linePtIds[k] ] < 3)
                   {
-                  unique = merger->InsertUniquePoint(xyz,
-                      ptIdMap[ linePtIds[k] ]);
+                  CellPointOnInterLine[ptIdMap[ linePtIds[k] ]] = 1;
+                  }
+
+                }
+
+              if (unique)
+                {
+                //Check to see what surface point originates from. Don't
+                //mark if point is from other surface
+                if (surfaceMapper->GetValue(linePtIds[k]) == inputIndex + 1
+                    || surfaceMapper->GetValue(linePtIds[k]) == 3)
+                  {
+                  cellBoundaryPt->InsertValue(ptIdMap[linePtIds[k]], 1);
                   }
 
                 else
                   {
-                  //Point is less than 3, original cell point
-                  if (ptIdMap[ linePtIds[k] ] < 3)
-                    {
-                    CellPointOnInterLine[ptIdMap[ linePtIds[k] ]] = 1;
-                    }
-
+                  cellBoundaryPt->InsertValue(ptIdMap[linePtIds[k]], 0);
                   }
 
-                if (unique)
+                }
+              else
+                {
+                if (ptIdMap[ linePtIds[k] ] < 3)
                   {
-                  //Check to see what surface point originates from. Don't
-                  //mark if point is from other surface
-                  if (surfaceMapper->GetValue(linePtIds[k]) == inputIndex + 1
-                      || surfaceMapper->GetValue(linePtIds[k]) == 3)
-                    {
-                    cellBoundaryPt->InsertValue(ptIdMap[linePtIds[k]], 1);
-                    }
-
-                  else
-                    {
-                    cellBoundaryPt->InsertValue(ptIdMap[linePtIds[k]], 0);
-                    }
-
-                  }
-                else
-                  {
-                  if (ptIdMap[ linePtIds[k] ] < 3)
-                    {
-                    CellPointOnInterLine[ptIdMap[ linePtIds[k] ]] = 1;
-                    }
+                  CellPointOnInterLine[ptIdMap[ linePtIds[k] ]] = 1;
                   }
                 }
-              ++cellIterLower;
               }
-            ++ptIterLower;
+            ++cellIterLower;
             }
           }
         ++iterLower;
@@ -1099,6 +1153,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
   transformer->Update();
   transformedpd = transformer->GetOutput();
   transformedpd->BuildLinks();
+              fprintf(stdout,"SPLITTT: %d %d %d\n", cellId, interPtIdList->GetNumberOfTuples(), interceptlines->GetNumberOfCells());
 #ifdef VTKSV_PREDELAUNAY_SPLIT
   //If the triangle has intersecting lines and new points
   if (interPtIdList->GetNumberOfTuples() > 0 &&
@@ -1159,7 +1214,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #endif
       del2D->SetInputData(newpd);
       del2D->SetSourceData(boundary);
-      del2D->SetTolerance(0.0);
+      del2D->SetTolerance(this->Tolerance);
       del2D->SetAlpha(0.0);
       del2D->SetOffset(0);
       del2D->SetProjectionPlaneMode(VTK_SET_TRANSFORM_PLANE);
@@ -1186,7 +1241,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #endif
           del2Doffset->SetInputData(newpd);
           del2Doffset->SetSourceData(boundary);
-          del2Doffset->SetTolerance(0.0);
+          del2Doffset->SetTolerance(this->Tolerance);
           del2Doffset->SetAlpha(0.0);
           del2Doffset->SetOffset(numoffsets);
           del2Doffset->SetProjectionPlaneMode(VTK_SET_TRANSFORM_PLANE);
@@ -1277,7 +1332,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #endif
     del2D->SetInputData(fullpd);
     del2D->SetSourceData(fullpd);
-    del2D->SetTolerance(0.0);
+    del2D->SetTolerance(this->Tolerance);
     del2D->SetAlpha(0.0);
     del2D->SetOffset(0);
     del2D->SetProjectionPlaneMode(VTK_SET_TRANSFORM_PLANE);
@@ -1366,7 +1421,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
 
   double t, dist, closestPt[3];
   dist = vtkLine::DistanceToLine(x, pt0, pt1, t, closestPt);
-  if (fabs(dist) < pow(this->Tolerance, 3) && t >= 0.0 && t <= 1.0)
+  if (fabs(dist) <= (this->Tolerance * this->Tolerance) && t >= 0.0 && t <= 1.0)
     {
     CellEdgeLineType cellEdgeLine;
     cellEdgeLine.CellId = cellId;
@@ -2051,7 +2106,7 @@ vtkSVLoopIntersectionPolyDataFilter::vtkSVLoopIntersectionPolyDataFilter()
   this->CheckInput = 0;
   this->Status = 1;
   this->ComputeIntersectionPointArray = 0;
-  this->Tolerance = 1e-6;
+  this->Tolerance = 1e-3;
 }
 
 //----------------------------------------------------------------------------
@@ -2080,7 +2135,7 @@ void vtkSVLoopIntersectionPolyDataFilter::PrintSelf(ostream &os, vtkIndent inden
 }
 
 //----------------------------------------------------------------------------
-int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
+int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
                                         double p1[3], double q1[3],
                                         double r1[3], double p2[3],
                                         double q2[3], double r2[3],
@@ -2155,125 +2210,114 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
 
 
   int index1 = 0, index2 = 0;
+  int tri_index1 = 0, tri_index2 = 0;
   double t1[3], t2[3];
+  int interType1[3], interType2[3];
   int ts1=50, ts2=50;
+  int ptcount=0;
   for (int i = 0; i < 3; i++)
     {
     double t, x[3];
     int id1 = i, id2 = (i+1) % 3;
 
-    // Find t coordinate on line of intersection between two planes.
-    double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
-        pts1[id1], pts1[id2], pts2, t, x);
-    if (val1 == 1)
+    fprintf(stdout,"TRI 1 edge %d\n", i);
+    double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(
+        pts1[id1], pts1[id2], pts2, t, x, tolerance);
+    if (val1 > 0)
       {
-         if (t == 1)
-           {
-           ts1 = index1;
-           }
-
-         t1[index1++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
+      if (val1 >= 2)
+         ts1 = index1;
+      t1[index1++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
       }
+    interType1[i] = val1;
 
-    double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
-        pts2[id1], pts2[id2], pts1, t, x);
-    if (val2 == 1)
+    fprintf(stdout,"TRI 2 edge %d\n", i);
+    double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(
+        pts2[id1], pts2[id2], pts1, t, x, tolerance);
+    if (val2 > 0)
       {
-        if (t == 1)
-          {
-          ts2 = index2;
-          }
-
-        t2[index2++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
+      if (val2 >= 2)
+        ts2 = index2;
+      t2[index2++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
       }
+    interType2[i] = val2;
     }
 
-  //If the value of the index is greater than 2, the intersecting point
-  //actually is intersected by all three edges. In this case, set the two
-  //edges to the two edges where the intersecting point is not the end point
-  if (index1 > 2)
+  if (index1 + index2 < 2)
     {
-    index1--;
-    std::swap(t1[ts1], t1[2]);
-    }
-  if (index2 > 2)
-    {
-    index2--;
-    std::swap(t2[ts2], t2[2]);
-    }
-  // Check if only one edge or all edges intersect the supporting
-  // planes intersection.
-  if (index1 != 2 || index2 != 2)
-    {
-    fprintf(stdout,"CODE SAYS ONLY ONE INTERSECTING EDGE\n");
-    //vtkDebugMacro(<<"Only one edge intersecting!");
-    return SV_ERROR;
-    }
-
-  // Check for NaNs
-  if (vtkMath::IsNan(t1[0]) || vtkMath::IsNan(t1[1]) ||
-      vtkMath::IsNan(t2[0]) || vtkMath::IsNan(t2[1]))
-    {
-    fprintf(stdout,"CODE SAYS NANS\n");
-    //vtkWarningMacro(<<"NaNs!");
-    return SV_ERROR;
-    }
-
-  if (t1[0] > t1[1])
-    {
-    std::swap(t1[0], t1[1]);
-    }
-  if (t2[0] > t2[1])
-    {
-    std::swap(t2[0], t2[1]);
-    }
-  // Handle the different interval configuration cases.
-  double tt1, tt2;
-  if (t1[1] < t2[0] || t2[1] < t1[0])
-    {
-    fprintf(stdout,"CODE SAYS NO NO NO OVERLAP\n");
+    //fprintf(stdout,"CODE SAYS NO NO NO OVERLAP\n");
     //vtkDebugMacro(<<"No Overlap!");
     return SV_ERROR; // No overlap
     }
-  else if (t1[0] < t2[0])
+  else if (index1 + index2 > 2)
+  {
+    fprintf(stderr,"TELLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMME\n");
+    fprintf(stderr,"WHAT IS index1: %d\n", index1);
+    fprintf(stderr,"WHAT ARE TYPES: %d %d %d\n", interType1[0], interType1[1], interType1[2]);
+    fprintf(stderr,"WHAT ARE ts1s: %.4f %.4f %.4f\n", t1[0], t1[1], t1[2]);
+    fprintf(stderr,"WHAT IS index2: %d\n", index2);
+    fprintf(stderr,"WHAT ARE TYPES: %d %d %d\n", interType2[0], interType2[1], interType2[2]);
+    fprintf(stderr,"WHAT ARE ts2s: %.4f %.4f %.4f\n", t2[0], t2[1], t2[2]);
+    fprintf(stderr,"POINTS 1: %.5f %.5f %.5f, %.5f %.5f %.5f, %.5f %.5f %.5f\n", pts1[0][0],
+                                                                                 pts1[0][1],
+                                                                                 pts1[0][2],
+                                                                                 pts1[1][0],
+                                                                                 pts1[1][1],
+                                                                                 pts1[1][2],
+                                                                                 pts1[2][0],
+                                                                                 pts1[2][1],
+                                                                                 pts1[2][2]);
+    fprintf(stderr,"POINTS 2: %.5f %.5f %.5f, %.5f %.5f %.5f, %.5f %.5f %.5f\n", pts2[0][0],
+                                                                                 pts2[0][1],
+                                                                                 pts2[0][2],
+                                                                                 pts2[1][0],
+                                                                                 pts2[1][1],
+                                                                                 pts2[1][2],
+                                                                                 pts2[2][0],
+                                                                                 pts2[2][1],
+                                                                                 pts2[2][2]);
+  }
+
+  double tt1, tt2;
+  if (index1 == 2)
+  {
+    //Both points belong to lines on surface 1
+    surfaceid[0] = 1;
+    surfaceid[1] = 1;
+    if (t1[0] > t1[1])
+      std::swap(t1[0], t1[1]);
+    tt1 = t1[0];
+    tt2 = t1[1];
+  }
+  else if (index2 == 2)
+  {
+    //Both points belong to lines on surface 2
+    surfaceid[0] = 2;
+    surfaceid[1] = 2;
+    if (t2[0] > t2[1])
+      std::swap(t2[0], t2[1]);
+    tt1 = t2[0];
+    tt2 = t2[1];
+  }
+  else
+  {
+    if (t1[0] < t2[0])
     {
-    if (t1[1] < t2[1])
-      {
-      //First point on surface 2, second point on surface 1
-      surfaceid[0] = 2;
-      surfaceid[1] = 1;
-      tt1 = t2[0];
-      tt2 = t1[1];
-      }
-    else
-      {
-      //Both points belong to lines on surface 2
-      surfaceid[0] = 2;
-      surfaceid[1] = 2;
-      tt1 = t2[0];
-      tt2 = t2[1];
-      }
-    }
-  else // t1[0] >= t2[0]
-    {
-    if (t1[1] < t2[1])
-      {
-      //Both points belong to lines on surface 1
-      surfaceid[0] = 1;
-      surfaceid[1] = 1;
-      tt1 = t1[0];
-      tt2 = t1[1];
-      }
-    else
-      {
       //First point on surface 1, second point on surface 2
       surfaceid[0] = 1;
       surfaceid[1] = 2;
       tt1 = t1[0];
-      tt2 = t2[1];
-      }
+      tt2 = t2[0];
     }
-  fprintf(stdout,"CODE SAYS INTERSECTION\n");
+    else
+    {
+      //First point on surface 2, second point on surface 1
+      surfaceid[0] = 2;
+      surfaceid[1] = 1;
+      tt1 = t2[0];
+      tt2 = t1[0];
+    }
+  }
 
   // Create actual intersection points.
   pt1[0] = p[0] + tt1*v[0];
@@ -2285,7 +2329,20 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   pt2[2] = p[2] + tt2*v[2];
 
   return SV_OK;
+}
 #else
+  return SV_OK;
+}
+#endif
+//----------------------------------------------------------------------------
+int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
+                                        double p1[3], double q1[3],
+                                        double r1[3], double p2[3],
+                                        double q2[3], double r2[3],
+                                        int &coplanar, double pt1[3],
+                                        double pt2[3], double surfaceid[2],
+                                        double tolerance)
+{
   double n1[3], n2[3];
 
   // Compute supporting plane normals.
@@ -2303,7 +2360,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
 
   // If signs of all points are the same, all the points lie on the
   // same side of the supporting plane, and we can exit early.
-  if ((dist1[0]*dist1[1] > tolerance) && (dist1[0]*dist1[2] > tolerance))
+  if ((dist1[0]*dist1[1] > tolerance * tolerance) && (dist1[0]*dist1[2] > tolerance * tolerance))
     {
     //vtkDebugMacro(<<"Same side supporting plane 1!");
     return SV_ERROR;
@@ -2318,7 +2375,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
 
   // If signs of all points are the same, all the points lie on the
   // same side of the supporting plane, and we can exit early.
-  if ((dist2[0]*dist2[1] > tolerance) && (dist2[0]*dist2[2] > tolerance))
+  if ((dist2[0]*dist2[1] > tolerance * tolerance) && (dist2[0]*dist2[2] > tolerance * tolerance))
     {
     //vtkDebugMacro(<<"Same side supporting plane 2!");
     return SV_ERROR;
@@ -2362,7 +2419,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
 
     // Find t coordinate on line of intersection between two planes.
     double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
-        pts1[id1], pts1[id2], pts2, t, x);
+        pts1[id1], pts1[id2], pts2, t, x, tolerance);
     if (val1 == 1 ||
         (t > (0-tolerance) && t < (1+tolerance)))
       {
@@ -2375,7 +2432,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
       }
 
     double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(
-        pts2[id1], pts2[id2], pts1, t, x);
+        pts2[id1], pts2[id2], pts1, t, x, tolerance);
     if (val2 == 1 ||
         (t > (0-tolerance) && t < (1+tolerance)))
       {
@@ -2481,7 +2538,6 @@ int vtkSVLoopIntersectionPolyDataFilter::TriangleTriangleIntersection(
   pt2[2] = p[2] + tt2*v[2];
 
   return SV_OK;
-#endif
 }
 
 void vtkSVLoopIntersectionPolyDataFilter::CleanAndCheckSurface(vtkPolyData *pd,
@@ -2711,7 +2767,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
   //Set up the point merger for insertion of points into the intersection
   //lines. Tolerance is set to 1e-6
   vtkNew(vtkPointLocator , pointMerger);
-  pointMerger->SetTolerance(sqrt((double) 2.0)*this->Tolerance);
+  pointMerger->SetTolerance(this->Tolerance);
   pointMerger->InitPointInsertion(outputIntersection->GetPoints(), bounds0);
   impl->PointMerger = pointMerger;
 
@@ -2731,32 +2787,6 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
       }
     }
 
-  vtkDebugMacro(<<"LINEPTSBEFORE "<<outputIntersection->GetNumberOfPoints());
-  //The point merger doesn't doesn't detect 100 percent of the points already
-  //inserted into the points object. This sometimes causes multiple lines
-  //or points. To account for this, this simple clean retains what we need.
-  vtkNew(vtkPolyData, tmpLines);
-  tmpLines->DeepCopy(outputIntersection);
-  tmpLines->BuildLinks();
-
-  vtkNew(vtkCleanPolyData, lineCleaner);
-  lineCleaner->SetInputData(outputIntersection);
-  lineCleaner->ToleranceIsAbsoluteOn();
-  lineCleaner->SetAbsoluteTolerance(this->Tolerance);
-  lineCleaner->Update();
-  outputIntersection->DeepCopy(lineCleaner->GetOutput());
-  vtkNew(vtkPointLocator , linePtMapper);
-  linePtMapper->SetDataSet(outputIntersection);
-  linePtMapper->BuildLocator();
-  double newpt[3];
-  vtkIdType mapPtId=0;
-  for (vtkIdType ptId = 0; ptId < tmpLines->GetNumberOfPoints(); ptId++)
-    {
-    tmpLines->GetPoint(ptId, newpt);
-    mapPtId = linePtMapper->FindClosestPoint(newpt);
-    impl->PointMapper->insert(std::make_pair(mapPtId, ptId));
-    }
-  vtkDebugMacro(<<"LINEPTSAFTER "<<outputIntersection->GetNumberOfPoints());
   this->NumberOfIntersectionPoints = outputIntersection->GetNumberOfPoints();
   this->NumberOfIntersectionLines = outputIntersection->GetNumberOfLines();
   if (this->NumberOfIntersectionPoints == 0 ||
@@ -2894,6 +2924,87 @@ int vtkSVLoopIntersectionPolyDataFilter::FillInputPortInformation(int port,
   return SV_OK;
 }
 
+
+#if VTKSV_DELAUNAY_TYPE == TRIANGLE
+int vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(double p1[3], double p2[3], double *ppts[3],
+                                                                      double& t, double x[3], double tol)
+{
+  int interCase = 0;
+
+  // First check to see if they are on opposite sides of the plane
+  double testp1 = orient3d(ppts[0], ppts[1], ppts[2], p1);
+  double testp2 = orient3d(ppts[0], ppts[1], ppts[2], p2);
+
+  if (testp1 > 0 && testp2 > 0 ||
+      testp1 < 0 && testp2 < 0)
+  {
+    return interCase;
+  }
+
+  double vals[3];
+  for (int i=0; i<3; i++)
+  {
+    int id1 = i, id2 = (i+1) % 3;
+    vals[i] = orient3d(p1, ppts[id1], ppts[id2], p2);
+  }
+  fprintf(stdout,"WHAT ARE VALS: %.4f %.4f %.4f\n", vals[0], vals[1], vals[2]);
+  if ((vals[0] > 0 && vals[1] > 0 && vals[2] > 0) ||
+      (vals[0] < 0 && vals[1] < 0 && vals[2] < 0))
+  {
+    // All on same side of planes, clean intersection!
+    interCase = 1;
+  }
+  else if ((vals[0] == 0 && vals[1] > 0 && vals[2] > 0) ||
+           (vals[0] == 0 && vals[1] < 0 && vals[2] < 0) ||
+           (vals[1] == 0 && vals[2] > 0 && vals[0] > 0) ||
+           (vals[1] == 0 && vals[2] < 0 && vals[0] < 0) ||
+           (vals[2] == 0 && vals[0] > 0 && vals[1] > 0) ||
+           (vals[2] == 0 && vals[0] < 0 && vals[1] < 0))
+  {
+    // Passes through an edge of the triangle
+    interCase = 2;
+  }
+  else if ((vals[0] == 0 && vals[1] == 0 && vals[2] != 0) ||
+           (vals[1] == 0 && vals[2] == 0 && vals[0] != 0) ||
+           (vals[2] == 0 && vals[0] == 0 && vals[1] != 0))
+  {
+    // Passes through a vertex
+    interCase = 3;
+  }
+  else if ((vals[0] == 0 && vals[1] == 0 && vals[2] == 0))
+  {
+    // Is either coplanar or passes through a vertex of the triangle
+    interCase = 4;
+
+    // May need to code up coplanar cases!
+    // https://members.loria.fr/SLazard/ARC-Visi3D/Pant-project/files/Line_Triangle.html
+  }
+
+  // Compute line vector
+  //
+  double num, den, p21[3];
+  p21[0] = p2[0] - p1[0];
+  p21[1] = p2[1] - p1[1];
+  p21[2] = p2[2] - p1[2];
+
+  double n[3];
+  vtkTriangle::ComputeNormal(ppts[0], ppts[1], ppts[2], n);
+
+  // Compute denominator.  If ~0, line and plane are parallel.
+  //
+  num = vtkMath::Dot(n,ppts[0]) - ( n[0]*p1[0] + n[1]*p1[1] + n[2]*p1[2] ) ;
+  den = n[0]*p21[0] + n[1]*p21[1] + n[2]*p21[2];
+
+  t = num / den;
+
+  x[0] = p1[0] + t*p21[0];
+  x[1] = p1[1] + t*p21[1];
+  x[2] = p1[2] + t*p21[2];
+
+  return interCase;
+}
+#endif
+
 //----------------------------------------------------------------------------
 //
 
@@ -2904,7 +3015,7 @@ int vtkSVLoopIntersectionPolyDataFilter::FillInputPortInformation(int port,
 // do not intersect between (0<=t<=1). If the plane and line are parallel,
 // zero is returned and t is set to VTK_LARGE_DOUBLE.
 int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[3], double p2[3], double *ppts[3],
-                                                                      double& t, double x[3])
+                                                                      double& t, double x[3], double tol)
 {
   double num, den, p21[3];
   double fabsden, fabstolerance;
@@ -2925,29 +3036,6 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[
   //
   // If denominator with respect to numerator is "zero", then the line and
   // plane are considered parallel.
-
-#if VTKSV_DELAUNAY_TYPE == TRIANGLE
-  fprintf(stdout,"Need Opposited %.6f\n", orient3d(ppts[0], ppts[1], ppts[2], p1));
-  fprintf(stdout,"Need Opposited %.6f\n", orient3d(ppts[0], ppts[1], ppts[2], p2));
-  double vals[3];
-  for (int i=0; i<3; i++)
-  {
-    int id1 = i, id2 = (i+1) % 3;
-    vals[i] = orient3d(p1, ppts[id1], ppts[id2], p2);
-  }
-  if ((vals[0] > 0 && vals[1] > 0 && vals[2] > 0) ||
-      (vals[0] < 0 && vals[1] < 0 && vals[2] < 0))
-  {
-    fprintf(stdout,"TRIANGLE SAYS INTERSECTION, JUST NEED ONE\n");
-  }
-  if ((vals[0] == 0 && vals[1] == 0 && vals[2] == 0))
-  {
-    fprintf(stdout,"TRIANGLE SAYS SPECIAL\n");
-  }
-  fprintf(stdout,"What are vals: %.6f %.6f %.6f\n", vals[0], vals[1], vals[2]);
-
-#endif
-
   // trying to avoid an expensive call to fabs()
   if (den < 0.0)
     {
@@ -2959,11 +3047,11 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[
     }
   if (num < 0.0)
     {
-    fabstolerance = -num*1.0e-6;
+    fabstolerance = -num*tol;
     }
   else
     {
-    fabstolerance = num*1.0e-6;
+    fabstolerance = num*tol;
     }
   if ( fabsden <= fabstolerance )
     {
@@ -2973,7 +3061,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::IntersectPlaneWithLine(double p1[
 
   // valid intersection
   t = num / den;
-  fprintf(stdout,"What is t: %.8f\n", t);
+  //fprintf(stdout,"What is t: %.8f\n", t);
 
   x[0] = p1[0] + t*p21[0];
   x[1] = p1[1] + t*p21[1];

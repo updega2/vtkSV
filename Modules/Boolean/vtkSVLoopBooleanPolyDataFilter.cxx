@@ -43,6 +43,7 @@
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVLoopIntersectionPolyDataFilter.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
@@ -874,7 +875,7 @@ vtkSVLoopBooleanPolyDataFilter::vtkSVLoopBooleanPolyDataFilter() :
   this->NumberOfIntersectionLines = 0;
 
   this->Status = 1;
-  this->Tolerance = 1e-6;
+  this->Tolerance = 1e-3;
 }
 
 // ----------------------
@@ -952,6 +953,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   impl->Mesh[1]->DeepCopy(polydataIntersection->GetOutput(2));
   impl->Mesh[1]->BuildLinks();
   impl->IntersectionLines->ShallowCopy(polydataIntersection->GetOutput(0));
+  outputIntersection->DeepCopy(impl->IntersectionLines);
 
   if (this->NumberOfIntersectionPoints == 0 ||
                   this->NumberOfIntersectionLines == 0)
@@ -1041,6 +1043,11 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   impl->GetBooleanRegions(1, &loops);
   vtkDebugMacro(<<"DONE WITH 2");
 
+  //std::string mesh0 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH0.vtp";
+  //std::string mesh1 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH1.vtp";
+  //vtkSVIOUtils::WriteVTPFile(mesh0, impl->Mesh[0]);
+  //vtkSVIOUtils::WriteVTPFile(mesh1, impl->Mesh[1]);
+
   //Combine certain orientations based on the operation desired
   impl->PerformBoolean(outputSurface, this->Operation);
 
@@ -1069,6 +1076,7 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   normaler->AutoOrientNormalsOn();
   normaler->Update();
   outputSurface->DeepCopy(normaler->GetOutput());
+
 
   vtkDebugMacro(<<"FULL SURFACE BAD TRI MIN: "<<fullbadtri[0]);
   vtkDebugMacro(<<" MAX: "<<fullbadtri[1]);
