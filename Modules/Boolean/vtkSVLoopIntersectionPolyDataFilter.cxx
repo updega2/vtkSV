@@ -2212,6 +2212,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
   int index1 = 0, index2 = 0;
   int tri_index1 = 0, tri_index2 = 0;
   double t1[3], t2[3];
+  double x1s[3][3], x2s[3][3];
   int interType1[3], interType2[3];
   int ts1=50, ts2=50;
   int ptcount=0;
@@ -2222,23 +2223,23 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
 
     fprintf(stdout,"TRI 1 edge %d\n", i);
     double val1 = vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(
-        pts1[id1], pts1[id2], pts2, t, x, tolerance);
+        pts1[id1], pts1[id2], pts2, t, x1s[i], tolerance);
     if (val1 > 0)
       {
       if (val1 >= 2)
          ts1 = index1;
-      t1[index1++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
+      t1[index1++] = vtkMath::Dot(x1s[i], v);
       }
     interType1[i] = val1;
 
     fprintf(stdout,"TRI 2 edge %d\n", i);
     double val2 = vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(
-        pts2[id1], pts2[id2], pts1, t, x, tolerance);
+        pts2[id1], pts2[id2], pts1, t, x2s[i], tolerance);
     if (val2 > 0)
       {
       if (val2 >= 2)
         ts2 = index2;
-      t2[index2++] = vtkMath::Dot(x, v) - vtkMath::Dot(p, v);
+      t2[index2++] = vtkMath::Dot(x2s[i], v);
       }
     interType2[i] = val2;
     }
@@ -2258,24 +2259,24 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
     fprintf(stderr,"WHAT IS index2: %d\n", index2);
     fprintf(stderr,"WHAT ARE TYPES: %d %d %d\n", interType2[0], interType2[1], interType2[2]);
     fprintf(stderr,"WHAT ARE ts2s: %.4f %.4f %.4f\n", t2[0], t2[1], t2[2]);
-    fprintf(stderr,"POINTS 1: %.5f %.5f %.5f, %.5f %.5f %.5f, %.5f %.5f %.5f\n", pts1[0][0],
-                                                                                 pts1[0][1],
-                                                                                 pts1[0][2],
-                                                                                 pts1[1][0],
-                                                                                 pts1[1][1],
-                                                                                 pts1[1][2],
-                                                                                 pts1[2][0],
-                                                                                 pts1[2][1],
-                                                                                 pts1[2][2]);
-    fprintf(stderr,"POINTS 2: %.5f %.5f %.5f, %.5f %.5f %.5f, %.5f %.5f %.5f\n", pts2[0][0],
-                                                                                 pts2[0][1],
-                                                                                 pts2[0][2],
-                                                                                 pts2[1][0],
-                                                                                 pts2[1][1],
-                                                                                 pts2[1][2],
-                                                                                 pts2[2][0],
-                                                                                 pts2[2][1],
-                                                                                 pts2[2][2]);
+    fprintf(stderr,"POINTS 1: %.5f %.5f %.5f, %.5f %.5f %.5f, %.5f %.5f %.5f\n", x1s[0][0],
+                                                                                 x1s[0][1],
+                                                                                 x1s[0][2],
+                                                                                 x1s[1][0],
+                                                                                 x1s[1][1],
+                                                                                 x1s[1][2],
+                                                                                 x1s[2][0],
+                                                                                 x1s[2][1],
+                                                                                 x1s[2][2]);
+    fprintf(stderr,"POINTS 2: %.5f %.5f %.5f, %.5f %.5f %.5f, %.5f %.5f %.5f\n", x2s[0][0],
+                                                                                 x2s[0][1],
+                                                                                 x2s[0][2],
+                                                                                 x2s[1][0],
+                                                                                 x2s[1][1],
+                                                                                 x2s[1][2],
+                                                                                 x2s[2][0],
+                                                                                 x2s[2][1],
+                                                                                 x2s[2][2]);
   }
 
   double tt1, tt2;
@@ -2990,8 +2991,9 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(do
   }
   else if ((vals[0] == 0 && vals[1] == 0 && vals[2] == 0))
   {
-    // Is either coplanar or passes through a vertex of the triangle
+    // Is coplanar
     interCase = 4;
+    interCase = 0;
 
     // May need to code up coplanar cases!
     // https://members.loria.fr/SLazard/ARC-Visi3D/Pant-project/files/Line_Triangle.html
@@ -3013,10 +3015,13 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::TRIANGLEIntersectPlaneWithLine(do
   den = n[0]*p21[0] + n[1]*p21[1] + n[2]*p21[2];
 
   t = num / den;
+  fprintf(stdout,"WHAT IS t: %.6f\n", t);
 
   x[0] = p1[0] + t*p21[0];
   x[1] = p1[1] + t*p21[1];
   x[2] = p1[2] + t*p21[2];
+
+  fprintf(stdout,"ANND X: %.6f %.6f %.6f\n", x[0], x[1], x[2]);
 
   return interCase;
 }
