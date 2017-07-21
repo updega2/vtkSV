@@ -49,7 +49,6 @@ extern "C"
 #ifndef REAL
 # define REAL double
 #endif
-#include "triangle.h"
 }
 #include "predicates.h"
 #include "vtkTriangleDelaunay2D.h"
@@ -63,6 +62,7 @@ extern "C"
 #include "vtkLine.h"
 #include "vtkOBBTree.h"
 #include "vtkObjectFactory.h"
+#include "vtkMergePoints.h"
 #include "vtkPlane.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
@@ -230,7 +230,7 @@ public:
 
   /// \brief Merging filter used to convert intersection lines from "line
   /// soup" to connected polylines.
-  vtkPointLocator     *PointMerger;
+  vtkMergePoints     *PointMerger;
 
   /// \brief Map from cell ID to intersection line.
   IntersectionMapType *IntersectionMap[2];
@@ -306,7 +306,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   vtkIdTypeArray  *intersectionSurfaceId = info->SurfaceId;
   vtkIdTypeArray  *intersectionCellIds0  = info->CellIds[0];
   vtkIdTypeArray  *intersectionCellIds1  = info->CellIds[1];
-  vtkPointLocator *pointMerger           = info->PointMerger;
+  vtkMergePoints  *pointMerger           = info->PointMerger;
   double tolerance                       = info->Tolerance;
 
   //The number of cells in OBBTree
@@ -419,10 +419,6 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
               continue;
               }
 
-              if (cellId0 == 3 && cellId1 == 8)
-              {
-                fprintf(stdout,"FFFIN TELL ME\n");
-              }
             //If actual intersection, add point and cell to edge, line,
             //and surface maps!
             if (intersects)
@@ -430,10 +426,20 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
               vtkIdType lineId = intersectionLines->GetNumberOfCells();
 
               vtkIdType ptId0, ptId1;
-              int unique[2];
-              unique[0] = pointMerger->InsertUniquePoint(outpt0, ptId0);
-              unique[1] = pointMerger->InsertUniquePoint(outpt1, ptId1);
+              int inserted[2];
+              fprintf(stdout,"CHECKING %d %d\n", cellId0, cellId1);
+              inserted[0] = pointMerger->IsInsertedPoint(outpt0);
+              inserted[1] = pointMerger->IsInsertedPoint(outpt1);
 
+              if (inserted[0] == -1)
+                ptId0 = pointMerger->InsertNextPoint(outpt0);
+              else
+                ptId0 = inserted[0];
+
+              if (inserted[1] == -1)
+                ptId1 = pointMerger->InsertNextPoint(outpt1);
+              else
+                ptId1 = inserted[1];
 
               int addline = 1;
               if (ptId0 == ptId1)
@@ -447,7 +453,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
                 }
               else
                 {
-                if (unique[0])
+                if (inserted[0] == -1)
                   {
                   intersectionSurfaceId->InsertValue(ptId0, surfaceid[0]);
                   }
@@ -458,7 +464,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
                     intersectionSurfaceId->InsertValue(ptId0, surfaceid[0]);
                     }
                   }
-                if (unique[1])
+                if (inserted[1] == -1)
                   {
                   intersectionSurfaceId->InsertValue(ptId1, surfaceid[1]);
                   }
@@ -483,7 +489,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
               //Check to see if duplicate line. Line can only be a duplicate
               //line if both points are not unique and they don't
               //equal eachother
-              if (!unique[0] && !unique[1] && ptId0 != ptId1)
+              if (inserted[0] != -1 && inserted[1] != -1 && ptId0 != ptId1)
                 {
                 vtkNew(vtkPolyData, lineTest);
                 lineTest->SetPoints(pointMerger->GetPoints());
@@ -602,6 +608,8 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
         }
       }
     }
+
+  info->PointMerger = pointMerger;
 
   return SV_OK;
 }
@@ -816,8 +824,8 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 
   // Gather points from the cell
   vtkNew( vtkPoints, points);
-  vtkNew( vtkPointLocator , merger);
-  merger->SetTolerance(this->Tolerance);
+  vtkNew( vtkMergePoints, merger);
+  merger->SetTolerance(0.0);
   merger->InitPointInsertion(points, input->GetBounds());
 
   double xyz[3];
@@ -969,7 +977,6 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
           //Check all cell values associated with this point
           while (cellIterLower != cellIterUpper)
             {
-            fprintf(stdout,"SHOULD BE IN HERE\n");
             vtkIdType checkCellId = cellIterLower->second;
 
             //If this cell id is the same as the current cell id, this
@@ -1153,7 +1160,6 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
   transformer->Update();
   transformedpd = transformer->GetOutput();
   transformedpd->BuildLinks();
-              fprintf(stdout,"SPLITTT: %d %d %d\n", cellId, interPtIdList->GetNumberOfTuples(), interceptlines->GetNumberOfCells());
 #ifdef VTKSV_PREDELAUNAY_SPLIT
   //If the triangle has intersecting lines and new points
   if (interPtIdList->GetNumberOfTuples() > 0 &&
@@ -1214,7 +1220,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #endif
       del2D->SetInputData(newpd);
       del2D->SetSourceData(boundary);
-      del2D->SetTolerance(this->Tolerance);
+      del2D->SetTolerance(0);
       del2D->SetAlpha(0.0);
       del2D->SetOffset(0);
       del2D->SetProjectionPlaneMode(VTK_SET_TRANSFORM_PLANE);
@@ -1241,7 +1247,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #endif
           del2Doffset->SetInputData(newpd);
           del2Doffset->SetSourceData(boundary);
-          del2Doffset->SetTolerance(this->Tolerance);
+          del2Doffset->SetTolerance(0);
           del2Doffset->SetAlpha(0.0);
           del2Doffset->SetOffset(numoffsets);
           del2Doffset->SetProjectionPlaneMode(VTK_SET_TRANSFORM_PLANE);
@@ -1332,7 +1338,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #endif
     del2D->SetInputData(fullpd);
     del2D->SetSourceData(fullpd);
-    del2D->SetTolerance(this->Tolerance);
+    del2D->SetTolerance(0);
     del2D->SetAlpha(0.0);
     del2D->SetOffset(0);
     del2D->SetProjectionPlaneMode(VTK_SET_TRANSFORM_PLANE);
@@ -1421,7 +1427,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
 
   double t, dist, closestPt[3];
   dist = vtkLine::DistanceToLine(x, pt0, pt1, t, closestPt);
-  if (fabs(dist) <= (this->Tolerance * this->Tolerance) && t >= 0.0 && t <= 1.0)
+  if (fabs(dist) == 0.0 && t >= 0.0 && t <= 1.0)
     {
     CellEdgeLineType cellEdgeLine;
     cellEdgeLine.CellId = cellId;
@@ -1882,14 +1888,11 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::GetLoopOrientation(
   pd->GetPoint(ptId2, pt2);
   pd->GetPoint(ptId3, pt3);
 
-  double area = 0;
-  area = area + (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
-  area = area + (pt2[0]*pt3[1])-(pt3[0]*pt2[1]);
-  area = area + (pt3[0]*pt1[1])-(pt1[0]*pt3[1]);
+  double area2 = orient2d(pt1, pt2, pt3);
 
   int orientation = 1;
 
-  if (fabs(area) < 1e-10)
+  if (fabs(area2) < 1e-10)
     {
     //The area is very small for these three based upon the transformed pd
     //from the cells original three points. Get a new transform from these
@@ -1935,15 +1938,12 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::GetLoopOrientation(
     newTransformer->GetOutput()->GetPoint(2, pt3);
 
     fprintf(stdout,"Area was\n");
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Area was: "<<area);
-    area = 0;
-    area = area + (pt1[0]*pt2[1])-(pt2[0]*pt1[1]);
-    area = area + (pt2[0]*pt3[1])-(pt3[0]*pt2[1]);
-    area = area + (pt3[0]*pt1[1])-(pt1[0]*pt3[1]);
-    fprintf(stdout,"Corrected area is %.4f\n", area);
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Corrected area is: "<<area);
+    vtkDebugWithObjectMacro(this->ParentFilter, <<"Area was: "<<area2);
+    area2 = orient2d(pt1, pt2, pt3);
+    fprintf(stdout,"Corrected area is %.4f\n", area2);
+    vtkDebugWithObjectMacro(this->ParentFilter, <<"Corrected area is: "<<area2);
     }
-  if (area < 0)
+  if (area2 < 0)
     {
     orientation = -1;
     }
@@ -2552,8 +2552,7 @@ void vtkSVLoopIntersectionPolyDataFilter::CleanAndCheckSurface(vtkPolyData *pd,
 
   //Clean the input surface
   cleaner->SetInputData(pd);
-  cleaner->ToleranceIsAbsoluteOn();
-  cleaner->SetAbsoluteTolerance(tolerance);
+  cleaner->SetTolerance(0.0);
   cleaner->Update();
   pd->DeepCopy(cleaner->GetOutput());
   pd->BuildLinks();
@@ -2675,8 +2674,9 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
 
   vtkPolyData *outputIntersection = vtkPolyData::SafeDownCast(
     outIntersectionInfo->Get(vtkDataObject::DATA_OBJECT()));
-  vtkNew( vtkPoints, outputIntersectionPoints);
+  vtkPoints *outputIntersectionPoints = vtkPoints::New();
   outputIntersection->SetPoints(outputIntersectionPoints);
+  outputIntersectionPoints->Delete();
 
   vtkPolyData *outputPolyData0 = vtkPolyData::SafeDownCast(
     outPolyDataInfo0->Get(vtkDataObject::DATA_OBJECT()));
@@ -2696,7 +2696,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
   obbTree0->SetDataSet(mesh0);
   obbTree0->SetNumberOfCellsPerNode(10);
   obbTree0->SetMaxLevel(1000000);
-  obbTree0->SetTolerance(this->Tolerance);
+  obbTree0->SetTolerance(0.0);
   obbTree0->AutomaticOn();
   obbTree0->BuildLocator();
 
@@ -2704,7 +2704,7 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
   obbTree1->SetDataSet(mesh1);
   obbTree1->SetNumberOfCellsPerNode(10);
   obbTree1->SetMaxLevel(1000000);
-  obbTree1->SetTolerance(this->Tolerance);
+  obbTree1->SetTolerance(0.0);
   obbTree1->AutomaticOn();
   obbTree1->BuildLocator();
 
@@ -2766,8 +2766,9 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
 
   //Set up the point merger for insertion of points into the intersection
   //lines. Tolerance is set to 1e-6
-  vtkNew(vtkPointLocator , pointMerger);
-  pointMerger->SetTolerance(this->Tolerance);
+  vtkNew(vtkMergePoints, pointMerger);
+  pointMerger->SetDataSet(outputIntersection);
+  pointMerger->SetTolerance(0.0);
   pointMerger->InitPointInsertion(outputIntersection->GetPoints(), bounds0);
   impl->PointMerger = pointMerger;
 
@@ -2786,6 +2787,22 @@ int vtkSVLoopIntersectionPolyDataFilter::RequestData(
       impl->NewCellIds[i]->InsertTuple2(interCellId, -1, -1);
       }
     }
+
+  vtkNew(vtkPoints, TESTPOINTS);
+  vtkNew(vtkPointLocator, TESTER);
+  TESTER->SetTolerance(this->Tolerance);
+  TESTER->InitPointInsertion(TESTPOINTS, bounds0);
+
+  for (int i=0; i<outputIntersection->GetNumberOfPoints(); i++)
+  {
+    double pt[3];
+    outputIntersection->GetPoint(i, pt);
+    vtkIdType ptId;
+    TESTER->InsertUniquePoint(pt, ptId);
+  }
+
+  fprintf(stdout,"NUMER POINTS: %d\n", outputIntersection->GetNumberOfPoints());
+  fprintf(stdout,"CLEAN POINTS: %d\n", TESTPOINTS->GetNumberOfPoints());
 
   this->NumberOfIntersectionPoints = outputIntersection->GetNumberOfPoints();
   this->NumberOfIntersectionLines = outputIntersection->GetNumberOfLines();

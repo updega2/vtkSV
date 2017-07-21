@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
   vtkNew(vtkSVLoopBooleanPolyDataFilter, myBoolean);
 
   //Call Function to Read Fie
-  double testTolerance = 1e-3;
+  double testTolerance = 1.0e-6; // Doesn't matter anymore!!!
   std::cout<<"Reading Files..."<<endl;
   vtkSVIOUtils::ReadInputFile(inputFilename1,pd1);
   vtkSVIOUtils::ReadInputFile(inputFilename2,pd2);
