@@ -939,6 +939,13 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
     return SV_ERROR;
     }
   fprintf(stdout,"Intersection done\n");
+  std::string mesh0 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH0.vtp";
+  std::string mesh1 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH1.vtp";
+  std::string lines = "/Users/adamupdegrove/Desktop/tmp/SPLITLINES.vtp";
+  vtkSVIOUtils::WriteVTPFile(mesh0, polydataIntersection->GetOutput(1));
+  vtkSVIOUtils::WriteVTPFile(mesh1, polydataIntersection->GetOutput(2));
+  vtkSVIOUtils::WriteVTPFile(lines, polydataIntersection->GetOutput(0));
+
 
   this->NumberOfIntersectionPoints =
           polydataIntersection->GetNumberOfIntersectionPoints();
@@ -1031,13 +1038,6 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   impl->SetBoundaryArrays();
   vtkDebugMacro(<<"Setting Check Arrays");
   impl->SetCheckArrays();
-
-  std::string mesh0 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH0.vtp";
-  std::string mesh1 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH1.vtp";
-  std::string lines = "/Users/adamupdegrove/Desktop/tmp/SPLITLINES.vtp";
-  vtkSVIOUtils::WriteVTPFile(mesh0, impl->Mesh[0]);
-  vtkSVIOUtils::WriteVTPFile(mesh1, impl->Mesh[1]);
-  vtkSVIOUtils::WriteVTPFile(lines, impl->IntersectionLines);
 
   //Determine the intersection type and obtain the intersection loops
   //to give to Boolean Region finding
@@ -1195,6 +1195,7 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::DetermineIntersection(
           vtkIdType nextPt = caseId;
           vtkDebugWithObjectMacro(this->ParentFilter, <<"End point of open loop is "<<nextPt);
           newloop.endPt = nextPt;
+          fprintf(stdout,"START POINT: %d, END POINT: %d\n", newloop.startPt, newloop.endPt);
           newloop.loopType = 2;
           nextCell = cellIds->GetId(1);
           vtkIdType newId = this->RunLoopFind(interPt, nextCell, usedPt,

@@ -166,7 +166,7 @@ public:
   static int TRIANGLETriangleTriangleIntersection(double p1[3], double q1[3],
                                                   double r1[3], double p2[3],
                                                   double q2[3], double r2[3],
-                                                  int &coplanar, double pt1[3],
+                                                  int &coplanar, int &onedge, double pt1[3],
                                                   double pt2[3], double surfaceid[2],
                                                   double tolerance);
 
