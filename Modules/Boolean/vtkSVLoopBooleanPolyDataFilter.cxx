@@ -582,6 +582,7 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::GetBooleanRegions(
           {
           int sign1 = this->GetCellOrientation(tmpPolyData, outputCellId0,
             p1, p2, inputIndex);
+          fprintf(stdout,"CELLID %d, LINEPTS %d %d, of %d has orientation %d\n", outputCellId0, p1, p2, inputIndex, sign1);
           //If cell orientation is found
           if (sign1 != 0)
             {
@@ -602,6 +603,7 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::GetBooleanRegions(
           {
           int sign2 = this->GetCellOrientation(tmpPolyData, outputCellId1,
               p1, p2, inputIndex);
+          fprintf(stdout,"CELLID %d LINEPTS %d %d, of %d has orientation %d\n", outputCellId1, p1, p2, inputIndex, sign2);
           //If cell orientation is found
           if (sign2 != 0)
             {
@@ -734,17 +736,33 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
   transPD->BuildLinks();
 
   // Calculate area
-  double tedgepts[3][3];
+  double area = 0;
+  double tedgept1[3];
+  double tedgept2[3];
   vtkIdType newpt;
-  for(int i=0;i<transPD->GetNumberOfPoints();i++)
-      transPD->GetPoint(i, tedgepts[i]);
-
-  double area2 = orient2d(tedgepts[0], tedgepts[1], tedgepts[2]);
+  for(newpt=0;newpt<transPD->GetNumberOfPoints()-1;newpt++)
+    {
+      transPD->GetPoint(newpt, tedgept1);
+      transPD->GetPoint(newpt+1, tedgept2);
+      area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
+    }
+  transPD->GetPoint(newpt, tedgept1);
+  transPD->GetPoint(0, tedgept2);
+  area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
 
   // Check with tolerance
-  int value=1;
-  if (area2 < 0)
+  int value=0;
+  double tolerance = 1e-6;
+  if (area < 0 && fabs(area) > tolerance)
     value = -1;
+  else if (area > 0 && fabs(area) > tolerance)
+    value = 1;
+  else
+    {
+    vtkDebugWithObjectMacro(this->ParentFilter, <<"Line pts are "<<p0<<" and "<<p1);
+    vtkDebugWithObjectMacro(this->ParentFilter, <<"PD pts are "<<cellPtId0<<" and "<<cellPtId1);
+    value = 0;
+    }
 
   return value;
 }
@@ -939,12 +957,14 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
     return SV_ERROR;
     }
   fprintf(stdout,"Intersection done\n");
-  std::string mesh0 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH0.vtp";
-  std::string mesh1 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH1.vtp";
   std::string lines = "/Users/adamupdegrove/Desktop/tmp/SPLITLINES.vtp";
-  vtkSVIOUtils::WriteVTPFile(mesh0, polydataIntersection->GetOutput(1));
-  vtkSVIOUtils::WriteVTPFile(mesh1, polydataIntersection->GetOutput(2));
   vtkSVIOUtils::WriteVTPFile(lines, polydataIntersection->GetOutput(0));
+  //std::string mesh0 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH0.vtp";
+  //std::string mesh1 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH1.vtp";
+  //std::string lines = "/Users/adamupdegrove/Desktop/tmp/SPLITLINES.vtp";
+  //vtkSVIOUtils::WriteVTPFile(mesh0, polydataIntersection->GetOutput(1));
+  //vtkSVIOUtils::WriteVTPFile(mesh1, polydataIntersection->GetOutput(2));
+  //vtkSVIOUtils::WriteVTPFile(lines, polydataIntersection->GetOutput(0));
 
 
   this->NumberOfIntersectionPoints =
@@ -1051,6 +1071,10 @@ int vtkSVLoopBooleanPolyDataFilter::RequestData(
   vtkDebugMacro(<<"DONE WITH 1");
   impl->GetBooleanRegions(1, &loops);
   vtkDebugMacro(<<"DONE WITH 2");
+  std::string mesh0 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH0.vtp";
+  std::string mesh1 = "/Users/adamupdegrove/Desktop/tmp/SPLITMESH1.vtp";
+  vtkSVIOUtils::WriteVTPFile(mesh0, impl->Mesh[0]);
+  vtkSVIOUtils::WriteVTPFile(mesh1, impl->Mesh[1]);
 
   //Combine certain orientations based on the operation desired
   impl->PerformBoolean(outputSurface, this->Operation);
@@ -1180,6 +1204,10 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::DetermineIntersection(
         }
 
       vtkIdType nextCell = cellIds->GetId(0);
+      fprintf(stdout,"NEXT CELL IS: %d\n", cellIds->GetId(0));
+      vtkIdType ntpts, *tpts;
+      this->IntersectionLines->GetCellPoints(nextCell, ntpts, tpts);
+      interPt = tpts[0];
 
       //Run through intersection lines to get loops!
       fprintf(stdout,"Running loop find: %d, %d\n", interPt, nextCell);
