@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
       attachName = "Intersection";
     if (boolOperation == 2)
       attachName = "Difference";
-    outputFilename = vtkSVIOUtils::GetPath(input0Filename)+"/"+vtkSVIOUtils::GetRawName(input0Filename)+"/"+vtkSVIOUtils::GetRawName(input1Filename)+attachName;
+    outputFilename = vtkSVIOUtils::GetPath(input0Filename)+"/"+vtkSVIOUtils::GetRawName(input0Filename)+"/"+vtkSVIOUtils::GetRawName(input0Filename)+"_"+vtkSVIOUtils::GetRawName(input1Filename)+attachName+".vtp";
   }
 
   // Call Function to Read File
@@ -169,7 +169,10 @@ int main(int argc, char *argv[])
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, output);
   if (writeIntersectionLines)
-    vtkSVIOUtils::WriteVTPFile(outputFilename, myBoolean->GetOutput(1), attachName);
+  {
+    std::string interLinesSuffix = "_IntersectionLines";
+    vtkSVIOUtils::WriteVTPFile(outputFilename, myBoolean->GetOutput(1), interLinesSuffix);
+  }
 
   std::cout<<"Done"<<endl;
   //Exit the program without errors
