@@ -1677,7 +1677,7 @@ int svCenterlineGraph::GetGraphDirections()
     double tmpX[3];
     double pt0[3], pt1[3];
 
-    //// Compute are temp coordinate system
+    //// Compute our temp coordinate system
     //fprintf(stdout,"THE FIRST VEC: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
     //fprintf(stdout,"CURIOUS: %.6f\n", vtkMath::Dot(refVecs[1], refVecs[0]));
     //this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
@@ -1961,8 +1961,14 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
   {
     if (gCell->Children.size() == 0)
       type = 0;
-    else
+    else if (gCell->Children.size() == 2)
       type = 1;
+    else
+    {
+      fprintf(stderr,"Cannot currently Polycube for more than bifurcations yet!!!\n");
+      type = 8;
+      return SV_ERROR;
+    }
   }
   else if (gCell->Children.size() == 2)
   {
@@ -1991,6 +1997,7 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
   else
   {
     fprintf(stderr,"Cannot currently Polycube for more than bifurcations yet!!!\n");
+    type = 8;
     return SV_ERROR;
   }
 

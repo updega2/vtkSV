@@ -232,7 +232,9 @@ protected:
                       std::vector<Region> endRegions,
                       std::vector<int> &individualFix,
                       std::vector<int> &wholePatchFix);
-  int FixGroups();
+  int CheckGroups();
+  int FixGroups(vtkPolyData *pd, std::string arrayName,
+                std::vector<Region> allRegions);
   int FixPatchesByGroup();
   int FixPatchesWithPolycube();
   int ParameterizeSurface(vtkPolyData *fullMapPd);

@@ -359,7 +359,7 @@ int vtkSVGroupsSegmenter::RunFilter()
 
   this->WorkPd->DeepCopy(smoother->GetOutput());
 
-  if (this->FixGroups() != SV_OK)
+  if (this->CheckGroups() != SV_OK)
   {
     vtkErrorMacro("Error in correcting groups");
     return SV_ERROR;
@@ -370,6 +370,19 @@ int vtkSVGroupsSegmenter::RunFilter()
     vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
+
+  //std::vector<Region> firstRegions;
+  //if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, firstRegions) != SV_OK)
+  //{
+  //  vtkErrorMacro("Couldn't get group regions");
+  //  return SV_ERROR;
+  //}
+  //if (this->FixGroups(this->WorkPd, this->GroupIdsArrayName, firstRegions) != SV_OK)
+  //{
+  //  vtkErrorMacro("Error in correcting groups");
+  //  return SV_ERROR;
+  //}
+
   if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro("Could not smootho boundaries of surface");
@@ -1103,7 +1116,7 @@ int vtkSVGroupsSegmenter::SmoothBoundaries(vtkPolyData *pd, std::string arrayNam
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, pointCellsValues);
-    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(), i, pointCellsValues);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, i, pointCellsValues);
     if (pointCellsValues->GetNumberOfIds() >= 3)
     {
       cornerPoints.push_back(i);
@@ -1124,7 +1137,7 @@ int vtkSVGroupsSegmenter::SmoothBoundaries(vtkPolyData *pd, std::string arrayNam
     if (isBoundaryPoint[i])
     {
       vtkNew(vtkIdList, pointCellsValues);
-      vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(),
+      vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName,
                                              i, pointCellsValues);
 
       // boundary edge
@@ -1221,7 +1234,7 @@ int vtkSVGroupsSegmenter::SmoothSpecificBoundaries(vtkPolyData *pd, std::string 
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, pointCellsValues);
-    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(), i, pointCellsValues);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, i, pointCellsValues);
     if (pointCellsValues->GetNumberOfIds() >= 3)
     {
       cornerPoints.push_back(i);
@@ -1247,7 +1260,7 @@ int vtkSVGroupsSegmenter::SmoothSpecificBoundaries(vtkPolyData *pd, std::string 
     if (isBoundaryPoint[i])
     {
       vtkNew(vtkIdList, pointCellsValues);
-      vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(),
+      vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName,
                                              i, pointCellsValues);
 
       // boundary edge
@@ -1442,7 +1455,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, pointCellsValues);
-    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(), i, pointCellsValues);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, i, pointCellsValues);
     if (pointOnOpenEdge[i] == 1)
       pointCellsValues->InsertNextId(-1);
     if (pointCellsValues->GetNumberOfIds() >= 3)
@@ -1702,7 +1715,7 @@ int vtkSVGroupsSegmenter::GetSpecificRegions(vtkPolyData *pd, std::string arrayN
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, pointCellsValues);
-    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName.c_str(), i, pointCellsValues);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, i, pointCellsValues);
     if (pointOnOpenEdge[i] == 1)
       pointCellsValues->InsertNextId(-1);
     if (pointCellsValues->GetNumberOfIds() >= 3)
@@ -2349,7 +2362,7 @@ int vtkSVGroupsSegmenter::CheckEndPatches(vtkPolyData *pd,
   return SV_OK;
 }
 
-int vtkSVGroupsSegmenter::FixGroups()
+int vtkSVGroupsSegmenter::CheckGroups()
 {
   // Clean up groups
   int allGood = 0;
@@ -4735,7 +4748,7 @@ int vtkSVGroupsSegmenter::FindPointMatchingValues(vtkPointSet *ps, std::string a
   for (int i=0; i<ps->GetNumberOfPoints(); i++)
   {
     vtkNew(vtkIdList, pointCellValues);
-    vtkSVGeneralUtils::GetPointCellsValues(ps, arrayName.c_str(), i, pointCellValues);
+    vtkSVGeneralUtils::GetPointCellsValues(ps, arrayName, i, pointCellValues);
     int prevNum = pointCellValues->GetNumberOfIds();
     pointCellValues->IntersectWith(matchingVals);
 
@@ -5103,6 +5116,71 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *pd)
 }
 
 // ----------------------
+// FixGroups
+// ----------------------
+int vtkSVGroupsSegmenter::FixGroups(vtkPolyData *pd, std::string arrayName,
+                                             std::vector<Region> allRegions)
+{
+  //vtkNew(vtkIntArray, newSlicePointsArray);
+  //newSlicePointsArray->SetNumberOfTuples(pd->GetNumberOfPoints());
+  //newSlicePointsArray->FillComponent(0, -1);
+  //newSlicePointsArray->SetName("SlicePoints");
+  //pd->GetPointData()->AddArray(newSlicePointsArray);
+  //for (int i=0; i<allRegions.size(); i++)
+  //{
+  //  fprintf(stdout,"CLUSTER %d\n", allRegions[i].IndexCluster);
+  //  int numEdges = allRegions[i].BoundaryEdges.size();
+  //  fprintf(stdout,"NUM EDGES %d\n", numEdges);
+  //  int numCorns = allRegions[i].NumberOfCorners;
+  //  fprintf(stdout,"NUM CORNERS: %d\n", numCorns);
+  //  for (int j=0; j<numCorns; j++)
+  //  {
+  //    fprintf(stdout,"CORNER #: %d\n", allRegions[i].CornerPoints[j]);
+  //  }
+  //  for (int j=0; j<numEdges; j++)
+  //  {
+  //    int edgeSize = allRegions[i].BoundaryEdges[j].size();
+
+  //    vtkNew(vtkIdList, ptId0List);
+  //    int ptId0 = allRegions[i].BoundaryEdges[j][0];
+  //    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0List);
+
+  //    vtkNew(vtkIdList, ptIdNList);
+  //    int ptIdN = allRegions[i].BoundaryEdges[j][edgeSize-1];
+  //    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNList);
+
+  //    fprintf(stdout,"PT ID 0: %d\n", ptId0);
+  //    fprintf(stdout,"IDS 0: %d %d %d\n", ptId0List->GetId(0), ptId0List->GetId(1), ptId0List->GetId(2));
+  //    fprintf(stdout,"PT ID N: %d\n", ptIdN);
+  //    fprintf(stdout,"IDS N: %d %d %d\n", ptIdNList->GetId(0), ptIdNList->GetId(1), ptIdNList->GetId(2));
+  //    fprintf(stdout,"\n");
+
+  //    ptId0List->IntersectWith(ptIdNList);
+
+  //    if (ptId0List->GetNumberOfIds() == 3)
+  //    {
+  //      // Traditional between sides of groups
+  //      vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 3, allRegions[i].IndexCluster);
+  //    }
+  //    else if (ptId0List->GetNumberOfIds() == 2)
+  //    {
+  //      // Between center of groups, need to do speial
+  //      vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 2, allRegions[i].IndexCluster);
+  //    }
+  //    else
+  //    {
+  //      fprintf(stderr,"Not sure where this case should happen, not implemented\n");
+  //      return SV_ERROR;
+  //    }
+
+  //  }
+  //  fprintf(stdout,"\n");
+  //}
+
+  return SV_OK;
+}
+
+// ----------------------
 // SplitUpBoundaries
 // ----------------------
 int vtkSVGroupsSegmenter::SplitUpBoundaries(vtkPolyData *pd, std::string arrayName,
@@ -5115,9 +5193,43 @@ int vtkSVGroupsSegmenter::SplitUpBoundaries(vtkPolyData *pd, std::string arrayNa
   pd->GetPointData()->AddArray(newSlicePointsArray);
   for (int i=0; i<allRegions.size(); i++)
   {
-    for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
+    int numEdges = allRegions[i].BoundaryEdges.size();
+    for (int j=0; j<numEdges; j++)
     {
-      vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 3, allRegions[i].IndexCluster);
+      int edgeSize = allRegions[i].BoundaryEdges[j].size();
+
+      vtkNew(vtkIdList, ptId0List);
+      int ptId0 = allRegions[i].BoundaryEdges[j][0];
+      vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0List);
+
+      vtkNew(vtkIdList, ptIdNList);
+      int ptIdN = allRegions[i].BoundaryEdges[j][edgeSize-1];
+      vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNList);
+
+      fprintf(stdout,"PT ID 0: %d\n", ptId0);
+      fprintf(stdout,"IDS 0: %d %d %d\n", ptId0List->GetId(0), ptId0List->GetId(1), ptId0List->GetId(2));
+      fprintf(stdout,"PT ID N: %d\n", ptIdN);
+      fprintf(stdout,"IDS N: %d %d %d\n", ptIdNList->GetId(0), ptIdNList->GetId(1), ptIdNList->GetId(2));
+      fprintf(stdout,"\n");
+
+      ptId0List->IntersectWith(ptIdNList);
+
+      if (ptId0List->GetNumberOfIds() == 3)
+      {
+        // Traditional between sides of groups
+        vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 3, allRegions[i].IndexCluster);
+      }
+      else if (ptId0List->GetNumberOfIds() == 2)
+      {
+        // Between center of groups, need to do speial
+        vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 2, allRegions[i].IndexCluster);
+      }
+      else
+      {
+        fprintf(stderr,"Not sure where this case should happen, not implemented\n");
+        return SV_ERROR;
+      }
+
     }
   }
 
