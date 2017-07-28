@@ -48,6 +48,7 @@
 #include "vtkClipPolyData.h"
 #include "vtkFeatureEdges.h"
 #include "vtkGenericCell.h"
+#include "vtkHexahedron.h"
 #include "vtkLinearSubdivisionFilter.h"
 #include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
@@ -4632,10 +4633,32 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
     vtkNew(vtkIdList, ptCellIds);
     hexMesh->GetPointCells(i, ptCellIds);
 
+    int interiorPoint = 1;
     vtkNew(vtkIdList, ptNeighbors);
     for (int j=0; j<ptCellIds->GetNumberOfIds(); j++)
     {
       vtkCell *cell = hexMesh->GetCell(ptCellIds->GetId(j));
+
+      int numFaces = cell->GetNumberOfFaces();
+      for (int k=0; k<numFaces; k++)
+      {
+        vtkCell *face = cell->GetFace(k);
+
+        int checkable = 0;
+        for (int l=0; l<4; l++)
+        {
+          if (face->PointIds->GetId(l) == i)
+            checkable = 1;
+        }
+
+        if (checkable)
+        {
+          vtkNew(vtkIdList, neighCellIds);
+          hexMesh->GetCellNeighbors(ptCellIds->GetId(j), face->PointIds, neighCellIds);
+          if (neighCellIds->GetNumberOfIds() == 0)
+            interiorPoint = 0;
+        }
+      }
 
       for (int k=0; k<cell->GetNumberOfEdges(); k++)
       {
@@ -4648,10 +4671,14 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
         }
       }
     }
-    if (ptNeighbors->GetNumberOfIds() == 6)
+
+    if (interiorPoint)
     {
-      for (int j=0; j<ptNeighbors->GetNumberOfIds(); j++)
-        ptEdgeNeighbors[i].push_back(ptNeighbors->GetId(j));
+      if (ptNeighbors->GetNumberOfIds() > 0)
+      {
+        for (int j=0; j<ptNeighbors->GetNumberOfIds(); j++)
+          ptEdgeNeighbors[i].push_back(ptNeighbors->GetId(j));
+      }
     }
   }
 
@@ -4660,11 +4687,12 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
     for (int i=0; i<numPoints; i++)
     {
       // If 6 neighbors, that means this is interior son
-      if (ptEdgeNeighbors[i].size() == 6)
+      int numPtNeighbors = ptEdgeNeighbors[i].size();
+      if (numPtNeighbors > 0)
       {
         double center[3]; center[0] = 0.0; center[1] = 0.0; center[2] = 0.0;
 
-        for (int j=0; j<ptEdgeNeighbors[i].size(); j++)
+        for (int j=0; j<numPtNeighbors; j++)
         {
           int neighborPtId = ptEdgeNeighbors[i][j];
           double neighborPt[3];
@@ -4678,7 +4706,7 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
         hexMesh->GetPoint(i, pt);
 
         for (int j=0; j<3; j++)
-          pt[j] += (center[j]/6 - pt[j]) * 0.02;
+          pt[j] += (center[j]/numPtNeighbors - pt[j]) * 0.02;
 
         hexMesh->GetPoints()->SetPoint(i, pt);
       }
