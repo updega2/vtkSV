@@ -1967,9 +1967,12 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
       type = 1;
     else
     {
-      fprintf(stderr,"Cannot currently Polycube for more than bifurcations yet!!!\n");
-      type = 8;
-      return SV_ERROR;
+      type = this->TrifurcationDetermination(gCell);
+      if (type == 0)
+      {
+        fprintf(stderr,"Cannot currently Polycube for this type of trifurcation yet!!!\n");
+        return SV_ERROR;
+      }
     }
   }
   else if (gCell->Children.size() == 2)
@@ -1998,9 +2001,12 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
   }
   else
   {
-    fprintf(stderr,"Cannot currently Polycube for more than bifurcations yet!!!\n");
-    type = 8;
-    return SV_ERROR;
+    type = this->TrifurcationDetermination(gCell);
+    if (type == 0)
+    {
+      fprintf(stderr,"Cannot currently Polycube for this type of trifurcation yet!!!\n");
+      return SV_ERROR;
+    }
   }
 
   return SV_OK;
@@ -2421,4 +2427,32 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
   }
 
   return SV_OK;
+}
+
+// ----------------------
+// TrifurcationDetermination
+// ----------------------
+int svCenterlineGraph::TrifurcationDetermination(svCenterlineGCell *gCell)
+{
+  int type = 0;
+
+  int numChildren = gCell->GetNumberOfChildren();
+
+  if (numChildren != 3)
+  {
+    fprintf(stderr,"Trifurcation wrongly identified\n");
+  }
+
+  for (int i=0; i<numChildren; i++)
+  {
+    if (gCell->Children[i]->IsDiverging == 0)
+    {
+      double maxAngle = -1.0*VTK_SV_LARGE_DOUBLE;
+      int maxChild = 0;
+
+    }
+  }
+
+
+  return type;
 }
