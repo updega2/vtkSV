@@ -84,14 +84,14 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     this->Generators->Delete();
     this->Generators = NULL;
   }
-  //if (this->NoInitialization == 0)
-  //{
-  //  if (this->PatchIdsArray != NULL)
-  //  {
-  //    this->PatchIdsArray->Delete();
-  //    this->PatchIdsArray = NULL;
-  //  }
-  //}
+  if (this->NoInitialization == 0)
+  {
+    if (this->PatchIdsArray != NULL)
+    {
+      this->PatchIdsArray->Delete();
+      this->PatchIdsArray = NULL;
+    }
+  }
 
   if (this->CVTDataArrayName != NULL)
   {
@@ -191,9 +191,17 @@ int vtkSVGeneralCVT::PrepFilter()
       strcpy(this->PatchIdsArrayName, "PatchIds");
     }
 
-    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->PatchIdsArrayName) == SV_OK)
+    if (this->NoInitialization == 1)
     {
-      this->PatchIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName));
+      if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->PatchIdsArrayName) == SV_OK)
+      {
+        this->PatchIdsArray = vtkIntArray::SafeDownCast(this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName));
+      }
+      else
+      {
+        vtkErrorMacro("No array named "<< this->PatchIdsArrayName << "on input.");
+        return SV_ERROR;
+      }
     }
     else
     {

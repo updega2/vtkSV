@@ -124,60 +124,66 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
 // ----------------------
 vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
 {
-  if (this->WorkPd)
+  if (this->WorkPd != NULL)
   {
     this->WorkPd->Delete();
     this->WorkPd = NULL;
   }
-  if (this->CenterlinesWorkPd)
+  if (this->CenterlinesWorkPd != NULL)
   {
     this->CenterlinesWorkPd->Delete();
     this->CenterlinesWorkPd = NULL;
   }
-  if (this->Centerlines)
+  if (this->Centerlines != NULL)
   {
     this->Centerlines->Delete();
     this->Centerlines = NULL;
   }
-  if (this->Polycube)
+  if (this->Polycube != NULL)
   {
     this->Polycube->Delete();
     this->Polycube = NULL;
   }
-  if (this->GraphPd)
+  if (this->GraphPd != NULL)
   {
     this->GraphPd->Delete();
     this->GraphPd = NULL;
   }
 
-  if (this->CenterlineGroupIds)
+  if (this->CenterlineGroupIds != NULL)
   {
     this->CenterlineGroupIds->Delete();
     this->CenterlineGroupIds = NULL;
   }
 
-  if (this->CenterlineGroupIdsArrayName)
+  if (this->CenterlineGroupIdsArrayName != NULL)
   {
     delete [] this->CenterlineGroupIdsArrayName;
     this->CenterlineGroupIdsArrayName = NULL;
   }
 
-  if (this->CenterlineRadiusArrayName)
+  if (this->CenterlineRadiusArrayName != NULL)
   {
     delete [] this->CenterlineRadiusArrayName;
     this->CenterlineRadiusArrayName = NULL;
   }
 
-  if (this->GroupIdsArrayName)
+  if (this->GroupIdsArrayName != NULL)
   {
     delete [] this->GroupIdsArrayName;
     this->GroupIdsArrayName = NULL;
   }
 
-  if (this->BlankingArrayName)
+  if (this->BlankingArrayName != NULL)
   {
     delete [] this->BlankingArrayName;
     this->BlankingArrayName = NULL;
+  }
+
+  if (this->CenterlineGraph != NULL)
+  {
+    delete this->CenterlineGraph;
+    this->CenterlineGraph = NULL;
   }
 }
 
@@ -647,22 +653,22 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  vtkNew(vtkPolyData, fullMapPd);
-  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  {
-    fprintf(stderr,"WRONG\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkPolyData, fullMapPd);
+  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  //{
+  //  fprintf(stderr,"WRONG\n");
+  //  return SV_ERROR;
+  //}
 
-  vtkNew(vtkUnstructuredGrid, loftedVolume);
-  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  {
-    fprintf(stderr,"Failed doing volume stuffs\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkUnstructuredGrid, loftedVolume);
+  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  //{
+  //  fprintf(stderr,"Failed doing volume stuffs\n");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }

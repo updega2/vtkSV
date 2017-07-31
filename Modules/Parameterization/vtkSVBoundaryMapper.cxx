@@ -68,8 +68,13 @@ vtkSVBoundaryMapper::vtkSVBoundaryMapper()
 
   this->InternalIdsArrayName = NULL;
 
-  this->SetObjectXAxis(1.0, 0.0, 0.0);
-  this->SetObjectZAxis(0.0, 0.0, 1.0);
+  this->ObjectXAxis[0] = 1.0;
+  this->ObjectXAxis[1] = 0.0;
+  this->ObjectXAxis[2] = 0.0;
+
+  this->ObjectZAxis[0] = 0.0;
+  this->ObjectZAxis[1] = 0.0;
+  this->ObjectZAxis[2] = 1.0;
 }
 
 // ----------------------

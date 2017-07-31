@@ -1949,6 +1949,8 @@ int svCenterlineGraph::FlipLinePoints(vtkPolyData *pd, const int cellId)
   pd->Modified();
   pd->BuildLinks();
 
+  delete [] tmpPts;
+
   return SV_OK;
 }
 

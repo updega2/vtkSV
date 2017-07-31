@@ -55,6 +55,14 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->UseLocalCoordinates = 0;
   this->RemoveEndPoints = 0;
   this->PointLocator = vtkPointLocator::New();
+
+  for (int i=0; i<3; i++)
+  {
+    this->PointNormal[i] = 0.0;
+    this->LastLocalCoordX[i] = 0.0;
+    this->LastLocalCoordY[i] = 0.0;
+    this->LastLocalCoordZ[i] = 0.0;
+  }
 }
 
 // ----------------------
@@ -62,23 +70,30 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
 // ----------------------
 vtkSVPolyBallLine::~vtkSVPolyBallLine()
 {
-  if (this->Input)
+  if (this->Input != NULL)
     {
     this->Input->Delete();
     this->Input = NULL;
     }
 
-  if (this->InputCellIds)
+  if (this->InputCellIds != NULL)
     {
     this->InputCellIds->Delete();
     this->InputCellIds = NULL;
     }
 
-  if (this->PolyBallRadiusArrayName)
+  if (this->PolyBallRadiusArrayName != NULL)
     {
     delete[] this->PolyBallRadiusArrayName;
     this->PolyBallRadiusArrayName = NULL;
     }
+
+  if (this->LocalCoordinatesArrayName != NULL)
+    {
+    delete[] this->LocalCoordinatesArrayName;
+    this->LocalCoordinatesArrayName = NULL;
+    }
+
   if (this->PointLocator != NULL)
     {
       this->PointLocator->Delete();
