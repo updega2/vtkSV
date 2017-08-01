@@ -390,6 +390,12 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
+  if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro("Could not correcto boundaries of surface");
+    return SV_ERROR;
+  }
+
   if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro("Could not smootho boundaries of surface");
@@ -646,29 +652,29 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  //// For checking purposes
-  //if (this->FixPatchesWithPolycube() != SV_OK)
-  //{
-  //  fprintf(stderr,"Couldn't fix patches\n");
-  //  return SV_ERROR;
-  //}
+  // For checking purposes
+  if (this->FixPatchesWithPolycube() != SV_OK)
+  {
+    fprintf(stderr,"Couldn't fix patches\n");
+    return SV_ERROR;
+  }
 
   //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
   //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //vtkNew(vtkPolyData, fullMapPd);
-  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkPolyData, fullMapPd);
+  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
-  //vtkNew(vtkUnstructuredGrid, loftedVolume);
-  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  //{
-  //  fprintf(stderr,"Failed doing volume stuffs\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkUnstructuredGrid, loftedVolume);
+  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  {
+    fprintf(stderr,"Failed doing volume stuffs\n");
+    return SV_ERROR;
+  }
 
   return SV_OK;
 }
@@ -2505,6 +2511,8 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
 
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(surfacer->GetOutput());
+  cleaner->ToleranceIsAbsoluteOn();
+  cleaner->SetAbsoluteTolerance(1.0e-6);
   cleaner->Update();
 
   vtkNew(vtkTriangleFilter, triangulator);
@@ -2584,6 +2592,17 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
                     polycubePatches[i].CornerPoints.size(),
                     patchId,
                     surfacePatches[j].CornerPoints.size());
+
+            fprintf(stderr,"POLYCUBE CORNERS: ");
+            for (int k=0; k<polycubePatches[i].CornerPoints.size(); k++)
+              fprintf(stderr,"%d ", polycubePatches[i].CornerPoints[k]);
+            fprintf(stderr,"\n");
+
+            fprintf(stderr,"SURFACE CORNERS: ");
+            for (int k=0; k<surfacePatches[j].CornerPoints.size(); k++)
+              fprintf(stderr,"%d ", surfacePatches[j].CornerPoints[k]);
+            fprintf(stderr,"\n");
+
             std::vector<int> lowCorners;
             std::vector<int> highCorners;
             vtkNew(vtkIdList, checkValues);
@@ -2932,19 +2951,23 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
   }
 
   // Extract surface, triangulate, and subdivide polycube
-  vtkNew(vtkPolyData, polycubePd);
+  vtkNew(vtkPolyData, polySurfacePd);
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(this->Polycube);
   surfacer->Update();
+  polySurfacePd->DeepCopy(surfacer->GetOutput());
 
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(surfacer->GetOutput());
+  cleaner->ToleranceIsAbsoluteOn();
+  cleaner->SetAbsoluteTolerance(1.0e-6);
   cleaner->Update();
 
   vtkNew(vtkTriangleFilter, triangulator);
   triangulator->SetInputData(cleaner->GetOutput());
   triangulator->Update();
 
+  vtkNew(vtkPolyData, polycubePd);
   vtkNew(vtkLinearSubdivisionFilter, subdivider);
   subdivider->SetInputData(triangulator->GetOutput());
   subdivider->SetNumberOfSubdivisions(4);
@@ -2966,10 +2989,10 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
 
     // Get same group polycube
     // translate polygroup to regular spot ya know
-    vtkNew(vtkUnstructuredGrid, rotPolycube);
+    vtkNew(vtkPolyData, rotPolycube);
     vtkNew(vtkMatrix4x4, rotMatrix0);
     vtkNew(vtkMatrix4x4, rotMatrix1);
-    this->RotateGroupToGlobalAxis(this->Polycube, groupId, this->GroupIdsArrayName, rotPolycube, rotMatrix0, rotMatrix1);
+    this->RotateGroupToGlobalAxis(polySurfacePd, groupId, this->GroupIdsArrayName, rotPolycube, rotMatrix0, rotMatrix1);
 
     // Connect corner points of patches to polycube for boundary
     vtkNew(vtkPolyData, thresholdPd);
@@ -3168,7 +3191,13 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     surfacer->SetInputData(this->Polycube);
     surfacer->Update();
 
-    polycubePd->DeepCopy(surfacer->GetOutput());
+    vtkNew(vtkCleanPolyData, cubeCleaner);
+    cubeCleaner->SetInputData(surfacer->GetOutput());
+    cubeCleaner->ToleranceIsAbsoluteOn();
+    cubeCleaner->SetAbsoluteTolerance(1.0e-6);
+    cubeCleaner->Update();
+
+    polycubePd->DeepCopy(cubeCleaner->GetOutput());
 
     vtkNew(vtkPolyData, branchPolycube);
     vtkSVGeneralUtils::ThresholdPd(polycubePd, groupId, groupId, 1, this->GroupIdsArrayName, branchPolycube);
@@ -3215,6 +3244,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(paraHexSurface);
+  cleaner->ToleranceIsAbsoluteOn();
+  cleaner->SetAbsoluteTolerance(1.0e-6);
   cleaner->Update();
 
   vtkNew(vtkPolyData, paraHexCleanSurface);
@@ -4725,21 +4756,21 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
 // ----------------------
 // RotateGroupToGlobalAxis
 // ----------------------
-int vtkSVGroupsSegmenter::RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
+int vtkSVGroupsSegmenter::RotateGroupToGlobalAxis(vtkPolyData *pd,
                                                   const int thresholdId,
                                                   std::string arrayName,
-                                                  vtkUnstructuredGrid *rotUg,
+                                                  vtkPolyData *rotPd,
                                                   vtkMatrix4x4 *rotMatrix0,
                                                   vtkMatrix4x4 *rotMatrix1)
 {
-  vtkNew(vtkUnstructuredGrid, thresholdUg);
-  vtkSVGeneralUtils::ThresholdUg(ug, thresholdId, thresholdId, 1, arrayName, thresholdUg);
+  vtkNew(vtkPolyData, thresholdPd);
+  vtkSVGeneralUtils::ThresholdPd(pd, thresholdId, thresholdId, 1, arrayName, thresholdPd);
 
   double pts[3][3];
   for (int i=0; i<3; i++)
   {
-    int ptId = thresholdUg->GetPointData()->GetArray("LocalPointIds")->LookupValue(i);
-    thresholdUg->GetPoint(ptId, pts[i]);
+    int ptId = thresholdPd->GetPointData()->GetArray("LocalPointIds")->LookupValue(i);
+    thresholdPd->GetPoint(ptId, pts[i]);
   }
 
   double zVec[4], tmpVec[3];
@@ -4762,13 +4793,15 @@ int vtkSVGroupsSegmenter::RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
 
   vtkSVGeneralUtils::GetRotationMatrix(newZVec, realZ, rotMatrix1);
 
-  vtkNew(vtkSVCleanUnstructuredGrid, ugCleaner);
-  ugCleaner->SetInputData(ug);
-  ugCleaner->Update();
-  rotUg->DeepCopy(ugCleaner->GetOutput());
+  vtkNew(vtkCleanPolyData, cleaner);
+  cleaner->SetInputData(pd);
+  cleaner->ToleranceIsAbsoluteOn();
+  cleaner->SetAbsoluteTolerance(1.0e-6);
+  cleaner->Update();
+  rotPd->DeepCopy(cleaner->GetOutput());
 
-  vtkSVGeneralUtils::ApplyRotationMatrix(rotUg, rotMatrix0);
-  vtkSVGeneralUtils::ApplyRotationMatrix(rotUg, rotMatrix1);
+  vtkSVGeneralUtils::ApplyRotationMatrix(rotPd, rotMatrix0);
+  vtkSVGeneralUtils::ApplyRotationMatrix(rotPd, rotMatrix1);
 
   return SV_OK;
 }
@@ -5158,6 +5191,10 @@ int vtkSVGroupsSegmenter::FixGroups(vtkPolyData *pd, std::string arrayName,
 
   vtkSVGeneralUtils::GiveIds(pd, "TmpInternalIds");
 
+  vtkNew(vtkPolyData, origPd);
+  origPd->DeepCopy(pd);
+
+  vtkNew(vtkIdList, halfIds);
   for (int i=0; i<allRegions.size(); i++)
   {
     int patchValue = allRegions[i].IndexCluster;
@@ -5211,6 +5248,10 @@ int vtkSVGroupsSegmenter::FixGroups(vtkPolyData *pd, std::string arrayName,
 
       if (badEdges.size() > 0 || edgeGroupList->GetNumberOfIds() != fullNumIds)
       {
+        vtkNew(vtkPolyData, branchPd);
+        vtkSVGeneralUtils::ThresholdPd(pd, patchValue, patchValue, 1, arrayName, branchPd);
+        branchPd->BuildLinks();
+
         fprintf(stdout,"NEEED TO DO SOMETHING!!!!\n");
         fprintf(stdout,"BAD EDGES: ");
         for (int j=0; j<badEdges.size(); j++)
@@ -5229,8 +5270,22 @@ int vtkSVGroupsSegmenter::FixGroups(vtkPolyData *pd, std::string arrayName,
           int startPtId = allRegions[i].BoundaryEdges[badEdgeId][0];
           int finalPtId = allRegions[i].BoundaryEdges[badEdgeId][edgeSize-1];
 
-          int halfSize = floor(edgeSize/2.);
+          int halfSize;
+          if (edgeSize%2 == 0)
+          {
+            int testId = allRegions[i].BoundaryEdges[badEdgeId][edgeSize/2-1];
+            fprintf(stdout,"TEST ID: %d\n", testId);
+            if (halfIds->IsId(testId) == -1)
+              halfSize = edgeSize/2;
+            else
+              halfSize = edgeSize/2-1;
+          }
+          else
+          {
+            halfSize = floor(edgeSize/2.);
+          }
           int halfId   = allRegions[i].BoundaryEdges[badEdgeId][halfSize];
+          halfIds->InsertUniqueId(halfId);
 
           for (int k=0; k<groupEdges.size(); k++)
           {
@@ -5298,10 +5353,6 @@ int vtkSVGroupsSegmenter::FixGroups(vtkPolyData *pd, std::string arrayName,
                 fprintf(stdout,"PLANNING PATH FROM %d to %d\n", halfId, stopId);
                 fprintf(stdout,"STARTING USING EDGE CELL %d AND PAINTING WITH %d\n", edgeCell, newCellValue);
 
-                vtkNew(vtkPolyData, branchPd);
-                vtkSVGeneralUtils::ThresholdPd(pd, patchValue, patchValue, 1, arrayName, branchPd);
-                branchPd->BuildLinks();
-
                 int startId  = branchPd->GetPointData()->GetArray("TmpInternalIds")->LookupValue(halfId);
                 int finalId  = branchPd->GetPointData()->GetArray("TmpInternalIds")->LookupValue(stopId);
                 edgeCell     = branchPd->GetCellData()->GetArray("TmpInternalIds")->LookupValue(edgeCell);
@@ -5366,27 +5417,129 @@ int vtkSVGroupsSegmenter::FixGroups(vtkPolyData *pd, std::string arrayName,
                     }
                   }
                 }
-
-                // Set vals on work pd
-                for (int l=0; l<branchPd->GetNumberOfCells(); l++)
-                {
-                  //Get real cell id
-                  int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(l);
-
-                  // Get val
-                  int cellVal = branchPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(l);
-
-                  // Set val
-                  pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(realCellId, cellVal);
-                }
               }
             }
-
           }
+        }
+        // Set vals on work pd
+        for (int l=0; l<branchPd->GetNumberOfCells(); l++)
+        {
+          //Get real cell id
+          int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(l);
 
+          // Get val
+          int cellVal = branchPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(l);
+
+          // Set val
+          pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(realCellId, cellVal);
+        }
+      }
+      fprintf(stdout,"\n");
+    }
+  }
+
+  for (int i=0; i<halfIds->GetNumberOfIds(); i++)
+  {
+    int halfId = halfIds->GetId(i);
+
+    vtkNew(vtkIdList, checkVals);
+    vtkSVGeneralUtils::GetPointCellsValues(origPd, arrayName, halfId, checkVals);
+
+    vtkNew(vtkIdList, finalVals);
+    vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, halfId, finalVals);
+    if (finalVals->GetNumberOfIds() != 4)
+    {
+      vtkNew(vtkIdList, missingVals);
+      for (int j=0; j<checkVals->GetNumberOfIds(); j++)
+      {
+        if (finalVals->IsId(checkVals->GetId(j)) == -1)
+          missingVals->InsertNextId(checkVals->GetId(j));
+      }
+
+      vtkNew(vtkIdList, badVals);
+      for (int j=0; j<finalVals->GetNumberOfIds(); j++)
+      {
+        if (checkVals->IsId(finalVals->GetId(j)) == -1)
+          badVals->InsertNextId(finalVals->GetId(j));
+      }
+
+      std::vector<std::vector<int> > allNodes;
+
+      int count=1;
+      std::vector<int> tempNodes;
+      tempNodes.push_back(halfId);
+
+      for (int j=0; j<count; j++)
+      {
+        vtkNew(vtkIdList, badCells);
+        pd->GetPointCells(tempNodes[j], badCells);
+
+        for (int k=0; k<badCells->GetNumberOfIds(); k++)
+        {
+          int cellId = badCells->GetId(k);
+          int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(pd, tempNodes[j], cellId);
+
+          vtkNew(vtkIdList, cellEdgeNeighbors);
+          pd->GetCellEdgeNeighbors(cellId, tempNodes[j], pointCCWId, cellEdgeNeighbors);
+
+          int edgeVal0 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId);
+          int edgeVal1 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellEdgeNeighbors->GetId(0));
+
+          if (edgeVal0 == badVals->GetId(0) && edgeVal1 == badVals->GetId(1))
+          {
+            tempNodes.push_back(pointCCWId);
+            count++;
+          }
+          else if (missingVals->IsId(edgeVal0) != -1 || missingVals->IsId(edgeVal1) != -1)
+          {
+            allNodes.push_back(tempNodes);
+
+            if (allNodes.size() == missingVals->GetNumberOfIds())
+            {
+              count = -1;
+              break;
+            }
+
+            tempNodes.clear();
+            tempNodes.push_back(halfId);
+            int tmpVal = badVals->GetId(0);
+            badVals->SetId(0, badVals->GetId(1));
+            badVals->SetId(1, tmpVal);
+            count=1;
+            j=-1;
+            break;
+          }
+        }
+        if (tempNodes.size() == 1 && allNodes.size() == 0)
+        {
+          int tmpVal = badVals->GetId(0);
+          badVals->SetId(0, badVals->GetId(1));
+          badVals->SetId(1, tmpVal);
+          count=1;
+          j=-1;
         }
       }
 
+      for (int j=0; j<allNodes.size(); j++)
+      {
+        fprintf(stdout,"\n");
+        for (int k=1; k<allNodes[j].size(); k++)
+        {
+          int ptId = allNodes[j][k];
+
+          vtkNew(vtkIdList, pointCells);
+          pd->GetPointCells(ptId, pointCells);
+
+          for (int l=0; l<pointCells->GetNumberOfIds(); l++)
+          {
+            int cellVal = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(pointCells->GetId(l));
+            if (cellVal == badVals->GetId(j))
+            {
+              pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(pointCells->GetId(l), missingVals->GetId(j));
+            }
+          }
+        }
+      }
       fprintf(stdout,"\n");
     }
   }
@@ -5430,14 +5583,14 @@ int vtkSVGroupsSegmenter::SplitUpBoundaries(vtkPolyData *pd, std::string arrayNa
 
       ptId0List->IntersectWith(ptIdNList);
 
-      if (ptId0List->GetNumberOfIds() == 3)
+      if (ptId0List->GetNumberOfIds() >= 3)
       {
         // Traditional between sides of groups
         vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 3, allRegions[i].IndexCluster);
       }
       else if (ptId0List->GetNumberOfIds() == 2)
       {
-        // Between center of groups, need to do speial
+        // Between center of groups, need to do special
         vtkSVGroupsSegmenter::SplitBoundary(pd, allRegions[i].BoundaryEdges[j], 2, allRegions[i].IndexCluster);
       }
       else
@@ -5491,7 +5644,7 @@ int vtkSVGroupsSegmenter::SplitBoundary(vtkPolyData *pd,
     if (currLength > currDiv * divLength)
     {
       currDiv++;
-      if (currDiv == 3)
+      if (currDiv == numDivs)
         break;
 
       if (slicePoints->GetTuple1(ptId0) == -1)

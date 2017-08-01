@@ -199,10 +199,10 @@ public:
 
   static int FixSpecificRegions(vtkPolyData *pd, std::string arrayName, vtkIdList *targetRegions, const int noEndRegions);
 
-  static int RotateGroupToGlobalAxis(vtkUnstructuredGrid *ug,
+  static int RotateGroupToGlobalAxis(vtkPolyData *pd,
                                      const int thresholdId,
                                      std::string arrayName,
-                                     vtkUnstructuredGrid *rotUg,
+                                     vtkPolyData *rotPd,
                                      vtkMatrix4x4 *rotMatrix0,
                                      vtkMatrix4x4 *rotMatrix1);
   static int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,

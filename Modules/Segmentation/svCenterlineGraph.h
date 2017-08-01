@@ -70,6 +70,7 @@ public:
   int PrintGraph();
   int GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg);
   int GetCubeType(svCenterlineGCell *gCell, int &type);
+  int TrifurcationDetermination(svCenterlineGCell *gCell, int &type);
   int AddBranchCube(vtkPoints *newPoints,
                     vtkCellArray *cellArray,
                     vtkPoints *points,
