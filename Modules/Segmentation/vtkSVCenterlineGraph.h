@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-/** @file svCenterlineGraph.h
+/** @file vtkSVCenterlineGraph.h
  *  @brief a binary tree for creating a graph structure of 3D surfaces
  *
  *  @author Adam Updegrove
@@ -37,40 +37,43 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#ifndef svCenterlineGraph_h
-#define svCenterlineGraph_h
+#ifndef vtkSVCenterlineGraph_h
+#define vtkSVCenterlineGraph_h
 
 #include "vtkPolyData.h"
 #include "vtkUnstructuredGrid.h"
-#include "svCenterlineGCell.h"
+#include "vtkSVCenterlineGCell.h"
 #include "vtkSVParameterizationModule.h" // For exports
 
 #include <map>
 #include <list>
 
-class VTKSVPARAMETERIZATION_EXPORT svCenterlineGraph
+class VTKSVPARAMETERIZATION_EXPORT vtkSVCenterlineGraph : public vtkObject
 {
 public:
+  static vtkSVCenterlineGraph* New();
+  vtkTypeMacro(vtkSVCenterlineGraph, vtkObject);
+
   //Constructors
-  svCenterlineGraph();
-  svCenterlineGraph(int rootId,
+  vtkSVCenterlineGraph();
+  vtkSVCenterlineGraph(int rootId,
           vtkPolyData *linesPd,
           std::string groupIdsArrayName);
 
   //Destructor
-  ~svCenterlineGraph();
+  ~vtkSVCenterlineGraph();
 
   //Member functions
-  svCenterlineGCell* NewCell(int a_Id, svCenterlineGCell *a_Parent);
-  svCenterlineGCell* NewCell(int a_Id, int a_BranchDir);
-  svCenterlineGCell* NewCell(int a_Id, int a_BranchDir, double a_StartPt[3], double a_EndPt[3]);
-  svCenterlineGCell* GetCell(const int findId);
-  svCenterlineGCell* LookUp(svCenterlineGCell *lookCell, const int findId);
+  vtkSVCenterlineGCell* NewCell(int a_Id, vtkSVCenterlineGCell *a_Parent);
+  vtkSVCenterlineGCell* NewCell(int a_Id, int a_BranchDir);
+  vtkSVCenterlineGCell* NewCell(int a_Id, int a_BranchDir, double a_StartPt[3], double a_EndPt[3]);
+  vtkSVCenterlineGCell* GetCell(const int findId);
+  vtkSVCenterlineGCell* LookUp(vtkSVCenterlineGCell *lookCell, const int findId);
   int BuildGraph();
   int PrintGraph();
   int GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg);
-  int GetCubeType(svCenterlineGCell *gCell, int &type);
-  int TrifurcationDetermination(svCenterlineGCell *gCell, int &type);
+  int GetCubeType(vtkSVCenterlineGCell *gCell, int &type);
+  int TrifurcationDetermination(vtkSVCenterlineGCell *gCell, int &type);
   int AddBranchCube(vtkPoints *newPoints,
                     vtkCellArray *cellArray,
                     vtkPoints *points,
@@ -88,22 +91,22 @@ public:
                       double vecs[3][3],
                       double returnPts[2][3]);
   int GetBifurcationPoint(const double startPt[3], const double vec0[3], const double vec1[3], const double vec2[3], const double factor, double returnPt[3]);
-  int GrowGraph(svCenterlineGCell *parent);
+  int GrowGraph(vtkSVCenterlineGCell *parent);
   int GetGraphDirections();
   int GetGraphPoints();
-  int ComputeGlobalReferenceVectors(svCenterlineGCell *parent);
-  int ComputeBranchReferenceVectors(svCenterlineGCell *parent);
-  int GetInitialBranchDirections(svCenterlineGCell *parent);
-  int UpdateBranchDirs(svCenterlineGCell *parent, const int updateDir);
+  int ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *parent);
+  int ComputeBranchReferenceVectors(vtkSVCenterlineGCell *parent);
+  int GetInitialBranchDirections(vtkSVCenterlineGCell *parent);
+  int UpdateBranchDirs(vtkSVCenterlineGCell *parent, const int updateDir);
   int GetGraphPolyData(vtkPolyData *pd);
   int GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups);
 
   //Static Member functions
-  static int Recurse(svCenterlineGCell *rootsvCenterlineGCell,
-         int(*function)(svCenterlineGCell *currentsvCenterlineGCell, void *arg0, void *arg1, void *arg2),
+  static int Recurse(vtkSVCenterlineGCell *rootvtkSVCenterlineGCell,
+         int(*function)(vtkSVCenterlineGCell *currentvtkSVCenterlineGCell, void *arg0, void *arg1, void *arg2),
          void *rec_arg0, void *rec_arg1, void *rec_arg2);
-  static int PrintGCell(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
-  static int InsertGCellPoints(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
+  static int PrintGCell(vtkSVCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
+  static int InsertGCellPoints(vtkSVCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
 
 
   int ComputeLocalCoordinateSystem(const double vz[3], const double vstart[3],
@@ -129,7 +132,7 @@ public:
   };
 
   //Member data
-  svCenterlineGCell *Root;
+  vtkSVCenterlineGCell *Root;
   int NumberOfCells;
   int NumberOfNodes;
 
@@ -137,6 +140,10 @@ public:
   vtkPolyData *Lines;
   std::string GroupIdsArrayName;
   double ReferenceVecs[3][3];
+
+private:
+  vtkSVCenterlineGraph(const vtkSVCenterlineGraph&); // Not implemented.
+  void operator=(const vtkSVCenterlineGraph&); // Not implemented.
 };
 
 #endif

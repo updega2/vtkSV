@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-/** @file svCenterlineGCell.cxx
+/** @file vtkSVCenterlineGCell.cxx
  *  @brief a node of Graphs
  *
  *  @author Adam Updegrove
@@ -37,9 +37,17 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "svCenterlineGCell.h"
+#include "vtkSVCenterlineGCell.h"
 
-svCenterlineGCell::svCenterlineGCell()
+// ----------------------
+// StandardNewMacro
+// ----------------------
+vtkStandardNewMacro(vtkSVCenterlineGCell);
+
+// ----------------------
+// Constructor
+// ----------------------
+vtkSVCenterlineGCell::vtkSVCenterlineGCell()
 {
   this->Parent   = NULL;
   this->Id       = -1;
@@ -61,11 +69,17 @@ svCenterlineGCell::svCenterlineGCell()
     this->CornerPtIds[i] = -1;
 }
 
-svCenterlineGCell::~svCenterlineGCell()
+// ----------------------
+// Destructor
+// ----------------------
+vtkSVCenterlineGCell::~vtkSVCenterlineGCell()
 {
   for (int i=0; i<this->Children.size(); i++)
   {
-    delete this->Children[i];
-    this->Children[i] = NULL;
+    if (this->Children[i] != NULL)
+    {
+      this->Children[i]->Delete();
+      this->Children[i] = NULL;
+    }
   }
 }

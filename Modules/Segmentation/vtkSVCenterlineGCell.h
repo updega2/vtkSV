@@ -37,24 +37,28 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef svCenterlineGCell_h
-#define svCenterlineGCell_h
+#ifndef vtkSVCenterlineGCell_h
+#define vtkSVCenterlineGCell_h
 
 #include "vtkPolyData.h"
+#include "vtkObject.h"
 #include "vtkSVParameterizationModule.h" // For exports
 
-class VTKSVPARAMETERIZATION_EXPORT svCenterlineGCell
+class VTKSVPARAMETERIZATION_EXPORT vtkSVCenterlineGCell : public vtkObject
 {
 public:
+  static vtkSVCenterlineGCell* New();
+  vtkTypeMacro(vtkSVCenterlineGCell, vtkObject);
+
   //Constructors
-  svCenterlineGCell();
+  vtkSVCenterlineGCell();
 
   //Destructor
-  ~svCenterlineGCell();
+  ~vtkSVCenterlineGCell();
 
   //Member data
-  svCenterlineGCell *Parent;
-  std::vector<svCenterlineGCell *> Children;
+  vtkSVCenterlineGCell *Parent;
+  std::vector<vtkSVCenterlineGCell *> Children;
   int Id;
   int GroupId;
   int BranchDir;
@@ -67,6 +71,10 @@ public:
   int DivergingChild;
   int AligningChild;
   int IsAlign;
+
+private:
+  vtkSVCenterlineGCell(const vtkSVCenterlineGCell&); // Not implemented.
+  void operator=(const vtkSVCenterlineGCell&); // Not implemented.
 };
 
 #endif

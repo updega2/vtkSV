@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include "svCenterlineGraph.h"
+#include "vtkSVCenterlineGraph.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -50,7 +50,15 @@
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkUnstructuredGrid.h"
 
-svCenterlineGraph::svCenterlineGraph()
+// ----------------------
+// StandardNewMacro
+// ----------------------
+vtkStandardNewMacro(vtkSVCenterlineGraph);
+
+// ----------------------
+// Constructor
+// ----------------------
+vtkSVCenterlineGraph::vtkSVCenterlineGraph()
 {
   this->NumberOfCells = 0;
   this->NumberOfNodes = 1; // The root
@@ -62,7 +70,7 @@ svCenterlineGraph::svCenterlineGraph()
 // ----------------------
 // Constructor
 // ----------------------
-svCenterlineGraph::svCenterlineGraph(int rootId,
+vtkSVCenterlineGraph::vtkSVCenterlineGraph(int rootId,
                  vtkPolyData *linesPd,
                  std::string groupIdsArrayName)
 {
@@ -79,11 +87,11 @@ svCenterlineGraph::svCenterlineGraph(int rootId,
 // ----------------------
 // Destructor
 // ----------------------
-svCenterlineGraph::~svCenterlineGraph()
+vtkSVCenterlineGraph::~vtkSVCenterlineGraph()
 {
   if (this->Root != NULL)
   {
-    delete this->Root;
+    this->Root->Delete();
     this->Root = NULL;
   }
   if (this->Lines != NULL)
@@ -96,7 +104,7 @@ svCenterlineGraph::~svCenterlineGraph()
 // ----------------------
 // Recurse
 // ----------------------
-int svCenterlineGraph::Recurse(svCenterlineGCell *rootGCell, int(*function)(svCenterlineGCell *currentGCell,
+int vtkSVCenterlineGraph::Recurse(vtkSVCenterlineGCell *rootGCell, int(*function)(vtkSVCenterlineGCell *currentGCell,
                    void *arg0, void *arg1, void *arg2),
                    void *rec_arg0, void *rec_arg1, void *rec_arg2)
 {
@@ -104,7 +112,7 @@ int svCenterlineGraph::Recurse(svCenterlineGCell *rootGCell, int(*function)(svCe
   if (rootGCell->Children.size() != 0)
   {
     for (int i=0; i<rootGCell->Children.size(); i++)
-      svCenterlineGraph::Recurse(rootGCell->Children[i], function, rec_arg0, rec_arg1, rec_arg2);
+      vtkSVCenterlineGraph::Recurse(rootGCell->Children[i], function, rec_arg0, rec_arg1, rec_arg2);
   }
   return SV_OK;
 }
@@ -112,16 +120,16 @@ int svCenterlineGraph::Recurse(svCenterlineGCell *rootGCell, int(*function)(svCe
 // ----------------------
 // PrintGraph
 // ----------------------
-int svCenterlineGraph::PrintGraph()
+int vtkSVCenterlineGraph::PrintGraph()
 {
-  svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::PrintGCell, NULL, NULL, NULL);
+  vtkSVCenterlineGraph::Recurse(this->Root, vtkSVCenterlineGraph::PrintGCell, NULL, NULL, NULL);
   return SV_OK;
 }
 
 // ----------------------
 // PrintGCell
 // ----------------------
-int svCenterlineGraph::PrintGCell(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2)
+int vtkSVCenterlineGraph::PrintGCell(vtkSVCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2)
 {
   fprintf(stdout, "GCell ID: %d\n", gCell->Id);
   fprintf(stdout, "GCell Group ID: %d\n", gCell->GroupId);
@@ -143,13 +151,13 @@ int svCenterlineGraph::PrintGCell(svCenterlineGCell *gCell, void *arg0, void *ar
 // ----------------------
 // GetGraphPolyData
 // ----------------------
-int svCenterlineGraph::GetGraphPolyData(vtkPolyData *pd)
+int vtkSVCenterlineGraph::GetGraphPolyData(vtkPolyData *pd)
 {
   vtkNew(vtkPoints, newPoints);
   vtkNew(vtkCellArray, newCells);
   vtkNew(vtkIntArray, groupIds);
   groupIds->SetName(this->GroupIdsArrayName.c_str());
-  svCenterlineGraph::Recurse(this->Root, svCenterlineGraph::InsertGCellPoints, newPoints, newCells, groupIds);
+  vtkSVCenterlineGraph::Recurse(this->Root, vtkSVCenterlineGraph::InsertGCellPoints, newPoints, newCells, groupIds);
 
   pd->SetPoints(newPoints);
   pd->SetLines(newCells);
@@ -168,7 +176,7 @@ int svCenterlineGraph::GetGraphPolyData(vtkPolyData *pd)
 // ----------------------
 // InsertGCellPoints
 // ----------------------
-int svCenterlineGraph::InsertGCellPoints(svCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2)
+int vtkSVCenterlineGraph::InsertGCellPoints(vtkSVCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2)
 {
   vtkPoints *points =
     reinterpret_cast<vtkPoints*>(arg0);
@@ -192,7 +200,7 @@ int svCenterlineGraph::InsertGCellPoints(svCenterlineGCell *gCell, void *arg0, v
 // ----------------------
 // BuildGraph
 // ----------------------
-int svCenterlineGraph::BuildGraph()
+int vtkSVCenterlineGraph::BuildGraph()
 {
   fprintf(stdout,"Building graph!!!\n");
 
@@ -230,7 +238,7 @@ int svCenterlineGraph::BuildGraph()
 // ----------------------
 // GetPolycube
 // ----------------------
-int svCenterlineGraph::GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg)
+int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg)
 {
   int numSegs = this->NumberOfCells;
 
@@ -246,7 +254,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
   for (int i=0; i<numSegs; i++)
   {
     // Corresponding GCell
-    svCenterlineGCell *gCell = this->GetCell(i);
+    vtkSVCenterlineGCell *gCell = this->GetCell(i);
 
     // cell id in the vtkPolyData
     int groupId = gCell->GroupId;
@@ -317,8 +325,8 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       int numPoints = 10;
       double vecs[3][3];
       double endPts[2][3];
-      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
-      svCenterlineGCell *diver = gCell->Children[gCell->DivergingChild];
+      vtkSVCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      vtkSVCenterlineGCell *diver = gCell->Children[gCell->DivergingChild];
 
       this->FormBifurcation(gCell->StartPt, gCell->EndPt,
                             diver->EndPt, diver->StartPt,
@@ -374,7 +382,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     {
       int numPoints = 12;
 
-      svCenterlineGCell *brother, *diver, *parent;
+      vtkSVCenterlineGCell *brother, *diver, *parent;
       parent = gCell->Parent;
       if (parent->Children[0]->Id == gCell->Id)
         brother = parent->Children[1];
@@ -431,8 +439,8 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
         vtkMath::Add(topPts[1], workVec, finalPts[7]);
       }
 
-      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
-      svCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
+      vtkSVCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      vtkSVCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
 
       double endPts[2][3];
       this->FormBifurcation(gCell->StartPt, gCell->EndPt,
@@ -484,7 +492,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     {
       int numPoints = 12;
 
-      svCenterlineGCell *brother, *diver, *parent;
+      vtkSVCenterlineGCell *brother, *diver, *parent;
       parent = gCell->Parent;
       if (parent->Children[0]->Id == gCell->Id)
         brother = parent->Children[1];
@@ -541,8 +549,8 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
         vtkMath::Add(topPts[1], workVec, finalPts[10]);
       }
 
-      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
-      svCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
+      vtkSVCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      vtkSVCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
 
       double endPts[2][3];
       this->FormBifurcation(gCell->StartPt, gCell->EndPt,
@@ -595,7 +603,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     {
       int numPoints = 12;
 
-      svCenterlineGCell *brother, *diver, *parent;
+      vtkSVCenterlineGCell *brother, *diver, *parent;
       parent = gCell->Parent;
       if (parent->Children[0]->Id == gCell->Id)
         brother = parent->Children[1];
@@ -652,8 +660,8 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
         vtkMath::Add(topPts[1], workVec, finalPts[8]);
       }
 
-      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
-      svCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
+      vtkSVCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      vtkSVCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
 
       double endPts[2][3];
       this->FormBifurcation(gCell->StartPt, gCell->EndPt,
@@ -704,7 +712,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     {
       int numPoints = 12;
 
-      svCenterlineGCell *brother, *diver, *parent;
+      vtkSVCenterlineGCell *brother, *diver, *parent;
       parent = gCell->Parent;
       if (parent->Children[0]->Id == gCell->Id)
         brother = parent->Children[1];
@@ -761,8 +769,8 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
         vtkMath::Add(topPts[1], workVec, finalPts[9]);
       }
 
-      svCenterlineGCell *align = gCell->Children[gCell->AligningChild];
-      svCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
+      vtkSVCenterlineGCell *align = gCell->Children[gCell->AligningChild];
+      vtkSVCenterlineGCell *cDiver = gCell->Children[gCell->DivergingChild];
 
       double endPts[2][3];
       this->FormBifurcation(gCell->StartPt, gCell->EndPt,
@@ -816,7 +824,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
       {
         int numPoints = 10;
 
-        svCenterlineGCell *brother, *diver, *parent;
+        vtkSVCenterlineGCell *brother, *diver, *parent;
         parent = gCell->Parent;
         if (parent->Children[0]->Id == gCell->Id)
           brother = parent->Children[1];
@@ -910,7 +918,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
             crossBrother = i;
         }
 
-        svCenterlineGCell *brother, *diver, *parent;
+        vtkSVCenterlineGCell *brother, *diver, *parent;
         parent = gCell->Parent;
         double vecs[3][3];
         double topPts[2][3];
@@ -1014,7 +1022,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
     {
       int numPoints = 10;
 
-      svCenterlineGCell *brother, *diver, *parent;
+      vtkSVCenterlineGCell *brother, *diver, *parent;
       parent = gCell->Parent;
       if (parent->Children[0]->Id == gCell->Id)
         brother = parent->Children[1];
@@ -1109,8 +1117,8 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
         if (i != gCell->AligningChild && i != gCell->DivergingChild)
           crossChild = i;
       }
-      svCenterlineGCell *cross = gCell->Children[crossChild];
-      svCenterlineGCell *diver = gCell->Children[gCell->DivergingChild];
+      vtkSVCenterlineGCell *cross = gCell->Children[crossChild];
+      vtkSVCenterlineGCell *diver = gCell->Children[gCell->DivergingChild];
 
       this->FormBifurcation(gCell->StartPt, gCell->EndPt,
                             diver->EndPt, diver->StartPt,
@@ -1209,7 +1217,7 @@ int svCenterlineGraph::GetPolycube(const double height, const double width, vtkU
  * @param *pd
  * @return
  */
-int svCenterlineGraph::GrowGraph(svCenterlineGCell *parent)
+int vtkSVCenterlineGraph::GrowGraph(vtkSVCenterlineGCell *parent)
 {
   vtkNew(vtkIdList, connectingGroups);
   this->GetConnectingLineGroups(parent->GroupId, connectingGroups);
@@ -1254,7 +1262,7 @@ int svCenterlineGraph::GrowGraph(svCenterlineGCell *parent)
 // ----------------------
 // GetConnectingLineGroups
 // ----------------------
-int svCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups)
+int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups)
 {
   // Get first cell points
   vtkIdType npts, *pts;
@@ -1295,7 +1303,7 @@ int svCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *con
  * @param *pd
  * @return
  */
-int svCenterlineGraph::ComputeGlobalReferenceVectors(svCenterlineGCell *parent)
+int vtkSVCenterlineGraph::ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *parent)
 {
   vtkNew(vtkThreshold, thresholder);
   thresholder->SetInputData(this->Lines);
@@ -1395,7 +1403,7 @@ int svCenterlineGraph::ComputeGlobalReferenceVectors(svCenterlineGCell *parent)
  * @param *pd
  * @return
  */
-int svCenterlineGraph::ComputeBranchReferenceVectors(svCenterlineGCell *parent)
+int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *parent)
 {
   //fprintf(stdout,"Child %d of parent %d, dir: %d\n", parent->Children[0]->GroupId, parent->GroupId, parent->Children[0]->BranchDir);
   //fprintf(stdout,"Child %d of parent %d, dir: %d\n", parent->Children[1]->GroupId, parent->GroupId, parent->Children[1]->BranchDir);
@@ -1506,7 +1514,7 @@ int svCenterlineGraph::ComputeBranchReferenceVectors(svCenterlineGCell *parent)
  * @param *pd
  * @return
  */
-int svCenterlineGraph::GetInitialBranchDirections(svCenterlineGCell *parent)
+int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *parent)
 {
   fprintf(stdout,"Determing initial dirs for parent %d\n", parent->GroupId);
   int numChildren = parent->Children.size();
@@ -1566,9 +1574,9 @@ int svCenterlineGraph::GetInitialBranchDirections(svCenterlineGCell *parent)
 // ----------------------
 // NewCell
 // ----------------------
-svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, svCenterlineGCell *a_Parent)
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::NewCell(int a_GroupId, vtkSVCenterlineGCell *a_Parent)
 {
-  svCenterlineGCell *newCell = new svCenterlineGCell;
+  vtkSVCenterlineGCell *newCell = vtkSVCenterlineGCell::New();
   newCell->Parent  = a_Parent;
   newCell->Id      = this->NumberOfCells++;
   newCell->GroupId = a_GroupId;
@@ -1584,9 +1592,9 @@ svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, svCenterlineGCell *
 // ----------------------
 // NewCell
 // ----------------------
-svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, int a_BranchDir, double a_StartPt[3], double a_EndPt[3])
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::NewCell(int a_GroupId, int a_BranchDir, double a_StartPt[3], double a_EndPt[3])
 {
-  svCenterlineGCell *newCell = new svCenterlineGCell;
+  vtkSVCenterlineGCell *newCell = vtkSVCenterlineGCell::New();
   newCell->Id      =   this->NumberOfCells++;
   newCell->GroupId =   a_GroupId;
   newCell->BranchDir = a_BranchDir;
@@ -1602,9 +1610,9 @@ svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, int a_BranchDir, do
 // ----------------------
 // NewCell
 // ----------------------
-svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, int a_BranchDir)
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::NewCell(int a_GroupId, int a_BranchDir)
 {
-  svCenterlineGCell *newCell = new svCenterlineGCell;
+  vtkSVCenterlineGCell *newCell = vtkSVCenterlineGCell::New();
   newCell->Id      =   this->NumberOfCells++;
   newCell->GroupId =   a_GroupId;
   newCell->BranchDir = a_BranchDir;
@@ -1615,7 +1623,7 @@ svCenterlineGCell* svCenterlineGraph::NewCell(int a_GroupId, int a_BranchDir)
 // ----------------------
 // GetCell
 // ----------------------
-svCenterlineGCell* svCenterlineGraph::GetCell(const int findId)
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::GetCell(const int findId)
 {
   if (findId > this->NumberOfCells)
   {
@@ -1628,7 +1636,7 @@ svCenterlineGCell* svCenterlineGraph::GetCell(const int findId)
 // ----------------------
 // LookUp
 // ----------------------
-svCenterlineGCell* svCenterlineGraph::LookUp(svCenterlineGCell *lookCell, const int findId)
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::LookUp(vtkSVCenterlineGCell *lookCell, const int findId)
 {
   if (lookCell == NULL)
   {
@@ -1644,7 +1652,7 @@ svCenterlineGCell* svCenterlineGraph::LookUp(svCenterlineGCell *lookCell, const 
     {
       for (int i=0; i<lookCell->Children.size(); i++)
       {
-        svCenterlineGCell* foundCell = this->LookUp(lookCell->Children[i], findId);
+        vtkSVCenterlineGCell* foundCell = this->LookUp(lookCell->Children[i], findId);
         if (foundCell != NULL)
           return foundCell;
       }
@@ -1657,14 +1665,14 @@ svCenterlineGCell* svCenterlineGraph::LookUp(svCenterlineGCell *lookCell, const 
 // ----------------------
 // GetGraphPoints
 // ----------------------
-int svCenterlineGraph::GetGraphPoints()
+int vtkSVCenterlineGraph::GetGraphPoints()
 {
   int numSegs = this->NumberOfCells;
 
   for (int i=0; i<numSegs; i++)
   {
     // Corresponding GCell
-    svCenterlineGCell *gCell = this->GetCell(i);
+    vtkSVCenterlineGCell *gCell = this->GetCell(i);
 
     // cell id in the vtkPolyData
     int cellId = this->Lines->GetCellData()->GetArray(
@@ -1685,7 +1693,7 @@ int svCenterlineGraph::GetGraphPoints()
       length += vtkSVMathUtils::Distance(pt0, pt1);
     }
 
-    svCenterlineGCell *parent = gCell->Parent;
+    vtkSVCenterlineGCell *parent = gCell->Parent;
     if (parent == NULL)
     {
       this->Lines->GetPoint(pts[0], gCell->EndPt);
@@ -1708,7 +1716,7 @@ int svCenterlineGraph::GetGraphPoints()
       double crossVec[3];
       double lineDir[3];
 
-      svCenterlineGCell *grandParent = parent->Parent;
+      vtkSVCenterlineGCell *grandParent = parent->Parent;
       if (grandParent == NULL)
       {
         double parentVec[3];
@@ -1793,7 +1801,7 @@ int svCenterlineGraph::GetGraphPoints()
 // ----------------------
 // GetGraphDirections
 // ----------------------
-int svCenterlineGraph::GetGraphDirections()
+int vtkSVCenterlineGraph::GetGraphDirections()
 {
   int numSegs   = this->NumberOfCells;
   int numPoints = this->Lines->GetNumberOfPoints();
@@ -1819,7 +1827,7 @@ int svCenterlineGraph::GetGraphDirections()
   for (int i=0; i<numSegs; i++)
   {
     // Corresponding GCell
-    svCenterlineGCell *gCell = this->GetCell(i);
+    vtkSVCenterlineGCell *gCell = this->GetCell(i);
 
     // The front direction of segment
     for (int j=0; j<3; j++)
@@ -2045,7 +2053,7 @@ int svCenterlineGraph::GetGraphDirections()
 // ----------------------
 // UpdateBranchDirs
 // ----------------------
-int svCenterlineGraph::UpdateBranchDirs(svCenterlineGCell *gCell, const int updateDir)
+int vtkSVCenterlineGraph::UpdateBranchDirs(vtkSVCenterlineGCell *gCell, const int updateDir)
 {
   if (gCell->Children.size() != 0)
   {
@@ -2064,7 +2072,7 @@ int svCenterlineGraph::UpdateBranchDirs(svCenterlineGCell *gCell, const int upda
 // ----------------------
 // ComputeLocalCoordinateSystem
 // ----------------------
-int svCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
+int vtkSVCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
                                                                const double vstart[3],
                                                                double vx[3],
                                                                double vy[3])
@@ -2086,7 +2094,7 @@ int svCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
 // ----------------------
 // RotateVecAroundLine
 // ----------------------
-int svCenterlineGraph::RotateVecAroundLine(const double inVec[3],
+int vtkSVCenterlineGraph::RotateVecAroundLine(const double inVec[3],
                                            const double angle,
                                            const double axis[3],
                                            double outVec[3])
@@ -2121,7 +2129,7 @@ int svCenterlineGraph::RotateVecAroundLine(const double inVec[3],
 // ----------------------
 // FlipLinePoints
 // ----------------------
-int svCenterlineGraph::FlipLinePoints(vtkPolyData *pd, const int cellId)
+int vtkSVCenterlineGraph::FlipLinePoints(vtkPolyData *pd, const int cellId)
 {
   vtkIdType npts, *pts;
   pd->GetCellPoints(cellId, npts, pts);
@@ -2145,7 +2153,7 @@ int svCenterlineGraph::FlipLinePoints(vtkPolyData *pd, const int cellId)
 // ----------------------
 // GetCubeType
 // ----------------------
-int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
+int vtkSVCenterlineGraph::GetCubeType(vtkSVCenterlineGCell *gCell, int &type)
 {
   if (gCell->Parent == NULL)
   {
@@ -2203,7 +2211,7 @@ int svCenterlineGraph::GetCubeType(svCenterlineGCell *gCell, int &type)
 // ----------------------
 // FormBifurcation
 // ----------------------
-int svCenterlineGraph::FormBifurcation(const double pt0[3], const double pt1[3],
+int vtkSVCenterlineGraph::FormBifurcation(const double pt0[3], const double pt1[3],
                                        const double pt2[3], const double pt3[3],
                                        const double pt4[3], const double pt5[3],
                                        const double centerPt[3],
@@ -2227,7 +2235,7 @@ int svCenterlineGraph::FormBifurcation(const double pt0[3], const double pt1[3],
 // ----------------------
 // GetBifurcationPoint
 // ----------------------
-int svCenterlineGraph::GetBifurcationPoint(const double startPt[3],
+int vtkSVCenterlineGraph::GetBifurcationPoint(const double startPt[3],
                                            const double vec0[3],
                                            const double vec1[3],
                                            const double vec2[3],
@@ -2262,7 +2270,7 @@ int svCenterlineGraph::GetBifurcationPoint(const double startPt[3],
 // ----------------------
 // AddBranchCube
 // ----------------------
-int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
+int vtkSVCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
                                      vtkCellArray *cellArray,
                                      vtkPoints *points,
                                      const int groupId,
@@ -2662,7 +2670,7 @@ int svCenterlineGraph::AddBranchCube(vtkPoints *newPoints,
 // ----------------------
 // TrifurcationDetermination
 // ----------------------
-int svCenterlineGraph::TrifurcationDetermination(svCenterlineGCell *gCell, int &type)
+int vtkSVCenterlineGraph::TrifurcationDetermination(vtkSVCenterlineGCell *gCell, int &type)
 {
   int numChildren = gCell->Children.size();
 

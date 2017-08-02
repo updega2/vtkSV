@@ -182,7 +182,7 @@ vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
 
   if (this->CenterlineGraph != NULL)
   {
-    delete this->CenterlineGraph;
+    this->CenterlineGraph->Delete();
     this->CenterlineGraph = NULL;
   }
 }
@@ -287,7 +287,7 @@ int vtkSVGroupsSegmenter::PrepFilter()
   //  return SV_ERROR;
   //}
 
-  this->CenterlineGraph = new svCenterlineGraph(0, this->Centerlines,
+  this->CenterlineGraph = new vtkSVCenterlineGraph(0, this->Centerlines,
                                                 this->GroupIdsArrayName);
 
   if (this->CenterlineGraph->BuildGraph() != SV_OK)

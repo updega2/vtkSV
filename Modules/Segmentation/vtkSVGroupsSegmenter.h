@@ -47,7 +47,7 @@
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkIdList.h"
-#include "svCenterlineGraph.h"
+#include "vtkSVCenterlineGraph.h"
 #include "vtkMatrix4x4.h"
 
 #include "vtkSVSegmentationModule.h" // For export
@@ -295,7 +295,7 @@ protected:
   double CutoffRadiusFactor;
   double ClipValue;
 
-  svCenterlineGraph *CenterlineGraph;
+  vtkSVCenterlineGraph *CenterlineGraph;
   vtkUnstructuredGrid *Polycube;
 
 private:
