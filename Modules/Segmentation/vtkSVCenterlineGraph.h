@@ -64,16 +64,11 @@ public:
   ~vtkSVCenterlineGraph();
 
   //Member functions
-  vtkSVCenterlineGCell* NewCell(int a_Id, vtkSVCenterlineGCell *a_Parent);
-  vtkSVCenterlineGCell* NewCell(int a_Id, int a_BranchDir);
-  vtkSVCenterlineGCell* NewCell(int a_Id, int a_BranchDir, double a_StartPt[3], double a_EndPt[3]);
   vtkSVCenterlineGCell* GetCell(const int findId);
   vtkSVCenterlineGCell* LookUp(vtkSVCenterlineGCell *lookCell, const int findId);
   int BuildGraph();
   int PrintGraph();
   int GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg);
-  int GetCubeType(vtkSVCenterlineGCell *gCell, int &type);
-  int TrifurcationDetermination(vtkSVCenterlineGCell *gCell, int &type);
   int AddBranchCube(vtkPoints *newPoints,
                     vtkCellArray *cellArray,
                     vtkPoints *points,
@@ -81,16 +76,7 @@ public:
                     vtkIntArray *localPtIds,
                     vtkIntArray *groupIds,
                     vtkIntArray *patchIds,
-                    vtkDoubleArray *textureCoordinates,
                     const int type);
-  int FormBifurcation(const double pt0[3], const double pt1[3],
-                      const double pt2[3], const double pt3[3],
-                      const double pt4[3], const double pt5[3],
-                      const double centerPt[3],
-                      const double factor,
-                      double vecs[3][3],
-                      double returnPts[2][3]);
-  int GetBifurcationPoint(const double startPt[3], const double vec0[3], const double vec1[3], const double vec2[3], const double factor, double returnPt[3]);
   int GrowGraph(vtkSVCenterlineGCell *parent);
   int GetGraphDirections();
   int GetGraphPoints();

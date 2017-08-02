@@ -52,9 +52,18 @@ public:
 
   //Constructors
   vtkSVCenterlineGCell();
+  vtkSVCenterlineGCell(int a_Id,
+                       int a_GroupId,
+                       vtkSVCenterlineGCell *a_Parent);
+  vtkSVCenterlineGCell(int a_Id, int a_GroupId, int a_BranchDir);
+  vtkSVCenterlineGCell(int a_Id, int a_GroupId, int a_BranchDir, double a_StartPt[3], double a_EndPt[3]);
 
   //Destructor
   ~vtkSVCenterlineGCell();
+
+  int GetCubeType(int &type);
+  int GetTrifurcationType(int &type);
+  int GetCubePoints(vtkPoints *points);
 
   //Member data
   vtkSVCenterlineGCell *Parent;
@@ -71,6 +80,18 @@ public:
   int DivergingChild;
   int AligningChild;
   int IsAlign;
+
+  /// \brief directions of nodes in graph simplification
+  enum DIRECTIONS
+  {
+    RIGHT = 0,
+    BACK,
+    LEFT,
+    FRONT,
+    UP,
+    DOWN
+  };
+
 
 private:
   vtkSVCenterlineGCell(const vtkSVCenterlineGCell&); // Not implemented.
