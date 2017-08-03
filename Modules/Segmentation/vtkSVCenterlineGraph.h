@@ -69,14 +69,6 @@ public:
   int BuildGraph();
   int PrintGraph();
   int GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg);
-  int AddBranchCube(vtkPoints *newPoints,
-                    vtkCellArray *cellArray,
-                    vtkPoints *points,
-                    const int groupId,
-                    vtkIntArray *localPtIds,
-                    vtkIntArray *groupIds,
-                    vtkIntArray *patchIds,
-                    const int type);
   int GrowGraph(vtkSVCenterlineGCell *parent);
   int GetGraphDirections();
   int GetGraphPoints();
@@ -107,7 +99,7 @@ public:
 
 
   /// \brief directions of nodes in graph simplification
-  enum DIRECTIONS
+  enum SV_DIRECTIONS
   {
     RIGHT = 0,
     BACK,

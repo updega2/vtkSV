@@ -63,7 +63,29 @@ public:
 
   int GetCubeType(int &type);
   int GetTrifurcationType(int &type);
-  int GetCubePoints(vtkPoints *points);
+  int GetCubePoints(const double height, const double width,
+                    vtkPoints *allPoints, vtkCellArray *allCells,
+                    vtkIntArray *localPtIds, vtkIntArray *groupIds,
+                    vtkIntArray *patchIds);
+  int GetSquare(const double startPt[3], const double vec0[3],
+                const double vec1[3], const double height, const double width,
+                vtkPoints *points);
+  int GetWedge(const double pt0[3], const double pt1[3],
+               const double pt2[3], const double vec0[3], const double height,
+               vtkPoints *points);
+  int FormBifurcation(const double pt0[3], const double pt1[3],
+                      const double pt2[3], const double pt3[3],
+                      const double pt4[3], const double pt5[3],
+                      const double centerPt[3],
+                      const double factor,
+                      double vecs[3][3],
+                      double returnPts[2][3]);
+  int GetBifurcationPoint(const double startPt[3],
+                          const double vec0[3],
+                          const double vec1[3],
+                          const double vec2[3],
+                          const double factor,
+                          double returnPt[3]);
 
   //Member data
   vtkSVCenterlineGCell *Parent;
@@ -82,7 +104,7 @@ public:
   int IsAlign;
 
   /// \brief directions of nodes in graph simplification
-  enum DIRECTIONS
+  enum SV_DIRECTIONS
   {
     RIGHT = 0,
     BACK,
@@ -90,6 +112,18 @@ public:
     FRONT,
     UP,
     DOWN
+  };
+
+  /// \brief possible number of separations
+  enum SV_SPLIT_TYPE
+  {
+    NONE = 0,
+    UNO, // NOT ACTUALLY POSSIBLE, just nice to have so that numbers follow type
+    BI,
+    TRI,
+    QUAD,
+    PENTA,
+    NOTHANDLED,
   };
 
 
