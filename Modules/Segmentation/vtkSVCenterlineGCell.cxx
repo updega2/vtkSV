@@ -578,7 +578,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     vtkMath::Cross(vecs[1], vecs[0], frontVec);
     vtkMath::Normalize(frontVec);
 
-    this->GetWedge(endPts[1], this->EndPt, endPts[0], frontVec, 
+    this->GetWedge(endPts[1], this->EndPt, endPts[0], frontVec,
                     height, endPoints);
   }
   else
@@ -812,12 +812,12 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     begPoints->GetPoint(4, finalPts[6]);
     begPoints->GetPoint(5, finalPts[2]);
 
-    endPoints->GetPoint(0, finalPts[3]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[10]);
-    endPoints->GetPoint(4, finalPts[11]);
-    endPoints->GetPoint(5, finalPts[7]);
+    endPoints->GetPoint(0, finalPts[7]);
+    endPoints->GetPoint(1, finalPts[11]);
+    endPoints->GetPoint(2, finalPts[10]);
+    endPoints->GetPoint(3, finalPts[0]);
+    endPoints->GetPoint(4, finalPts[4]);
+    endPoints->GetPoint(5, finalPts[3]);
 
     int pI[12];
     for (int i=0; i<numPoints; i++)

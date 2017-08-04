@@ -126,7 +126,6 @@ public:
     NOTHANDLED
   };
 
-
 private:
   vtkSVCenterlineGCell(const vtkSVCenterlineGCell&); // Not implemented.
   void operator=(const vtkSVCenterlineGCell&); // Not implemented.
