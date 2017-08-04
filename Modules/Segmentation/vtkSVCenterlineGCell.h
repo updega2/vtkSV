@@ -67,6 +67,8 @@ public:
                     vtkPoints *allPoints, vtkCellArray *allCells,
                     vtkIntArray *localPtIds, vtkIntArray *groupIds,
                     vtkIntArray *patchIds);
+  int GetBeginningType(int &beginningType);
+  int GetEndType(int &endType);
   int GetSquare(const double startPt[3], const double vec0[3],
                 const double vec1[3], const double height, const double width,
                 vtkPoints *points);
@@ -118,12 +120,10 @@ public:
   enum SV_SPLIT_TYPE
   {
     NONE = 0,
-    UNO, // NOT ACTUALLY POSSIBLE, just nice to have so that numbers follow type
+    UNO, // Not possible, but convenient to have so number follows type
     BI,
-    TRI,
-    QUAD,
-    PENTA,
-    NOTHANDLED,
+    TRI, // Just for now have the general trifurcation case
+    NOTHANDLED
   };
 
 
