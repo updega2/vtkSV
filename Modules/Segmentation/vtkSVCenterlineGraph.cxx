@@ -786,22 +786,43 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         int parentType;
         parent->GetCubeType(parentType);
 
-        if (parentType == 4 || parentType == 5)
+        if (parentType == 4 || parentType == 5 ||
+            parentType == 10 || parentType == 11)
         {
           double tempVec[3];
-          if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
+          if (parentType == 4)
           {
-            if (parent->BranchDir == RIGHT)
-              vtkMath::Cross(grandParentVec, parentVec, tempVec);
+            if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
+            {
+              if (parent->BranchDir == LEFT || parent->BranchDir == FRONT)
+                vtkMath::Cross(grandParentVec, parentVec, tempVec);
+              else
+                vtkMath::Cross(parentVec, grandParentVec, tempVec);
+            }
             else
-              vtkMath::Cross(parentVec, grandParentVec, tempVec);
+            {
+              if (parent->BranchDir == RIGHT || parent->BranchDir == BACK)
+                vtkMath::Cross(parentVec, grandParentVec, tempVec);
+              else
+                vtkMath::Cross(grandParentVec, parentVec, tempVec);
+            }
           }
-          else
+          else if (parentType == 5)
           {
-            if (parent->BranchDir == RIGHT)
-              vtkMath::Cross(parentVec, grandParentVec, tempVec);
+            if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
+            {
+              if (parent->BranchDir == RIGHT || parent->BranchDir == BACK)
+                vtkMath::Cross(grandParentVec, parentVec, tempVec);
+              else
+                vtkMath::Cross(parentVec, grandParentVec, tempVec);
+            }
             else
-              vtkMath::Cross(grandParentVec, parentVec, tempVec);
+            {
+              if (parent->BranchDir == LEFT || parent->BranchDir == FRONT)
+                vtkMath::Cross(parentVec, grandParentVec, tempVec);
+              else
+                vtkMath::Cross(grandParentVec, parentVec, tempVec);
+            }
           }
           vtkMath::Normalize(tempVec);
           vtkMath::Cross(parentVec, tempVec, crossVec);

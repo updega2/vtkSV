@@ -106,7 +106,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeConnectivity()
 
   int numCells = this->WorkGenerators->GetNumberOfCells();
   int numPoints = this->WorkGenerators->GetNumberOfPoints();
-  this->IsGoodNeighborCell.resize(numCells, std::vector<int>(this->MaximumNumberOfNeighborPatches));
+  this->IsGoodNeighborCell.resize(numCells, std::vector<int>(numCells));
 
   if (this->UseBifurcationInformation)
   {

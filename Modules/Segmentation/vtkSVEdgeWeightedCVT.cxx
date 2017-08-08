@@ -52,7 +52,7 @@ vtkSVEdgeWeightedCVT::vtkSVEdgeWeightedCVT()
 {
   this->NumberOfRings = 2;
   this->EdgeWeight = 1.0;
-  this->MaximumNumberOfNeighborPatches = 10;
+  this->MaximumNumberOfNeighborPatches = 20;
 }
 
 // ----------------------

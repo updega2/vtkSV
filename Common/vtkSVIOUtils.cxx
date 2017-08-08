@@ -92,8 +92,11 @@ std::string vtkSVIOUtils::IntToString(int i)
 std::string vtkSVIOUtils::GetPath(std::string fullName)
 {
   std::string pathName;
-  unsigned split = fullName.find_last_of("/\\");
-  pathName = fullName.substr(0,split);
+  int split = fullName.find_last_of("/\\");
+  if (split < 0)
+    pathName = ".";
+  else
+    pathName = fullName.substr(0,split);
   return pathName;
 }
 

@@ -236,10 +236,20 @@ int vtkSVCenterlineGCell::GetCubeType(int &type)
   {
     if ((this->Parent->BranchDir + this->BranchDir)%2 == 0)
     {
-      if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-        type = 2;
+      if (this->Parent->BranchDir == BACK || this->Parent->BranchDir == FRONT)
+      {
+        if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+          type = 3;
+        else
+          type = 5;
+      }
       else
-        type = 4;
+      {
+        if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+          type = 2;
+        else
+          type = 4;
+      }
     }
     else
     {
@@ -278,7 +288,7 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
 
   if (numChildren != 3)
   {
-    fprintf(stderr,"Trifurcation wrongly identified\n");
+    fprintf(stderr,"Trifurcation wrongly identified, number of children is actually %d\n", numChildren);
   }
 
   // Count branch directions
@@ -327,12 +337,45 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
       if (dotCheck > 0)
         backCount++;
       else
-        fprintf(stdout,"FRONT\n");
+        frontCount++;
     }
   }
 
-  if (rightCount == 1 && leftCount == 1 && downCount == 1)
-    type = 8;
+  if ((rightCount == 1 && leftCount == 1 && downCount == 1) ||
+      (backCount == 1 && frontCount == 1 && downCount == 1))
+  {
+    if (this->Parent == NULL)
+    {
+      type = 8;
+    }
+    else
+    {
+      if ((this->Parent->BranchDir + this->BranchDir)%2 == 0)
+      {
+        if (this->Parent->BranchDir == BACK || this->Parent->BranchDir == FRONT)
+        {
+          if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+            type = 9;
+          else
+            type = 11;
+        }
+        else
+        {
+          if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+            type = 8;
+          else
+            type = 10;
+        }
+      }
+      else
+      {
+        if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+          type = 9;
+        else
+          type = 11;
+      }
+    }
+  }
   else
   {
     fprintf(stderr, "THIS ISNT HANDLED YET!\n");
@@ -573,17 +616,35 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                           this->EndPt,
                           width/2., vecs, endPts);
 
-    // get vector towards top of cube
-    double frontVec[3];
-    vtkMath::Cross(vecs[1], vecs[0], frontVec);
-    vtkMath::Normalize(frontVec);
+    // TEMPORARYRYRY
+    if (cubeType == 8)
+    {
+      // get vector towards top of cube
+      double frontVec[3];
+      vtkMath::Cross(vecs[1], vecs[0], frontVec);
+      vtkMath::Normalize(frontVec);
 
-    this->GetWedge(endPts[1], this->EndPt, endPts[0], frontVec,
-                    height, endPoints);
+      this->GetWedge(endPts[1], this->EndPt, endPts[0], frontVec,
+                      height, endPoints);
+    }
+    else if (cubeType == 10)
+    {
+      // get vector towards top of cube
+      double frontVec[3];
+      vtkMath::Cross(vecs[0], vecs[1], frontVec);
+      vtkMath::Normalize(frontVec);
+
+      this->GetWedge(endPts[0], this->EndPt, endPts[1], frontVec,
+                      height, endPoints);
+    }
+    else
+    {
+      fprintf(stderr,"NEED TO ADD RULE!!\n");
+    }
   }
   else
   {
-    fprintf(stdout,"END NOT_HANDLED\n");
+    fprintf(stderr,"END NOT_HANDLED\n");
   }
 
   if (cubeType == 0)
@@ -812,12 +873,12 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     begPoints->GetPoint(4, finalPts[6]);
     begPoints->GetPoint(5, finalPts[2]);
 
-    endPoints->GetPoint(0, finalPts[7]);
-    endPoints->GetPoint(1, finalPts[11]);
-    endPoints->GetPoint(2, finalPts[10]);
-    endPoints->GetPoint(3, finalPts[0]);
-    endPoints->GetPoint(4, finalPts[4]);
-    endPoints->GetPoint(5, finalPts[3]);
+    endPoints->GetPoint(0, finalPts[3]);
+    endPoints->GetPoint(1, finalPts[4]);
+    endPoints->GetPoint(2, finalPts[0]);
+    endPoints->GetPoint(3, finalPts[10]);
+    endPoints->GetPoint(4, finalPts[11]);
+    endPoints->GetPoint(5, finalPts[7]);
 
     int pI[12];
     for (int i=0; i<numPoints; i++)
@@ -990,6 +1051,48 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
+  else if (cubeType == 10)
+  {
+    int numPoints = 12;
+
+    double finalPts[12][3];
+
+    begPoints->GetPoint(0, finalPts[1]);
+    begPoints->GetPoint(1, finalPts[2]);
+    begPoints->GetPoint(2, finalPts[3]);
+    begPoints->GetPoint(3, finalPts[8]);
+    begPoints->GetPoint(4, finalPts[9]);
+    begPoints->GetPoint(5, finalPts[10]);
+
+    endPoints->GetPoint(0, finalPts[0]);
+    endPoints->GetPoint(1, finalPts[5]);
+    endPoints->GetPoint(2, finalPts[7]);
+    endPoints->GetPoint(3, finalPts[4]);
+    endPoints->GetPoint(4, finalPts[6]);
+    endPoints->GetPoint(5, finalPts[11]);
+
+    int pI[12];
+    for (int i=0; i<numPoints; i++)
+    {
+      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+      localPtIds->InsertNextTuple1(i);
+    }
+    vtkIdType face0[5] = {pI[7], pI[8], pI[1], pI[0], pI[5]};
+    vtkIdType face1[5] = {pI[11], pI[10], pI[9], pI[8], pI[7]};
+    vtkIdType face2[5] = {pI[4], pI[3], pI[10], pI[11], pI[6]};
+    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
+
+    allCells->InsertNextCell(5, face0);
+    allCells->InsertNextCell(5, face1);
+    allCells->InsertNextCell(5, face2);
+    allCells->InsertNextCell(5, face3);
+
+    for (int i=0; i<4; i++)
+    {
+      groupIds->InsertNextTuple1(groupId);
+      patchIds->InsertNextTuple1(i);
+    }
+  }
 
   return SV_OK;
 }
@@ -1041,12 +1144,14 @@ int vtkSVCenterlineGCell::GetBifurcationPoint(const double startPt[3],
   double dotCheck = vtkMath::Dot(midVec, vec2);
 
   double midLength;
-  if (dotCheck > 0)
-  {
-    vtkMath::MultiplyScalar(midVec, -1.0);
-    midLength = factor / ( cos(ang/2.));
-  }
-  else
+  // TODO: CHECK ON THIS BECAUSE IM NOT SO SURE THAT THIS IS BAD,
+  // I THINK I NEED IT BUT TBD LATER
+  //if (dotCheck > 0)
+  //{
+  //  vtkMath::MultiplyScalar(midVec, -1.0);
+  //  midLength = factor / ( cos(ang/2.));
+  //}
+  //else
     midLength = factor / ( sin(ang/2.));
 
   vtkMath::MultiplyScalar(midVec, midLength);
