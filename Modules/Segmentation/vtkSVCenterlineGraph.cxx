@@ -787,10 +787,10 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         parent->GetCubeType(parentType);
 
         if (parentType == 4 || parentType == 5 ||
-            parentType == 10 || parentType == 11)
+            parentType == 11 || parentType == 12)
         {
           double tempVec[3];
-          if (parentType == 4)
+          if (parentType == 4 || parentType == 11)
           {
             if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
             {
@@ -807,7 +807,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
                 vtkMath::Cross(grandParentVec, parentVec, tempVec);
             }
           }
-          else if (parentType == 5)
+          else if (parentType == 5 || parentType == 12)
           {
             if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
             {

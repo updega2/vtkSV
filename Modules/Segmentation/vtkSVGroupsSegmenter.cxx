@@ -556,18 +556,18 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    // TODO
-    //if (this->CheckSidePatches(branchPd) != SV_OK)
-    //{
-    //  vtkErrorMacro("Error fixing side patches");
-    //  return SV_ERROR;
-    //}
-
     if (this->FixEndPatches(branchPd) != SV_OK)
     {
       vtkErrorMacro("Error fixing end patches");
       return SV_ERROR;
     }
+
+    if (this->FixSidePatches(branchPd) != SV_OK)
+    {
+      vtkErrorMacro("Error fixing side patches");
+      return SV_ERROR;
+    }
+
 
     vtkNew(vtkIdList, noEndPatches);
     noEndPatches->SetNumberOfIds(4);
@@ -652,29 +652,29 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  //// For checking purposes
-  //if (this->FixPatchesWithPolycube() != SV_OK)
-  //{
-  //  fprintf(stderr,"Couldn't fix patches\n");
-  //  return SV_ERROR;
-  //}
+  // For checking purposes
+  if (this->FixPatchesWithPolycube() != SV_OK)
+  {
+    fprintf(stderr,"Couldn't fix patches\n");
+    return SV_ERROR;
+  }
 
-  ////// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  ////// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //vtkNew(vtkPolyData, fullMapPd);
-  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkPolyData, fullMapPd);
+  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
-  //vtkNew(vtkUnstructuredGrid, loftedVolume);
-  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  //{
-  //  fprintf(stderr,"Failed doing volume stuffs\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkUnstructuredGrid, loftedVolume);
+  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  {
+    fprintf(stderr,"Failed doing volume stuffs\n");
+    return SV_ERROR;
+  }
 
   return SV_OK;
 }
@@ -2123,6 +2123,9 @@ int vtkSVGroupsSegmenter::CurveFitBoundaries(vtkPolyData *pd, std::string arrayN
   return SV_OK;
 }
 
+// ----------------------
+// SplineKnots
+// ----------------------
 void vtkSVGroupsSegmenter::SplineKnots(std::vector<int> &u, int n, int t)
 {
 
@@ -2148,6 +2151,9 @@ void vtkSVGroupsSegmenter::SplineKnots(std::vector<int> &u, int n, int t)
 
 }
 
+// ----------------------
+// SplineCurve
+// ----------------------
 void vtkSVGroupsSegmenter::SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res)
 {
 
@@ -2220,6 +2226,9 @@ double vtkSVGroupsSegmenter::SplineBlend(int k, int t, const std::vector<int> &u
 
 }
 
+// ----------------------
+// FixEndPatches
+// ----------------------
 int vtkSVGroupsSegmenter::FixEndPatches(vtkPolyData *pd)
 {
   vtkNew(vtkIdList, targetRegions);
@@ -2287,34 +2296,127 @@ int vtkSVGroupsSegmenter::FixEndPatches(vtkPolyData *pd)
   if (wholePatchFix.size() > 0)
   {
     fprintf(stdout,"FIXING WHOLE END PATCHES\n");
-    vtkNew(vtkPolyData, workPdCopy);
-    workPdCopy->DeepCopy(pd);
 
-    // Set up generators
-    vtkNew(vtkPoints, generatorsPts);
-    generatorsPts->SetNumberOfPoints(4);
-    generatorsPts->SetPoint(0, 1.0, 0.0, 0.0);
-    generatorsPts->SetPoint(1, 0.0, 1.0, 0.0);
-    generatorsPts->SetPoint(2, -1.0, 0.0, 0.0);
-    generatorsPts->SetPoint(3, 0.0, -1.0, 0.0);
+    // Determine fix approach
 
-    vtkNew(vtkPolyData, generatorsPd);
-    generatorsPd->SetPoints(generatorsPts);
+    vtkNew(vtkIdList, sideTargetRegions);
+    sideTargetRegions->SetNumberOfIds(4);
+    sideTargetRegions->SetId(0, 0);
+    sideTargetRegions->SetId(1, 1);
+    sideTargetRegions->SetId(2, 2);
+    sideTargetRegions->SetId(3, 3);
 
-    if (this->RunEdgeWeightedCVT(workPdCopy, generatorsPd) != SV_OK)
+    std::vector<Region> sideRegions;
+    if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, sideTargetRegions) != SV_OK)
     {
-      vtkErrorMacro("Error in cvt");
+      vtkErrorMacro("Couldn't get patches");
       return SV_ERROR;
     }
 
-    for (int i=0; i<wholePatchFix.size(); i++)
+    std::vector<int> sidePatchFix;
+    this->CheckSidePatches(pd, sideRegions, sidePatchFix);
+
+    int fixStrategy = 0;
+
+    if (sidePatchFix.size() == 1)
     {
-      int badPatch = wholePatchFix[i];
-      for (int j=0; j<endRegions[badPatch].NumberOfElements; j++)
+      std::vector<Region> allRegions;
+      if (this->GetRegions(pd, "PatchIds", allRegions) != SV_OK)
       {
-        int cellId = endRegions[badPatch].Elements[j];
-        int newCellValue = workPdCopy->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
-        pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, newCellValue);
+        vtkErrorMacro("Couldn't get patches");
+        return SV_ERROR;
+      }
+
+      for (int r=0; r<wholePatchFix.size(); r++)
+      {
+        int badPatch = wholePatchFix[r];
+
+        int numTouchers=0;
+        for (int i=0; i<sidePatchFix.size(); i++)
+        {
+          int edgeTouchCount=0;
+          for (int j=0; j<allRegions.size(); j++)
+          {
+            if (allRegions[j].IndexCluster == sidePatchFix[i])
+            {
+              for (int k=0; k<allRegions[j].BoundaryEdges.size(); k++)
+              {
+                for (int l=0; l<allRegions[j].BoundaryEdges[k].size()-1; l++)
+                {
+                  int ptId0 = allRegions[j].BoundaryEdges[k][l];
+                  int ptId1 = allRegions[j].BoundaryEdges[k][l+1];
+
+                  vtkNew(vtkIdList, cellEdgeNeighbors);
+                  pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, cellEdgeNeighbors);
+
+                  for (int m=0; m<cellEdgeNeighbors->GetNumberOfIds(); m++)
+                  {
+                    int cellId  = cellEdgeNeighbors->GetId(m);
+                    int cellVal = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+
+                    if (cellVal == endRegions[badPatch].IndexCluster)
+                      edgeTouchCount++;
+                  }
+                }
+              }
+            }
+          }
+          if (edgeTouchCount > 0)
+            numTouchers++;
+        }
+
+        if (numTouchers == 1)
+          fixStrategy = 1;
+
+      }
+    }
+
+    if (fixStrategy == 0)
+    {
+      vtkNew(vtkPolyData, workPdCopy);
+      workPdCopy->DeepCopy(pd);
+
+      // Set up generators
+      vtkNew(vtkPoints, generatorsPts);
+      generatorsPts->SetNumberOfPoints(4);
+      generatorsPts->SetPoint(0, 1.0, 0.0, 0.0);
+      generatorsPts->SetPoint(1, 0.0, 1.0, 0.0);
+      generatorsPts->SetPoint(2, -1.0, 0.0, 0.0);
+      generatorsPts->SetPoint(3, 0.0, -1.0, 0.0);
+
+      vtkNew(vtkPolyData, generatorsPd);
+      generatorsPd->SetPoints(generatorsPts);
+
+      if (this->RunEdgeWeightedCVT(workPdCopy, generatorsPd) != SV_OK)
+      {
+        vtkErrorMacro("Error in cvt");
+        return SV_ERROR;
+      }
+
+      for (int r=0; r<wholePatchFix.size(); r++)
+      {
+        int badPatch = wholePatchFix[r];
+
+        for (int j=0; j<endRegions[badPatch].NumberOfElements; j++)
+        {
+          int cellId = endRegions[badPatch].Elements[j];
+          int newCellValue = workPdCopy->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, newCellValue);
+        }
+      }
+    }
+    else if (fixStrategy = 1)
+    {
+      for (int r=0; r<wholePatchFix.size(); r++)
+      {
+        int badPatch = wholePatchFix[r];
+
+        for (int j=0; j<endRegions[badPatch].NumberOfElements; j++)
+        {
+          int cellId = endRegions[badPatch].Elements[j];
+          int newCellValue = sidePatchFix[0];
+          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, newCellValue);
+        }
       }
     }
   }
@@ -2323,6 +2425,9 @@ int vtkSVGroupsSegmenter::FixEndPatches(vtkPolyData *pd)
   return SV_OK;
 }
 
+// ----------------------
+// CheckEndPatches
+// ----------------------
 int vtkSVGroupsSegmenter::CheckEndPatches(vtkPolyData *pd,
                                           std::vector<Region> endRegions,
                                           std::vector<int> &individualFix,
@@ -2376,6 +2481,162 @@ int vtkSVGroupsSegmenter::CheckEndPatches(vtkPolyData *pd,
   return SV_OK;
 }
 
+// ----------------------
+// FixSidePatches
+// ----------------------
+int vtkSVGroupsSegmenter::FixSidePatches(vtkPolyData *pd)
+{
+  vtkNew(vtkIdList, targetRegions);
+  targetRegions->SetNumberOfIds(4);
+  targetRegions->SetId(0, 0);
+  targetRegions->SetId(1, 1);
+  targetRegions->SetId(2, 2);
+  targetRegions->SetId(3, 3);
+
+  std::vector<Region> sideRegions;
+  if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, targetRegions) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get patches");
+    return SV_ERROR;
+  }
+
+  std::vector<int> wholePatchFix;
+  this->CheckSidePatches(pd, sideRegions, wholePatchFix);
+
+  vtkDataArray *cellNormals = pd->GetCellData()->GetArray("Normals");
+
+  if (wholePatchFix.size() > 0)
+  {
+    fprintf(stdout,"FIXING WHOLE SIDE PATCHES\n");
+
+    for (int i=0; i<wholePatchFix.size(); i++)
+    {
+      int maxPatch;
+      int maxNumberOfElements = -1;
+      for (int j=0; j<sideRegions.size(); j++)
+      {
+        if (wholePatchFix[i] == sideRegions[j].IndexCluster)
+        {
+          if (maxNumberOfElements < sideRegions[j].NumberOfElements)
+          {
+            maxPatch = j;
+            maxNumberOfElements = sideRegions[j].NumberOfElements;
+          }
+        }
+      }
+
+      std::vector<int> minPatchFixes;
+      for (int j=0; j<sideRegions.size(); j++)
+      {
+        if (wholePatchFix[i] == sideRegions[j].IndexCluster && j != maxPatch)
+          minPatchFixes.push_back(j);
+      }
+
+      for (int r=0; r<minPatchFixes.size(); r++)
+      {
+        int minPatch = minPatchFixes[r];
+
+        vtkNew(vtkIdList, patchIds);
+        vtkNew(vtkIdList, patchCount);
+        for (int j=0; j<sideRegions[minPatch].BoundaryEdges.size(); j++)
+        {
+          for (int k=0; k<sideRegions[minPatch].BoundaryEdges[j].size()-1; k++)
+          {
+            int ptId0 = sideRegions[minPatch].BoundaryEdges[j][k];
+            int ptId1 = sideRegions[minPatch].BoundaryEdges[j][k+1];
+
+            vtkNew(vtkIdList, cellEdgeNeighbors);
+            pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, cellEdgeNeighbors);
+
+            for (int l=0; l<cellEdgeNeighbors->GetNumberOfIds(); l++)
+            {
+              int cellId  = cellEdgeNeighbors->GetId(l);
+              int cellVal = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+
+              if (cellVal != wholePatchFix[i])
+              {
+                int isId = patchIds->IsId(cellVal);
+                if (isId == -1)
+                {
+                  patchIds->InsertNextId(cellVal);
+                  patchCount->InsertNextId(1);
+                }
+                else
+                  patchCount->SetId(isId, patchCount->GetId(isId)+1);
+              }
+            }
+          }
+        }
+
+        int maxVal = -1;
+        int maxPatchId;
+        for (int j=0; j<patchIds->GetNumberOfIds(); j++)
+        {
+          if (patchCount->GetId(j) > maxVal)
+          {
+            maxPatchId = patchIds->GetId(j);
+            maxVal = patchCount->GetId(j);
+          }
+        }
+
+        for (int k=0; k<sideRegions[minPatch].Elements.size(); k++)
+        {
+          int cellId = sideRegions[minPatch].Elements[k];
+
+          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, maxPatchId);
+        }
+      }
+    }
+  }
+
+
+  return SV_OK;
+}
+
+// ----------------------
+// CheckSidePatches
+// ----------------------
+int vtkSVGroupsSegmenter::CheckSidePatches(vtkPolyData *pd,
+                                          std::vector<Region> sideRegions,
+                                          std::vector<int> &wholePatchFix)
+{
+  int numRegions = sideRegions.size();
+
+  vtkNew(vtkIdList, regionIds);
+  vtkNew(vtkIdList, regionCount);
+  for (int i=0; i<numRegions; i++)
+  {
+    int isId = regionIds->IsId(sideRegions[i].IndexCluster);
+    if (isId == -1)
+    {
+      regionIds->InsertNextId(sideRegions[i].IndexCluster);
+      regionCount->InsertNextId(1);
+    }
+    else
+      regionCount->SetId(isId, regionCount->GetId(isId)+1);
+  }
+
+  if (numRegions == 4 && regionIds->GetNumberOfIds() == 4)
+    return SV_OK;
+
+  if (numRegions < 4)
+  {
+    fprintf(stderr,"THIS IS REALLY BIG PROBLEM! NOT SURE WHAT TO DO ABOUT THIS\n");
+    return SV_ERROR;
+  }
+
+  for (int i=0; i<regionCount->GetNumberOfIds(); i++)
+  {
+    if (regionCount->GetId(i) > 1)
+      wholePatchFix.push_back(regionIds->GetId(i));
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// CheckGroups
+// ----------------------
 int vtkSVGroupsSegmenter::CheckGroups()
 {
   // Clean up groups
@@ -2501,6 +2762,9 @@ int vtkSVGroupsSegmenter::FixPatchesByGroup()
   return SV_OK;
 }
 
+// ----------------------
+// FixPatchesWithPolycube
+// ----------------------
 int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
 {
   // Then check everything
@@ -2780,6 +3044,9 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
   return SV_OK;
 }
 
+// ----------------------
+// FixSpecificRegions
+// ----------------------
 int vtkSVGroupsSegmenter::FixSpecificRegions(vtkPolyData *pd, std::string arrayName,
                                              vtkIdList *targetRegions, const int noEndRegions)
 {
@@ -3027,6 +3294,10 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
       if (this->FindPointMatchingValues(rotPolycube, "PatchIds", patchVals, paraPtId) != SV_OK)
       {
         fprintf(stdout,"Could not find corresponding polycube point id\n");
+        fprintf(stdout,"COULD NOT FIND: ");
+        for (int r=0; r<patchVals->GetNumberOfIds(); r++)
+          fprintf(stdout,"%d ", patchVals->GetId(r));
+        fprintf(stdout,"\n");
         return SV_ERROR;
       }
 

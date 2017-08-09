@@ -232,6 +232,10 @@ protected:
                       std::vector<Region> endRegions,
                       std::vector<int> &individualFix,
                       std::vector<int> &wholePatchFix);
+  int FixSidePatches(vtkPolyData *pd);
+  int CheckSidePatches(vtkPolyData *pd,
+                      std::vector<Region> endRegions,
+                      std::vector<int> &wholePatchFix);
   int CheckGroups();
   int FixGroups(vtkPolyData *pd, std::string arrayName,
                 std::vector<Region> allRegions);
