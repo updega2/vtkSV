@@ -736,33 +736,18 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
   transPD->BuildLinks();
 
   // Calculate area
-  double area = 0;
-  double tedgept1[3];
-  double tedgept2[3];
-  vtkIdType newpt;
-  for(newpt=0;newpt<transPD->GetNumberOfPoints()-1;newpt++)
-    {
-      transPD->GetPoint(newpt, tedgept1);
-      transPD->GetPoint(newpt+1, tedgept2);
-      area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
-    }
-  transPD->GetPoint(newpt, tedgept1);
-  transPD->GetPoint(0, tedgept2);
-  area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
+  double tedgepts[3][3];
+  for(int i=0;i<transPD->GetNumberOfPoints();i++)
+    transPD->GetPoint(i, tedgepts[i]);
+
+  double area2 = orient2d(tedgepts[0], tedgepts[1], tedgepts[2]);
 
   // Check with tolerance
   int value=0;
-  double tolerance = 1e-6;
-  if (area < 0 && fabs(area) > tolerance)
+  if (area2 < 0)
     value = -1;
-  else if (area > 0 && fabs(area) > tolerance)
-    value = 1;
   else
-    {
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Line pts are "<<p0<<" and "<<p1);
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"PD pts are "<<cellPtId0<<" and "<<cellPtId1);
-    value = 0;
-    }
+    value = 1;
 
   return value;
 }
@@ -1203,8 +1188,20 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::DetermineIntersection(
         vtkDebugWithObjectMacro(this->ParentFilter, <<"Number Of Cells is less than 2 for point "<<interPt);
         }
 
-      vtkIdType nextCell = cellIds->GetId(0);
-      fprintf(stdout,"NEXT CELL IS: %d\n", cellIds->GetId(0));
+      vtkIdType nextCell = -1;
+      for (int i=0; i<cellIds->GetNumberOfIds(); i++)
+      {
+        if (this->IntersectionLines->GetCell(cellIds->GetId(i))->GetPointIds()->GetId(0) == interPt)
+          nextCell = cellIds->GetId(i);
+      }
+
+      if (nextCell == -1)
+      {
+        fprintf(stderr,"Did not find a line in correct orientation\n");
+        //return SV_ERROR;
+      }
+
+      fprintf(stdout,"NEXT CELL IS: %d\n", nextCell);
       vtkIdType ntpts, *tpts;
       this->IntersectionLines->GetCellPoints(nextCell, ntpts, tpts);
       interPt = tpts[0];
