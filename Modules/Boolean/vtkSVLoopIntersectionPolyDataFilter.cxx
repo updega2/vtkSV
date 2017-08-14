@@ -1132,6 +1132,10 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
       interceptlines->GetNumberOfCells() > 0)
     {
     //Get polygon loops of intersected triangle
+    std::string full = "/Users/adamupdegrove/Desktop/tmp/FULL_BEFSPLIT.vtp";
+    vtkSVIOUtils::WriteVTPFile(full, fullpd);
+    std::string trans = "/Users/adamupdegrove/Desktop/tmp/TRANS_BEFSPLIT.vtp";
+    vtkSVIOUtils::WriteVTPFile(trans, transformedpd);
     std::vector<simPolygon> loops;
     if (this->GetLoops(transformedpd, &loops) != SV_OK)
       {
@@ -1298,7 +1302,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
 #if VTKSV_DELAUNAY_TYPE == OLD
     vtkNew( vtkDelaunay2D_60 , del2D);
 #elif VTKSV_DELAUNAY_TYPE == TRIANGLE
-    vtkNew( vtkDelaunay2D , del2D);
+    vtkNew( vtkTriangleDelaunay2D , del2D);
 #else
     vtkNew( vtkDelaunay2D , del2D);
 #endif
@@ -1663,6 +1667,8 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
   int foundcell = 0;
   double newcell = 0;
   double minangle = VTK_DOUBLE_MAX;
+  fprintf(stdout,"TELL ME IF MORE THAN DEOS: %d\n", pointCells->GetNumberOfIds());
+  fprintf(stdout,"WHAT POINT: %d\n", nextPt);
   for (vtkIdType i = 0; i < pointCells->GetNumberOfIds(); i++)
     {
     vtkIdType cellId = pointCells->GetId(i);
@@ -1703,6 +1709,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
         vtkMath::Normalize(edge2);
         double angle =
           vtkMath::DegreesFromRadians(acos(vtkMath::Dot(edge1, edge2)));
+
         if (angle < minangle)
           {
           minangle = angle;
@@ -1811,63 +1818,69 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl::GetLoopOrientation(
 
   double area2 = orient2d(pt1, pt2, pt3);
 
+  if (area2 == 0)
+  {
+    fprintf(stdout,"TELLLLEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
+  }
   int orientation = 1;
 
-  if (fabs(area2) < 1e-10)
-    {
-    //The area is very small for these three based upon the transformed pd
-    //from the cells original three points. Get a new transform from these
-    //interior three points to make sure the area is correct
-    fprintf(stdout,"Very small area triangle\n");
-    fprintf(stdout,"Double check area\n");
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Very Small Area Triangle");
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Double check area with more accurate transform");
-    vtkNew(vtkPoints, testPoints);
-    vtkNew(vtkPolyData, testPD);
-    vtkNew(vtkCellArray, testCells);
-    testPoints->InsertNextPoint(this->SplittingPD->GetPoint(ptId1));
-    testPoints->InsertNextPoint(this->SplittingPD->GetPoint(ptId2));
-    testPoints->InsertNextPoint(this->SplittingPD->GetPoint(ptId3));
-    for (int i = 0; i < 3; i++)
-      {
-      testCells->InsertNextCell(2);
-      testCells->InsertCellPoint(i);
-      testCells->InsertCellPoint((i+1)%3);
-      }
-    testPD->SetPoints(testPoints);
-    testPD->SetLines(testCells);
-    testPD->BuildLinks();
+  //if (fabs(area2) < 1e-10)
+  //  {
+  //  //The area is very small for these three based upon the transformed pd
+  //  //from the cells original three points. Get a new transform from these
+  //  //interior three points to make sure the area is correct
+  //  fprintf(stdout,"Very small area triangle\n");
+  //  fprintf(stdout,"Double check area\n");
+  //  vtkDebugWithObjectMacro(this->ParentFilter, <<"Very Small Area Triangle");
+  //  vtkDebugWithObjectMacro(this->ParentFilter, <<"Double check area with more accurate transform");
+  //  vtkNew(vtkPoints, testPoints);
+  //  vtkNew(vtkPolyData, testPD);
+  //  vtkNew(vtkCellArray, testCells);
+  //  testPoints->InsertNextPoint(this->SplittingPD->GetPoint(ptId1));
+  //  testPoints->InsertNextPoint(this->SplittingPD->GetPoint(ptId2));
+  //  testPoints->InsertNextPoint(this->SplittingPD->GetPoint(ptId3));
+  //  for (int i = 0; i < 3; i++)
+  //    {
+  //    testCells->InsertNextCell(2);
+  //    testCells->InsertCellPoint(i);
+  //    testCells->InsertCellPoint((i+1)%3);
+  //    }
+  //  testPD->SetPoints(testPoints);
+  //  testPD->SetLines(testCells);
+  //  testPD->BuildLinks();
 
-    vtkNew(vtkTransform, newTransform);
-    int sign = this->GetTransform(newTransform, testPoints);
-    if (sign != this->TransformSign)
-      {
-      testPoints->SetPoint(0, this->SplittingPD->GetPoint(ptId2));
-      testPoints->SetPoint(1, this->SplittingPD->GetPoint(ptId1));
-      this->GetTransform(newTransform, testPoints);
-      testPoints->SetPoint(0, this->SplittingPD->GetPoint(ptId1));
-      testPoints->SetPoint(1, this->SplittingPD->GetPoint(ptId2));
-      }
+  //  vtkNew(vtkTransform, newTransform);
+  //  int sign = this->GetTransform(newTransform, testPoints);
+  //  if (sign != this->TransformSign)
+  //    {
+  //    testPoints->SetPoint(0, this->SplittingPD->GetPoint(ptId2));
+  //    testPoints->SetPoint(1, this->SplittingPD->GetPoint(ptId1));
+  //    this->GetTransform(newTransform, testPoints);
+  //    testPoints->SetPoint(0, this->SplittingPD->GetPoint(ptId1));
+  //    testPoints->SetPoint(1, this->SplittingPD->GetPoint(ptId2));
+  //    }
 
-    vtkNew(vtkTransformPolyDataFilter, newTransformer);
-    newTransformer->SetInputData(testPD);
-    newTransformer->SetTransform(newTransform);
-    newTransformer->Update();
+  //  vtkNew(vtkTransformPolyDataFilter, newTransformer);
+  //  newTransformer->SetInputData(testPD);
+  //  newTransformer->SetTransform(newTransform);
+  //  newTransformer->Update();
 
-    newTransformer->GetOutput()->GetPoint(0, pt1);
-    newTransformer->GetOutput()->GetPoint(1, pt2);
-    newTransformer->GetOutput()->GetPoint(2, pt3);
+  //  newTransformer->GetOutput()->GetPoint(0, pt1);
+  //  newTransformer->GetOutput()->GetPoint(1, pt2);
+  //  newTransformer->GetOutput()->GetPoint(2, pt3);
 
-    fprintf(stdout,"Area was %.4f\n", area2);
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Area was: "<<area2);
-    area2 = orient2d(pt1, pt2, pt3);
-    fprintf(stdout,"Corrected area is %.4f\n", area2);
-    vtkDebugWithObjectMacro(this->ParentFilter, <<"Corrected area is: "<<area2);
-    }
+  //  fprintf(stdout,"Area was %.4f\n", area2);
+  //  vtkDebugWithObjectMacro(this->ParentFilter, <<"Area was: "<<area2);
+  //  area2 = orient2d(pt1, pt2, pt3);
+  //  fprintf(stdout,"Corrected area is %.4f\n", area2);
+  //  vtkDebugWithObjectMacro(this->ParentFilter, <<"Corrected area is: "<<area2);
+  //  }
   if (area2 < 0)
     {
     orientation = -1;
     }
+  else if (area2 == 0)
+    orientation = 0;
 
   return orientation;
 }
@@ -2266,7 +2279,8 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
     else
     {
       // These cross at an edge and do not actually intersect!
-      touchedge = 1;
+      //touchedge = 1;
+      touchedge = 0;
       surfaceid[0] = 3;
       surfaceid[1] = 3;
       if (t1[0] < t2[0])
@@ -2283,8 +2297,7 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
   }
   else if (index1 == 2 && index2 == 1)
   {
-    if ((inters1[0] == 1 || inters1[1] == 1) ||
-        (inters1[0] == 3 || inters1[1] == 3))
+    if (inters1[0] == 1 || inters1[1] == 1)
     {
       if (inters1[0] == 1)
       {
@@ -2307,19 +2320,24 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
     }
     else
     {
-      touchedge = 1;
-      surfaceid[0] = 3;
-      surfaceid[1] = 3;
-      if (t1[0] > t1[1])
-        std::swap(t1[0], t1[1]);
-      tt1 = t1[0];
-      tt2 = t1[1];
+      if (inters2[0] != 3)
+      {
+        touchedge = 1;
+        touchedge = 0;
+        surfaceid[0] = 3;
+        surfaceid[1] = 3;
+        if (t1[0] > t1[1])
+          std::swap(t1[0], t1[1]);
+        tt1 = t1[0];
+        tt2 = t1[1];
+      }
+      else
+        return SV_ERROR;
     }
   }
   else if (index1 == 1 && index2 == 2)
   {
-    if ((inters2[0] == 1 || inters2[1] == 1) ||
-        (inters2[0] == 3 || inters2[1] == 3))
+    if (inters2[0] == 1 || inters2[1] == 1)
     {
       if (inters1[0] == 1)
       {
@@ -2342,13 +2360,19 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
     }
     else
     {
-      touchedge = 1;
-      surfaceid[0] = 3;
-      surfaceid[1] = 3;
-      if (t2[0] > t2[1])
-        std::swap(t2[0], t2[1]);
-      tt1 = t2[0];
-      tt2 = t2[1];
+      if (inters1[0] != 3)
+      {
+        touchedge = 1;
+        touchedge = 0;
+        surfaceid[0] = 3;
+        surfaceid[1] = 3;
+        if (t2[0] > t2[1])
+          std::swap(t2[0], t2[1]);
+        tt1 = t2[0];
+        tt2 = t2[1];
+      }
+      else
+        return SV_ERROR;
     }
   }
   else if (index1 == 2 && index2 == 2)
@@ -2369,13 +2393,21 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
   // Create actual intersection points.
   fprintf(stdout,"DOUBLE CHECK T1: %.32f\n", tt1);
   fprintf(stdout,"DOUBLE CHECK T2: %.32f\n", tt2);
-  pt1[0] = std::trunc( 1e12 * (p[0] + tt1*v[0])) / 1e12;
-  pt1[1] = std::trunc( 1e12 * (p[1] + tt1*v[1])) / 1e12;
-  pt1[2] = std::trunc( 1e12 * (p[2] + tt1*v[2])) / 1e12;
+  //pt1[0] = std::trunc( 1e12 * (p[0] + tt1*v[0])) / 1e12;
+  //pt1[1] = std::trunc( 1e12 * (p[1] + tt1*v[1])) / 1e12;
+  //pt1[2] = std::trunc( 1e12 * (p[2] + tt1*v[2])) / 1e12;
 
-  pt2[0] = std::trunc( 1e12 * (p[0] + tt2*v[0])) / 1e12;
-  pt2[1] = std::trunc( 1e12 * (p[1] + tt2*v[1])) / 1e12;
-  pt2[2] = std::trunc( 1e12 * (p[2] + tt2*v[2])) / 1e12;
+  //pt2[0] = std::trunc( 1e12 * (p[0] + tt2*v[0])) / 1e12;
+  //pt2[1] = std::trunc( 1e12 * (p[1] + tt2*v[1])) / 1e12;
+  //pt2[2] = std::trunc( 1e12 * (p[2] + tt2*v[2])) / 1e12;
+
+  pt1[0] = p[0] + tt1*v[0];
+  pt1[1] = p[1] + tt1*v[1];
+  pt1[2] = p[2] + tt1*v[2];
+
+  pt2[0] = p[0] + tt2*v[0];
+  pt2[1] = p[1] + tt2*v[1];
+  pt2[2] = p[2] + tt2*v[2];
 
   return SV_OK;
 }
