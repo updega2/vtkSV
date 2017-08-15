@@ -424,6 +424,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
               if (ptId0 == ptId1)
                 {
                 addline = 0;
+                    fprintf(stdout,"IS SAME POINT\n");
                 }
 
               if (ptId0 == ptId1 && surfaceid[0] != surfaceid[1])
@@ -486,6 +487,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
                 if (isLine != -1)
                   {
                     addline = 0;
+                    fprintf(stdout,"IS ALREADY LINE\n");
                   }
                 }
 
@@ -768,6 +770,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
             vtkPolyData *interLines, int inputIndex,
             int numCurrCells)
 {
+  fprintf(stdout,"SPLITTING CELL %d OF INDEX %d\n", cellId, inputIndex);
   // Copy down the SurfaceID array that tells which surface the point belongs
   // to
   vtkIdTypeArray *surfaceMapper;
@@ -1035,7 +1038,7 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
     points->GetPoint(ptId, x);
 
     interPtBool[ptId] = false;
-      if (cellId == 46 && inputIndex == 0)
+      if (cellId == 47 && inputIndex == 0)
       {
         fprintf(stdout,"ANGLE STUFF: %d %d\n", ptId, cellBoundaryPt->GetValue(ptId));
       }
@@ -1132,10 +1135,13 @@ vtkCellArray* vtkSVLoopIntersectionPolyDataFilter::Impl
       interceptlines->GetNumberOfCells() > 0)
     {
     //Get polygon loops of intersected triangle
-    std::string full = "/Users/adamupdegrove/Desktop/tmp/FULL_BEFSPLIT.vtp";
-    vtkSVIOUtils::WriteVTPFile(full, fullpd);
-    std::string trans = "/Users/adamupdegrove/Desktop/tmp/TRANS_BEFSPLIT.vtp";
-    vtkSVIOUtils::WriteVTPFile(trans, transformedpd);
+      if (cellId == 47 && inputIndex == 0)
+      {
+        std::string full = "/Users/adamupdegrove/Desktop/tmp/FULL_BEFSPLIT.vtp";
+        vtkSVIOUtils::WriteVTPFile(full, fullpd);
+        std::string trans = "/Users/adamupdegrove/Desktop/tmp/TRANS_BEFSPLIT.vtp";
+        vtkSVIOUtils::WriteVTPFile(trans, transformedpd);
+      }
     std::vector<simPolygon> loops;
     if (this->GetLoops(transformedpd, &loops) != SV_OK)
       {
@@ -1472,6 +1478,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
     if (ptBool[ptId] == false)
       {
       nextPt.id = ptId;
+      fprintf(stdout,"DOINT POINT: %d\n", ptId);
       pd->GetPoint(nextPt.id, nextPt.pt);
       simPolygon interloop;
       interloop.points.push_back(nextPt);
@@ -1556,6 +1563,7 @@ int vtkSVLoopIntersectionPolyDataFilter::Impl
     newpoint.id = cellPoints->GetId(0);
     nextPt = cellPoints->GetId(0);
     }
+  fprintf(stdout,"NOW NEXT POINT: %d\n", nextPt);
   pd->GetPoint(newpoint.id, newpoint.pt);
   loop->points.push_back(newpoint);
   interPtBool[nextPt] = true;
@@ -1745,6 +1753,7 @@ void vtkSVLoopIntersectionPolyDataFilter::Impl
   for (vtkIdType i = 0; i < pointCells->GetNumberOfIds(); i++)
     {
     vtkIdType cellId = pointCells->GetId(i);
+    fprintf(stdout,"CHECK IN OUT: %d\n", cellId);
     //If the next line is not equal to the current line, check the angle
     //it makes with the previous line
     if (*nextCell != cellId)
@@ -1776,6 +1785,7 @@ void vtkSVLoopIntersectionPolyDataFilter::Impl
       vtkMath::Normalize(edge2);
       double angle =
         vtkMath::DegreesFromRadians(acos(vtkMath::Dot(edge1, edge2)));
+      fprintf(stdout,"ANGLELEL: %.4f\n", angle);
 
       if (angle < minangle)
         {
@@ -1788,6 +1798,7 @@ void vtkSVLoopIntersectionPolyDataFilter::Impl
   //previous cell and set the orientation of the loop
   *nextCell = mincell;
   loop->orientation = this->GetLoopOrientation(pd, *nextCell, prevPt, nextPt);
+  fprintf(stdout,"SET LOOP ORIENTATION TO: %d, MIN CELL: %.2f\n", loop->orientation, mincell);
 }
 
 // ----------------------
@@ -2320,8 +2331,6 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
     }
     else
     {
-      if (inters2[0] != 3)
-      {
         touchedge = 1;
         touchedge = 0;
         surfaceid[0] = 3;
@@ -2330,9 +2339,6 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
           std::swap(t1[0], t1[1]);
         tt1 = t1[0];
         tt2 = t1[1];
-      }
-      else
-        return SV_ERROR;
     }
   }
   else if (index1 == 1 && index2 == 2)
@@ -2360,8 +2366,6 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
     }
     else
     {
-      if (inters1[0] != 3)
-      {
         touchedge = 1;
         touchedge = 0;
         surfaceid[0] = 3;
@@ -2370,9 +2374,6 @@ int vtkSVLoopIntersectionPolyDataFilter::TRIANGLETriangleTriangleIntersection(
           std::swap(t2[0], t2[1]);
         tt1 = t2[0];
         tt2 = t2[1];
-      }
-      else
-        return SV_ERROR;
     }
   }
   else if (index1 == 2 && index2 == 2)
