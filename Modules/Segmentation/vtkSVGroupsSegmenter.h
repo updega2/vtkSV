@@ -244,7 +244,7 @@ protected:
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
   int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
-                            const int w_div, const int l_div, const int h_div);
+                            const int w_div, int &l_div, const int h_div);
   int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
                            vtkPolyData *pdWithCleanInterior,
                            vtkPolyData *pdWithoutInterior,
@@ -298,6 +298,7 @@ protected:
 
   double CutoffRadiusFactor;
   double ClipValue;
+  double PolycubeUnitLength;
 
   vtkSVCenterlineGraph *CenterlineGraph;
   vtkUnstructuredGrid *Polycube;

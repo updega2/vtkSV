@@ -189,7 +189,8 @@ protected:
 
   /** \brief Use the vtkSVNURBS code to loft a polydata surface for portion
    *  pd. */
-  int LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *loftedPd);
+  int LoftNURBSSurfaceBranch(vtkPolyData *pd, vtkPolyData *loftedPd);
+  int LoftNURBSSurfaceBifurcation(vtkPolyData *pd, vtkPolyData *loftedPd);
 
 private:
   vtkSVPolyDataToNURBSFilter(const vtkSVPolyDataToNURBSFilter&);  // Not implemented.

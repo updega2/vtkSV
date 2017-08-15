@@ -136,6 +136,13 @@ public:
   //@}
 
   //@{
+  /// \brief Use radius information
+  vtkSetMacro(UseBifurcationInformation,int);
+  vtkGetMacro(UseBifurcationInformation,int);
+  vtkBooleanMacro(UseBifurcationInformation,int);
+  //@}
+
+  //@{
   /// \brief Remove end points from centerline possible points to check
   vtkSetMacro(RemoveEndPoints,int);
   vtkGetMacro(RemoveEndPoints,int);
@@ -173,6 +180,7 @@ protected:
   int UsePointNormal;
   int UseRadiusWeighting;
   int UseLocalCoordinates;
+  int UseBifurcationInformation;
   int RemoveEndPoints;
 
   double LastPolyBallCellPCoord;

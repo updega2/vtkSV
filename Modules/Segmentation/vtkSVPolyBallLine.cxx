@@ -50,6 +50,7 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->LastPolyBallCenter[0] = this->LastPolyBallCenter[1] = this->LastPolyBallCenter[2] = 0.0;
   this->LastPolyBallCenterRadius = 0.0;
   this->UseRadiusInformation = 1;
+  this->UseBifurcationInformation = 0;
   this->UsePointNormal = 0;
   this->UseRadiusWeighting = 0;
   this->UseLocalCoordinates = 0;
@@ -137,6 +138,8 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
   vtkDataArray *localXArray = NULL;
   vtkDataArray *localYArray = NULL;
   vtkDataArray *localZArray = NULL;
+  vtkNew(vtkIdList, tmpList);
+  vtkNew(vtkIdList, tmpList2);
 
   if (!this->Input)
     {
@@ -189,7 +192,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     return SV_ERROR;
     }
 
-  this->Input->BuildLinks();
+  this->Input->BuildCells();
 #if (VTK_MAJOR_VERSION <= 5)
   this->Input->Update();
 #endif
@@ -223,35 +226,23 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
       }
     }
 
-  vtkNew(vtkIdList, closestPoints);
-  this->PointLocator->FindClosestNPoints(10, x, closestPoints);
-
-  for (i=0; i<closestPoints->GetNumberOfIds(); i++)
+  for (int c=0; c<cellIds->GetNumberOfIds(); c++)
     {
-      int ptId0 = closestPoints->GetId(i);
-      this->Input->GetPoint(ptId0, point0);
-      vtkNew(vtkIdList, tmpList);
-      this->Input->GetPointCells(ptId0, tmpList);
-      vtkNew(vtkIdList, pointNeighbors);
-      for (int r=0; r<tmpList->GetNumberOfIds(); r++)
+    int cellId = cellIds->GetId(c);
+
+    if (this->Input->GetCellType(cellId)!=VTK_LINE && this->Input->GetCellType(cellId)!=VTK_POLY_LINE)
       {
-        vtkIdType *pts, npts;
-        this->Input->GetCellPoints(tmpList->GetId(r), npts, pts);
-        for (int f=0; f<npts; f++)
-        {
-          if (pts[f] == ptId0)
-          {
-            if (f != 0)
-              pointNeighbors->InsertNextId(pts[f-1]);
-            if (f != npts-1)
-              pointNeighbors->InsertNextId(pts[f+1]);
-          }
-        }
+      continue;
       }
-      for (int r=0; r<pointNeighbors->GetNumberOfIds(); r++)
+
+    this->Input->GetCellPoints(cellId,npts,pts);
+
+    for (i=0; i<npts-1; i++)
       {
-        int ptId1 = pointNeighbors->GetId(r);
-      this->Input->GetPoint(ptId1, point1);
+        int ptId0 = pts[i];
+        int ptId1 = pts[i+1];
+      this->Input->GetPoint(pts[i],point0);
+      this->Input->GetPoint(pts[i+1],point1);
 
       if (this->UseRadiusInformation)
         {
@@ -264,34 +255,26 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         radius1 = 0.0;
         }
 
-        int cellId;
-        vtkNew(vtkIdList, pointCells0);
-        vtkNew(vtkIdList, pointCells1);
-        this->Input->GetPointCells(ptId0, pointCells0);
-        this->Input->GetPointCells(ptId1, pointCells1);
-        pointCells0->IntersectWith(pointCells1);
-        cellId = pointCells0->GetId(0);
-
-        vtkNew(vtkIdList, tmpList2);
-        this->Input->GetPointCells(ptId1, tmpList2);
-
       if (this->UseLocalCoordinates)
         {
-        localXArray->GetTuple(ptId0, local0[0]);
-        localYArray->GetTuple(ptId0, local0[1]);
-        localZArray->GetTuple(ptId0, local0[2]);
-        localXArray->GetTuple(ptId1, local1[0]);
-        localYArray->GetTuple(ptId1, local1[1]);
-        localZArray->GetTuple(ptId1, local1[2]);
-        }
-      else
-        {
-        for (int j=0; j<3; j++)
+        if (localXArray != NULL && localYArray != NULL && localZArray != NULL)
           {
-          for (int k=0; k<3; k++)
+          localXArray->GetTuple(ptId0, local0[0]);
+          localYArray->GetTuple(ptId0, local0[1]);
+          localZArray->GetTuple(ptId0, local0[2]);
+          localXArray->GetTuple(ptId1, local1[0]);
+          localYArray->GetTuple(ptId1, local1[1]);
+          localZArray->GetTuple(ptId1, local1[2]);
+          }
+        else
+          {
+          for (int j=0; j<3; j++)
             {
-            local0[j][k] = 0.0;
-            local1[j][k] = 0.0;
+            for (int k=0; k<3; k++)
+              {
+              local0[j][k] = 0.0;
+              local1[j][k] = 0.0;
+              }
             }
           }
         }
@@ -304,8 +287,11 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
       vector1[1] = x[1] - point0[1];
       vector1[2] = x[2] - point0[2];
       vector1[3] = 0.0 - radius0;
-      for (int j=0; j<3; j++)
-        vtkMath::Subtract(local1[j], local0[j], localDiffs[j]);
+      if (this->UseLocalCoordinates)
+      {
+        for (int j=0; j<3; j++)
+          vtkMath::Subtract(local1[j], local0[j], localDiffs[j]);
+      }
 
 //       cout<<x[0]<<" "<<x[1]<<" "<<x[2]<<" "<<point0[0]<<" "<<point0[1]<<" "<<point0[2]<<" "<<point1[0]<<" "<<point1[1]<<" "<<point1[2]<<" "<<endl;
 
@@ -326,10 +312,13 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         closestPoint[1] = point0[1];
         closestPoint[2] = point0[2];
         closestPoint[3] = radius0;
-        for (int j=0; j<3; j++)
+        if (this->UseLocalCoordinates)
           {
-          for (int k=0; k<3; k++)
-            finalLocal[j][k] = local0[j][k];
+          for (int j=0; j<3; j++)
+            {
+            for (int k=0; k<3; k++)
+              finalLocal[j][k] = local0[j][k];
+            }
           }
         }
       else if (1.0-t<VTK_SV_DOUBLE_TOL)
@@ -339,10 +328,13 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         closestPoint[1] = point1[1];
         closestPoint[2] = point1[2];
         closestPoint[3] = radius1;
-        for (int j=0; j<3; j++)
+        if (this->UseLocalCoordinates)
           {
-          for (int k=0; k<3; k++)
-            finalLocal[j][k] = local1[j][k];
+          for (int j=0; j<3; j++)
+            {
+            for (int k=0; k<3; k++)
+              finalLocal[j][k] = local1[j][k];
+            }
           }
         }
       else
@@ -351,10 +343,13 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         closestPoint[1] = point0[1] + t * vector0[1];
         closestPoint[2] = point0[2] + t * vector0[2];
         closestPoint[3] = radius0 + t * vector0[3];
-        for (int j=0; j<3; j++)
+        if (this->UseLocalCoordinates)
           {
-          for (int k=0; k<3; k++)
-            finalLocal[j][k] = local0[j][k] + t * localDiffs[j][k];
+          for (int j=0; j<3; j++)
+            {
+            for (int k=0; k<3; k++)
+              finalLocal[j][k] = local0[j][k] + t * localDiffs[j][k];
+            }
           }
         }
 
@@ -384,10 +379,16 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
 
        if (polyballFunctionValue<minPolyBallFunctionValue)
         {
-          if (tmpList->GetNumberOfIds() > 1)
-            this->FindBifurcationCellId(ptId0, tmpList, x, closestPoint, t, radius0, cellId);
-          else if (tmpList2->GetNumberOfIds() > 1)
-            this->FindBifurcationCellId(ptId1, tmpList2, x, closestPoint, 1-t, radius1, cellId);
+          if (this->UseBifurcationInformation)
+          {
+            this->Input->GetPointCells(ptId0, tmpList);
+            this->Input->GetPointCells(ptId1, tmpList2);
+
+            if (tmpList->GetNumberOfIds() > 1)
+              this->FindBifurcationCellId(ptId0, tmpList, x, closestPoint, t, radius0, cellId);
+            else if (tmpList2->GetNumberOfIds() > 1)
+              this->FindBifurcationCellId(ptId1, tmpList2, x, closestPoint, 1-t, radius1, cellId);
+          }
         minPolyBallFunctionValue = polyballFunctionValue;
         this->LastPolyBallCellId = cellId;
         this->LastPolyBallCellSubId = i;
@@ -396,11 +397,14 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         this->LastPolyBallCenter[1] = closestPoint[1];
         this->LastPolyBallCenter[2] = closestPoint[2];
         this->LastPolyBallCenterRadius = closestPoint[3];
-        for (int j=0; j<3; j++)
+        if (this->UseLocalCoordinates)
           {
-          this->LastLocalCoordX[j] = finalLocal[0][j];
-          this->LastLocalCoordY[j] = finalLocal[1][j];
-          this->LastLocalCoordZ[j] = finalLocal[2][j];
+          for (int j=0; j<3; j++)
+            {
+            this->LastLocalCoordX[j] = finalLocal[0][j];
+            this->LastLocalCoordY[j] = finalLocal[1][j];
+            this->LastLocalCoordZ[j] = finalLocal[2][j];
+            }
           }
         }
       }

@@ -44,6 +44,7 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSSurface.h"
 #include "vtkSVMapInterpolator.h"
 #include "vtkSVPlanarMapper.h"
@@ -477,13 +478,13 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
         this->UseMapToAddTextureCoordinates(slicePd, sliceBaseDomain, 1.0, 1.0);
       inputAppender->AddInputData(slicePd);
 
-      //std::stringstream out;
-      //out << branchId;
-      //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+      std::stringstream out;
+      out << branchId;
+      std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
       //this->WriteToGroupsFile(mappedPd, groupfile);
       // Loft this portion
       vtkNew(vtkPolyData, loftedPd);
-      //this->LoftNURBSSurface(mappedPd, loftedPd);
+      this->LoftNURBSSurfaceBranch(mappedPd, loftedPd);
       loftAppender->AddInputData(loftedPd);
     }
   }
@@ -566,13 +567,13 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
       this->UseMapToAddTextureCoordinates(bifurcationPd, sliceBaseDomain, 1.0, 1.0);
     inputAppender->AddInputData(bifurcationPd);
 
-    //std::stringstream out;
-    //out << bifurcationId;
-    //std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
+    std::stringstream out;
+    out << bifurcationId;
+    std::string groupfile = "/Users/adamupdegrove/Desktop/tmp/GroupFile_"+out.str();
     //this->WriteToGroupsFile(mappedPd, groupfile);
     // Loft this portion now
     vtkNew(vtkPolyData, loftedPd);
-    //this->LoftNURBSSurface(mappedPd, loftedPd);
+    this->LoftNURBSSurfaceBifurcation(mappedPd, loftedPd);
     loftAppender->AddInputData(loftedPd);
 
   }
@@ -794,9 +795,9 @@ int vtkSVPolyDataToNURBSFilter::UseMapToAddTextureCoordinates(vtkPolyData *pd,
 }
 
 // ----------------------
-// LoftNURBSSurface
+// LoftNURBSSurfaceBranch
 // ----------------------
-int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *loftedPd)
+int vtkSVPolyDataToNURBSFilter::LoftNURBSSurfaceBranch(vtkPolyData *pd, vtkPolyData *loftedPd)
 {
   vtkFloatArray *tCoords = vtkFloatArray::SafeDownCast(pd->GetPointData()->GetArray("TextureCoordinates"));
   int numPts = pd->GetNumberOfPoints();
@@ -807,10 +808,10 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
 
   vtkNew(vtkSVLoftNURBSSurface, lofter);
 
-  int xNum = 1.0/xSpacing + 2;
-  int yNum = 1.0/ySpacing + 2;
-  //fprintf(stdout,"XNum: %d\n", xNum);
-  //fprintf(stdout,"YNum: %d\n", yNum);
+  int xNum = 1.0/xSpacing + 1;
+  int yNum = 1.0/ySpacing + 1;
+  fprintf(stdout,"XNum: %d\n", xNum);
+  fprintf(stdout,"YNum: %d\n", yNum);
   for (int i=0; i<yNum; i++)
   {
     vtkNew(vtkPoints, newPoints);
@@ -828,8 +829,58 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurface(vtkPolyData *pd, vtkPolyData *l
   }
   lofter->SetUDegree(2);
   lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(ySpacing);
-  lofter->SetPolyDataVSpacing(xSpacing);
+  lofter->SetPolyDataUSpacing(0.001);
+  lofter->SetPolyDataVSpacing(0.001);
+  lofter->SetUKnotSpanType("average");
+  lofter->SetVKnotSpanType("average");
+  //lofter->SetUKnotSpanType("derivative");
+  //lofter->SetVKnotSpanType("derivative");
+  lofter->SetUParametricSpanType("chord");
+  lofter->SetVParametricSpanType("chord");
+  lofter->Update();
+
+  loftedPd->DeepCopy(lofter->GetOutput());
+
+  return SV_OK;
+}
+
+// ----------------------
+// LoftNURBSSurfaceBifurcation
+// ----------------------
+int vtkSVPolyDataToNURBSFilter::LoftNURBSSurfaceBifurcation(vtkPolyData *pd, vtkPolyData *loftedPd)
+{
+  vtkFloatArray *tCoords = vtkFloatArray::SafeDownCast(pd->GetPointData()->GetArray("TextureCoordinates"));
+  int numPts = pd->GetNumberOfPoints();
+
+  double xSpacing, ySpacing;
+  vtkSVPolyDataToNURBSFilter::GetSpacingOfTCoords(pd, xSpacing, ySpacing);
+  fprintf(stdout,"What even is spacing: %.4f, %.4f\n", xSpacing, ySpacing);
+
+  vtkNew(vtkSVLoftNURBSSurface, lofter);
+
+  int xNum = 1.0/xSpacing + 2;
+  int yNum = 1.0/ySpacing + 1;
+  fprintf(stdout,"XNum: %d\n", xNum);
+  fprintf(stdout,"YNum: %d\n", yNum);
+  for (int i=0; i<yNum; i++)
+  {
+    vtkNew(vtkPoints, newPoints);
+    newPoints->SetNumberOfPoints(xNum);
+    for (int j=0; j<xNum; j++)
+    {
+      double pt[3];
+      pd->GetPoint(i*xNum+j, pt);
+      newPoints->SetPoint(j,pt);
+
+    }
+    vtkNew(vtkPolyData, newPoly);
+    newPoly->SetPoints(newPoints);
+    lofter->AddInputData(newPoly);
+  }
+  lofter->SetUDegree(2);
+  lofter->SetVDegree(2);
+  lofter->SetPolyDataUSpacing(0.001);
+  lofter->SetPolyDataVSpacing(0.001);
   lofter->SetUKnotSpanType("average");
   lofter->SetVKnotSpanType("average");
   //lofter->SetUKnotSpanType("derivative");

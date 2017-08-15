@@ -291,6 +291,10 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
     fprintf(stderr,"Trifurcation wrongly identified, number of children is actually %d\n", numChildren);
   }
 
+  fprintf(stdout,"TRIFURCATION, TELL ME THIS DIR:            %d\n", this->BranchDir);
+  fprintf(stdout,"TRIFURCATION, TELL ME DIVERGING CHILD DIR: %d\n", this->Children[this->DivergingChild]->BranchDir);
+  fprintf(stdout,"TRIFURCATION, TELL ME ALIGNING CHILD DIR:  %d\n", this->Children[this->AligningChild]->BranchDir);
+
   // Count branch directions
   int rightCount = 0;
   int leftCount = 0;
@@ -617,7 +621,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                           width/2., vecs, endPts);
 
     // TEMPORARYRYRY
-    if (cubeType == 8 || cubeType == 10 || cubeType == 12)
+    if (diver->BranchDir == RIGHT || diver->BranchDir == BACK)
     {
       // get vector towards top of cube
       double frontVec[3];
@@ -627,7 +631,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       this->GetWedge(endPts[1], this->EndPt, endPts[0], frontVec,
                       height, endPoints);
     }
-    else if (cubeType == 9 || cubeType == 11)
+    else if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
     {
       // get vector towards top of cube
       double frontVec[3];

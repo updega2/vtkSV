@@ -59,6 +59,7 @@ vtkSVCenterlinesEdgeWeightedCVT::vtkSVCenterlinesEdgeWeightedCVT()
   this->UseRadiusInformation = 1;
   this->UseBifurcationInformation = 1;
   this->UseCurvatureWeight = 1;
+  this->UsePointNormals = 1;
 }
 
 // ----------------------
@@ -122,7 +123,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeConnectivity()
   {
     for (int i=0; i<numCells; i++)
     {
-      for (int j=0; j<this->MaximumNumberOfNeighborPatches; j++)
+      for (int j=0; j<numCells; j++)
           this->IsGoodNeighborCell[i][j] = 1;
     }
   }
@@ -142,8 +143,8 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
     this->DistanceFunction->SetInput(this->WorkGenerators);
     this->DistanceFunction->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     this->DistanceFunction->SetUseRadiusInformation(this->UseRadiusInformation);
-    this->DistanceFunction->UsePointNormalOn();
-    this->DistanceFunction->BuildLocator();
+    this->DistanceFunction->SetUsePointNormal(this->UsePointNormals);
+    //this->DistanceFunction->BuildLocator();
 
     // Get all the different ids
     vtkNew(vtkIdList, centerlineGroupIds);
