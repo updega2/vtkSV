@@ -68,8 +68,10 @@ vtkStandardNewMacro(vtkSVPolyDataToNURBSFilter);
 vtkSVPolyDataToNURBSFilter::vtkSVPolyDataToNURBSFilter()
 {
   this->AddTextureCoordinates = 1;
-  this->BaseDomainXResolution = 32;
-  this->BaseDomainYResolution = 8;
+  //this->BaseDomainXResolution = 32;
+  //this->BaseDomainYResolution = 8;
+  this->BaseDomainXResolution = 128;
+  this->BaseDomainYResolution = 64;
 
   this->InputPd                 = vtkPolyData::New();
   this->ParameterizedPd         = vtkPolyData::New();
@@ -484,7 +486,7 @@ int vtkSVPolyDataToNURBSFilter::MapBranch(const int branchId,
       //this->WriteToGroupsFile(mappedPd, groupfile);
       // Loft this portion
       vtkNew(vtkPolyData, loftedPd);
-      this->LoftNURBSSurfaceBranch(mappedPd, loftedPd);
+      //this->LoftNURBSSurfaceBranch(mappedPd, loftedPd);
       loftAppender->AddInputData(loftedPd);
     }
   }
@@ -573,7 +575,7 @@ int vtkSVPolyDataToNURBSFilter::MapBifurcation(const int bifurcationId,
     //this->WriteToGroupsFile(mappedPd, groupfile);
     // Loft this portion now
     vtkNew(vtkPolyData, loftedPd);
-    this->LoftNURBSSurfaceBifurcation(mappedPd, loftedPd);
+    //this->LoftNURBSSurfaceBifurcation(mappedPd, loftedPd);
     loftAppender->AddInputData(loftedPd);
 
   }
@@ -829,8 +831,8 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurfaceBranch(vtkPolyData *pd, vtkPolyD
   }
   lofter->SetUDegree(2);
   lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(0.001);
-  lofter->SetPolyDataVSpacing(0.001);
+  lofter->SetPolyDataUSpacing(xSpacing);
+  lofter->SetPolyDataVSpacing(ySpacing);
   lofter->SetUKnotSpanType("average");
   lofter->SetVKnotSpanType("average");
   //lofter->SetUKnotSpanType("derivative");
@@ -876,11 +878,12 @@ int vtkSVPolyDataToNURBSFilter::LoftNURBSSurfaceBifurcation(vtkPolyData *pd, vtk
     vtkNew(vtkPolyData, newPoly);
     newPoly->SetPoints(newPoints);
     lofter->AddInputData(newPoly);
+
   }
   lofter->SetUDegree(2);
   lofter->SetVDegree(2);
-  lofter->SetPolyDataUSpacing(0.001);
-  lofter->SetPolyDataVSpacing(0.001);
+  lofter->SetPolyDataUSpacing(xSpacing);
+  lofter->SetPolyDataVSpacing(ySpacing);
   lofter->SetUKnotSpanType("average");
   lofter->SetVKnotSpanType("average");
   //lofter->SetUKnotSpanType("derivative");

@@ -220,7 +220,7 @@ int vtkSVSquareBoundaryMapper::SetSquareBoundary(vtkIntArray *actualIds)
     newCells->InsertCellPoint(i+1);
   }
   newCells->InsertNextCell(2);
-  newCells->InsertCellPoint(i-1);
+  newCells->InsertCellPoint(i);
   newCells->InsertCellPoint(0);
 
   // Set the points and cells
