@@ -39,6 +39,8 @@
 
 #include "vtkSVCenterlineGCell.h"
 
+#include "vtkCellArray.h"
+#include "vtkMath.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 
