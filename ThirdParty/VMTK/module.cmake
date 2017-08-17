@@ -24,39 +24,43 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#-----------------------------------------------------------------------------
-# vtkSV Libraries
-set(VTKSV_LIBS
-  vtkSVVMTK
-  vtkSVBoolean
-  vtkSVCommon
-  vtkSVFilters
-  vtkSVGeometry
-  vtkSVNURBS
-  vtkSVParameterization
-  vtkSVSegmentation
-  vtkSVArchive)
-#-----------------------------------------------------------------------------
+set(DOCUMENTATION "A library containing VMTK code used in vtkSV.")
 
-#-----------------------------------------------------------------------------
-# Make library names
-if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
-
-  # Set the lib name as module name
-  foreach(lib ${VTKSV_LIBS})
-    string(TOUPPER ${lib} _cap_lib_name)
-    set(SV_LIB_${_cap_lib_name}_NAME ${lib})
-  endforeach()
-else()
-
-  # Add the simvascular_ because most likely being built as simvascular lib
-  foreach(lib ${VTKSV_LIBS})
-    string(TOUPPER ${lib} _cap_lib_name)
-    if(WIN32)
-      string(TOLOWER "lib_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
-    else()
-      string(TOLOWER "_SIMVASCULAR_${lib}" SV_LIB_${_cap_lib_name}_NAME)
-    endif()
-  endforeach()
+#------------------------------------------------------------------------------
+# Extra depends
+set(EXTRA_TEST_DEPENDS "")
+if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
+  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
 endif()
-#-----------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Module depends
+vtk_module(vtkSVVMTK
+  DESCRIPTION
+  "${DOCUMENTATION}"
+  DEPENDS
+  vtkCommonComputationalGeometry
+  vtkCommonDataModel
+  vtkCommonExecutionModel
+  vtkFiltersCore
+  vtkFiltersGeometry
+  vtkFiltersModeling
+  vtkFiltersTexture
+  vtkIOCore
+  vtkSVCommon
+  vtkRenderingCore
+  TEST_DEPENDS
+  vtkSVCommon
+  vtkFiltersExtraction
+  vtkIOXML
+  vtkInteractionStyle
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingLabel
+  vtkTestingCore
+  vtkTestingRendering
+  ${EXTRA_TEST_DEPENDS}
+  TCL_NAME
+  vtkSVVMTK
+  )
+#------------------------------------------------------------------------------
