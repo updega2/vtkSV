@@ -41,6 +41,7 @@
 
 #include "vtkCellArray.h"
 #include "vtkMath.h"
+#include "vtkSmartPointer.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 
