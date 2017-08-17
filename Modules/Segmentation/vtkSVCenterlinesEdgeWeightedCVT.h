@@ -87,9 +87,9 @@ public:
   vtkBooleanMacro(UseCurvatureWeight,int);
 
   /// \brief Get/Set use of point normals
-  vtkSetMacro(UsePointNormals,int);
-  vtkGetMacro(UsePointNormals,int);
-  vtkBooleanMacro(UsePointNormals,int);
+  vtkSetMacro(UsePointNormal,int);
+  vtkGetMacro(UsePointNormal,int);
+  vtkBooleanMacro(UsePointNormal,int);
   //@}
 protected:
   vtkSVCenterlinesEdgeWeightedCVT();
@@ -115,7 +115,7 @@ private:
   int UseRadiusInformation;
   int UseBifurcationInformation;
   int UseCurvatureWeight;
-  int UsePointNormals;
+  int UsePointNormal;
 
   char *GroupIdsArrayName;
   char *BlankingArrayName;

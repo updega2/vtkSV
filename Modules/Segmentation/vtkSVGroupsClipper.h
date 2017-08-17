@@ -109,6 +109,28 @@ public:
   vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
+  //@{
+  /// \brief Use given normal for directional help
+  vtkSetMacro(UsePointNormal,int);
+  vtkGetMacro(UsePointNormal,int);
+  vtkBooleanMacro(UsePointNormal,int);
+  //@}
+
+  //@{
+  /// \brief Use given normal for directional help
+  vtkSetMacro(UseRadiusWeighting,int);
+  vtkGetMacro(UseRadiusWeighting,int);
+  vtkBooleanMacro(UseRadiusWeighting,int);
+  //@}
+
+  //@{
+  /// \brief Use radius information
+  vtkSetMacro(UseBifurcationInformation,int);
+  vtkGetMacro(UseBifurcationInformation,int);
+  vtkBooleanMacro(UseBifurcationInformation,int);
+  //@}
+
+
 protected:
   vtkSVGroupsClipper();
   ~vtkSVGroupsClipper();
@@ -157,6 +179,9 @@ protected:
 
   int ClipAllCenterlineGroupIds;
   int UseRadiusInformation;
+  int UseRadiusWeighting;
+  int UseBifurcationInformation;
+  int UsePointNormal;
 
   double CutoffRadiusFactor;
   double ClipValue;

@@ -143,10 +143,6 @@ public:
   static int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
                                            vtkIdList *targetRegions);
 
-  /** \brief Pass an array from points to cells by using the most
-   * occuring point value. */
-  static int PassPointGroupsToCells(vtkPolyData *pd, std::string pointArrayName);
-
   /** \brief Naive implementation to get most reoccuring number in list. Okay
    *  because list size is small. */
   static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
@@ -197,8 +193,6 @@ public:
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
 
-  static int FixSpecificRegions(vtkPolyData *pd, std::string arrayName, vtkIdList *targetRegions, const int noEndRegions);
-
   static int RotateGroupToGlobalAxis(vtkPolyData *pd,
                                      const int thresholdId,
                                      std::string arrayName,
@@ -225,6 +219,7 @@ protected:
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
 
+  int MergeCenterlines();
   int GetPatches();
   int FixEndPatches(vtkPolyData *pd);
   int MatchEndPatches(vtkPolyData *pd);
@@ -239,7 +234,7 @@ protected:
   int CheckGroups();
   int FixGroups(vtkPolyData *pd, std::string arrayName,
                 std::vector<Region> allRegions);
-  int FixPatchesByGroup();
+  int FixGroupsWithPolycube();
   int FixPatchesWithPolycube();
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
@@ -290,7 +285,7 @@ protected:
   vtkPolyData *WorkPd;
   vtkPolyData *GraphPd;
   vtkPolyData *Centerlines;
-  vtkPolyData *CenterlinesWorkPd;
+  vtkPolyData *MergedCenterlines;
   vtkIdList *CenterlineGroupIds;
 
   int ClipAllCenterlineGroupIds;

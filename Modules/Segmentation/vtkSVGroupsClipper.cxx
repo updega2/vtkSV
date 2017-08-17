@@ -246,6 +246,15 @@ int vtkSVGroupsClipper::PrepFilter()
     return SV_ERROR;
   }
 
+  if (this->UsePointNormal)
+  {
+    if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 0, "Normals") != SV_OK)
+    {
+      vtkErrorMacro(<< "Cannot use point normals without having normals on the surface");
+      return SV_ERROR;
+    }
+  }
+
   return SV_OK;
 }
 
@@ -265,6 +274,9 @@ int vtkSVGroupsClipper::RunFilter()
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
+  groupTubes->SetUseRadiusWeighting(this->UseRadiusWeighting);
+  groupTubes->SetUseBifurcationInformation(this->UseBifurcationInformation);
+  groupTubes->SetUsePointNormal(this->UsePointNormal);
   groupTubes->BuildLocator();
 
   // For non group ids
@@ -272,6 +284,9 @@ int vtkSVGroupsClipper::RunFilter()
   nonGroupTubes->SetInput(this->Centerlines);
   nonGroupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   nonGroupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
+  nonGroupTubes->SetUseRadiusWeighting(this->UseRadiusWeighting);
+  nonGroupTubes->SetUseBifurcationInformation(this->UseBifurcationInformation);
+  nonGroupTubes->SetUsePointNormal(this->UsePointNormal);
   nonGroupTubes->BuildLocator();
 
   double point[3];
@@ -364,6 +379,14 @@ int vtkSVGroupsClipper::RunFilter()
     // Loop through points to evaluate function at each point
     for (int k=0; k<numberOfPoints; k++)
     {
+      if (this->UsePointNormal)
+      {
+        double pointNormal[3];
+        normalsArray->GetTuple(k, pointNormal);
+        groupTubes->SetPointNormal(pointNormal);
+        nonGroupTubes->SetPointNormal(pointNormal);
+      }
+
       // Evaluate function at point!
       clippingInput->GetPoint(k,point);
       groupTubeValue = groupTubes->EvaluateFunction(point);
@@ -372,10 +395,6 @@ int vtkSVGroupsClipper::RunFilter()
       if (groupTubeValue > this->CutoffRadiusFactor * this->CutoffRadiusFactor - 1)
         groupTubeValue = VTK_SV_LARGE_DOUBLE;
 
-      // Get value at all other ids
-      double pointNormal[3];
-      normalsArray->GetTuple(k, pointNormal);
-      nonGroupTubes->SetPointNormal(pointNormal);
       nonGroupTubeValue = nonGroupTubes->EvaluateFunction(point);
 
       // Subtract to give us the final value!
@@ -524,23 +543,23 @@ int vtkSVGroupsClipper::RunFilter()
   vtkNew(vtkPolyData, finisher);
   finisher->DeepCopy(allCleaner->GetOutput());
 
-  // Get list of points at boundary between two groups and -1 group
-  vtkNew(vtkIdList, separateIds);
-  this->FindGroupSeparatingPoints(finisher, separateIds);
+  //// Get list of points at boundary between two groups and -1 group
+  //vtkNew(vtkIdList, separateIds);
+  //this->FindGroupSeparatingPoints(finisher, separateIds);
 
-  // Take these point ids, punch holes near them, and fill to give nice
-  // separation between groups
-  vtkNew(vtkPoints, newPoints);
-  this->PunchHoles(finisher, separateIds, newPoints);
+  //// Take these point ids, punch holes near them, and fill to give nice
+  //// separation between groups
+  //vtkNew(vtkPoints, newPoints);
+  //this->PunchHoles(finisher, separateIds, newPoints);
 
-  // Fill and paint regions with group ids
-  this->FillHoles(finisher, newPoints);
+  //// Fill and paint regions with group ids
+  //this->FillHoles(finisher, newPoints);
 
-  // Last clean to remove duplicate points
-  vtkNew(vtkCleanPolyData, finalCleaner);
-  finalCleaner->SetInputData(finisher);
-  finalCleaner->Update();
-  finisher->DeepCopy(finalCleaner->GetOutput());
+  //// Last clean to remove duplicate points
+  //vtkNew(vtkCleanPolyData, finalCleaner);
+  //finalCleaner->SetInputData(finisher);
+  //finalCleaner->Update();
+  //finisher->DeepCopy(finalCleaner->GetOutput());
 
   // Finalize
   this->WorkPd->DeepCopy(finisher);

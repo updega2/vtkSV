@@ -59,7 +59,7 @@ vtkSVCenterlinesEdgeWeightedCVT::vtkSVCenterlinesEdgeWeightedCVT()
   this->UseRadiusInformation = 1;
   this->UseBifurcationInformation = 1;
   this->UseCurvatureWeight = 1;
-  this->UsePointNormals = 1;
+  this->UsePointNormal = 1;
 }
 
 // ----------------------
@@ -143,7 +143,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
     this->DistanceFunction->SetInput(this->WorkGenerators);
     this->DistanceFunction->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     this->DistanceFunction->SetUseRadiusInformation(this->UseRadiusInformation);
-    this->DistanceFunction->SetUsePointNormal(this->UsePointNormals);
+    this->DistanceFunction->SetUsePointNormal(this->UsePointNormal);
     this->DistanceFunction->SetUseBifurcationInformation(this->UseBifurcationInformation);
     //this->DistanceFunction->BuildLocator();
 
@@ -170,9 +170,12 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
       double center[3];
       vtkTriangle::TriangleCenter(pts[0], pts[1], pts[2], center);
 
-      double pointNormal[3];
-      this->CVTDataArray->GetTuple(i, pointNormal);
-      this->DistanceFunction->SetPointNormal(pointNormal);
+      if (this->UsePointNormal)
+      {
+        double pointNormal[3];
+        this->CVTDataArray->GetTuple(i, pointNormal);
+        this->DistanceFunction->SetPointNormal(pointNormal);
+      }
 
       int cellGenerator = 0;
       double minDist = VTK_SV_LARGE_DOUBLE;
