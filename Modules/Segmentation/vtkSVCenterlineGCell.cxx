@@ -314,14 +314,16 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
     for (int j=0; j<3; j++)
     {
       double compare = fabs(vtkMath::Dot(this->Children[i]->RefDirs[j], this->Children[i]->BranchVec));
-      //fprintf(stdout,"Would like to see compare, dir: %d, dot: %.6f\n", j, compare);
+      fprintf(stdout,"TRIFURCATION, Would like to see compare, dir: %d, dot: %.6f\n", j, compare);
       if (compare > maxDot)
       {
         maxDot = compare;
         maxDir = j;
       }
     }
+    fprintf(stdout,"Child %d max dir is %d\n", this->Children[i]->GroupId, maxDir);
     double dotCheck = vtkMath::Dot(this->Children[i]->RefDirs[maxDir], this->Children[i]->BranchVec);
+    fprintf(stdout,"And the dot check is %.6f\n", dotCheck);
     if (maxDir == 0)
     {
       if (dotCheck <= 0)
@@ -348,8 +350,9 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
     }
   }
 
-  if ((rightCount == 1 && leftCount == 1 && downCount == 1) ||
-      (backCount == 1 && frontCount == 1 && downCount == 1))
+  fprintf(stdout,"MY COUNT, RIGHT: %d, BACK: %d, LEFT: %d, FRONT: %d, DOWN: %d\n", rightCount, backCount, leftCount, frontCount, downCount);
+  if ((rightCount + leftCount + downCount) == 3 ||
+      (backCount + frontCount +downCount) == 3)
   {
     if (this->Parent == NULL)
     {
@@ -486,10 +489,14 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     fprintf(stdout,"BEG TRI\n");
 
     int crossBrother = -1;
+    int myLoc;
     for (int i=0; i<3; i++)
     {
       if (i != this->Parent->AligningChild && i != this->Parent->DivergingChild)
         crossBrother = i;
+
+      if (parent->Children[i]->Id == this->Id)
+        myLoc = i;
     }
 
    if (parent->Children[parent->AligningChild]->Id == this->Id)
@@ -1279,15 +1286,14 @@ int vtkSVCenterlineGCell::GetBifurcationPoint(const double startPt[3],
   double dotCheck = vtkMath::Dot(midVec, vec2);
 
   double midLength;
-  // TODO: CHECK ON THIS BECAUSE IM NOT SO SURE THAT THIS IS BAD,
-  // I THINK I NEED IT BUT TBD LATER
+  //// TODO: CHECK ON THIS BECAUSE IM NOT SO SURE THAT THIS IS BAD,
+  //// I THINK I NEED IT BUT TBD LATER
   //if (dotCheck > 0)
   //{
   //  vtkMath::MultiplyScalar(midVec, -1.0);
   //  midLength = factor / ( cos(ang/2.));
   //}
-  //else
-    midLength = factor / ( sin(ang/2.));
+  midLength = factor / ( sin(ang/2.));
 
   vtkMath::MultiplyScalar(midVec, midLength);
   vtkMath::Add(startPt, midVec, returnPt);

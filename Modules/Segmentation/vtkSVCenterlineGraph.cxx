@@ -45,6 +45,7 @@
 #include "vtkSVMathUtils.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSmartPointer.h"
+#include "vtkSortDataArray.h"
 #include "vtkThreshold.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
@@ -570,6 +571,37 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
       parent->Children[i]->IsAlign = 0;
   }
 
+  // Now that we know the diverging child, reorder the branches in an order that
+  // traverses around parent branch starting with the diverging branch
+  vtkNew(vtkDoubleArray, alignVals);
+  vtkNew(vtkIntArray, alignKeys);
+  for (int i=0; i<numChildren; i++)
+  {
+    double checkDot = vtkMath::Dot(parent->Children[minChild]->BranchVec, parent->Children[i]->BranchVec);
+    double checkAng = parent->Children[i]->RefAngle;
+
+    if (checkDot < 0)
+      checkAng = 2.0*SV_PI - checkAng;
+
+    alignVals->InsertNextTuple1(checkAng);
+    alignKeys->InsertNextTuple1(i);
+  }
+
+  // Sort the array
+  vtkSortDataArray::Sort(alignVals, alignKeys, 0);
+
+  // Now get temporary vals
+  std::vector<vtkSVCenterlineGCell*> tempCells(numChildren);
+  for (int i=0; i<numChildren; i++)
+    tempCells[i] = parent->Children[i];
+
+  // And replace
+  for (int i=0; i<numChildren; i++)
+  {
+    int newVal = alignKeys->GetTuple1(i);
+    parent->Children[i] = tempCells[newVal];
+  }
+
   vtkMath::Normalize(vec3);
   vtkMath::Cross(vec3, vec0, refDirs[1]);
   vtkMath::Normalize(refDirs[1]);
@@ -616,11 +648,7 @@ int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *paren
       int maxDir=0;
       double maxDot = -1.0;
 
-      int startDir = 1;
-      if (numChildren > 2)
-        startDir = 0;
-
-      for (int j=startDir; j<3; j++)
+      for (int j=1; j<3; j++)
       {
         double compare = fabs(vtkMath::Dot(parent->Children[i]->RefDirs[j], parent->Children[i]->BranchVec));
         fprintf(stdout,"Would like to see compare, dir: %d, dot: %.6f\n", j, compare);
@@ -645,16 +673,15 @@ int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *paren
         else
           parent->Children[i]->BranchDir = FRONT;
       }
-      else if (maxDir == 0)
-      {
-        // Trifurcation case
-        parent->Children[i]->BranchDir = RIGHT;
-      }
     }
     else
       parent->Children[i]->BranchDir = RIGHT;
     fprintf(stdout,"Child %d got direction %d\n", parent->Children[i]->GroupId, parent->Children[i]->BranchDir);
   }
+
+  // Trifurcation case, set aligning child to the correct directiono
+  if (numChildren >= 3)
+    parent->Children[parent->AligningChild]->BranchDir = RIGHT;
 
   return SV_OK;
 }
