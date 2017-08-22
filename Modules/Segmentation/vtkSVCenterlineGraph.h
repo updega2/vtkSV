@@ -109,6 +109,30 @@ public:
     DOWN
   };
 
+  /// \brief possible split types
+  enum SV_CUBE_TYPE
+  {
+    NONE = 0,
+    VERT_WEDGE,
+    HORZ_WEDGE,
+    SPEC_WEDGE,
+    TET,
+    NOTHANDLED
+  };
+
+  /// \brief possible split types
+  enum SV_SPLIT_TYPE
+  {
+    ZERO = 0,
+    UNO,
+    BI,
+    TRI,
+    QUAD,
+    PENT,
+    TOOMANY
+  };
+
+
   //Member data
   vtkSVCenterlineGCell *Root;
   int NumberOfCells;

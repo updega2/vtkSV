@@ -784,9 +784,6 @@ int vtkSVCenterlineGraph::GetGraphPoints()
     }
     else
     {
-      int parentType;
-      parent->GetCubeType(parentType);
-
       for (int j=0; j<3; j++)
         gCell->StartPt[j] = parent->EndPt[j];
 
@@ -819,6 +816,11 @@ int vtkSVCenterlineGraph::GetGraphPoints()
       }
       else
       {
+        int begType, begSplitType;
+        parent->GetBeginningType(begType, begSplitType);
+        int endType, endSplitType;
+        parent->GetEndType(endType, endSplitType);
+
         double grandParentVec[3];
         vtkMath::Subtract(grandParent->StartPt, grandParent->EndPt, grandParentVec);
         vtkMath::Normalize(grandParentVec);
@@ -827,10 +829,11 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-        if (parentType == 4 || parentType == 5)
+        if ((begType == VERT_WEDGE && endType == HORZ_WEDGE) ||
+             begType == HORZ_WEDGE && endType == VERT_WEDGE)
         {
           double tempVec[3];
-          if (parentType == 4)
+          if (begType == VERT_WEDGE)
           {
             if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
             {
@@ -847,7 +850,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
                 vtkMath::Cross(grandParentVec, parentVec, tempVec);
             }
           }
-          else if (parentType == 5)
+          else if (begType == HORZ_WEDGE)
           {
             if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
             {

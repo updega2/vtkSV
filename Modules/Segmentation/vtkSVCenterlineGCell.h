@@ -61,14 +61,13 @@ public:
   //Destructor
   ~vtkSVCenterlineGCell();
 
-  int GetCubeType(int &type);
   int GetTrifurcationType(int &type);
   int GetCubePoints(const double height, const double width,
                     vtkPoints *allPoints, vtkCellArray *allCells,
                     vtkIntArray *localPtIds, vtkIntArray *groupIds,
                     vtkIntArray *patchIds);
-  int GetBeginningType(int &beginningType);
-  int GetEndType(int &endType);
+  int GetBeginningType(int &beginningType, int &splitType);
+  int GetEndType(int &endType, int &splitType);
   int GetSquare(const double startPt[3], const double vec0[3],
                 const double vec1[3], const double height, const double width,
                 vtkPoints *points);
@@ -116,14 +115,27 @@ public:
     DOWN
   };
 
-  /// \brief possible number of separations
-  enum SV_SPLIT_TYPE
+  /// \brief possible split types
+  enum SV_CUBE_TYPE
   {
     NONE = 0,
-    UNO, // Not possible, but convenient to have so number follows type
-    BI,
-    TRI, // Just for now have the general trifurcation case
+    VERT_WEDGE,
+    HORZ_WEDGE,
+    SPEC_WEDGE,
+    TET,
     NOTHANDLED
+  };
+
+  /// \brief possible split types
+  enum SV_SPLIT_TYPE
+  {
+    ZERO = 0,
+    UNO,
+    BI,
+    TRI,
+    QUAD,
+    PENT,
+    TOOMANY
   };
 
 private:

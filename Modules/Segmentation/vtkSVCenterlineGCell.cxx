@@ -175,17 +175,39 @@ vtkSVCenterlineGCell::~vtkSVCenterlineGCell()
 // ----------------------
 // GetBeginningType
 // ----------------------
-int vtkSVCenterlineGCell::GetBeginningType(int &beginningType)
+int vtkSVCenterlineGCell::GetBeginningType(int &beginningType, int &splitType)
 {
   if (this->Parent == NULL)
+  {
+    splitType     = ZERO;
     beginningType = NONE;
-  else if (this->Parent->Children.size() == 2)
-    beginningType = BI;
-  else if (this->Parent->Children.size() == 3)
-    beginningType = TRI;
+  }
+  else if (this->Parent->Children.size() == 2 || this->Parent->Children.size() == 3)
+  {
+    if (this->Parent->Children.size() == 2)
+      splitType = BI;
+    else
+      splitType = TRI;
+
+    if ((this->Parent->BranchDir + this->BranchDir)%2 == 0)
+    {
+      if (this->Parent->BranchDir == RIGHT || this->Parent->BranchDir == LEFT)
+        beginningType = VERT_WEDGE;
+      else
+        beginningType = HORZ_WEDGE;
+    }
+    else
+    {
+      if (this->Parent->BranchDir == RIGHT || this->Parent->BranchDir == LEFT)
+        beginningType = HORZ_WEDGE;
+      else
+        beginningType = VERT_WEDGE;
+    }
+  }
   else
   {
     beginningType = NOTHANDLED;
+    splitType     = TOOMANY;
     fprintf(stdout,"Cannot currently handle more than a trifurcation\n");
     return SV_ERROR;
   }
@@ -196,87 +218,41 @@ int vtkSVCenterlineGCell::GetBeginningType(int &beginningType)
 // ----------------------
 // GetEndType
 // ----------------------
-int vtkSVCenterlineGCell::GetEndType(int &endType)
+int vtkSVCenterlineGCell::GetEndType(int &endType, int &splitType)
 {
   if (this->Children.size() == 0)
-    endType = NONE;
-  else if (this->Children.size() == 2)
-    endType = BI;
-  else if (this->Children.size() == 3)
-    endType = TRI;
+  {
+    endType   = NONE;
+    splitType = ZERO;
+  }
+  else if (this->Children.size() == 2 || this->Children.size() == 3)
+  {
+    if (this->Children.size() == 2)
+      splitType = BI;
+    else
+      splitType = TRI;
+
+    if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+    {
+      if (this->BranchDir == RIGHT || this->BranchDir == LEFT)
+        endType = VERT_WEDGE;
+      else
+        endType = HORZ_WEDGE;
+    }
+    else
+    {
+      if (this->BranchDir == RIGHT || this->BranchDir == LEFT)
+        endType = HORZ_WEDGE;
+      else
+        endType = VERT_WEDGE;
+    }
+  }
   else
   {
-    endType = NOTHANDLED;
+    endType   = NOTHANDLED;
+    splitType = TOOMANY;
     fprintf(stdout,"Cannot currently handle more than a trifurcation\n");
     return SV_ERROR;
-  }
-
-  return SV_OK;
-}
-
-// ----------------------
-// GetCubeType
-// ----------------------
-int vtkSVCenterlineGCell::GetCubeType(int &type)
-{
-  if (this->Parent == NULL)
-  {
-    if (this->Children.size() == 0)
-      type = 0;
-    else if (this->Children.size() == 2)
-      type = 1;
-    else
-    {
-      this->GetTrifurcationType(type);
-      if (type == 0)
-      {
-        fprintf(stderr,"Cannot currently Polycube for this type of trifurcation yet!!!\n");
-        return SV_ERROR;
-      }
-    }
-  }
-  else if (this->Children.size() == 2)
-  {
-    if ((this->Parent->BranchDir + this->BranchDir)%2 == 0)
-    {
-      if (this->Parent->BranchDir == BACK || this->Parent->BranchDir == FRONT)
-      {
-        if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-          type = 3;
-        else
-          type = 5;
-      }
-      else
-      {
-        if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-          type = 2;
-        else
-          type = 4;
-      }
-    }
-    else
-    {
-      if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-        type = 3;
-      else
-        type = 5;
-    }
-  }
-  else if (this->Children.size() == 0)
-  {
-    if ((this->BranchDir)%2 == 0)
-      type = 6;
-    else
-      type = 7;
-  }
-  else
-  {
-    this->GetTrifurcationType(type);
-    if (type == 0)
-    {
-      fprintf(stderr,"Cannot currently Polycube for this type of trifurcation yet!!!\n");
-      return SV_ERROR;
-    }
   }
 
   return SV_OK;
@@ -411,10 +387,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                                         vtkIntArray *groupIds,
                                         vtkIntArray *patchIds)
 {
-  int cubeType;
-  this->GetCubeType(cubeType);
   fprintf(stdout,"CUBE GROUP ID: %d\n", this->GroupId);
-  fprintf(stdout,"CUBE TYPE:     %d\n", cubeType);
 
   int groupId = this->GroupId;
 
@@ -436,8 +409,8 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
 
   // Get beginning type
-  int beginningType;
-  this->GetBeginningType(beginningType);
+  int begType, begSplitType;
+  this->GetBeginningType(begType, begSplitType);
 
   // Do beginning
   double begVec[3];
@@ -445,7 +418,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   double triPts[2][3];
   vtkNew(vtkPoints, begPoints);
 
-  if (beginningType == NONE)
+  if (begSplitType == ZERO)
   {
     fprintf(stdout,"BEG NONE\n");
     // Get top square from start pt
@@ -456,7 +429,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                     height, width, begPoints);
 
   }
-  else if (beginningType == BI)
+  else if (begSplitType == BI)
   {
     fprintf(stdout,"BEG BI\n");
 
@@ -489,7 +462,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                      height, begPoints);
 
   }
-  else if (beginningType == TRI)
+  else if (begSplitType == TRI)
   {
     fprintf(stdout,"BEG TRI\n");
 
@@ -563,18 +536,18 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
 
   // Get end type
-  int endType;
-  this->GetEndType(endType);
+  int endType, endSplitType;
+  this->GetEndType(endType, endSplitType);
 
   // Do end
   vtkNew(vtkPoints, endPoints);
 
-  if (endType == NONE)
+  if (endSplitType == ZERO)
   {
     fprintf(stdout,"END NONE\n");
 
     // Get square from end pt
-    if (beginningType == NONE)
+    if (begSplitType == ZERO)
       this->GetSquare(this->EndPt, this->RefDirs[1], begVec,
                       height, width, endPoints);
     else
@@ -596,7 +569,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       }
     }
   }
-  else if (endType == BI)
+  else if (endSplitType == BI)
   {
     fprintf(stdout,"END BI\n");
 
@@ -623,7 +596,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                      height, endPoints);
 
   }
-  else if (endType == TRI)
+  else if (endSplitType == TRI)
   {
     fprintf(stdout,"END TRI\n");
 
@@ -674,7 +647,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     fprintf(stderr,"END NOT_HANDLED\n");
   }
 
-  if (cubeType == 0)
+  if (begType == NONE && endType == NONE)
   {
     int numPoints = 8;
 
@@ -717,7 +690,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
-  else if (cubeType == 1)
+  else if (begType == NONE && endType == VERT_WEDGE)
   {
     int numPoints = 10;
 
@@ -760,7 +733,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
-  else if (cubeType == 2)
+  else if (begType == VERT_WEDGE && endType == VERT_WEDGE)
   {
     int numPoints = 12;
 
@@ -802,7 +775,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
-  else if (cubeType == 3)
+  else if (begType == HORZ_WEDGE && endType == HORZ_WEDGE)
   {
     int numPoints = 12;
 
@@ -845,7 +818,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
-  else if (cubeType == 4)
+  else if (begType == VERT_WEDGE && endType == HORZ_WEDGE)
   {
     int numPoints = 12;
 
@@ -887,7 +860,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
-  else if (cubeType == 5)
+  else if (begType == HORZ_WEDGE && endType == VERT_WEDGE)
   {
     int numPoints = 12;
 
@@ -930,7 +903,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       patchIds->InsertNextTuple1(i);
     }
   }
-  else if (cubeType == 6)
+  else if (begType == VERT_WEDGE && endType == NONE)
   {
     int numPoints = 10;
 
@@ -991,7 +964,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     groupIds->InsertNextTuple1(groupId);
     patchIds->InsertNextTuple1(5);
   }
-  else if (cubeType == 7)
+  else if (begType == HORZ_WEDGE && endType == NONE)
   {
     int numPoints = 10;
 
