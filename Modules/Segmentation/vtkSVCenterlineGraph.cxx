@@ -39,7 +39,6 @@
 #include "vtkMath.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
-#include "vtkSortDataArray.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVMathUtils.h"
@@ -588,7 +587,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   }
 
   // Sort the array
-  vtkSortDataArray::Sort(alignVals, alignKeys, 0);
+  vtkSortDataArray::Sort(alignVals, alignKeys);
 
   // Now get temporary vals
   std::vector<vtkSVCenterlineGCell*> tempCells(numChildren);
