@@ -356,7 +356,7 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
   {
     if (this->Parent == NULL)
     {
-      type = 8;
+      type = 1;
     }
     else
     {
@@ -365,29 +365,34 @@ int vtkSVCenterlineGCell::GetTrifurcationType(int &type)
         if (this->Parent->BranchDir == BACK || this->Parent->BranchDir == FRONT)
         {
           if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-            type = 10;
+            type = 3;
           else
-            type = 12;
+            type = 5;
         }
         else
         {
           if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-            type = 9;
+            type = 2;
           else
-            type = 11;
+            type = 4;
         }
       }
       else
       {
         if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
-          type = 10;
+          type = 3;
         else
-          type = 12;
+          type = 5;
       }
     }
   }
+  else if (rightCount + frontCount + downCount == 3)
+  {
+    type =8;
+  }
   else
   {
+    type = -1;
     fprintf(stderr, "THIS ISNT HANDLED YET!\n");
     return SV_ERROR;
   }
@@ -413,7 +418,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
 
   int groupId = this->GroupId;
 
-  vtkSVCenterlineGCell *brother, *diver, *parent, *align, *cDiver;
+  vtkSVCenterlineGCell *brother, *diver, *parent, *align, *cDiver, *otherBrother;
   parent = this->Parent;
   if (parent != NULL)
   {
@@ -488,42 +493,50 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   {
     fprintf(stdout,"BEG TRI\n");
 
-    int crossBrother = -1;
     int myLoc;
     for (int i=0; i<3; i++)
     {
-      if (i != this->Parent->AligningChild && i != this->Parent->DivergingChild)
-        crossBrother = i;
-
       if (parent->Children[i]->Id == this->Id)
         myLoc = i;
     }
 
-   if (parent->Children[parent->AligningChild]->Id == this->Id)
-   {
-     brother = parent->Children[crossBrother];
-     diver = parent->Children[parent->AligningChild];
-     parent  = parent->Children[parent->DivergingChild];
+    if (myLoc == 0)
+    {
+      brother = parent->Children[parent->AligningChild];
+      diver = parent->Children[parent->DivergingChild];
 
-     // Get ending bifurcation points
-     this->FormBifurcation(this->EndPt, this->StartPt,
-                          parent->EndPt, parent->StartPt,
-                          brother->EndPt, brother->StartPt,
-                          this->StartPt,
-                          width/2., vecs, triPts);
-   }
-   else
-   {
-     brother = parent->Children[parent->AligningChild];
-     diver = parent->Children[parent->DivergingChild];
+      // Get ending bifurcation points
+      this->FormBifurcation(this->EndPt, this->StartPt,
+                            parent->StartPt, parent->EndPt,
+                            brother->EndPt, brother->StartPt,
+                            this->StartPt,
+                            width/2., vecs, triPts);
+    }
+    else if (myLoc == parent->Children.size() - 1)
+    {
+      brother = parent->Children[parent->AligningChild];
+      diver = parent->Children[parent->DivergingChild];
 
-     // Get ending bifurcation points
-     this->FormBifurcation(this->EndPt, this->StartPt,
-                          parent->StartPt, parent->EndPt,
-                          brother->EndPt, brother->StartPt,
-                          this->StartPt,
-                          width/2., vecs, triPts);
-   }
+      // Get ending bifurcation points
+      this->FormBifurcation(this->EndPt, this->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           this->StartPt,
+                           width/2., vecs, triPts);
+    }
+    else
+    {
+      brother = parent->Children[myLoc - 1];
+      diver = parent->Children[parent->AligningChild];
+      otherBrother  = parent->Children[myLoc + 1];
+
+      // Get ending bifurcation points
+      this->FormBifurcation(this->EndPt, this->StartPt,
+                           brother->EndPt, brother->StartPt,
+                           otherBrother->EndPt, otherBrother->StartPt,
+                           this->StartPt,
+                           width/2., vecs, triPts);
+    }
 
     // get vector towards top of cube
     double diverVec[3];
@@ -1022,218 +1035,6 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     }
     groupIds->InsertNextTuple1(groupId);
     patchIds->InsertNextTuple1(5);
-  }
-  else if (cubeType == 8)
-  {
-    int numPoints = 10;
-
-    double finalPts[10][3];
-
-    endPoints->GetPoint(0, finalPts[3]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[8]);
-    endPoints->GetPoint(4, finalPts[9]);
-    endPoints->GetPoint(5, finalPts[5]);
-
-    begPoints->GetPoint(0, finalPts[6]);
-    begPoints->GetPoint(1, finalPts[1]);
-    begPoints->GetPoint(2, finalPts[2]);
-    begPoints->GetPoint(3, finalPts[7]);
-
-    int pI[10];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-    vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
-    vtkIdType face1[5] = {pI[8], pI[7], pI[6], pI[5], pI[9]};
-    vtkIdType face2[4] = {pI[3], pI[2], pI[7], pI[8]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-    vtkIdType face4[4] = {pI[2], pI[1], pI[6], pI[7]};
-
-    allCells->InsertNextCell(4, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(4, face2);
-    allCells->InsertNextCell(5, face3);
-    allCells->InsertNextCell(4, face4);
-
-    for (int i=0; i<5; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
-  }
-  else if (cubeType == 9)
-  {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[1]);
-    begPoints->GetPoint(1, finalPts[2]);
-    begPoints->GetPoint(2, finalPts[3]);
-    begPoints->GetPoint(3, finalPts[7]);
-    begPoints->GetPoint(4, finalPts[8]);
-    begPoints->GetPoint(5, finalPts[9]);
-
-    endPoints->GetPoint(0, finalPts[4]);
-    endPoints->GetPoint(1, finalPts[5]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[10]);
-    endPoints->GetPoint(4, finalPts[11]);
-    endPoints->GetPoint(5, finalPts[6]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-    vtkIdType face0[4] = {pI[6], pI[7], pI[1], pI[0]};
-    vtkIdType face1[6] = {pI[10], pI[9], pI[8], pI[7], pI[6], pI[11]};
-    vtkIdType face2[4] = {pI[4], pI[3], pI[9], pI[10]};
-    vtkIdType face3[6] = {pI[0], pI[1], pI[2], pI[3], pI[4], pI[5]};
-
-    allCells->InsertNextCell(4, face0);
-    allCells->InsertNextCell(6, face1);
-    allCells->InsertNextCell(4, face2);
-    allCells->InsertNextCell(6, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
-  }
-  else if (cubeType == 10)
-  {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[9]);
-    begPoints->GetPoint(1, finalPts[5]);
-    begPoints->GetPoint(2, finalPts[1]);
-    begPoints->GetPoint(3, finalPts[10]);
-    begPoints->GetPoint(4, finalPts[6]);
-    begPoints->GetPoint(5, finalPts[2]);
-
-    endPoints->GetPoint(0, finalPts[0]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[8]);
-    endPoints->GetPoint(3, finalPts[3]);
-    endPoints->GetPoint(4, finalPts[7]);
-    endPoints->GetPoint(5, finalPts[11]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-
-    vtkIdType face0[6] = {pI[8], pI[9], pI[5], pI[1], pI[0], pI[4]};
-    vtkIdType face1[4] = {pI[11], pI[10], pI[9], pI[8]};
-    vtkIdType face2[6] = {pI[3], pI[2], pI[6], pI[10], pI[11], pI[7]};
-    vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
-
-    allCells->InsertNextCell(6, face0);
-    allCells->InsertNextCell(4, face1);
-    allCells->InsertNextCell(6, face2);
-    allCells->InsertNextCell(4, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
-  }
-  else if (cubeType == 11)
-  {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[1]);
-    begPoints->GetPoint(1, finalPts[2]);
-    begPoints->GetPoint(2, finalPts[3]);
-    begPoints->GetPoint(3, finalPts[8]);
-    begPoints->GetPoint(4, finalPts[9]);
-    begPoints->GetPoint(5, finalPts[10]);
-
-    endPoints->GetPoint(0, finalPts[0]);
-    endPoints->GetPoint(1, finalPts[5]);
-    endPoints->GetPoint(2, finalPts[7]);
-    endPoints->GetPoint(3, finalPts[4]);
-    endPoints->GetPoint(4, finalPts[6]);
-    endPoints->GetPoint(5, finalPts[11]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-    vtkIdType face0[5] = {pI[7], pI[8], pI[1], pI[0], pI[5]};
-    vtkIdType face1[5] = {pI[11], pI[10], pI[9], pI[8], pI[7]};
-    vtkIdType face2[5] = {pI[4], pI[3], pI[10], pI[11], pI[6]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-
-    allCells->InsertNextCell(5, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(5, face2);
-    allCells->InsertNextCell(5, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
-  }
-  else if (cubeType == 12)
-  {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[8]);
-    begPoints->GetPoint(1, finalPts[5]);
-    begPoints->GetPoint(2, finalPts[1]);
-    begPoints->GetPoint(3, finalPts[9]);
-    begPoints->GetPoint(4, finalPts[6]);
-    begPoints->GetPoint(5, finalPts[2]);
-
-    endPoints->GetPoint(0, finalPts[3]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[10]);
-    endPoints->GetPoint(4, finalPts[11]);
-    endPoints->GetPoint(5, finalPts[7]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-
-    vtkIdType face0[5] = {pI[7], pI[8], pI[5], pI[1], pI[0]};
-    vtkIdType face1[5] = {pI[10], pI[9], pI[8], pI[7], pI[11]};
-    vtkIdType face2[5] = {pI[3], pI[2], pI[6], pI[9], pI[10]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-
-    allCells->InsertNextCell(5, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(5, face2);
-    allCells->InsertNextCell(5, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
   }
 
   return SV_OK;

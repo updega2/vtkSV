@@ -369,7 +369,7 @@ int vtkSVGroupsSegmenter::RunFilter()
   CVT->SetUsePointNormal(1);
   //CVT->SetUseRadiusInformation(0);
   //CVT->SetUseBifurcationInformation(0);
-  //CVT->SetUsePointNormals(0);
+  //CVT->SetUsePointNormal(0);
   CVT->Update();
 
   vtkNew(vtkSVEdgeWeightedSmoother, smoother);
@@ -391,23 +391,23 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  {
-    vtkErrorMacro("Could not correcto boundaries of surface");
-    return SV_ERROR;
-  }
+  //if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+  //{
+  //  vtkErrorMacro("Could not correcto boundaries of surface");
+  //  return SV_ERROR;
+  //}
 
-  std::vector<Region> firstRegions;
-  if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, firstRegions) != SV_OK)
-  {
-    vtkErrorMacro("Couldn't get group regions");
-    return SV_ERROR;
-  }
-  if (this->FixGroups(this->WorkPd, this->GroupIdsArrayName, firstRegions) != SV_OK)
-  {
-    vtkErrorMacro("Error in correcting groups");
-    return SV_ERROR;
-  }
+  //std::vector<Region> firstRegions;
+  //if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, firstRegions) != SV_OK)
+  //{
+  //  vtkErrorMacro("Couldn't get group regions");
+  //  return SV_ERROR;
+  //}
+  //if (this->FixGroups(this->WorkPd, this->GroupIdsArrayName, firstRegions) != SV_OK)
+  //{
+  //  vtkErrorMacro("Error in correcting groups");
+  //  return SV_ERROR;
+  //}
   //if (this->FixGroupsWithPolycube() != SV_OK)
   //{
   //  vtkErrorMacro("Error in correcting groups");
@@ -580,18 +580,17 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    if (this->FixEndPatches(branchPd) != SV_OK)
-    {
-      vtkErrorMacro("Error fixing end patches");
-      return SV_ERROR;
-    }
+    //if (this->FixEndPatches(branchPd) != SV_OK)
+    //{
+    //  vtkErrorMacro("Error fixing end patches");
+    //  return SV_ERROR;
+    //}
 
-    if (this->FixSidePatches(branchPd) != SV_OK)
-    {
-      vtkErrorMacro("Error fixing side patches");
-      return SV_ERROR;
-    }
-
+    //if (this->FixSidePatches(branchPd) != SV_OK)
+    //{
+    //  vtkErrorMacro("Error fixing side patches");
+    //  return SV_ERROR;
+    //}
 
     vtkNew(vtkIdList, noEndPatches);
     noEndPatches->SetNumberOfIds(4);
@@ -604,14 +603,14 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    if (this->MergedCenterlines->GetNumberOfCells() > 1)
-    {
-      if (this->MatchEndPatches(branchPd) != SV_OK)
-      {
-        vtkErrorMacro("Error matching end patches");
-        return SV_ERROR;
-      }
-    }
+    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    //{
+    //  if (this->MatchEndPatches(branchPd) != SV_OK)
+    //  {
+    //    vtkErrorMacro("Error matching end patches");
+    //    return SV_ERROR;
+    //  }
+    //}
 
     // Set vals on work pd
     for (int j=0; j<branchPd->GetNumberOfCells(); j++)
@@ -676,29 +675,29 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  // For checking purposes
-  if (this->FixPatchesWithPolycube() != SV_OK)
-  {
-    fprintf(stderr,"Couldn't fix patches\n");
-    return SV_ERROR;
-  }
+  //// For checking purposes
+  //if (this->FixPatchesWithPolycube() != SV_OK)
+  //{
+  //  fprintf(stderr,"Couldn't fix patches\n");
+  //  return SV_ERROR;
+  //}
 
-  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  ////// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  ////// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  vtkNew(vtkPolyData, fullMapPd);
-  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  {
-    fprintf(stderr,"WRONG\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkPolyData, fullMapPd);
+  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  //{
+  //  fprintf(stderr,"WRONG\n");
+  //  return SV_ERROR;
+  //}
 
-  vtkNew(vtkUnstructuredGrid, loftedVolume);
-  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  {
-    fprintf(stderr,"Failed doing volume stuffs\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkUnstructuredGrid, loftedVolume);
+  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  //{
+  //  fprintf(stderr,"Failed doing volume stuffs\n");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
@@ -708,6 +707,7 @@ int vtkSVGroupsSegmenter::RunFilter()
 // ----------------------
 int vtkSVGroupsSegmenter::MergeCenterlines()
 {
+  fprintf(stdout,"Merging centerlines...\n");
   vtkNew(vtkvmtkMergeCenterlines, merger);
   merger->SetInputData(this->Centerlines);
   merger->SetRadiusArrayName(this->CenterlineRadiusArrayName);
@@ -719,7 +719,13 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
   merger->SetMergeBlanked(1);
   merger->Update();
 
-  this->MergedCenterlines->DeepCopy(merger->GetOutput());
+  vtkNew(vtkCleanPolyData, lineCleaner);
+  lineCleaner->SetInputData(merger->GetOutput());
+  lineCleaner->Update();
+
+  this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
+
+  fprintf(stdout,"Merged\n");
 
   return SV_OK;
 }

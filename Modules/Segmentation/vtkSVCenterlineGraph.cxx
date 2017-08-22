@@ -577,10 +577,12 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   for (int i=0; i<numChildren; i++)
   {
     double checkDot = vtkMath::Dot(parent->Children[minChild]->BranchVec, parent->Children[i]->BranchVec);
+    fprintf(stdout,"DOTER WITH DIVERGER %.6f FOR GROUP %d\n", checkDot, parent->Children[i]->GroupId);
     double checkAng = parent->Children[i]->RefAngle;
 
     if (checkDot < 0)
       checkAng = 2.0*SV_PI - checkAng;
+    fprintf(stdout,"ANGLE WITH DIVERGER %.6f FOR GROUP %d\n", 180.0*checkAng/SV_PI, parent->Children[i]->GroupId);
 
     alignVals->InsertNextTuple1(checkAng);
     alignKeys->InsertNextTuple1(i);
@@ -595,11 +597,19 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
     tempCells[i] = parent->Children[i];
 
   // And replace
+  int newDiverger;
+  int newAligner;
   for (int i=0; i<numChildren; i++)
   {
     int newVal = alignKeys->GetTuple1(i);
     parent->Children[i] = tempCells[newVal];
+    if (parent->DivergingChild == newVal)
+      newDiverger = i;
+    if (parent->AligningChild == newVal)
+      newAligner = i;
   }
+  parent->DivergingChild = newDiverger;
+  parent->AligningChild  = newAligner;
 
   vtkMath::Normalize(vec3);
   vtkMath::Cross(vec3, vec0, refDirs[1]);
@@ -680,7 +690,10 @@ int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *paren
 
   // Trifurcation case, set aligning child to the correct directiono
   if (numChildren >= 3)
+  {
     parent->Children[parent->AligningChild]->BranchDir = RIGHT;
+    fprintf(stdout,"Aligning of group id %d set to %d\n", parent->Children[parent->AligningChild]->GroupId, RIGHT);
+  }
 
   return SV_OK;
 }
@@ -771,6 +784,9 @@ int vtkSVCenterlineGraph::GetGraphPoints()
     }
     else
     {
+      int parentType;
+      parent->GetCubeType(parentType);
+
       for (int j=0; j<3; j++)
         gCell->StartPt[j] = parent->EndPt[j];
 
@@ -789,13 +805,16 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Subtract(parent->StartPt, parent->EndPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-        vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
+        if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
+          vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
+        else
+          vtkMath::Cross(parentVec, this->ReferenceVecs[2], crossVec);
         vtkMath::Normalize(crossVec);
 
         // Rotate vec around line
-        if (gCell->BranchDir == RIGHT)
+        if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
           this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-        else if (gCell->BranchDir == LEFT)
+        else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
           this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
       }
       else
@@ -808,15 +827,10 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-
-        int parentType;
-        parent->GetCubeType(parentType);
-
-        if (parentType == 4 || parentType == 5 ||
-            parentType == 11 || parentType == 12)
+        if (parentType == 4 || parentType == 5)
         {
           double tempVec[3];
-          if (parentType == 4 || parentType == 11)
+          if (parentType == 4)
           {
             if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
             {
@@ -833,7 +847,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
                 vtkMath::Cross(grandParentVec, parentVec, tempVec);
             }
           }
-          else if (parentType == 5 || parentType == 12)
+          else if (parentType == 5)
           {
             if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
             {
