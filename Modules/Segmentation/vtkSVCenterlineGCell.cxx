@@ -647,6 +647,238 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     fprintf(stderr,"END NOT_HANDLED\n");
   }
 
+  //// -----------------------------------------------------------------------
+  //// FACE 3
+  //// -----------------------------------------------------------------------
+  //std::vector<int> face3PtIds;
+
+  //// END
+  //if (endType == NONE)
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  //else if (endType == VERT_WEDGE)
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  //else if (endType == HORZ_WEDGE)
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+
+  //// BEG
+  //if (begType == NONE)
+  //{
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+  //}
+  //else if (begType == VERT_WEDGE)
+  //{
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+  //}
+  //else if (begType == HORZ_WEDGE)
+  //{
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
+  //}
+
+  //// END
+  //if (endType == NONE)
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  //else if (endType == VERT_WEDGE)
+  //{
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  //}
+  //else if (endType == HORZ_WEDGE)
+  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  //// -----------------------------------------------------------------------
+
+  //// -----------------------------------------------------------------------
+  //// FACE 1
+  //// -----------------------------------------------------------------------
+  //std::vector<int> face1PtIds;
+
+  //// END
+  //if (endType == NONE)
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  //else if (endType == VERT_WEDGE)
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  //else if (endType == HORZ_WEDGE)
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+
+  //// BEG
+  //if (begType == NONE)
+  //{
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+  //}
+  //else if (begType == VERT_WEDGE)
+  //{
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+  //}
+  //else if (begType == HORZ_WEDGE)
+  //{
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+  //}
+
+  //// END
+  //if (endType == NONE)
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  //else if (endType == VERT_WEDGE)
+  //{
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
+  //}
+  //else if (endType == HORZ_WEDGE)
+  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  //// -----------------------------------------------------------------------
+
+  //// -----------------------------------------------------------------------
+  //// Now interior points if they are there!
+  //// -----------------------------------------------------------------------
+  //std::vector<int> begInterPtIds;
+  //std::vector<int> endInterPtIds;
+
+  //// END
+  //if (endType == HORZ_WEDGE)
+  //{
+  //  begInterPtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  //  begInterPtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
+  //}
+
+  //// BEG
+  //if (begType == HORZ_WEDGE)
+  //{
+  //  endInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+  //  endInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
+  //}
+  //// -----------------------------------------------------------------------
+
+  //// -----------------------------------------------------------------------
+  //// FACE 0
+  //// -----------------------------------------------------------------------
+  //std::vector<int> face0PtIds;
+
+  //// END
+  //if (endType == NONE)
+  //{
+  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
+  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+  //}
+  //else if (endType == VERT_WEDGE)
+  //{
+  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-3]);
+  //}
+  //else if (endType == HORZ_WEDGE)
+  //{
+  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
+  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+  //}
+
+  //// INT
+  //if (begType == HORZ_WEDGE)
+  //  face0PtIds.push_back(begInterPtIds[0]);
+
+  //// BEG
+  //if (begType == NONE)
+  //{
+  //  face0PtIds.push_back(face3PtIds[1]);
+  //  face0PtIds.push_back(face3PtIds[0]);
+  //}
+  //else if (begType == VERT_WEDGE)
+  //{
+  //  face0PtIds.push_back(face3PtIds[1]);
+  //  face0PtIds.push_back(face3PtIds[0]);
+  //}
+  //else if (begType == HORZ_WEDGE)
+  //{
+  //  face0PtIds.push_back(face3PtIds[1]);
+  //  face0PtIds.push_back(face3PtIds[0]);
+  //}
+
+  //// INT
+  //if (endType == HORZ_WEDGE)
+  //  face0PtIds.push_back(endInterPtIds[0]);
+  //// -----------------------------------------------------------------------
+
+  //// -----------------------------------------------------------------------
+  //// FACE 2
+  //// -----------------------------------------------------------------------
+  //std::vector<int> face2PtIds;
+
+  //// END
+  //if (endType == NONE)
+  //{
+  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
+  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+  //}
+  //else if (endType == VERT_WEDGE)
+  //{
+  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-3]);
+  //}
+  //else if (endType == HORZ_WEDGE)
+  //{
+  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
+  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+  //}
+
+  //// INT
+  //if (begType == HORZ_WEDGE)
+  //  face2PtIds.push_back(begInterPtIds[1]);
+
+  //// BEG
+  //if (begType == NONE)
+  //{
+  //  face2PtIds.push_back(face1PtIds[1]);
+  //  face2PtIds.push_back(face1PtIds[0]);
+  //}
+  //else if (begType == VERT_WEDGE)
+  //{
+  //  face2PtIds.push_back(face1PtIds[1]);
+  //  face2PtIds.push_back(face1PtIds[0]);
+  //}
+  //else if (begType == HORZ_WEDGE)
+  //{
+  //  face2PtIds.push_back(face1PtIds[1]);
+  //  face2PtIds.push_back(face1PtIds[0]);
+  //}
+
+  //// INT
+  //if (endType == HORZ_WEDGE)
+  //  face2PtIds.push_back(endInterPtIds[1]);
+  //// -----------------------------------------------------------------------
+
+  //// -----------------------------------------------------------------------
+  //// FACE 4, if there
+  //// -----------------------------------------------------------------------
+  //std::vector<int> face4PtIds;
+
+  //// BEG
+  //if (begType == NONE)
+  //{
+  //  face4PtIds.push_back(face3PtIds[2]);
+  //  face4PtIds.push_back(face3PtIds[1]);
+  //  face4PtIds.push_back(face1PtIds[2]);
+  //  face4PtIds.push_back(face1PtIds[1]);
+  //}
+
+  //// -----------------------------------------------------------------------
+  //// FACE 5, if there
+  //// -----------------------------------------------------------------------
+  //std::vector<int> face5PtIds;
+
+  //// BEG
+  //if (endType == NONE)
+  //{
+  //  face5PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
+  //  face5PtIds.push_back(face3PtIds[0]);
+  //  face5PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
+  //  face4PtIds.push_back(face3PtIds[0]);
+  //}
+  //// -----------------------------------------------------------------------
+
   if (begType == NONE && endType == NONE)
   {
     int numPoints = 8;
