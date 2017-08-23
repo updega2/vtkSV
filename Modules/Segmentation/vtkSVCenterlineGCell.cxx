@@ -647,90 +647,89 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     fprintf(stderr,"END NOT_HANDLED\n");
   }
 
+  std::vector<std::vector<int> > facesPtIds(6);
   // -----------------------------------------------------------------------
   // FACE 3
   // -----------------------------------------------------------------------
-  std::vector<int> face3PtIds;
 
   // END
   if (endType == NONE)
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
   else if (endType == VERT_WEDGE)
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   else if (endType == HORZ_WEDGE)
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
 
   // BEG
   if (begType == NONE)
   {
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
   else if (begType == VERT_WEDGE)
   {
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
   else if (begType == HORZ_WEDGE)
   {
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
-    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
   }
 
   // END
   if (endType == NONE)
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   else if (endType == VERT_WEDGE)
   {
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
   }
   else if (endType == HORZ_WEDGE)
-    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
   // FACE 1
   // -----------------------------------------------------------------------
-  std::vector<int> face1PtIds;
 
   // END
   if (endType == NONE)
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   else if (endType == VERT_WEDGE)
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   else if (endType == HORZ_WEDGE)
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
 
   // BEG
   if (begType == NONE)
   {
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
   else if (begType == VERT_WEDGE)
   {
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
   }
   else if (begType == HORZ_WEDGE)
   {
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
 
   // END
   if (endType == NONE)
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
   else if (endType == VERT_WEDGE)
   {
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
   }
   else if (endType == HORZ_WEDGE)
-    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
@@ -757,133 +756,129 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // -----------------------------------------------------------------------
   // FACE 0
   // -----------------------------------------------------------------------
-  std::vector<int> face0PtIds;
 
   // END
   if (endType == NONE)
   {
-    face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
-    face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-1]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-2]);
   }
   else if (endType == VERT_WEDGE)
   {
-    face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
-    face0PtIds.push_back(face1PtIds[face1PtIds.size()-3]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-2]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-3]);
   }
   else if (endType == HORZ_WEDGE)
   {
-    face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
-    face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-1]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-2]);
   }
 
   // INT
   if (begType == HORZ_WEDGE)
-    face0PtIds.push_back(begInterPtIds[0]);
+    facesPtIds[0].push_back(begInterPtIds[0]);
 
   // BEG
   if (begType == NONE)
   {
-    face0PtIds.push_back(face3PtIds[1]);
-    face0PtIds.push_back(face3PtIds[0]);
+    facesPtIds[0].push_back(facesPtIds[3][1]);
+    facesPtIds[0].push_back(facesPtIds[3][0]);
   }
   else if (begType == VERT_WEDGE)
   {
-    face0PtIds.push_back(face3PtIds[1]);
-    face0PtIds.push_back(face3PtIds[0]);
+    facesPtIds[0].push_back(facesPtIds[3][1]);
+    facesPtIds[0].push_back(facesPtIds[3][0]);
   }
   else if (begType == HORZ_WEDGE)
   {
-    face0PtIds.push_back(face3PtIds[1]);
-    face0PtIds.push_back(face3PtIds[0]);
+    facesPtIds[0].push_back(facesPtIds[3][1]);
+    facesPtIds[0].push_back(facesPtIds[3][0]);
   }
 
   // INT
   if (endType == HORZ_WEDGE)
-    face0PtIds.push_back(endInterPtIds[0]);
+    facesPtIds[0].push_back(endInterPtIds[0]);
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
   // FACE 2
   // -----------------------------------------------------------------------
-  std::vector<int> face2PtIds;
 
   // END
   if (endType == NONE)
   {
-    face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
-    face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-1]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-2]);
   }
   else if (endType == VERT_WEDGE)
   {
-    face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
-    face2PtIds.push_back(face3PtIds[face3PtIds.size()-3]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-2]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-3]);
   }
   else if (endType == HORZ_WEDGE)
   {
-    face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
-    face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-1]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-2]);
   }
 
   // INT
   if (begType == HORZ_WEDGE)
-    face2PtIds.push_back(begInterPtIds[1]);
+    facesPtIds[2].push_back(begInterPtIds[1]);
 
   // BEG
   if (begType == NONE)
   {
-    face2PtIds.push_back(face1PtIds[1]);
-    face2PtIds.push_back(face1PtIds[0]);
+    facesPtIds[2].push_back(facesPtIds[1][1]);
+    facesPtIds[2].push_back(facesPtIds[1][0]);
   }
   else if (begType == VERT_WEDGE)
   {
-    face2PtIds.push_back(face1PtIds[1]);
-    face2PtIds.push_back(face1PtIds[0]);
+    facesPtIds[2].push_back(facesPtIds[1][1]);
+    facesPtIds[2].push_back(facesPtIds[1][0]);
   }
   else if (begType == HORZ_WEDGE)
   {
-    face2PtIds.push_back(face1PtIds[1]);
-    face2PtIds.push_back(face1PtIds[0]);
+    facesPtIds[2].push_back(facesPtIds[1][1]);
+    facesPtIds[2].push_back(facesPtIds[1][0]);
   }
 
   // INT
   if (endType == HORZ_WEDGE)
-    face2PtIds.push_back(endInterPtIds[1]);
+    facesPtIds[2].push_back(endInterPtIds[1]);
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
   // FACE 4, if there
   // -----------------------------------------------------------------------
-  std::vector<int> face4PtIds;
 
   // BEG
   if (begType == NONE)
   {
-    face4PtIds.push_back(face3PtIds[2]);
-    face4PtIds.push_back(face3PtIds[1]);
-    face4PtIds.push_back(face1PtIds[2]);
-    face4PtIds.push_back(face1PtIds[1]);
+    facesPtIds[4].push_back(facesPtIds[3][2]);
+    facesPtIds[4].push_back(facesPtIds[3][1]);
+    facesPtIds[4].push_back(facesPtIds[1][2]);
+    facesPtIds[4].push_back(facesPtIds[1][1]);
   }
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
   // FACE 5, if there
   // -----------------------------------------------------------------------
-  std::vector<int> face5PtIds;
 
   // BEG
   if (endType == NONE)
   {
-    face5PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
-    face5PtIds.push_back(face3PtIds[0]);
-    face5PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
-    face5PtIds.push_back(face1PtIds[0]);
+    facesPtIds[5].push_back(facesPtIds[1][facesPtIds[1].size()-1]);
+    facesPtIds[5].push_back(facesPtIds[3][0]);
+    facesPtIds[5].push_back(facesPtIds[3][facesPtIds[3].size()-1]);
+    facesPtIds[5].push_back(facesPtIds[1][0]);
   }
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
   // LocalPtIds
   // -----------------------------------------------------------------------
-  int numPoints = face3PtIds.size() + face1PtIds.size() + endInterPtIds.size() + begInterPtIds.size();
+  int numPoints = facesPtIds[3].size() + facesPtIds[1].size() + endInterPtIds.size() + begInterPtIds.size();
   fprintf(stdout,"NUMBER OF POINTS: %d\n", numPoints);
   for (int i=0; i<numPoints; i++)
     localPtIds->InsertNextTuple1(i);
@@ -892,70 +887,19 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // -----------------------------------------------------------------------
   // Add faces
   // -----------------------------------------------------------------------
-  // FACE 0
-  int f0npts = face0PtIds.size();
-  vtkIdType *face0 = new vtkIdType[f0npts];
-  for (int i=0; i<f0npts; i++)
-    face0[i] = face0PtIds[i];
-  allCells->InsertNextCell(f0npts, face0);
-  groupIds->InsertNextTuple1(groupId);
-  patchIds->InsertNextTuple1(0);
-  delete [] face0;
-
-  // FACE 1
-  int f1npts = face1PtIds.size();
-  vtkIdType *face1 = new vtkIdType[f1npts];
-  for (int i=0; i<f1npts; i++)
-    face1[i] = face1PtIds[i];
-  allCells->InsertNextCell(f1npts, face1);
-  groupIds->InsertNextTuple1(groupId);
-  patchIds->InsertNextTuple1(1);
-  delete [] face1;
-
-  // FACE 2
-  int f2npts = face2PtIds.size();
-  vtkIdType *face2 = new vtkIdType[f2npts];
-  for (int i=0; i<f2npts; i++)
-    face2[i] = face2PtIds[i];
-  allCells->InsertNextCell(f2npts, face2);
-  groupIds->InsertNextTuple1(groupId);
-  patchIds->InsertNextTuple1(2);
-  delete [] face2;
-
-  // FACE 3
-  int f3npts = face3PtIds.size();
-  vtkIdType *face3 = new vtkIdType[f3npts];
-  for (int i=0; i<f3npts; i++)
-    face3[i] = face3PtIds[i];
-  allCells->InsertNextCell(f3npts, face3);
-  groupIds->InsertNextTuple1(groupId);
-  patchIds->InsertNextTuple1(3);
-  delete [] face3;
-
-  // FACE 4
-  int f4npts = face4PtIds.size();
-  if (f4npts > 0)
+  for (int i=0; i<6; i++)
   {
-    vtkIdType *face4 = new vtkIdType[f4npts];
-    for (int i=0; i<f4npts; i++)
-      face4[i] = face4PtIds[i];
-    allCells->InsertNextCell(f4npts, face4);
-    groupIds->InsertNextTuple1(groupId);
-    patchIds->InsertNextTuple1(4);
-    delete [] face4;
-  }
-
-  // FACE 5
-  int f5npts = face5PtIds.size();
-  if (f5npts > 0)
-  {
-    vtkIdType *face5 = new vtkIdType[f5npts];
-    for (int i=0; i<f5npts; i++)
-      face5[i] = face5PtIds[i];
-    allCells->InsertNextCell(f5npts, face5);
-    groupIds->InsertNextTuple1(groupId);
-    patchIds->InsertNextTuple1(5);
-    delete [] face5;
+    int fnpts = facesPtIds[i].size();
+    if (fnpts > 0)
+    {
+      vtkIdType *face = new vtkIdType[fnpts];
+      for (int j=0; j<fnpts; j++)
+        face[j] = facesPtIds[i][j];
+      allCells->InsertNextCell(fnpts, face);
+      groupIds->InsertNextTuple1(groupId);
+      patchIds->InsertNextTuple1(i);
+      delete [] face;
+    }
   }
   // -----------------------------------------------------------------------
 
