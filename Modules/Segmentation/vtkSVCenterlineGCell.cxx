@@ -177,28 +177,69 @@ vtkSVCenterlineGCell::~vtkSVCenterlineGCell()
 // ----------------------
 int vtkSVCenterlineGCell::GetBeginningType(int &beginningType, int &splitType)
 {
-  if (this->Parent == NULL)
+  vtkSVCenterlineGCell *parent = this->Parent;
+
+  if (parent == NULL)
   {
     splitType     = ZERO;
     beginningType = NONE;
   }
-  else if (this->Parent->Children.size() == 2 || this->Parent->Children.size() == 3)
+  else if (parent->Children.size() == 2)
   {
-    if (this->Parent->Children.size() == 2)
-      splitType = BI;
-    else
-      splitType = TRI;
+    splitType = BI;
 
-    if ((this->Parent->BranchDir + this->BranchDir)%2 == 0)
+    vtkSVCenterlineGCell *brother;
+    if (parent->Children[0]->Id == this->Id)
+      brother = parent->Children[1];
+    else
+      brother = parent->Children[0];
+
+    if ((brother->BranchDir + this->BranchDir)%2 != 0)
     {
-      if (this->Parent->BranchDir == RIGHT || this->Parent->BranchDir == LEFT)
+      if ((brother->BranchDir + this->BranchDir) == 1)
+        beginningType = TET_0;
+      else if ((brother->BranchDir + this->BranchDir) == 5)
+        beginningType = TET_2;
+      else
+      {
+        if (brother->BranchDir == 0 || this->BranchDir == 0)
+          beginningType = TET_1;
+        else
+          beginningType = TET_3;
+      }
+    }
+    else
+    {
+      if ((parent->BranchDir + this->BranchDir)%2 == 0)
+      {
+        if (parent->BranchDir == RIGHT || parent->BranchDir == LEFT)
+          beginningType = VERT_WEDGE;
+        else
+          beginningType = HORZ_WEDGE;
+      }
+      else
+      {
+        if (parent->BranchDir == RIGHT || parent->BranchDir == LEFT)
+          beginningType = HORZ_WEDGE;
+        else
+          beginningType = VERT_WEDGE;
+      }
+    }
+  }
+  else if (parent->Children.size() == 3)
+  {
+    splitType = TRI;
+
+    if ((parent->BranchDir + this->BranchDir)%2 == 0)
+    {
+      if (parent->BranchDir == RIGHT || parent->BranchDir == LEFT)
         beginningType = VERT_WEDGE;
       else
         beginningType = HORZ_WEDGE;
     }
     else
     {
-      if (this->Parent->BranchDir == RIGHT || this->Parent->BranchDir == LEFT)
+      if (parent->BranchDir == RIGHT || parent->BranchDir == LEFT)
         beginningType = HORZ_WEDGE;
       else
         beginningType = VERT_WEDGE;
@@ -225,12 +266,45 @@ int vtkSVCenterlineGCell::GetEndType(int &endType, int &splitType)
     endType   = NONE;
     splitType = ZERO;
   }
-  else if (this->Children.size() == 2 || this->Children.size() == 3)
+  else if (this->Children.size() == 2)
   {
-    if (this->Children.size() == 2)
-      splitType = BI;
+    splitType = BI;
+
+    if ((this->Children[this->DivergingChild]->BranchDir + this->Children[this->AligningChild]->BranchDir)%2 != 0)
+    {
+      if ((this->Children[this->DivergingChild]->BranchDir + this->Children[this->AligningChild]->BranchDir) == 1)
+        endType = TET_0;
+      else if ((this->Children[this->DivergingChild]->BranchDir + this->Children[this->AligningChild]->BranchDir) == 5)
+        endType = TET_2;
+      else
+      {
+        if (this->Children[this->DivergingChild]->BranchDir == 0 || this->Children[this->AligningChild]->BranchDir == 0)
+          endType = TET_1;
+        else
+          endType = TET_3;
+      }
+    }
     else
-      splitType = TRI;
+    {
+      if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
+      {
+        if (this->BranchDir == RIGHT || this->BranchDir == LEFT)
+          endType = VERT_WEDGE;
+        else
+          endType = HORZ_WEDGE;
+      }
+      else
+      {
+        if (this->BranchDir == RIGHT || this->BranchDir == LEFT)
+          endType = HORZ_WEDGE;
+        else
+          endType = VERT_WEDGE;
+      }
+    }
+  }
+  else if (this->Children.size() == 3)
+  {
+    splitType = TRI;
 
     if ((this->BranchDir + this->Children[this->DivergingChild]->BranchDir)%2 == 0)
     {
@@ -391,7 +465,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
 
   int groupId = this->GroupId;
 
-  vtkSVCenterlineGCell *brother, *diver, *parent, *align, *cDiver, *otherBrother;
+  vtkSVCenterlineGCell *brother, *diver, *parent, *align, *cDiver, *sister;
   parent = this->Parent;
   if (parent != NULL)
   {
@@ -431,36 +505,65 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (begSplitType == BI)
   {
-    fprintf(stdout,"BEG BI\n");
+    if (begType >= TET_0 && begType <= TET_3)
+    {
+      // Get ending bifurcation points
+      this->FormBifurcation(this->EndPt, this->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           this->StartPt,
+                           width/2., vecs, triPts);
 
-    // Get ending bifurcation points
-    this->FormBifurcation(this->EndPt, this->StartPt,
-                         parent->StartPt, parent->EndPt,
-                         brother->EndPt, brother->StartPt,
-                         this->StartPt,
-                         width/2., vecs, triPts);
+      // get diverging vector towards top of cube
+      double myVec[3];
+      vtkMath::Subtract(this->EndPt, this->StartPt, myVec);
+      vtkMath::Normalize(myVec);
 
-    // get diverging vector towards top of cube
-    double diverVec[3];
-    vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
-    vtkMath::Normalize(diverVec);
+      // get front vector
+      vtkMath::Cross(myVec, vecs[1], begVec);
+      vtkMath::Normalize(begVec);
 
-    // get front vector
-    vtkMath::Cross(diverVec, vecs[1], begVec);
-    vtkMath::Normalize(begVec);
+      // Flip if diver branch is left or front
+      if (this->BranchDir == LEFT || this->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(begVec, -1.0);
 
-    // Flip if diver branch is left or front
-    if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
-      vtkMath::MultiplyScalar(begVec, -1.0);
+      this->GetSquare(this->StartPt, vecs[1], begVec,
+                      height, width, begPoints);
 
-    // Treat differently for different dirs
-    if (this->BranchDir == LEFT || this->BranchDir == FRONT)
-      this->GetWedge(triPts[1], this->StartPt, triPts[0], begVec,
-                     height, begPoints);
+    }
     else
-      this->GetWedge(triPts[0], this->StartPt, triPts[1], begVec,
-                     height, begPoints);
+    {
+      fprintf(stdout,"BEG BI WEDGE\n");
 
+      // Get ending bifurcation points
+      this->FormBifurcation(this->EndPt, this->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           this->StartPt,
+                           width/2., vecs, triPts);
+
+      // get diverging vector towards top of cube
+      double diverVec[3];
+      vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
+      vtkMath::Normalize(diverVec);
+
+      // get front vector
+      vtkMath::Cross(diverVec, vecs[1], begVec);
+      vtkMath::Normalize(begVec);
+
+      // Flip if diver branch is left or front
+      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(begVec, -1.0);
+
+      // Treat differently for different dirs
+      if (this->BranchDir == LEFT || this->BranchDir == FRONT)
+        this->GetWedge(triPts[1], this->StartPt, triPts[0], begVec,
+                       height, begPoints);
+      else
+        this->GetWedge(triPts[0], this->StartPt, triPts[1], begVec,
+                       height, begPoints);
+
+    }
   }
   else if (begSplitType == TRI)
   {
@@ -501,12 +604,12 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     {
       brother = parent->Children[myLoc - 1];
       diver = parent->Children[parent->AligningChild];
-      otherBrother  = parent->Children[myLoc + 1];
+      sister  = parent->Children[myLoc + 1];
 
       // Get ending bifurcation points
       this->FormBifurcation(this->EndPt, this->StartPt,
                            brother->EndPt, brother->StartPt,
-                           otherBrother->EndPt, otherBrother->StartPt,
+                           sister->EndPt, sister->StartPt,
                            this->StartPt,
                            width/2., vecs, triPts);
     }
@@ -571,30 +674,57 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (endSplitType == BI)
   {
-    fprintf(stdout,"END BI\n");
-
-    this->FormBifurcation(this->StartPt, this->EndPt,
-                          cDiver->EndPt, cDiver->StartPt,
-                          align->EndPt, align->StartPt,
-                          this->EndPt,
-                          width/2., vecs, triPts);
-
-
-    // get vector towards top of cube
-    vtkMath::Cross(vecs[1], vecs[0], begVec);
-    vtkMath::Normalize(begVec);
-
-    // treat differently for different dirs
-    if (cDiver->BranchDir == LEFT || cDiver->BranchDir == FRONT)
+    if (endType >= TET_0 && endType <= TET_3)
     {
-      vtkMath::MultiplyScalar(begVec, -1.0);
-      this->GetWedge(triPts[0], this->EndPt, triPts[1], begVec,
-                     height, endPoints);
+      // Get square from end pt
+      if (begSplitType == ZERO)
+        this->GetSquare(this->EndPt, this->RefDirs[1], begVec,
+                        height, width, endPoints);
+      else
+      {
+        double endVec[3];
+        if ((this->BranchDir)%2 == 0)
+        {
+          vtkMath::Cross(begVec, vecs[0], endVec);
+          vtkMath::Normalize(endVec);
+          this->GetSquare(this->EndPt, endVec, begVec,
+                          height, width, endPoints);
+        }
+        else
+        {
+          vtkMath::Cross(vecs[0], begVec, endVec);
+          vtkMath::Normalize(endVec);
+          this->GetSquare(this->EndPt, begVec, endVec,
+                          height, width, endPoints);
+        }
+      }
     }
     else
-      this->GetWedge(triPts[1], this->EndPt, triPts[0], begVec,
-                     height, endPoints);
+    {
+      fprintf(stdout,"END BI WEDGE\n");
 
+      this->FormBifurcation(this->StartPt, this->EndPt,
+                            cDiver->EndPt, cDiver->StartPt,
+                            align->EndPt, align->StartPt,
+                            this->EndPt,
+                            width/2., vecs, triPts);
+
+
+      // get vector towards top of cube
+      vtkMath::Cross(vecs[1], vecs[0], begVec);
+      vtkMath::Normalize(begVec);
+
+      // treat differently for different dirs
+      if (cDiver->BranchDir == LEFT || cDiver->BranchDir == FRONT)
+      {
+        vtkMath::MultiplyScalar(begVec, -1.0);
+        this->GetWedge(triPts[0], this->EndPt, triPts[1], begVec,
+                       height, endPoints);
+      }
+      else
+        this->GetWedge(triPts[1], this->EndPt, triPts[0], begVec,
+                       height, endPoints);
+    }
   }
   else if (endSplitType == TRI)
   {
@@ -659,6 +789,8 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   else if (endType == HORZ_WEDGE)
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  else if (endType >= TET_0 && endType <= TET_3)
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
 
   // BEG
   if (begType == NONE)
@@ -677,6 +809,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
   }
+  else if (begType >= TET_0 && begType <= TET_3)
+  {
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+  }
 
   // END
   if (endType == NONE)
@@ -688,6 +825,10 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (endType == HORZ_WEDGE)
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  else if (endType >= TET_0 && endType <= TET_3)
+  {
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  }
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
@@ -701,6 +842,8 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   else if (endType == HORZ_WEDGE)
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+  else if (endType >= TET_0 && endType <= TET_3)
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
 
   // BEG
   if (begType == NONE)
@@ -719,6 +862,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
+  else if (begType >= TET_0 && begType <= TET_3)
+  {
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+  }
 
   // END
   if (endType == NONE)
@@ -730,6 +878,10 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (endType == HORZ_WEDGE)
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  else if (endType >= TET_0 && endType <= TET_3)
+  {
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  }
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
@@ -773,6 +925,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-1]);
     facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-2]);
   }
+  else if (endType >= TET_0 && endType <= TET_3)
+  {
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-1]);
+    facesPtIds[0].push_back(facesPtIds[1][facesPtIds[1].size()-2]);
+  }
 
   // INT
   if (begType == HORZ_WEDGE)
@@ -790,6 +947,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[0].push_back(facesPtIds[3][0]);
   }
   else if (begType == HORZ_WEDGE)
+  {
+    facesPtIds[0].push_back(facesPtIds[3][1]);
+    facesPtIds[0].push_back(facesPtIds[3][0]);
+  }
+  else if (begType >= TET_0 && begType <= TET_3)
   {
     facesPtIds[0].push_back(facesPtIds[3][1]);
     facesPtIds[0].push_back(facesPtIds[3][0]);
@@ -820,6 +982,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-1]);
     facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-2]);
   }
+  else if (endType >= TET_0 && endType <= TET_3)
+  {
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-1]);
+    facesPtIds[2].push_back(facesPtIds[3][facesPtIds[3].size()-2]);
+  }
 
   // INT
   if (begType == HORZ_WEDGE)
@@ -837,6 +1004,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[2].push_back(facesPtIds[1][0]);
   }
   else if (begType == HORZ_WEDGE)
+  {
+    facesPtIds[2].push_back(facesPtIds[1][1]);
+    facesPtIds[2].push_back(facesPtIds[1][0]);
+  }
+  else if (begType >= TET_0 && begType <= TET_3)
   {
     facesPtIds[2].push_back(facesPtIds[1][1]);
     facesPtIds[2].push_back(facesPtIds[1][0]);
@@ -905,6 +1077,47 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
 
   return SV_OK;
 }
+
+// ----------------------
+// FormTrifurcation
+// ----------------------
+int vtkSVCenterlineGCell::FormTrifurcation(const double pt0[3], const double pt1[3],
+                                           const double pt2[3], const double pt3[3],
+                                           const double pt4[3], const double pt5[3],
+                                           const double centerPt[3],
+                                           const double factor,
+                                           double vecs[3][3],
+                                           double returnPts[4][3])
+{
+  vtkMath::Subtract(pt0, pt1, vecs[0]);
+  vtkMath::Subtract(pt2, pt3, vecs[1]);
+  vtkMath::Subtract(pt4, pt5, vecs[2]);
+  for (int j=0; j<3; j++)
+    vtkMath::Normalize(vecs[j]);
+
+  double midVec[3];
+  vtkMath::Add(vecs[1], vecs[2], midVec);
+  vtkMath::Normalize(midVec);
+  vtkMath::MultiplyScalar(midVec, -1.0);
+
+  // Get ending bifurcation points
+  this->GetBifurcationPoint(centerPt, midVec, vecs[1], vecs[2], factor, returnPts[0]);
+  this->GetBifurcationPoint(centerPt, midVec, vecs[2], vecs[1], factor, returnPts[1]);
+  this->GetBifurcationPoint(centerPt, vecs[1], vecs[2], midVec, factor, returnPts[2]);
+
+  vtkMath::MultiplyScalar(midVec, -1.0);
+  double negVecs[2][3];
+  for (int i=0; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+      negVecs[i][j] = -1.0 * vecs[i+1][j];
+  }
+
+  this->GetBifurcationPoint(centerPt, negVecs[0], negVecs[1], midVec, factor, returnPts[3]);
+
+  return SV_OK;
+}
+
 
 // ----------------------
 // FormBifurcation
