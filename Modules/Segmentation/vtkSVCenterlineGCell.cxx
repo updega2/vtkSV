@@ -647,600 +647,680 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     fprintf(stderr,"END NOT_HANDLED\n");
   }
 
-  //// -----------------------------------------------------------------------
-  //// FACE 3
-  //// -----------------------------------------------------------------------
-  //std::vector<int> face3PtIds;
+  // -----------------------------------------------------------------------
+  // FACE 3
+  // -----------------------------------------------------------------------
+  std::vector<int> face3PtIds;
 
-  //// END
-  //if (endType == NONE)
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
-  //else if (endType == VERT_WEDGE)
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
-  //else if (endType == HORZ_WEDGE)
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  // END
+  if (endType == NONE)
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  else if (endType == VERT_WEDGE)
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  else if (endType == HORZ_WEDGE)
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
 
-  //// BEG
-  //if (begType == NONE)
-  //{
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
-  //}
-  //else if (begType == VERT_WEDGE)
-  //{
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
-  //}
-  //else if (begType == HORZ_WEDGE)
-  //{
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
-  //}
-
-  //// END
-  //if (endType == NONE)
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
-  //else if (endType == VERT_WEDGE)
-  //{
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
-  //}
-  //else if (endType == HORZ_WEDGE)
-  //  face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
-  //// -----------------------------------------------------------------------
-
-  //// -----------------------------------------------------------------------
-  //// FACE 1
-  //// -----------------------------------------------------------------------
-  //std::vector<int> face1PtIds;
-
-  //// END
-  //if (endType == NONE)
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
-  //else if (endType == VERT_WEDGE)
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
-  //else if (endType == HORZ_WEDGE)
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
-
-  //// BEG
-  //if (begType == NONE)
-  //{
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
-  //}
-  //else if (begType == VERT_WEDGE)
-  //{
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-  //}
-  //else if (begType == HORZ_WEDGE)
-  //{
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
-  //}
-
-  //// END
-  //if (endType == NONE)
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
-  //else if (endType == VERT_WEDGE)
-  //{
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
-  //}
-  //else if (endType == HORZ_WEDGE)
-  //  face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
-  //// -----------------------------------------------------------------------
-
-  //// -----------------------------------------------------------------------
-  //// Now interior points if they are there!
-  //// -----------------------------------------------------------------------
-  //std::vector<int> begInterPtIds;
-  //std::vector<int> endInterPtIds;
-
-  //// END
-  //if (endType == HORZ_WEDGE)
-  //{
-  //  begInterPtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
-  //  begInterPtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
-  //}
-
-  //// BEG
-  //if (begType == HORZ_WEDGE)
-  //{
-  //  endInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-  //  endInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
-  //}
-  //// -----------------------------------------------------------------------
-
-  //// -----------------------------------------------------------------------
-  //// FACE 0
-  //// -----------------------------------------------------------------------
-  //std::vector<int> face0PtIds;
-
-  //// END
-  //if (endType == NONE)
-  //{
-  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
-  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
-  //}
-  //else if (endType == VERT_WEDGE)
-  //{
-  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
-  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-3]);
-  //}
-  //else if (endType == HORZ_WEDGE)
-  //{
-  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
-  //  face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
-  //}
-
-  //// INT
-  //if (begType == HORZ_WEDGE)
-  //  face0PtIds.push_back(begInterPtIds[0]);
-
-  //// BEG
-  //if (begType == NONE)
-  //{
-  //  face0PtIds.push_back(face3PtIds[1]);
-  //  face0PtIds.push_back(face3PtIds[0]);
-  //}
-  //else if (begType == VERT_WEDGE)
-  //{
-  //  face0PtIds.push_back(face3PtIds[1]);
-  //  face0PtIds.push_back(face3PtIds[0]);
-  //}
-  //else if (begType == HORZ_WEDGE)
-  //{
-  //  face0PtIds.push_back(face3PtIds[1]);
-  //  face0PtIds.push_back(face3PtIds[0]);
-  //}
-
-  //// INT
-  //if (endType == HORZ_WEDGE)
-  //  face0PtIds.push_back(endInterPtIds[0]);
-  //// -----------------------------------------------------------------------
-
-  //// -----------------------------------------------------------------------
-  //// FACE 2
-  //// -----------------------------------------------------------------------
-  //std::vector<int> face2PtIds;
-
-  //// END
-  //if (endType == NONE)
-  //{
-  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
-  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
-  //}
-  //else if (endType == VERT_WEDGE)
-  //{
-  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
-  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-3]);
-  //}
-  //else if (endType == HORZ_WEDGE)
-  //{
-  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
-  //  face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
-  //}
-
-  //// INT
-  //if (begType == HORZ_WEDGE)
-  //  face2PtIds.push_back(begInterPtIds[1]);
-
-  //// BEG
-  //if (begType == NONE)
-  //{
-  //  face2PtIds.push_back(face1PtIds[1]);
-  //  face2PtIds.push_back(face1PtIds[0]);
-  //}
-  //else if (begType == VERT_WEDGE)
-  //{
-  //  face2PtIds.push_back(face1PtIds[1]);
-  //  face2PtIds.push_back(face1PtIds[0]);
-  //}
-  //else if (begType == HORZ_WEDGE)
-  //{
-  //  face2PtIds.push_back(face1PtIds[1]);
-  //  face2PtIds.push_back(face1PtIds[0]);
-  //}
-
-  //// INT
-  //if (endType == HORZ_WEDGE)
-  //  face2PtIds.push_back(endInterPtIds[1]);
-  //// -----------------------------------------------------------------------
-
-  //// -----------------------------------------------------------------------
-  //// FACE 4, if there
-  //// -----------------------------------------------------------------------
-  //std::vector<int> face4PtIds;
-
-  //// BEG
-  //if (begType == NONE)
-  //{
-  //  face4PtIds.push_back(face3PtIds[2]);
-  //  face4PtIds.push_back(face3PtIds[1]);
-  //  face4PtIds.push_back(face1PtIds[2]);
-  //  face4PtIds.push_back(face1PtIds[1]);
-  //}
-
-  //// -----------------------------------------------------------------------
-  //// FACE 5, if there
-  //// -----------------------------------------------------------------------
-  //std::vector<int> face5PtIds;
-
-  //// BEG
-  //if (endType == NONE)
-  //{
-  //  face5PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
-  //  face5PtIds.push_back(face3PtIds[0]);
-  //  face5PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
-  //  face4PtIds.push_back(face3PtIds[0]);
-  //}
-  //// -----------------------------------------------------------------------
-
-  if (begType == NONE && endType == NONE)
+  // BEG
+  if (begType == NONE)
   {
-    int numPoints = 8;
-
-    double finalPts[8][3];
-
-    begPoints->GetPoint(0, finalPts[5]);
-    begPoints->GetPoint(1, finalPts[1]);
-    begPoints->GetPoint(2, finalPts[2]);
-    begPoints->GetPoint(3, finalPts[6]);
-
-    endPoints->GetPoint(0, finalPts[4]);
-    endPoints->GetPoint(1, finalPts[0]);
-    endPoints->GetPoint(2, finalPts[3]);
-    endPoints->GetPoint(3, finalPts[7]);
-
-    int pI[8];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-
-    vtkIdType face0[4] = {pI[4], pI[5], pI[1], pI[0]};
-    vtkIdType face1[4] = {pI[7], pI[6], pI[5], pI[4]};
-    vtkIdType face2[4] = {pI[3], pI[2], pI[6], pI[7]};
-    vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
-    vtkIdType face4[4] = {pI[2], pI[1], pI[5], pI[6]};
-    vtkIdType face5[4] = {pI[4], pI[0], pI[3], pI[7]};
-
-    allCells->InsertNextCell(4, face0);
-    allCells->InsertNextCell(4, face1);
-    allCells->InsertNextCell(4, face2);
-    allCells->InsertNextCell(4, face3);
-    allCells->InsertNextCell(4, face4);
-    allCells->InsertNextCell(4, face5);
-
-    for (int i=0; i<6; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
-  else if (begType == NONE && endType == VERT_WEDGE)
+  else if (begType == VERT_WEDGE)
   {
-    int numPoints = 10;
-
-    double finalPts[10][3];
-
-    begPoints->GetPoint(0, finalPts[6]);
-    begPoints->GetPoint(1, finalPts[1]);
-    begPoints->GetPoint(2, finalPts[2]);
-    begPoints->GetPoint(3, finalPts[7]);
-
-    endPoints->GetPoint(0, finalPts[3]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[8]);
-    endPoints->GetPoint(4, finalPts[9]);
-    endPoints->GetPoint(5, finalPts[5]);
-
-    int pI[10];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-
-    vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
-    vtkIdType face1[5] = {pI[8], pI[7], pI[6], pI[5], pI[9]};
-    vtkIdType face2[4] = {pI[3], pI[2], pI[7], pI[8]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-    vtkIdType face4[4] = {pI[2], pI[1], pI[6], pI[7]};
-
-    allCells->InsertNextCell(4, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(4, face2);
-    allCells->InsertNextCell(5, face3);
-    allCells->InsertNextCell(4, face4);
-
-    for (int i=0; i<5; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
-  else if (begType == VERT_WEDGE && endType == VERT_WEDGE)
+  else if (begType == HORZ_WEDGE)
   {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[1]);
-    begPoints->GetPoint(1, finalPts[2]);
-    begPoints->GetPoint(2, finalPts[3]);
-    begPoints->GetPoint(3, finalPts[7]);
-    begPoints->GetPoint(4, finalPts[8]);
-    begPoints->GetPoint(5, finalPts[9]);
-
-    endPoints->GetPoint(0, finalPts[4]);
-    endPoints->GetPoint(1, finalPts[5]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[10]);
-    endPoints->GetPoint(4, finalPts[11]);
-    endPoints->GetPoint(5, finalPts[6]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-    vtkIdType face0[4] = {pI[6], pI[7], pI[1], pI[0]};
-    vtkIdType face1[6] = {pI[10], pI[9], pI[8], pI[7], pI[6], pI[11]};
-    vtkIdType face2[4] = {pI[4], pI[3], pI[9], pI[10]};
-    vtkIdType face3[6] = {pI[0], pI[1], pI[2], pI[3], pI[4], pI[5]};
-
-    allCells->InsertNextCell(4, face0);
-    allCells->InsertNextCell(6, face1);
-    allCells->InsertNextCell(4, face2);
-    allCells->InsertNextCell(6, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+    face3PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
   }
-  else if (begType == HORZ_WEDGE && endType == HORZ_WEDGE)
+
+  // END
+  if (endType == NONE)
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  else if (endType == VERT_WEDGE)
   {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[9]);
-    begPoints->GetPoint(1, finalPts[5]);
-    begPoints->GetPoint(2, finalPts[1]);
-    begPoints->GetPoint(3, finalPts[10]);
-    begPoints->GetPoint(4, finalPts[6]);
-    begPoints->GetPoint(5, finalPts[2]);
-
-    endPoints->GetPoint(0, finalPts[0]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[8]);
-    endPoints->GetPoint(3, finalPts[3]);
-    endPoints->GetPoint(4, finalPts[7]);
-    endPoints->GetPoint(5, finalPts[11]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-
-    vtkIdType face0[6] = {pI[8], pI[9], pI[5], pI[1], pI[0], pI[4]};
-    vtkIdType face1[4] = {pI[11], pI[10], pI[9], pI[8]};
-    vtkIdType face2[6] = {pI[3], pI[2], pI[6], pI[10], pI[11], pI[7]};
-    vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
-
-    allCells->InsertNextCell(6, face0);
-    allCells->InsertNextCell(4, face1);
-    allCells->InsertNextCell(6, face2);
-    allCells->InsertNextCell(4, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
   }
-  else if (begType == VERT_WEDGE && endType == HORZ_WEDGE)
+  else if (endType == HORZ_WEDGE)
+    face3PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // FACE 1
+  // -----------------------------------------------------------------------
+  std::vector<int> face1PtIds;
+
+  // END
+  if (endType == NONE)
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  else if (endType == VERT_WEDGE)
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  else if (endType == HORZ_WEDGE)
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+
+  // BEG
+  if (begType == NONE)
   {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[1]);
-    begPoints->GetPoint(1, finalPts[2]);
-    begPoints->GetPoint(2, finalPts[3]);
-    begPoints->GetPoint(3, finalPts[8]);
-    begPoints->GetPoint(4, finalPts[9]);
-    begPoints->GetPoint(5, finalPts[10]);
-
-    endPoints->GetPoint(0, finalPts[0]);
-    endPoints->GetPoint(1, finalPts[5]);
-    endPoints->GetPoint(2, finalPts[7]);
-    endPoints->GetPoint(3, finalPts[4]);
-    endPoints->GetPoint(4, finalPts[6]);
-    endPoints->GetPoint(5, finalPts[11]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-    vtkIdType face0[5] = {pI[7], pI[8], pI[1], pI[0], pI[5]};
-    vtkIdType face1[5] = {pI[11], pI[10], pI[9], pI[8], pI[7]};
-    vtkIdType face2[5] = {pI[4], pI[3], pI[10], pI[11], pI[6]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-
-    allCells->InsertNextCell(5, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(5, face2);
-    allCells->InsertNextCell(5, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
-  else if (begType == HORZ_WEDGE && endType == VERT_WEDGE)
+  else if (begType == VERT_WEDGE)
   {
-    int numPoints = 12;
-
-    double finalPts[12][3];
-
-    begPoints->GetPoint(0, finalPts[8]);
-    begPoints->GetPoint(1, finalPts[5]);
-    begPoints->GetPoint(2, finalPts[1]);
-    begPoints->GetPoint(3, finalPts[9]);
-    begPoints->GetPoint(4, finalPts[6]);
-    begPoints->GetPoint(5, finalPts[2]);
-
-    endPoints->GetPoint(0, finalPts[3]);
-    endPoints->GetPoint(1, finalPts[4]);
-    endPoints->GetPoint(2, finalPts[0]);
-    endPoints->GetPoint(3, finalPts[10]);
-    endPoints->GetPoint(4, finalPts[11]);
-    endPoints->GetPoint(5, finalPts[7]);
-
-    int pI[12];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-
-    vtkIdType face0[5] = {pI[7], pI[8], pI[5], pI[1], pI[0]};
-    vtkIdType face1[5] = {pI[10], pI[9], pI[8], pI[7], pI[11]};
-    vtkIdType face2[5] = {pI[3], pI[2], pI[6], pI[9], pI[10]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-
-    allCells->InsertNextCell(5, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(5, face2);
-    allCells->InsertNextCell(5, face3);
-
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
   }
-  else if (begType == VERT_WEDGE && endType == NONE)
+  else if (begType == HORZ_WEDGE)
   {
-    int numPoints = 10;
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    face1PtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+  }
 
-    double finalPts[10][3];
+  // END
+  if (endType == NONE)
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  else if (endType == VERT_WEDGE)
+  {
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
+  }
+  else if (endType == HORZ_WEDGE)
+    face1PtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  // -----------------------------------------------------------------------
 
-    if (this->Parent->Children.size() == 2)
-    {
-      begPoints->GetPoint(0, finalPts[1]);
-      begPoints->GetPoint(1, finalPts[2]);
-      begPoints->GetPoint(2, finalPts[3]);
-      begPoints->GetPoint(3, finalPts[6]);
-      begPoints->GetPoint(4, finalPts[7]);
-      begPoints->GetPoint(5, finalPts[8]);
+  // -----------------------------------------------------------------------
+  // Now interior points if they are there!
+  // -----------------------------------------------------------------------
+  std::vector<int> endInterPtIds;
+  std::vector<int> begInterPtIds;
 
-      endPoints->GetPoint(0, finalPts[5]);
-      endPoints->GetPoint(1, finalPts[0]);
-      endPoints->GetPoint(2, finalPts[4]);
-      endPoints->GetPoint(3, finalPts[9]);
-    }
-    else
-    {
-      begPoints->GetPoint(0, finalPts[1]);
-      begPoints->GetPoint(1, finalPts[2]);
-      begPoints->GetPoint(2, finalPts[3]);
-      begPoints->GetPoint(3, finalPts[6]);
-      begPoints->GetPoint(4, finalPts[7]);
-      begPoints->GetPoint(5, finalPts[8]);
+  // END
+  if (endType == HORZ_WEDGE)
+  {
+    endInterPtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+    endInterPtIds.push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
+  }
 
-      endPoints->GetPoint(0, finalPts[5]);
-      endPoints->GetPoint(1, finalPts[0]);
-      endPoints->GetPoint(2, finalPts[4]);
-      endPoints->GetPoint(3, finalPts[9]);
-    }
+  // BEG
+  if (begType == HORZ_WEDGE)
+  {
+    begInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    begInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
+  }
+  // -----------------------------------------------------------------------
 
-    int pI[10];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
-    vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
-    vtkIdType face1[5] = {pI[9], pI[8], pI[7], pI[6], pI[5]};
-    vtkIdType face2[4] = {pI[4], pI[3], pI[8], pI[9]};
-    vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
-    vtkIdType face4[4] = {pI[5], pI[0], pI[4], pI[9]};
+  // -----------------------------------------------------------------------
+  // FACE 0
+  // -----------------------------------------------------------------------
+  std::vector<int> face0PtIds;
 
-    allCells->InsertNextCell(4, face0);
-    allCells->InsertNextCell(5, face1);
-    allCells->InsertNextCell(4, face2);
-    allCells->InsertNextCell(5, face3);
-    allCells->InsertNextCell(4, face4);
+  // END
+  if (endType == NONE)
+  {
+    face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
+    face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+  }
+  else if (endType == VERT_WEDGE)
+  {
+    face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+    face0PtIds.push_back(face1PtIds[face1PtIds.size()-3]);
+  }
+  else if (endType == HORZ_WEDGE)
+  {
+    face0PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
+    face0PtIds.push_back(face1PtIds[face1PtIds.size()-2]);
+  }
 
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
+  // INT
+  if (begType == HORZ_WEDGE)
+    face0PtIds.push_back(begInterPtIds[0]);
+
+  // BEG
+  if (begType == NONE)
+  {
+    face0PtIds.push_back(face3PtIds[1]);
+    face0PtIds.push_back(face3PtIds[0]);
+  }
+  else if (begType == VERT_WEDGE)
+  {
+    face0PtIds.push_back(face3PtIds[1]);
+    face0PtIds.push_back(face3PtIds[0]);
+  }
+  else if (begType == HORZ_WEDGE)
+  {
+    face0PtIds.push_back(face3PtIds[1]);
+    face0PtIds.push_back(face3PtIds[0]);
+  }
+
+  // INT
+  if (endType == HORZ_WEDGE)
+    face0PtIds.push_back(endInterPtIds[0]);
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // FACE 2
+  // -----------------------------------------------------------------------
+  std::vector<int> face2PtIds;
+
+  // END
+  if (endType == NONE)
+  {
+    face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
+    face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+  }
+  else if (endType == VERT_WEDGE)
+  {
+    face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+    face2PtIds.push_back(face3PtIds[face3PtIds.size()-3]);
+  }
+  else if (endType == HORZ_WEDGE)
+  {
+    face2PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
+    face2PtIds.push_back(face3PtIds[face3PtIds.size()-2]);
+  }
+
+  // INT
+  if (begType == HORZ_WEDGE)
+    face2PtIds.push_back(begInterPtIds[1]);
+
+  // BEG
+  if (begType == NONE)
+  {
+    face2PtIds.push_back(face1PtIds[1]);
+    face2PtIds.push_back(face1PtIds[0]);
+  }
+  else if (begType == VERT_WEDGE)
+  {
+    face2PtIds.push_back(face1PtIds[1]);
+    face2PtIds.push_back(face1PtIds[0]);
+  }
+  else if (begType == HORZ_WEDGE)
+  {
+    face2PtIds.push_back(face1PtIds[1]);
+    face2PtIds.push_back(face1PtIds[0]);
+  }
+
+  // INT
+  if (endType == HORZ_WEDGE)
+    face2PtIds.push_back(endInterPtIds[1]);
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // FACE 4, if there
+  // -----------------------------------------------------------------------
+  std::vector<int> face4PtIds;
+
+  // BEG
+  if (begType == NONE)
+  {
+    face4PtIds.push_back(face3PtIds[2]);
+    face4PtIds.push_back(face3PtIds[1]);
+    face4PtIds.push_back(face1PtIds[2]);
+    face4PtIds.push_back(face1PtIds[1]);
+  }
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // FACE 5, if there
+  // -----------------------------------------------------------------------
+  std::vector<int> face5PtIds;
+
+  // BEG
+  if (endType == NONE)
+  {
+    face5PtIds.push_back(face1PtIds[face1PtIds.size()-1]);
+    face5PtIds.push_back(face3PtIds[0]);
+    face5PtIds.push_back(face3PtIds[face3PtIds.size()-1]);
+    face5PtIds.push_back(face1PtIds[0]);
+  }
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // LocalPtIds
+  // -----------------------------------------------------------------------
+  int numPoints = face3PtIds.size() + face1PtIds.size() + endInterPtIds.size() + begInterPtIds.size();
+  fprintf(stdout,"NUMBER OF POINTS: %d\n", numPoints);
+  for (int i=0; i<numPoints; i++)
+    localPtIds->InsertNextTuple1(i);
+  // -----------------------------------------------------------------------
+
+  // -----------------------------------------------------------------------
+  // Add faces
+  // -----------------------------------------------------------------------
+  // FACE 0
+  int f0npts = face0PtIds.size();
+  vtkIdType *face0 = new vtkIdType[f0npts];
+  for (int i=0; i<f0npts; i++)
+    face0[i] = face0PtIds[i];
+  allCells->InsertNextCell(f0npts, face0);
+  groupIds->InsertNextTuple1(groupId);
+  patchIds->InsertNextTuple1(0);
+  delete [] face0;
+
+  // FACE 1
+  int f1npts = face1PtIds.size();
+  vtkIdType *face1 = new vtkIdType[f1npts];
+  for (int i=0; i<f1npts; i++)
+    face1[i] = face1PtIds[i];
+  allCells->InsertNextCell(f1npts, face1);
+  groupIds->InsertNextTuple1(groupId);
+  patchIds->InsertNextTuple1(1);
+  delete [] face1;
+
+  // FACE 2
+  int f2npts = face2PtIds.size();
+  vtkIdType *face2 = new vtkIdType[f2npts];
+  for (int i=0; i<f2npts; i++)
+    face2[i] = face2PtIds[i];
+  allCells->InsertNextCell(f2npts, face2);
+  groupIds->InsertNextTuple1(groupId);
+  patchIds->InsertNextTuple1(2);
+  delete [] face2;
+
+  // FACE 3
+  int f3npts = face3PtIds.size();
+  vtkIdType *face3 = new vtkIdType[f3npts];
+  for (int i=0; i<f3npts; i++)
+    face3[i] = face3PtIds[i];
+  allCells->InsertNextCell(f3npts, face3);
+  groupIds->InsertNextTuple1(groupId);
+  patchIds->InsertNextTuple1(3);
+  delete [] face3;
+
+  // FACE 4
+  int f4npts = face4PtIds.size();
+  if (f4npts > 0)
+  {
+    vtkIdType *face4 = new vtkIdType[f4npts];
+    for (int i=0; i<f4npts; i++)
+      face4[i] = face4PtIds[i];
+    allCells->InsertNextCell(f4npts, face4);
+    groupIds->InsertNextTuple1(groupId);
+    patchIds->InsertNextTuple1(4);
+    delete [] face4;
+  }
+
+  // FACE 5
+  int f5npts = face5PtIds.size();
+  if (f5npts > 0)
+  {
+    vtkIdType *face5 = new vtkIdType[f5npts];
+    for (int i=0; i<f5npts; i++)
+      face5[i] = face5PtIds[i];
+    allCells->InsertNextCell(f5npts, face5);
     groupIds->InsertNextTuple1(groupId);
     patchIds->InsertNextTuple1(5);
+    delete [] face5;
   }
-  else if (begType == HORZ_WEDGE && endType == NONE)
-  {
-    int numPoints = 10;
+  // -----------------------------------------------------------------------
 
-    double finalPts[10][3];
+  //if (begType == NONE && endType == NONE)
+  //{
+  //  int numPoints = 8;
 
-    begPoints->GetPoint(0, finalPts[7]);
-    begPoints->GetPoint(1, finalPts[4]);
-    begPoints->GetPoint(2, finalPts[1]);
-    begPoints->GetPoint(3, finalPts[8]);
-    begPoints->GetPoint(4, finalPts[5]);
-    begPoints->GetPoint(5, finalPts[2]);
+  //  double finalPts[8][3];
 
-    endPoints->GetPoint(0, finalPts[6]);
-    endPoints->GetPoint(1, finalPts[0]);
-    endPoints->GetPoint(2, finalPts[3]);
-    endPoints->GetPoint(3, finalPts[9]);
+  //  begPoints->GetPoint(0, finalPts[5]);
+  //  begPoints->GetPoint(1, finalPts[1]);
+  //  begPoints->GetPoint(2, finalPts[2]);
+  //  begPoints->GetPoint(3, finalPts[6]);
 
-    int pI[10];
-    for (int i=0; i<numPoints; i++)
-    {
-      pI[i] = allPoints->InsertNextPoint(finalPts[i]);
-      localPtIds->InsertNextTuple1(i);
-    }
+  //  endPoints->GetPoint(0, finalPts[4]);
+  //  endPoints->GetPoint(1, finalPts[0]);
+  //  endPoints->GetPoint(2, finalPts[3]);
+  //  endPoints->GetPoint(3, finalPts[7]);
 
-    vtkIdType face0[5] = {pI[6], pI[7], pI[4], pI[1], pI[0]};
-    vtkIdType face1[4] = {pI[9], pI[8], pI[7], pI[6]};
-    vtkIdType face2[5] = {pI[3], pI[2], pI[5], pI[8], pI[9]};
-    vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
-    vtkIdType face4[4] = {pI[6], pI[0], pI[3], pI[9]};
+  //  int pI[8];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
 
-    allCells->InsertNextCell(5, face0);
-    allCells->InsertNextCell(4, face1);
-    allCells->InsertNextCell(5, face2);
-    allCells->InsertNextCell(4, face3);
-    allCells->InsertNextCell(4, face4);
+  //  vtkIdType face0[4] = {pI[4], pI[5], pI[1], pI[0]};
+  //  vtkIdType face1[4] = {pI[7], pI[6], pI[5], pI[4]};
+  //  vtkIdType face2[4] = {pI[3], pI[2], pI[6], pI[7]};
+  //  vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
+  //  vtkIdType face4[4] = {pI[2], pI[1], pI[5], pI[6]};
+  //  vtkIdType face5[4] = {pI[4], pI[0], pI[3], pI[7]};
 
-    for (int i=0; i<4; i++)
-    {
-      groupIds->InsertNextTuple1(groupId);
-      patchIds->InsertNextTuple1(i);
-    }
-    groupIds->InsertNextTuple1(groupId);
-    patchIds->InsertNextTuple1(5);
-  }
+  //  allCells->InsertNextCell(4, face0);
+  //  allCells->InsertNextCell(4, face1);
+  //  allCells->InsertNextCell(4, face2);
+  //  allCells->InsertNextCell(4, face3);
+  //  allCells->InsertNextCell(4, face4);
+  //  allCells->InsertNextCell(4, face5);
+
+  //  for (int i=0; i<6; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //}
+  //else if (begType == NONE && endType == VERT_WEDGE)
+  //{
+  //  int numPoints = 10;
+
+  //  double finalPts[10][3];
+
+  //  begPoints->GetPoint(0, finalPts[6]);
+  //  begPoints->GetPoint(1, finalPts[1]);
+  //  begPoints->GetPoint(2, finalPts[2]);
+  //  begPoints->GetPoint(3, finalPts[7]);
+
+  //  endPoints->GetPoint(0, finalPts[3]);
+  //  endPoints->GetPoint(1, finalPts[4]);
+  //  endPoints->GetPoint(2, finalPts[0]);
+  //  endPoints->GetPoint(3, finalPts[8]);
+  //  endPoints->GetPoint(4, finalPts[9]);
+  //  endPoints->GetPoint(5, finalPts[5]);
+
+  //  int pI[10];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+
+  //  vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
+  //  vtkIdType face1[5] = {pI[8], pI[7], pI[6], pI[5], pI[9]};
+  //  vtkIdType face2[4] = {pI[3], pI[2], pI[7], pI[8]};
+  //  vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
+  //  vtkIdType face4[4] = {pI[2], pI[1], pI[6], pI[7]};
+
+  //  allCells->InsertNextCell(4, face0);
+  //  allCells->InsertNextCell(5, face1);
+  //  allCells->InsertNextCell(4, face2);
+  //  allCells->InsertNextCell(5, face3);
+  //  allCells->InsertNextCell(4, face4);
+
+  //  for (int i=0; i<5; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //}
+  //else if (begType == VERT_WEDGE && endType == VERT_WEDGE)
+  //{
+  //  int numPoints = 12;
+
+  //  double finalPts[12][3];
+
+  //  begPoints->GetPoint(0, finalPts[1]);
+  //  begPoints->GetPoint(1, finalPts[2]);
+  //  begPoints->GetPoint(2, finalPts[3]);
+  //  begPoints->GetPoint(3, finalPts[7]);
+  //  begPoints->GetPoint(4, finalPts[8]);
+  //  begPoints->GetPoint(5, finalPts[9]);
+
+  //  endPoints->GetPoint(0, finalPts[4]);
+  //  endPoints->GetPoint(1, finalPts[5]);
+  //  endPoints->GetPoint(2, finalPts[0]);
+  //  endPoints->GetPoint(3, finalPts[10]);
+  //  endPoints->GetPoint(4, finalPts[11]);
+  //  endPoints->GetPoint(5, finalPts[6]);
+
+  //  int pI[12];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+  //  vtkIdType face0[4] = {pI[6], pI[7], pI[1], pI[0]};
+  //  vtkIdType face1[6] = {pI[10], pI[9], pI[8], pI[7], pI[6], pI[11]};
+  //  vtkIdType face2[4] = {pI[4], pI[3], pI[9], pI[10]};
+  //  vtkIdType face3[6] = {pI[0], pI[1], pI[2], pI[3], pI[4], pI[5]};
+
+  //  allCells->InsertNextCell(4, face0);
+  //  allCells->InsertNextCell(6, face1);
+  //  allCells->InsertNextCell(4, face2);
+  //  allCells->InsertNextCell(6, face3);
+
+  //  for (int i=0; i<4; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //}
+  //else if (begType == HORZ_WEDGE && endType == HORZ_WEDGE)
+  //{
+  //  int numPoints = 12;
+
+  //  double finalPts[12][3];
+
+  //  begPoints->GetPoint(0, finalPts[9]);
+  //  begPoints->GetPoint(1, finalPts[5]);
+  //  begPoints->GetPoint(2, finalPts[1]);
+  //  begPoints->GetPoint(3, finalPts[10]);
+  //  begPoints->GetPoint(4, finalPts[6]);
+  //  begPoints->GetPoint(5, finalPts[2]);
+
+  //  endPoints->GetPoint(0, finalPts[0]);
+  //  endPoints->GetPoint(1, finalPts[4]);
+  //  endPoints->GetPoint(2, finalPts[8]);
+  //  endPoints->GetPoint(3, finalPts[3]);
+  //  endPoints->GetPoint(4, finalPts[7]);
+  //  endPoints->GetPoint(5, finalPts[11]);
+
+  //  int pI[12];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+
+  //  vtkIdType face0[6] = {pI[8], pI[9], pI[5], pI[1], pI[0], pI[4]};
+  //  vtkIdType face1[4] = {pI[11], pI[10], pI[9], pI[8]};
+  //  vtkIdType face2[6] = {pI[3], pI[2], pI[6], pI[10], pI[11], pI[7]};
+  //  vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
+
+  //  allCells->InsertNextCell(6, face0);
+  //  allCells->InsertNextCell(4, face1);
+  //  allCells->InsertNextCell(6, face2);
+  //  allCells->InsertNextCell(4, face3);
+
+  //  for (int i=0; i<4; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //}
+  //else if (begType == VERT_WEDGE && endType == HORZ_WEDGE)
+  //{
+  //  int numPoints = 12;
+
+  //  double finalPts[12][3];
+
+  //  begPoints->GetPoint(0, finalPts[1]);
+  //  begPoints->GetPoint(1, finalPts[2]);
+  //  begPoints->GetPoint(2, finalPts[3]);
+  //  begPoints->GetPoint(3, finalPts[8]);
+  //  begPoints->GetPoint(4, finalPts[9]);
+  //  begPoints->GetPoint(5, finalPts[10]);
+
+  //  endPoints->GetPoint(0, finalPts[0]);
+  //  endPoints->GetPoint(1, finalPts[5]);
+  //  endPoints->GetPoint(2, finalPts[7]);
+  //  endPoints->GetPoint(3, finalPts[4]);
+  //  endPoints->GetPoint(4, finalPts[6]);
+  //  endPoints->GetPoint(5, finalPts[11]);
+
+  //  int pI[12];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+  //  vtkIdType face0[5] = {pI[7], pI[8], pI[1], pI[0], pI[5]};
+  //  vtkIdType face1[5] = {pI[11], pI[10], pI[9], pI[8], pI[7]};
+  //  vtkIdType face2[5] = {pI[4], pI[3], pI[10], pI[11], pI[6]};
+  //  vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
+
+  //  allCells->InsertNextCell(5, face0);
+  //  allCells->InsertNextCell(5, face1);
+  //  allCells->InsertNextCell(5, face2);
+  //  allCells->InsertNextCell(5, face3);
+
+  //  for (int i=0; i<4; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //}
+  //else if (begType == HORZ_WEDGE && endType == VERT_WEDGE)
+  //{
+  //  int numPoints = 12;
+
+  //  double finalPts[12][3];
+
+  //  begPoints->GetPoint(0, finalPts[8]);
+  //  begPoints->GetPoint(1, finalPts[5]);
+  //  begPoints->GetPoint(2, finalPts[1]);
+  //  begPoints->GetPoint(3, finalPts[9]);
+  //  begPoints->GetPoint(4, finalPts[6]);
+  //  begPoints->GetPoint(5, finalPts[2]);
+
+  //  endPoints->GetPoint(0, finalPts[3]);
+  //  endPoints->GetPoint(1, finalPts[4]);
+  //  endPoints->GetPoint(2, finalPts[0]);
+  //  endPoints->GetPoint(3, finalPts[10]);
+  //  endPoints->GetPoint(4, finalPts[11]);
+  //  endPoints->GetPoint(5, finalPts[7]);
+
+  //  int pI[12];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+
+  //  vtkIdType face0[5] = {pI[7], pI[8], pI[5], pI[1], pI[0]};
+  //  vtkIdType face1[5] = {pI[10], pI[9], pI[8], pI[7], pI[11]};
+  //  vtkIdType face2[5] = {pI[3], pI[2], pI[6], pI[9], pI[10]};
+  //  vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
+
+  //  allCells->InsertNextCell(5, face0);
+  //  allCells->InsertNextCell(5, face1);
+  //  allCells->InsertNextCell(5, face2);
+  //  allCells->InsertNextCell(5, face3);
+
+  //  for (int i=0; i<4; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //}
+  //else if (begType == VERT_WEDGE && endType == NONE)
+  //{
+  //  int numPoints = 10;
+
+  //  double finalPts[10][3];
+
+  //  if (this->Parent->Children.size() == 2)
+  //  {
+  //    begPoints->GetPoint(0, finalPts[1]);
+  //    begPoints->GetPoint(1, finalPts[2]);
+  //    begPoints->GetPoint(2, finalPts[3]);
+  //    begPoints->GetPoint(3, finalPts[6]);
+  //    begPoints->GetPoint(4, finalPts[7]);
+  //    begPoints->GetPoint(5, finalPts[8]);
+
+  //    endPoints->GetPoint(0, finalPts[5]);
+  //    endPoints->GetPoint(1, finalPts[0]);
+  //    endPoints->GetPoint(2, finalPts[4]);
+  //    endPoints->GetPoint(3, finalPts[9]);
+  //  }
+  //  else
+  //  {
+  //    begPoints->GetPoint(0, finalPts[1]);
+  //    begPoints->GetPoint(1, finalPts[2]);
+  //    begPoints->GetPoint(2, finalPts[3]);
+  //    begPoints->GetPoint(3, finalPts[6]);
+  //    begPoints->GetPoint(4, finalPts[7]);
+  //    begPoints->GetPoint(5, finalPts[8]);
+
+  //    endPoints->GetPoint(0, finalPts[5]);
+  //    endPoints->GetPoint(1, finalPts[0]);
+  //    endPoints->GetPoint(2, finalPts[4]);
+  //    endPoints->GetPoint(3, finalPts[9]);
+  //  }
+
+  //  int pI[10];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+  //  vtkIdType face0[4] = {pI[5], pI[6], pI[1], pI[0]};
+  //  vtkIdType face1[5] = {pI[9], pI[8], pI[7], pI[6], pI[5]};
+  //  vtkIdType face2[4] = {pI[4], pI[3], pI[8], pI[9]};
+  //  vtkIdType face3[5] = {pI[0], pI[1], pI[2], pI[3], pI[4]};
+  //  vtkIdType face4[4] = {pI[5], pI[0], pI[4], pI[9]};
+
+  //  allCells->InsertNextCell(4, face0);
+  //  allCells->InsertNextCell(5, face1);
+  //  allCells->InsertNextCell(4, face2);
+  //  allCells->InsertNextCell(5, face3);
+  //  allCells->InsertNextCell(4, face4);
+
+  //  for (int i=0; i<4; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //  groupIds->InsertNextTuple1(groupId);
+  //  patchIds->InsertNextTuple1(5);
+  //}
+  //else if (begType == HORZ_WEDGE && endType == NONE)
+  //{
+  //  int numPoints = 10;
+
+  //  double finalPts[10][3];
+
+  //  begPoints->GetPoint(0, finalPts[7]);
+  //  begPoints->GetPoint(1, finalPts[4]);
+  //  begPoints->GetPoint(2, finalPts[1]);
+  //  begPoints->GetPoint(3, finalPts[8]);
+  //  begPoints->GetPoint(4, finalPts[5]);
+  //  begPoints->GetPoint(5, finalPts[2]);
+
+  //  endPoints->GetPoint(0, finalPts[6]);
+  //  endPoints->GetPoint(1, finalPts[0]);
+  //  endPoints->GetPoint(2, finalPts[3]);
+  //  endPoints->GetPoint(3, finalPts[9]);
+
+  //  int pI[10];
+  //  for (int i=0; i<numPoints; i++)
+  //  {
+  //    pI[i] = allPoints->InsertNextPoint(finalPts[i]);
+  //    localPtIds->InsertNextTuple1(i);
+  //  }
+
+  //  vtkIdType face0[5] = {pI[6], pI[7], pI[4], pI[1], pI[0]};
+  //  vtkIdType face1[4] = {pI[9], pI[8], pI[7], pI[6]};
+  //  vtkIdType face2[5] = {pI[3], pI[2], pI[5], pI[8], pI[9]};
+  //  vtkIdType face3[4] = {pI[0], pI[1], pI[2], pI[3]};
+  //  vtkIdType face4[4] = {pI[6], pI[0], pI[3], pI[9]};
+
+  //  allCells->InsertNextCell(5, face0);
+  //  allCells->InsertNextCell(4, face1);
+  //  allCells->InsertNextCell(5, face2);
+  //  allCells->InsertNextCell(4, face3);
+  //  allCells->InsertNextCell(4, face4);
+
+  //  for (int i=0; i<4; i++)
+  //  {
+  //    groupIds->InsertNextTuple1(groupId);
+  //    patchIds->InsertNextTuple1(i);
+  //  }
+  //  groupIds->InsertNextTuple1(groupId);
+  //  patchIds->InsertNextTuple1(5);
+  //}
 
   return SV_OK;
 }
