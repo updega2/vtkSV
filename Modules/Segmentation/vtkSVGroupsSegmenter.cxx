@@ -45,6 +45,7 @@
 #include "vtkSVPointSetBoundaryMapper.h"
 #include "vtkSVMapInterpolator.h"
 #include "vtkSVLoftNURBSVolume.h"
+#include "vtkSVMUPFESNURBSWriter.h"
 
 #include "vtkAppendPolyData.h"
 #include "vtkAppendFilter.h"
@@ -3432,6 +3433,15 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     lofter->Update();
 
     loftAppender->AddInputData(lofter->GetOutput());
+
+    if (this->MergedCenterlines->GetNumberOfCells() == 1)
+    {
+      std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
+      vtkNew(vtkSVMUPFESNURBSWriter, writer);
+      writer->SetInputData(lofter->GetVolume());
+      writer->SetFileName(mfsname.c_str());
+      writer->Write();
+    }
   }
 
   loftAppender->Update();
