@@ -116,7 +116,10 @@ public:
     VERT_WEDGE,
     HORZ_WEDGE,
     SPEC_WEDGE,
-    TET,
+    TET_0,
+    TET_1,
+    TET_2,
+    TET_3,
     NOTHANDLED
   };
 
