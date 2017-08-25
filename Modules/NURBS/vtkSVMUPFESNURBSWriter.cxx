@@ -99,27 +99,27 @@ void vtkSVMUPFESNURBSWriter::WriteMUPFESFile(vtkSVNURBSVolume *volume)
   vtkDoubleArray *vKnots = volume->GetVKnotVector();
   vtkDoubleArray *wKnots = volume->GetWKnotVector();
   int nuk = uKnots->GetNumberOfTuples();
-  int nvk = uKnots->GetNumberOfTuples();
-  int nwk = uKnots->GetNumberOfTuples();
+  int nvk = vKnots->GetNumberOfTuples();
+  int nwk = wKnots->GetNumberOfTuples();
 
   vtkSVControlGrid *controlPoints = volume->GetControlPointGrid();
 
   int dims[3];
   controlPoints->GetDimensions(dims);
   int np = dims[0];
-  int mp = dims[0];
-  int lp = dims[0];
+  int mp = dims[1];
+  int lp = dims[2];
 
-  fprintf(fp,"knotV %d\n", nuk);
+  fprintf(fp,"#knotV %d\n", nuk);
   for (int i=0; i<nuk; i++)
     fprintf(fp,"%.6f\n", uKnots->GetTuple1(i));
-  fprintf(fp,"knotV %d\n", nvk);
+  fprintf(fp,"#knotV %d\n", nvk);
   for (int i=0; i<nvk; i++)
     fprintf(fp,"%.6f\n", vKnots->GetTuple1(i));
-  fprintf(fp,"knotV %d\n", nwk);
+  fprintf(fp,"#knotV %d\n", nwk);
   for (int i=0; i<nwk; i++)
     fprintf(fp,"%.6f\n", wKnots->GetTuple1(i));
-  fprintf(fp,"ctrlPts %d\n", np*mp*lp);
+  fprintf(fp,"#ctrlPts %d\n", np*mp*lp);
   for (int i=0;i<np; i++)
   {
     for (int j=0; j<mp; j++)

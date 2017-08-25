@@ -3210,8 +3210,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
   std::vector<vtkSmartPointer<vtkStructuredGrid> > paraHexVolumes(numGroups);
 
-  int w_div = 100*this->PolycubeUnitLength + 1;
-  int h_div = 100*this->PolycubeUnitLength + 1;
+  int w_div = 60*this->PolycubeUnitLength + 1;
+  int h_div = 60*this->PolycubeUnitLength + 1;
   int l_div = 0; // Determined by length of cube
 
   for (int i=0; i<numGroups; i++)
@@ -3567,7 +3567,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     }
   }
 
-  l_div = floor(l/this->PolycubeUnitLength);
+  l_div = floor(l/(10.0*this->PolycubeUnitLength));
   double w_dist = w/(w_div-1);
   double l_dist = l/(l_div-1);
   double h_dist = h/(h_div-1);

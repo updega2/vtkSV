@@ -568,8 +568,8 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     fprintf(stderr,"Error getting knots\n");
     return SV_ERROR;
   }
-  //fprintf(stdout,"Y knots\n");
-  //vtkSVNURBSUtils::PrintArray(vKnots);
+  //fprintf(stdout,"Z knots\n");
+  //vtkSVNURBSUtils::PrintArray(wKnots);
 
   //// Get derivatives in fomrat we need
   //vtkNew(vtkDoubleArray, DU0); DU0->DeepCopy(this->StartUDerivatives);
@@ -616,6 +616,12 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   this->Volume->SetKnotVector(vKnots, 1);
   this->Volume->SetKnotVector(wKnots, 2);
   this->Volume->SetControlPoints(cPoints);
+  //fprintf(stdout,"X knots\n");
+  //vtkSVNURBSUtils::PrintArray(uKnots);
+  //fprintf(stdout,"Y knots\n");
+  //vtkSVNURBSUtils::PrintArray(vKnots);
+  //fprintf(stdout,"Z knots\n");
+  //vtkSVNURBSUtils::PrintArray(wKnots);
 
   // Get the unstructuredgird representation from the NURBS Volume
   this->Volume->GenerateVolumeRepresentation(this->UnstructuredGridUSpacing, this->UnstructuredGridVSpacing, this->UnstructuredGridWSpacing);
