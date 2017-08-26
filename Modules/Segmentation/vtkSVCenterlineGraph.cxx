@@ -811,7 +811,6 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         int begType, begSplitType;
         gCell->GetBeginningType(begType, begSplitType);
 
-        fprintf(stdout,"AAQUUUUUUI %d\n", begType);
         if (begType >= TET_0 && begType <= TET_3)
         {
           // Rotate vec around line

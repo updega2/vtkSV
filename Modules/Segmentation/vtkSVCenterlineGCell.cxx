@@ -528,8 +528,27 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       if (this->BranchDir == LEFT || this->BranchDir == FRONT)
         vtkMath::MultiplyScalar(begVec, -1.0);
 
-      this->GetSquare(this->StartPt, vecs[1], begVec,
+      this->GetSquare(this->StartPt, this->Parent->RefDirs[1], begVec,
                       height, width, begPoints);
+
+      double pushVec[3];
+      vtkMath::Subtract(parent->EndPt, parent->StartPt, pushVec);
+      vtkMath::Normalize(pushVec);
+      vtkMath::MultiplyScalar(pushVec, width);
+      vtkNew(vtkPoints, myPoints);
+      myPoints->SetNumberOfPoints(8);
+      for (int i=0; i<4; i++)
+      {
+        double pt[3];
+        begPoints->GetPoint(i, pt);
+        myPoints->SetPoint(i, pt);
+
+        double newPt[3];
+        vtkMath::Add(pt, pushVec, newPt);
+        myPoints->SetPoint(i+4, newPt);
+
+      }
+      begPoints->SetPoint(2, myPoints->GetPoint(6));
 
     }
     else
@@ -699,100 +718,24 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                           height, width, endPoints);
         }
       }
+      double pushVec[3];
+      vtkMath::Subtract(this->EndPt, this->StartPt, pushVec);
+      vtkMath::Normalize(pushVec);
+      vtkMath::MultiplyScalar(pushVec, width);
       vtkNew(vtkPoints, myPoints);
       myPoints->SetNumberOfPoints(8);
-      double tempVec[3];
-      vtkMath::Subtract(this->StartPt, this->EndPt, tempVec);
-      vtkMath::Normalize(tempVec);
-      vtkMath::MultiplyScalar(tempVec, width/2.);
-
-      for (int i=0; i<4; i++)
-      {
-        double upPoint[3];
-        vtkMath::Add(endPoints->GetPoint(i), tempVec, upPoint);
-        myPoints->SetPoint(i, upPoint);
-      }
-
-      this->FormBifurcation(this->StartPt, this->EndPt,
-                            cDiver->EndPt, cDiver->StartPt,
-                            align->EndPt, align->StartPt,
-                            this->EndPt,
-                            width/2., vecs, triPts);
-
-      double newCrossVec[3];
-      vtkMath::Cross(vecs[2], vecs[1], newCrossVec);
-      vtkMath::Normalize(newCrossVec);
-
-      vtkMath::Normalize(tempVec);
-      vtkMath::MultiplyScalar(tempVec, -1.0);
-
-      for (int i=0; i<4; i++)
-      {
-
-        double upPoint[3];
-        myPoints->GetPoint(i, upPoint);
-
-        double insideVec[3];
-        vtkMath::Subtract(this->EndPt, upPoint, insideVec);
-        double myDot = vtkMath::Dot(insideVec, newCrossVec);
-        double copyVec[3], copyVec2[3];;
-        for (int j=0; j<3; j++)
-        {
-          copyVec[j] = newCrossVec[j];
-          copyVec2[j] = newCrossVec[j];
-        }
-
-        double planePoint[3];
-        vtkMath::MultiplyScalar(copyVec, myDot);
-        vtkMath::Add(upPoint, copyVec, planePoint);
-
-        double scaleDot = vtkMath::Dot(tempVec, copyVec2);
-        fprintf(stdout,"NORM OF tempVec should be one: %.6f\n", vtkMath::Norm(tempVec));
-        fprintf(stdout,"NORM OF copyVec2 should be one: %.6f\n", vtkMath::Norm(copyVec2));
-        fprintf(stdout,"WHAT IS THEIR DOT: %.6f\n", scaleDot);
-
-        double scaleVal = (1.0 / scaleDot) * myDot;
-        fprintf(stdout,"MY DOT: %.6f\n", scaleVal);
-
-        double dumbVec[3];
-        for (int j=0; j<3; j++)
-          dumbVec[j] = tempVec[j];
-        vtkMath::MultiplyScalar(dumbVec, scaleVal);
-
-        double newPoint[3];
-        vtkMath::Add(upPoint, dumbVec, newPoint);
-        fprintf(stdout,"NEW POINT: %.6f %.6f %.6f\n", newPoint[0], newPoint[1], newPoint[2]);
-
-        myPoints->SetPoint(i, newPoint);
-        myPoints->SetPoint(i+4, newPoint);
-      }
-
-      vtkMath::MultiplyScalar(tempVec, width/2.);
       for (int i=0; i<4; i++)
       {
         double pt[3];
-        myPoints->GetPoint(i+4, pt);
+        endPoints->GetPoint(i, pt);
+        myPoints->SetPoint(i, pt);
+
         double newPt[3];
-        vtkMath::Add(pt, tempVec, newPt);
+        vtkMath::Add(pt, pushVec, newPt);
         myPoints->SetPoint(i+4, newPt);
+
       }
-
-      vtkMath::MultiplyScalar(tempVec, -2.0*width);
-      vtkMath::MultiplyScalar(newCrossVec, -1.0*width/2.);
-      for (int i=0; i<4; i++)
-      {
-        double pt[3];
-        myPoints->GetPoint(i+4, pt);
-        double newPt[3];
-        vtkMath::Add(pt, tempVec, newPt);
-        myPoints->SetPoint(i, newPt);
-      }
-
-      vtkNew(vtkPolyData, dumbPoly);
-      dumbPoly->SetPoints(myPoints);
-
-      std::string dumstring = "/Users/adamupdegrove/Desktop/tmp/HEREWEARE.vtp";
-      vtkSVIOUtils::WriteVTPFile(dumstring, dumbPoly);
+      endPoints->SetPoint(2, myPoints->GetPoint(6));
 
     }
     else
