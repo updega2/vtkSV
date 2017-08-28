@@ -528,28 +528,38 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       if (this->BranchDir == LEFT || this->BranchDir == FRONT)
         vtkMath::MultiplyScalar(begVec, -1.0);
 
-      this->GetSquare(this->StartPt, this->Parent->RefDirs[1], begVec,
-                      height, width, begPoints);
+      if (this->BranchDir == BACK || this->BranchDir == FRONT)
+      {
+        vtkMath::MultiplyScalar(begVec, -1.0);
+        this->GetSquare(this->StartPt, begVec, vecs[1],
+                        height, width, begPoints);
+      }
+      else
+      {
+        this->GetSquare(this->StartPt, vecs[1], begVec,
+                        height, width, begPoints);
+      }
 
       double pushVec[3];
-      vtkMath::Subtract(parent->EndPt, parent->StartPt, pushVec);
+      vtkMath::Subtract(this->StartPt, this->EndPt, pushVec);
       vtkMath::Normalize(pushVec);
-      vtkMath::MultiplyScalar(pushVec, width);
-      vtkNew(vtkPoints, myPoints);
-      myPoints->SetNumberOfPoints(8);
+      vtkMath::MultiplyScalar(pushVec, width/2.);
+
       for (int i=0; i<4; i++)
       {
         double pt[3];
         begPoints->GetPoint(i, pt);
-        myPoints->SetPoint(i, pt);
 
         double newPt[3];
-        vtkMath::Add(pt, pushVec, newPt);
-        myPoints->SetPoint(i+4, newPt);
+        if (i == 2 && this->BranchDir == RIGHT)
+          vtkMath::Add(pt, pushVec, newPt);
+        else if (i == 0 && this->BranchDir == BACK)
+          vtkMath::Add(pt, pushVec, newPt);
+        else
+          vtkMath::Subtract(pt, pushVec, newPt);
 
+        begPoints->SetPoint(i, newPt);
       }
-      begPoints->SetPoint(2, myPoints->GetPoint(6));
-
     }
     else
     {
@@ -721,21 +731,21 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       double pushVec[3];
       vtkMath::Subtract(this->EndPt, this->StartPt, pushVec);
       vtkMath::Normalize(pushVec);
-      vtkMath::MultiplyScalar(pushVec, width);
-      vtkNew(vtkPoints, myPoints);
-      myPoints->SetNumberOfPoints(8);
+      vtkMath::MultiplyScalar(pushVec, width/2.);
+
       for (int i=0; i<4; i++)
       {
         double pt[3];
         endPoints->GetPoint(i, pt);
-        myPoints->SetPoint(i, pt);
 
         double newPt[3];
-        vtkMath::Add(pt, pushVec, newPt);
-        myPoints->SetPoint(i+4, newPt);
+        if (i == 2)
+          vtkMath::Add(pt, pushVec, newPt);
+        else
+          vtkMath::Subtract(pt, pushVec, newPt);
 
+        endPoints->SetPoint(i, newPt);
       }
-      endPoints->SetPoint(2, myPoints->GetPoint(6));
 
     }
     else
@@ -823,7 +833,12 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
 
   // END
   if (endType == NONE)
-    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  {
+    if (begType >= TET_0 && endType <= TET_3)
+      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+    else
+      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  }
   else if (endType == VERT_WEDGE)
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   else if (endType == HORZ_WEDGE)
@@ -850,13 +865,18 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (begType >= TET_0 && begType <= TET_3)
   {
-    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
 
   // END
   if (endType == NONE)
-    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  {
+    if (begType >= TET_0 && endType <= TET_3)
+      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    else
+      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  }
   else if (endType == VERT_WEDGE)
   {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
@@ -876,7 +896,12 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
 
   // END
   if (endType == NONE)
-    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  {
+    if (begType >= TET_0 && endType <= TET_3)
+      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+    else
+      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  }
   else if (endType == VERT_WEDGE)
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   else if (endType == HORZ_WEDGE)
@@ -903,13 +928,18 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (begType >= TET_0 && begType <= TET_3)
   {
-    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
 
   // END
   if (endType == NONE)
-    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  {
+    if (begType >= TET_0 && endType <= TET_3)
+      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+    else
+      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  }
   else if (endType == VERT_WEDGE)
   {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));

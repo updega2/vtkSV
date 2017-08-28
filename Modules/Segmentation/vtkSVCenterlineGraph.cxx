@@ -815,9 +815,9 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         {
           // Rotate vec around line
           if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-            this->RotateVecAroundLine(rotateVec, 135.0, crossVec, lineDir);
+            this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
           else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-            this->RotateVecAroundLine(rotateVec, -135.0, crossVec, lineDir);
+            this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
         }
         else
         {
