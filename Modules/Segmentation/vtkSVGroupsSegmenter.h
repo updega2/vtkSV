@@ -232,9 +232,10 @@ protected:
                       std::vector<Region> endRegions,
                       std::vector<int> &wholePatchFix);
   int CheckGroups();
-  int FixGroups(vtkPolyData *pd, std::string arrayName,
-                std::vector<Region> allRegions);
+  int FixPlanarTrifurcation(vtkPolyData *pd, std::string arrayName,
+                            const Region region);
   int FixGroupsWithPolycube();
+  int GetConnectedEdges(const Region region, std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);

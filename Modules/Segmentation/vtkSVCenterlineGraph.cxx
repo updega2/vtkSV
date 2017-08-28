@@ -813,11 +813,31 @@ int vtkSVCenterlineGraph::GetGraphPoints()
 
         if (begType >= TET_0 && begType <= TET_3)
         {
-          // Rotate vec around line
-          if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-            this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-          else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-            this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
+          if (begSplitType == BI)
+          {
+            // Rotate vec around line
+            if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+              this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
+            else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
+              this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
+          }
+          else if (begSplitType == TRI)
+          {
+            if (gCell->Id == parent->Children[parent->AligningChild]->Id)
+            {
+              // Rotate vec around line
+              this->RotateVecAroundLine(rotateVec, 180.0, crossVec, lineDir);
+            }
+            else
+            {
+              // Rotate vec around line
+              if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
+                this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
+              else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
+                this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
+            }
+          }
+
         }
         else
         {
