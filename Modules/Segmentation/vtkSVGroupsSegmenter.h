@@ -167,11 +167,8 @@ public:
   static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
                                 std::vector<Region> allRegions);
 
-  static int SplitUpBoundaries(vtkPolyData *pd, std::string arrayName,
-                               std::vector<Region> allRegions);
-
   static int SplitBoundary(vtkPolyData *pd, std::vector<int> boundary,
-                           int numDivs, int groupId);
+                           int numDivs, int groupId, std::vector<int> &newSlicePoints);
 
   static int MatchBoundaries(vtkPolyData *pd, std::string checkArrayName,
                              std::string fitArrayName,
@@ -221,8 +218,10 @@ protected:
 
   int MergeCenterlines();
   int GetPatches();
+  int MatchSurfaceToPolycube();
   int FixEndPatches(vtkPolyData *pd);
-  int MatchEndPatches(vtkPolyData *pd);
+  int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *fullPd,
+                      vtkPolyData *polyBranchPd, vtkPolyData *fullPolyPd);
   int CheckEndPatches(vtkPolyData *pd,
                       std::vector<Region> endRegions,
                       std::vector<int> &individualFix,
@@ -232,8 +231,12 @@ protected:
                       std::vector<Region> endRegions,
                       std::vector<int> &wholePatchFix);
   int CheckGroups();
-  int FixPlanarTrifurcation(vtkPolyData *pd, std::string arrayName,
-                            const Region region);
+  int FixPlanarTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
+                            const Region region, std::vector<int> allEdges,
+                            std::vector<int> badEdges);
+  int FixPerpenTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
+                            const Region region, std::vector<int> allEdges,
+                            std::vector<int> badEdges);
   int FixGroupsWithPolycube();
   int GetConnectedEdges(const Region region, std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
@@ -287,6 +290,7 @@ protected:
   vtkPolyData *GraphPd;
   vtkPolyData *Centerlines;
   vtkPolyData *MergedCenterlines;
+  vtkPolyData *PolycubePd;
   vtkIdList *CenterlineGroupIds;
 
   int ClipAllCenterlineGroupIds;
@@ -297,7 +301,6 @@ protected:
   double PolycubeUnitLength;
 
   vtkSVCenterlineGraph *CenterlineGraph;
-  vtkUnstructuredGrid *Polycube;
 
 private:
   vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.
