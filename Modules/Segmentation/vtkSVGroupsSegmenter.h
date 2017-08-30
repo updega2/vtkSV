@@ -220,8 +220,7 @@ protected:
   int GetPatches();
   int MatchSurfaceToPolycube();
   int FixEndPatches(vtkPolyData *pd);
-  int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *fullPd,
-                      vtkPolyData *polyBranchPd, vtkPolyData *fullPolyPd);
+  int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
   int CheckEndPatches(vtkPolyData *pd,
                       std::vector<Region> endRegions,
                       std::vector<int> &individualFix,
