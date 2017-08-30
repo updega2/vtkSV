@@ -4921,37 +4921,6 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *fu
       vtkNew(vtkIdList, pointGroupValues);
       vtkSVGeneralUtils::GetPointCellsValues(fullPd, this->GroupIdsArrayName, fullPtId, pointGroupValues);
 
-      int pointFound = 0;
-      for (int l=0; l<polyBranchPd->GetNumberOfPoints(); l++)
-      {
-        vtkNew(vtkIdList, polyPatchValues);
-        vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", l, polyPatchValues);
-
-        int fullPolyPtId = polycubeBranchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(l);
-        vtkNew(vtkIdList, polyGroupValues);
-        vtkSVGeneralUtils::GetPointCellsValues(fullPolyPd, this->GroupIdsArrayName, fullPolyPtId, polyGroupValues);
-
-        fprintf(stdout,"POLY CORNER POINT %d GROUPS ARE ", l);
-        for (int m=0; m<polyPatchValues->GetNumberOfIds(); m++)
-          fprintf(stdout,"%d ", polyPatchValues->GetId(m));
-        fprintf(stdout,"\n");
-        fprintf(stdout,"\n");
-
-        vtkNew(vtkIdList, intersectList);
-        intersectList->DeepCopy(polyPatchValues);
-
-        intersectList->IntersectWith(pointPatchValues);
-
-        if (intersectList->GetNumberOfIds() == pointPatchValues->GetNumberOfIds() &&
-            intersectList->GetNumberOfIds() == polyPatchValues->GetNumberOfIds())
-        {
-          fprintf(stdout,"WE FOUND POINT IN POLYCUBE THAT MATCHES THIS POINT\n");
-          pointFound = 1;
-        }
-      }
-      if (!pointFound)
-        fprintf(stderr, "NOOOOOOOOOOOOOOOOOOOOOOOOOOOOO!\n");
-
       if (pointPatchValues->GetNumberOfIds() == 2 && pointUsed[cornerPtId] == 0)
       {
         pointUsed[cornerPtId] = 1;
@@ -5069,25 +5038,46 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *fu
   for (int j=0; j<interiorCornerPoints.size(); j++)
   {
     int cornerPtId = interiorCornerPoints[j];
-    vtkNew(vtkIdList, pointCellsValues);
-    vtkSVGeneralUtils::GetPointCellsValues(branchPd, "PatchIds", cornerPtId, pointCellsValues);
+    vtkNew(vtkIdList, pointPatchValues);
+    vtkSVGeneralUtils::GetPointCellsValues(branchPd, "PatchIds", cornerPtId, pointPatchValues);
+
+    int fullPtId = branchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(cornerPtId);
+    vtkNew(vtkIdList, pointGroupValues);
+    vtkSVGeneralUtils::GetPointCellsValues(fullPd, this->GroupIdsArrayName, fullPtId, pointGroupValues);
 
     int matchPointId = -1;
-    for (int l=0; l<polycubePd->GetNumberOfPoints(); l++)
+    for (int l=0; l<polyBranchPd->GetNumberOfPoints(); l++)
     {
-      vtkNew(vtkIdList, polyCellsValues);
-      vtkSVGeneralUtils::GetPointCellsValues(polycubePd, "PatchIds", l, polyCellsValues);
+      vtkNew(vtkIdList, polyPatchValues);
+      vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", l, polyPatchValues);
 
-      vtkNew(vtkIdList, intersectList);
-      intersectList->DeepCopy(polyCellsValues);
+      int fullPolyPtId = polyBranchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(l);
+      vtkNew(vtkIdList, polyGroupValues);
+      vtkSVGeneralUtils::GetPointCellsValues(fullPolyPd, this->GroupIdsArrayName, fullPolyPtId, polyGroupValues);
 
-      intersectList->IntersectWith(pointCellsValues);
+      for (int m=0; m<polyPatchValues->GetNumberOfIds(); m++)
+      {
+        int val = polyPatchValues->GetId(m);
+        polyPatchValues->SetId(m, val%6);
+      }
 
-      if (intersectList->GetNumberOfIds() == pointCellsValues->GetNumberOfIds() &&
-          intersectList->GetNumberOfIds() == polyCellsValues->GetNumberOfIds())
+      vtkNew(vtkIdList, checkList0);
+      checkList0->DeepCopy(polyPatchValues);
+
+      checkList0->IntersectWith(pointPatchValues);
+
+      vtkNew(vtkIdList, checkList1);
+      checkList1->DeepCopy(polyGroupValues);
+
+      checkList1->IntersectWith(pointGroupValues);
+
+      if (checkList0->GetNumberOfIds() == pointPatchValues->GetNumberOfIds() &&
+          checkList0->GetNumberOfIds() == polyPatchValues->GetNumberOfIds() &&
+          checkList1->GetNumberOfIds() == pointGroupValues->GetNumberOfIds() &&
+          checkList1->GetNumberOfIds() == polyGroupValues->GetNumberOfIds())
       {
         fprintf(stdout,"WE FOUND POINT IN POLYCUBE THAT MATCHES THIS POINT\n");
-        matchPointId = polycubePd->GetPointData()->GetArray("SlicePoints")->GetTuple1(l);
+        matchPointId = polyBranchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(l);
       }
     }
     if (matchPointId == -1)
