@@ -6487,3 +6487,129 @@ int vtkSVGroupsSegmenter::SplitBoundary(vtkPolyData *pd,
 
   return SV_OK;
 }
+
+//// ----------------------
+//// SplitCellsAroundPoint
+//// ----------------------
+//int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId, vtkIdList *deleteCellIds)
+//{
+//  vtkNew(vtkIdList, pointCells);
+//  pd->GetPointCells(ptId, pointCells);
+//
+//  int numSplitCells = pointCells->GetNumberOfIds();
+//
+//  vtkNew(vtkPointData, newPointData);
+//  vtkNew(vtkCellData, newCellData);
+//  newPointData->CopyAllocate(pd->GetPointData(), pd->GetNumberOfPoints() + numSplitCells);
+//  newPointData->CopyAllocate(pd->GetCellData(), pd->GetNumberOfCells + (4*numSplitCells));
+//
+//  // Copy current data
+//  for (int i=0; i<pd->GetNumberOfPoints(); i++)
+//    newPointData->CopyData(pd->GetPointData(), i, i);
+//  for (int i=0; i<pd->GetNumberOfCells(); i++)
+//    newCellData->CopyData(pd->GetCellData(), i, i);
+//
+//  for (int i=0; i<numSplitCells; i++)
+//  {
+//    int cellId = pointCells->GetId(i);
+//
+//    int inList = deleteCellIds->InsertUniqueId(cellId);
+//
+//    if (inList == -1)
+//    {
+//      vtkIdType npts, *pts;
+//      pd->GetCellPoints(cellId, npts, pts);
+//      for (int j=0; j<npts; j++)
+//      {
+//        int ptId0 = npts[j];
+//        int ptId1 = npts[(j+1)%npts];
+//
+//        if (ptId0 != ptId && ptId1 != ptId)
+//        {
+//          vtkNew(vtkIdList, newCellIds);
+//          int newPointId;
+//          this->SplitEdge(pd, cellId, ptId0, ptId1, newCellIds, newPointId);
+//
+//          newPointData->CopyData(pd->GetPointData(), ptId0, newPointId);
+//          for (int k=0; k<newCellIds->GetNumberOfIds(); k++)
+//          {
+//            newCellData->CopyData(pd->GetCellData(), cellId, newCellId);
+//          }
+//        }
+//      }
+//    }
+//  }
+//
+//  pd->GetPointData()->PassData(newPointData);
+//  pd->GetCellData()->PassData(newCellData);
+//}
+//
+//// ----------------------
+//// SplitEdge
+//// ----------------------
+//// \brief Does not remove the previous cell, must delete on own for point/cell data
+//// reasons
+//int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
+//                                    vtkIdList *newCellIds, int &newPointId)
+//{
+//  vtkNew(vtkIdList, edgeCells);
+//  if (cellId != -1)
+//    edgeCells->InsertNextId(cellId);
+//
+//  pd->GetCellEdgeNeighbors(cellId, ptId0, ptId1, edgeCells);
+//
+//  newCellIds->Reset();
+//  int pointAdded = 0;
+//  for (int i=0; i<edgeCells->GetNumberOfIds(); i++)
+//  {
+//    int splitCellId = edgeCells->GetId(i);
+//
+//    vtkIdType npts, *pts;
+//    pd->GetCellPoints(splitCellId, npts, pts);
+//
+//    for (int j=0; j<npts; j++)
+//    {
+//      int splitPtId0 = pts[j];
+//      int splitPtId1 = pts[(j+1)%npts];
+//
+//      if ((splitPtId0 == ptId0 && splitPtId1 == ptId1) ||
+//          (splitPtId1 == ptId0 && splitPtId0 == ptId1))
+//      {
+//        int thirdPtId = pts[(j+2)%npts];
+//
+//        double pt0[3], pt1[3], newPt[3];
+//        pd->GetPoint(splitPtId0, pt0);
+//        pd->GetPoint(splitPtId1, pt1);
+//
+//        vtkMath::Add(pt0, pt1, newPt);
+//        vtkMath::MultiplyScalar(newPt, 1./2);
+//
+//        if (!pointAdded)
+//        {
+//          newPointId = pd->GetPoints()->InsertNextPoint(newPt);
+//          pointAdded = 1;
+//        }
+//
+//        vtkNew(vtkIdList, newCell0);
+//        newCell0->SetNumberOfIds(3);
+//        newCell0->SetId(0, thirdPtId);
+//        newCell0->SetId(1, splitPtId0);
+//        newCell0->SetId(2, newPointId);
+//
+//        vtkNew(vtkIdList, newCell1);
+//        newCell1->SetNumberOfIds(3);
+//        newCell1->SetId(0, thirdPtId);
+//        newCell1->SetId(1, newPointId);
+//        newCell1->SetId(2, splitPtId1);
+//
+//        newCellIds->InsertNextId(pd->GetNumberOfCells());
+//        pd->InsertNextCell(VTK_TRIANGLE, newCell0);
+//
+//        newCellIds->InsertNextId(pd->GetNumberOfCells());
+//        pd->InsertNextCell(VTK_TRIANGLE, newCell1);
+//      }
+//    }
+//  }
+//
+//  return SV_OK;
+//}
