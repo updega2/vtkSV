@@ -219,6 +219,19 @@ protected:
   int MergeCenterlines();
   int GetPatches();
   int MatchSurfaceToPolycube();
+  int CheckSlicePoints();
+  int SplitCellsAroundPoint(vtkPolyData *pd, int ptId,
+                            std::vector<std::vector<double> > &newPoints,
+                            std::vector<int> &copyDataPointIds,
+                            std::vector<std::vector<int> > &newCells,
+                            std::vector<int> &copyDataCellIds,
+                            vtkIdList *deleteCellIds);
+  int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
+                            std::vector<std::vector<double> > &newPoints,
+                            std::vector<int> &copyDataPointIds,
+                            std::vector<std::vector<int> > &newCells,
+                            std::vector<int> &copyDataCellIds,
+                            vtkIdList *deleteCellIds);
   int FixEndPatches(vtkPolyData *pd);
   int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
   int CheckEndPatches(vtkPolyData *pd,
