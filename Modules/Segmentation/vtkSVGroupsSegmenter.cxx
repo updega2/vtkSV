@@ -3589,9 +3589,9 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     }
   }
 
-  if (f0npts==4)
+  if (f0npts == 4)
   {
-    if (f1npts==5)
+    if (f1npts == 5)
     {
       double pt4[3];
       polycubePd->GetPoint(f1PtIds[1], pt4);
@@ -3637,7 +3637,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         this->PushStructuredGridZAxis(paraHexMesh, topLeftPt, topRightPt, topMidPt0, topMidPt1, 0);
       }
     }
-    else if (f1npts==6)
+    else if (f1npts == 6)
     {
       double topLeftPt[3];
       polycubePd->GetPoint(f1PtIds[1], topLeftPt);
@@ -3668,9 +3668,9 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
       this->PushStructuredGridZAxis(paraHexMesh, bottomLeftPt, bottomRightPt, bottomMidPt0, bottomMidPt1, 1);
     }
   }
-  else if (f0npts==5)
+  else if (f0npts == 5)
   {
-    if (f1npts==4)
+    if (f1npts == 4)
     {
       double sideBottomPt[3];
       polycubePd->GetPoint(f2PtIds[3], sideBottomPt);
@@ -3686,7 +3686,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
       this->PushStructuredGridXAxis(paraHexMesh, sideBottomPt, sideTopPt, sideMidPt0, sideMidPt1, 0);
     }
-    else if (f1npts==5)
+    else if (f1npts == 5)
     {
       double pt4[3];
       polycubePd->GetPoint(f1PtIds[1], pt4);
@@ -3761,9 +3761,9 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
       }
     }
   }
-  else if (f0npts==6)
+  else if (f0npts == 6)
   {
-    if (f1npts==4)
+    if (f1npts == 4)
     {
       double sideBottomPt0[3];
       polycubePd->GetPoint(f2PtIds[3], sideBottomPt0);

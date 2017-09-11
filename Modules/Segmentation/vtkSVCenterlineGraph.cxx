@@ -249,7 +249,6 @@ int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, v
 
   vtkNew(vtkPoints, allPoints);
   vtkNew(vtkCellArray, allCells);
-  vtkNew(vtkIntArray, localPtIds); localPtIds->SetName("LocalPointIds");
   vtkNew(vtkIntArray, groupIds); groupIds->SetName("GroupIds");
   vtkNew(vtkIntArray, patchIds); patchIds->SetName("PatchIds");
 
@@ -259,7 +258,7 @@ int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, v
     vtkSVCenterlineGCell *gCell = this->GetCell(i);
 
     gCell->GetCubePoints(height, width, allPoints, allCells,
-                         localPtIds, groupIds, patchIds);
+                         groupIds, patchIds);
 
   }
 
@@ -288,7 +287,6 @@ int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, v
     patchIds->SetTuple1(i, newVal);
   }
 
-  outUg->GetPointData()->AddArray(localPtIds);
   outUg->GetCellData()->AddArray(groupIds);
   outUg->GetCellData()->AddArray(patchIds);
 

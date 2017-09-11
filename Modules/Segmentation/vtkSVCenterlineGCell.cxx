@@ -508,7 +508,6 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
                                         const double width,
                                         vtkPoints *allPoints,
                                         vtkCellArray *allCells,
-                                        vtkIntArray *localPtIds,
                                         vtkIntArray *groupIds,
                                         vtkIntArray *patchIds)
 {
@@ -760,14 +759,6 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
         begPoints->InsertNextPoint(midPt1);
 
         begPoints->InsertNextPoint(midPt0);
-
-
-        vtkNew(vtkPolyData, dummy);
-        dummy->SetPoints(begPoints);
-        std::string dumfile = "/Users/adamupdegrove/Desktop/tmp/DUMONE.vtp";
-
-        vtkSVIOUtils::WriteVTPFile(dumfile, dummy);
-
       }
       else
       {
@@ -1087,17 +1078,27 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   if (endType == NONE)
   {
     if (begType >= TET_0 && endType <= TET_3)
+    {
       facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
       //facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+    }
     else
+    {
       facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+    }
   }
   else if (endType == VERT_WEDGE)
+  {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  }
   else if (endType == HORZ_WEDGE)
+  {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  }
   else if (endType >= TET_0 && endType <= TET_3)
+  {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  }
 
   // BEG
   if (begType == NONE)
@@ -1122,7 +1123,9 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     //facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
     if (begSplitType == TRI && parent->DivergingChild == myLoc)
+    {
       facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
+    }
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
 
@@ -1130,10 +1133,14 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   if (endType == NONE)
   {
     if (begType >= TET_0 && endType <= TET_3)
+    {
       facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
       //facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    }
     else
+    {
       facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+    }
   }
   else if (endType == VERT_WEDGE)
   {
@@ -1141,7 +1148,9 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
   }
   else if (endType == HORZ_WEDGE)
+  {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  }
   else if (endType >= TET_0 && endType <= TET_3)
   {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
@@ -1156,17 +1165,27 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   if (endType == NONE)
   {
     if (begType >= TET_0 && endType <= TET_3)
+    {
       facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
       //facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+    }
     else
+    {
       facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+    }
   }
   else if (endType == VERT_WEDGE)
+  {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  }
   else if (endType == HORZ_WEDGE)
+  {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
+  }
   else if (endType >= TET_0 && endType <= TET_3)
+  {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  }
 
   // BEG
   if (begType == NONE)
@@ -1191,7 +1210,9 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     //facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
     if (begSplitType == TRI && parent->DivergingChild == myLoc)
+    {
       facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
+    }
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
 
@@ -1199,10 +1220,14 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   if (endType == NONE)
   {
     if (begType >= TET_0 && endType <= TET_3)
+    {
       facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
       //facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+    }
     else
+    {
       facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+    }
   }
   else if (endType == VERT_WEDGE)
   {
@@ -1210,7 +1235,9 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(4)));
   }
   else if (endType == HORZ_WEDGE)
+  {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  }
   else if (endType >= TET_0 && endType <= TET_3)
   {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
@@ -1399,8 +1426,6 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // -----------------------------------------------------------------------
   int numPoints = facesPtIds[3].size() + facesPtIds[1].size() + endInterPtIds.size() + begInterPtIds.size();
   fprintf(stdout,"NUMBER OF POINTS: %d\n", numPoints);
-  for (int i=0; i<numPoints; i++)
-    localPtIds->InsertNextTuple1(i);
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------

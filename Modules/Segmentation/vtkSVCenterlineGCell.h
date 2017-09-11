@@ -64,8 +64,7 @@ public:
   int GetTrifurcationType(int &type);
   int GetCubePoints(const double height, const double width,
                     vtkPoints *allPoints, vtkCellArray *allCells,
-                    vtkIntArray *localPtIds, vtkIntArray *groupIds,
-                    vtkIntArray *patchIds);
+                    vtkIntArray *groupIds, vtkIntArray *patchIds);
   int GetBeginningType(int &beginningType, int &splitType);
   int GetEndType(int &endType, int &splitType);
   int GetSquare(const double startPt[3], const double vec0[3],
