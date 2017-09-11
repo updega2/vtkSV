@@ -3384,54 +3384,54 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
   vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
 
-  vtkNew(vtkAppendFilter, loftAppender);
-  for (int i=0; i<numGroups; i++)
-  {
-    int groupId = groupIds->GetId(i);
+  //vtkNew(vtkAppendFilter, loftAppender);
+  //for (int i=0; i<numGroups; i++)
+  //{
+  //  int groupId = groupIds->GetId(i);
 
-    vtkNew(vtkUnstructuredGrid, mappedBranch);
-    vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
+  //  vtkNew(vtkUnstructuredGrid, mappedBranch);
+  //  vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
 
-    vtkNew(vtkStructuredGrid, realHexMesh);
-    if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_div, l_div, h_div) != SV_OK)
-    {
-      fprintf(stderr,"Couldn't do the dirt\n");
-      return SV_ERROR;
-    }
+  //  vtkNew(vtkStructuredGrid, realHexMesh);
+  //  if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_div, l_div, h_div) != SV_OK)
+  //  {
+  //    fprintf(stderr,"Couldn't do the dirt\n");
+  //    return SV_ERROR;
+  //  }
 
-    // Set up the volume
-    vtkNew(vtkUnstructuredGrid, emptyGrid);
-    vtkNew(vtkSVLoftNURBSVolume, lofter);
-    lofter->SetInputData(emptyGrid);
-    lofter->SetInputGrid(realHexMesh);
-    lofter->SetUDegree(2);
-    lofter->SetVDegree(2);
-    lofter->SetWDegree(2);
-    lofter->SetUnstructuredGridUSpacing(1./w_div);
-    lofter->SetUnstructuredGridVSpacing(1./l_div);
-    lofter->SetUnstructuredGridWSpacing(1./h_div);
-    lofter->SetUKnotSpanType("average");
-    lofter->SetUParametricSpanType("chord");
-    lofter->SetVKnotSpanType("average");
-    lofter->SetVParametricSpanType("chord");
-    lofter->SetWKnotSpanType("average");
-    lofter->SetWParametricSpanType("chord");
-    lofter->Update();
+  //  // Set up the volume
+  //  vtkNew(vtkUnstructuredGrid, emptyGrid);
+  //  vtkNew(vtkSVLoftNURBSVolume, lofter);
+  //  lofter->SetInputData(emptyGrid);
+  //  lofter->SetInputGrid(realHexMesh);
+  //  lofter->SetUDegree(2);
+  //  lofter->SetVDegree(2);
+  //  lofter->SetWDegree(2);
+  //  lofter->SetUnstructuredGridUSpacing(1./w_div);
+  //  lofter->SetUnstructuredGridVSpacing(1./l_div);
+  //  lofter->SetUnstructuredGridWSpacing(1./h_div);
+  //  lofter->SetUKnotSpanType("average");
+  //  lofter->SetUParametricSpanType("chord");
+  //  lofter->SetVKnotSpanType("average");
+  //  lofter->SetVParametricSpanType("chord");
+  //  lofter->SetWKnotSpanType("average");
+  //  lofter->SetWParametricSpanType("chord");
+  //  lofter->Update();
 
-    loftAppender->AddInputData(lofter->GetOutput());
+  //  loftAppender->AddInputData(lofter->GetOutput());
 
-    if (this->MergedCenterlines->GetNumberOfCells() == 1)
-    {
-      std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
-      vtkNew(vtkSVMUPFESNURBSWriter, writer);
-      writer->SetInputData(lofter->GetVolume());
-      writer->SetFileName(mfsname.c_str());
-      writer->Write();
-    }
-  }
+  //  if (this->MergedCenterlines->GetNumberOfCells() == 1)
+  //  {
+  //    std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
+  //    vtkNew(vtkSVMUPFESNURBSWriter, writer);
+  //    writer->SetInputData(lofter->GetVolume());
+  //    writer->SetFileName(mfsname.c_str());
+  //    writer->Write();
+  //  }
+  //}
 
-  loftAppender->Update();
-  loftedVolume->DeepCopy(loftAppender->GetOutput());
+  //loftAppender->Update();
+  //loftedVolume->DeepCopy(loftAppender->GetOutput());
 
   return SV_OK;
 }
@@ -6502,15 +6502,7 @@ int vtkSVGroupsSegmenter::CheckSlicePoints()
 
   int numPoints = this->PolycubePd->GetNumberOfPoints();
   int numCells = this->PolycubePd->GetNumberOfPoints();
-  fprintf(stdout,"TOT Cells: %d\n", this->WorkPd->GetNumberOfCells());
 
-  vtkNew(vtkIdList, deleteCellIds);
-  std::vector<std::vector<int> > newCells;
-  std::vector<std::vector<double> > newPoints;
-  std::vector<int> copyDataPointIds;
-  std::vector<int> copyDataCellIds;
-
-  int splitCells = 0;
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, pointCellsValues);
@@ -6533,84 +6525,10 @@ int vtkSVGroupsSegmenter::CheckSlicePoints()
       if (numVals >= (1./2)*numCells)
       {
         // Lets split these cells
-        this->SplitCellsAroundPoint(this->WorkPd, slicePointId, newPoints,
-          copyDataPointIds, newCells, copyDataCellIds, deleteCellIds);
-        splitCells = 1;
+        this->SplitCellsAroundPoint(this->WorkPd, slicePointId);
       }
     }
   }
-
-  if (splitCells)
-  {
-    vtkNew(vtkPolyData, dataCopy);
-    dataCopy->DeepCopy(this->WorkPd);
-
-    int numPoints = this->WorkPd->GetNumberOfPoints();
-    int numCells  = this->WorkPd->GetNumberOfCells();
-
-    vtkNew(vtkPointData, newPointData);
-    vtkNew(vtkCellData, newCellData);
-    newPointData->CopyAllocate(dataCopy->GetPointData(), numPoints + newPoints.size());
-    newCellData->CopyAllocate(dataCopy->GetCellData(), numCells + newCells.size());
-
-    // Copy current data
-    for (int i=0; i<numPoints; i++)
-      newPointData->CopyData(dataCopy->GetPointData(), i, i);
-    for (int i=0; i<numCells; i++)
-      newCellData->CopyData(dataCopy->GetCellData(), i, i);
-
-    for (int i=0; i<newPoints.size(); i++)
-    {
-      int newPointId = this->WorkPd->GetPoints()->InsertNextPoint(newPoints[i][0], newPoints[i][1], newPoints[i][2]);
-      newPointData->CopyData(dataCopy->GetPointData(), copyDataPointIds[i], numPoints+i);
-    }
-
-    for (int i=0; i<newCells.size(); i++)
-    {
-      vtkNew(vtkIdList, addCell);
-      addCell->SetNumberOfIds(3);
-      for (int j=0; j<newCells[i].size(); j++)
-        addCell->SetId(j, newCells[i][j]);
-      int newCellId = this->WorkPd->InsertNextCell(VTK_TRIANGLE, addCell);
-      newCellData->CopyData(dataCopy->GetCellData(), copyDataCellIds[i], numCells+i);
-    }
-
-    this->WorkPd->GetPointData()->PassData(newPointData);
-    this->WorkPd->GetCellData()->PassData(newCellData);
-
-    this->WorkPd->BuildLinks();
-
-    vtkNew(vtkPolyData, tmpPoly);
-    tmpPoly->DeepCopy(this->WorkPd);
-    tmpPoly->BuildLinks();
-
-    for (int i=0; i<deleteCellIds->GetNumberOfIds(); i++)
-    {
-      int deleteCellId = deleteCellIds->GetId(i);
-      tmpPoly->DeleteCell(deleteCellId);
-      fprintf(stdout,"DELETING CELL: %d\n", deleteCellId);
-    }
-
-    tmpPoly->RemoveDeletedCells();
-    tmpPoly->BuildLinks();
-
-    std::string tester = "/Users/adamupdegrove/Desktop/tmp/NOWSPLIT.vtp";
-    vtkSVIOUtils::WriteVTPFile(tester, tmpPoly);
-
-    vtkNew(vtkPolyDataNormals, normaler);
-    normaler->SetInputData(tmpPoly);
-    normaler->ComputePointNormalsOff();
-    normaler->ComputeCellNormalsOn();
-    normaler->SplittingOff();
-    normaler->Update();
-
-    this->WorkPd->DeepCopy(normaler->GetOutput());
-    this->WorkPd->BuildLinks();
-
-  }
-
-  std::string tester = "/Users/adamupdegrove/Desktop/tmp/NOWSPLIT.vtp";
-  vtkSVIOUtils::WriteVTPFile(tester, this->WorkPd);
 
   return SV_OK;
 }
@@ -6618,12 +6536,7 @@ int vtkSVGroupsSegmenter::CheckSlicePoints()
 // ----------------------
 // SplitCellsAroundPoint
 // ----------------------
-int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId,
-                                                std::vector<std::vector<double> > &newPoints,
-                                                std::vector<int> &copyDataPointIds,
-                                                std::vector<std::vector<int> > &newCells,
-                                                std::vector<int> &copyDataCellIds,
-                                                vtkIdList *deleteCellIds)
+int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId)
 {
   vtkNew(vtkIdList, pointCells);
   pd->GetPointCells(ptId, pointCells);
@@ -6643,8 +6556,7 @@ int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId,
 
       if (ptId0 != ptId && ptId1 != ptId)
       {
-        this->SplitEdge(pd, cellId, ptId0, ptId1, newPoints, copyDataPointIds,
-                        newCells, copyDataCellIds, deleteCellIds);
+        this->SplitEdge(pd, cellId, ptId0, ptId1);
       }
     }
   }
@@ -6656,12 +6568,7 @@ int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId,
 // ----------------------
 // \brief Does not remove the previous cell, must delete on own for point/cell data
 // reasons
-int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
-                                    std::vector<std::vector<double> > &newPoints,
-                                    std::vector<int> &copyDataPointIds,
-                                    std::vector<std::vector<int> > &newCells,
-                                    std::vector<int> &copyDataCellIds,
-                                    vtkIdList *deleteCellIds)
+int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1)
 
 {
   vtkNew(vtkIdList, edgeCells);
@@ -6671,61 +6578,77 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
     edgeCells->InsertNextId(cellId);
 
   int pointAdded = 0;
-  int newPointId = newPoints.size() + pd->GetNumberOfPoints();
+  int newPointId = -1;
   for (int i=0; i<edgeCells->GetNumberOfIds(); i++)
   {
     int splitCellId = edgeCells->GetId(i);
 
-    int unique = deleteCellIds->InsertUniqueId(splitCellId);
-    fprintf(stdout,"NEED  TO DELETL: %d\n", splitCellId);
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(splitCellId, npts, pts);
 
-    if (unique != -1)
+    for (int j=0; j<npts; j++)
     {
-      vtkIdType npts, *pts;
-      pd->GetCellPoints(splitCellId, npts, pts);
+      int splitPtId0 = pts[j];
+      int splitPtId1 = pts[(j+1)%npts];
 
-      for (int j=0; j<npts; j++)
+      if ((splitPtId0 == ptId0 && splitPtId1 == ptId1) ||
+          (splitPtId1 == ptId0 && splitPtId0 == ptId1))
       {
-        int splitPtId0 = pts[j];
-        int splitPtId1 = pts[(j+1)%npts];
+        int thirdPtId = pts[(j+2)%npts];
 
-        if ((splitPtId0 == ptId0 && splitPtId1 == ptId1) ||
-            (splitPtId1 == ptId0 && splitPtId0 == ptId1))
+        double pt0[3], pt1[3], newPt[3];
+        pd->GetPoint(ptId0, pt0);
+        pd->GetPoint(ptId1, pt1);
+
+        vtkMath::Add(pt0, pt1, newPt);
+        vtkMath::MultiplyScalar(newPt, 1./2);
+
+        if (!pointAdded)
         {
-          int thirdPtId = pts[(j+2)%npts];
+          newPointId = pd->GetPoints()->InsertNextPoint(newPt);
+          pointAdded = 1;
 
-          double pt0[3], pt1[3], newPt[3];
-          pd->GetPoint(ptId0, pt0);
-          pd->GetPoint(ptId1, pt1);
+         for (int k=0; k<pd->GetPointData()->GetNumberOfArrays(); k++)
+         {
+           pd->GetPointData()->GetArray(k)->InsertNextTuple(
+             pd->GetPointData()->GetArray(k)->GetTuple(ptId0));
 
-          vtkMath::Add(pt0, pt1, newPt);
-          vtkMath::MultiplyScalar(newPt, 1./2);
+           double weights[2]; weights[0] = 0.5; weights[1] = 0.5;
 
-          if (!pointAdded)
-          {
-            std::vector<double> newPoint(3);
-            for (int k=0; k<3; k++)
-              newPoint[k] = newPt[k];
+           vtkNew(vtkIdList, interpIds);
+           interpIds->SetNumberOfIds(2);
+           interpIds->SetId(0, ptId0);
+           interpIds->SetId(1, ptId1);
 
-            newPoints.push_back(newPoint);
-            copyDataPointIds.push_back(ptId0);
-            pointAdded = 1;
-          }
-
-          std::vector<int> newCell0;
-          newCell0.push_back(thirdPtId);
-          newCell0.push_back(ptId0);
-          newCell0.push_back(newPointId);
-          newCells.push_back(newCell0);
-          copyDataCellIds.push_back(splitCellId);
-
-          std::vector<int> newCell1;
-          newCell1.push_back(thirdPtId);
-          newCell1.push_back(newPointId);
-          newCell1.push_back(ptId1);
-          newCells.push_back(newCell1);
-          copyDataCellIds.push_back(splitCellId);
+           pd->GetPointData()->GetArray(k)->InterpolateTuple(newPointId,
+               interpIds, pd->GetPointData()->GetArray(k), weights);
+         }
         }
+
+        vtkNew(vtkIdList, newCell);
+        newCell->SetNumberOfIds(3);
+        newCell->SetId(0, thirdPtId);
+        newCell->SetId(1, newPointId);
+        newCell->SetId(2, ptId1);
+
+        pd->DeleteLinks();
+
+        pd->InsertNextCell(VTK_TRIANGLE, newCell);
+
+        vtkIdType replacePts[3];
+        replacePts[0] = thirdPtId;
+        replacePts[1] = ptId0;
+        replacePts[2] = newPointId;
+
+        pd->ReplaceCell(splitCellId, npts, replacePts);
+
+        for (int k=0; k<pd->GetCellData()->GetNumberOfArrays(); k++)
+        {
+          pd->GetCellData()->GetArray(k)->InsertNextTuple(
+            pd->GetCellData()->GetArray(k)->GetTuple(splitCellId));
+        }
+
+        pd->BuildLinks();
       }
     }
   }
