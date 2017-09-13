@@ -235,18 +235,18 @@ protected:
   int CheckGroups();
   int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                const Region region, std::vector<int> allEdges,
-               std::vector<int> fixEdges);
+               std::vector<int> fixEdges, vtkIdList *critPts);
   int FixPlanarTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                             const Region region, std::vector<int> allEdges,
-                            std::vector<int> badEdges);
+                            std::vector<int> badEdges, vtkIdList *critPts);
   int FixPerpenTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                             const Region region, std::vector<int> allEdges,
-                            std::vector<int> badEdges);
+                            std::vector<int> badEdges, vtkIdList *critPts);
   int FixOffsetTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
                             std::string arrayName,
                             const Region region, const Region polyRegion,
                             std::vector<int> allEdges,
-                            std::vector<int> badEdges);
+                            std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
   int GetConnectedEdges(const Region region, std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
