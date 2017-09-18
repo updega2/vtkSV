@@ -250,6 +250,7 @@ protected:
   int FixGroupsWithPolycube();
   int GetConnectedEdges(const Region region, std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
+  int FixPatchesWithPolycubeOld();
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
   int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
