@@ -33,6 +33,7 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
+#include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
 #include "vtkGraphToPolyData.h"
 #include "vtkIdList.h"
@@ -241,9 +242,9 @@ int vtkSVCenterlineGraph::BuildGraph()
 }
 
 // ----------------------
-// GetPolycube
+// GetSurfacePolycube
 // ----------------------
-int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg)
+int vtkSVCenterlineGraph::GetSurfacePolycube(const double height, const double width, vtkPolyData *outPd)
 {
   int numSegs = this->NumberOfCells;
 
@@ -262,12 +263,13 @@ int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, v
 
   }
 
-  outUg->SetPoints(allPoints);
-  outUg->SetCells(VTK_POLYGON, allCells);
+  vtkNew(vtkUnstructuredGrid, polycube);
+  polycube->SetPoints(allPoints);
+  polycube->SetCells(VTK_POLYGON, allCells);
 
   // Get final patch ids by adding to group ids
   vtkNew(vtkIdList, groupVals);
-  for (int i=0; i<outUg->GetNumberOfCells(); i++)
+  for (int i=0; i<polycube->GetNumberOfCells(); i++)
   {
     int groupVal = groupIds->GetTuple1(i);
     groupVals->InsertUniqueId(groupVal);
@@ -279,7 +281,7 @@ int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, v
   for (int i=0; i<numGroups; i++)
     addVals->SetId(i, 6*i);
 
-  for (int i=0; i<outUg->GetNumberOfCells(); i++)
+  for (int i=0; i<polycube->GetNumberOfCells(); i++)
   {
     int patchVal = patchIds->GetTuple1(i);
     int groupVal = groupIds->GetTuple1(i);
@@ -287,8 +289,14 @@ int vtkSVCenterlineGraph::GetPolycube(const double height, const double width, v
     patchIds->SetTuple1(i, newVal);
   }
 
-  outUg->GetCellData()->AddArray(groupIds);
-  outUg->GetCellData()->AddArray(patchIds);
+  polycube->GetCellData()->AddArray(groupIds);
+  polycube->GetCellData()->AddArray(patchIds);
+
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
+  surfacer->SetInputData(polycube);
+  surfacer->Update();
+
+  outPd->DeepCopy(surfacer->GetOutput());
 
   return SV_OK;
 }

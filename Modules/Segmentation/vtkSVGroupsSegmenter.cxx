@@ -319,17 +319,12 @@ int vtkSVGroupsSegmenter::PrepFilter()
   std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/CenterlineDirs.vtp";
   vtkSVIOUtils::WriteVTPFile(filename2, this->CenterlineGraph->Lines);
 
-  vtkNew(vtkUnstructuredGrid, polycube);
-  this->CenterlineGraph->GetPolycube(10*this->PolycubeUnitLength, 10*this->PolycubeUnitLength, polycube);
-  std::string filename3 = "/Users/adamupdegrove/Desktop/tmp/Polycube.vtu";
-  vtkSVIOUtils::WriteVTUFile(filename3, polycube);
-
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(polycube);
-  surfacer->Update();
+  this->CenterlineGraph->GetSurfacePolycube(10*this->PolycubeUnitLength, 10*this->PolycubeUnitLength, this->PolycubePd);
+  std::string filename3 = "/Users/adamupdegrove/Desktop/tmp/PolycubePd.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename3, this->PolycubePd);
 
   vtkNew(vtkCleanPolyData, cleaner);
-  cleaner->SetInputData(surfacer->GetOutput());
+  cleaner->SetInputData(this->PolycubePd);
   cleaner->ToleranceIsAbsoluteOn();
   cleaner->SetAbsoluteTolerance(1.0e-6);
   cleaner->Update();
@@ -3614,11 +3609,6 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   for (int i=0; i<numGroups; i++)
   {
     int groupId = groupIds->GetId(i);
-    vtkNew(vtkPolyData, branchMapPd);
-    vtkSVGeneralUtils::ThresholdPd(fullMapPd, groupId, groupId, 1, this->GroupIdsArrayName, branchMapPd);
-
-    vtkNew(vtkPolyData, branchPd);
-    vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1, this->GroupIdsArrayName, branchPd);
 
     // Extract surface of polycube
     vtkNew(vtkPolyData, branchPolycube);

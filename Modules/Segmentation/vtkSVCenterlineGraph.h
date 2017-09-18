@@ -68,7 +68,7 @@ public:
   vtkSVCenterlineGCell* LookUp(vtkSVCenterlineGCell *lookCell, const int findId);
   int BuildGraph();
   int PrintGraph();
-  int GetPolycube(const double height, const double width, vtkUnstructuredGrid *outUg);
+  int GetSurfacePolycube(const double height, const double width, vtkPolyData *outPd);
   int GrowGraph(vtkSVCenterlineGCell *parent);
   int GetGraphDirections();
   int GetGraphPoints();
