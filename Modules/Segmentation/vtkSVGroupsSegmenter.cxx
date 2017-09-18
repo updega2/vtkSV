@@ -219,7 +219,7 @@ int vtkSVGroupsSegmenter::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(input);
+    output->DeepCopy(this->WorkPd);
     return SV_ERROR;
   }
 
@@ -416,17 +416,17 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  //if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not correcto boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro("Could not correcto boundaries of surface");
+    return SV_ERROR;
+  }
 
-  //if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not smootho boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro("Could not smootho boundaries of surface");
+    return SV_ERROR;
+  }
 
   std::vector<Region> groupRegions;
   if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
@@ -676,16 +676,17 @@ int vtkSVGroupsSegmenter::RunFilter()
     for (int j=0; j<4; j++)
       targetPatches->SetId(4*i+j, 6*i+j);
   }
-  if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  {
-    vtkErrorMacro("Could not correcto boundaries of surface");
-    return SV_ERROR;
-  }
 
   // For checking purposes
   if (this->FixPatchesWithPolycube() != SV_OK)
   {
     fprintf(stderr,"Couldn't fix patches\n");
+    return SV_ERROR;
+  }
+
+  if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
 
@@ -712,22 +713,22 @@ int vtkSVGroupsSegmenter::RunFilter()
   //  return SV_ERROR;
   //}
 
-  ////// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  ////// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //vtkNew(vtkPolyData, fullMapPd);
-  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkPolyData, fullMapPd);
+  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
-  //vtkNew(vtkUnstructuredGrid, loftedVolume);
-  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  //{
-  //  fprintf(stderr,"Failed doing volume stuffs\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkUnstructuredGrid, loftedVolume);
+  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  {
+    fprintf(stderr,"Failed doing volume stuffs\n");
+    return SV_ERROR;
+  }
 
   return SV_OK;
 }
@@ -2960,6 +2961,7 @@ int vtkSVGroupsSegmenter::CheckGroups()
 // ----------------------
 int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
 {
+  fprintf(stdout,"CHECKING AND FIXING PATCHES...\n");
   // Then check everything
   // Extract surface, triangulate, and subdivide polycube
   vtkNew(vtkTriangleFilter, triangulator);
@@ -2971,6 +2973,7 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
   polycubePd->BuildLinks();
 
   fprintf(stdout,"GETTING SURFACE REGIONS\n");
+  this->WorkPd->BuildLinks();
   std::vector<Region> surfacePatches;
   if (this->GetRegions(this->WorkPd, "PatchIds", surfacePatches) != SV_OK)
   {
@@ -2995,15 +2998,34 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
     return SV_ERROR;
   }
 
-
+  std::vector<int> badPatches;
+  std::vector<int> polycubePatchIds;
   for (int i=0; i<numSurfacePatches; i++)
   {
-    int patchId = surfacePatches[i].IndexCluster;
-    int patchDir = patchId%6;
+    int patchVal = surfacePatches[i].IndexCluster;
+    int patchDir = patchVal%6;
 
-    for (int j=0; j<surfacePatches[i].NumberOfCorners; j++)
+    for (int j=0; j<numPolycubePatches; j++)
     {
-      int ptId = surfacePatches[i].CornerPoints[j];
+      if (polycubePatches[j].IndexCluster == patchVal)
+      {
+        if (surfacePatches[i].NumberOfCorners != polycubePatches[j].NumberOfCorners)
+        {
+          badPatches.push_back(i);
+          polycubePatchIds.push_back(j);
+        }
+      }
+    }
+  }
+
+  fprintf(stdout,"NUMBER OF BAD PATCHES!: %d\n", badPatches.size());
+  for (int i=0; i<badPatches.size(); i++)
+  {
+    int patchId = badPatches[i];
+
+    for (int j=0; j<surfacePatches[patchId].NumberOfCorners; j++)
+    {
+      int ptId = surfacePatches[patchId].CornerPoints[j];
       fprintf(stdout,"PT ID: %d\n", ptId);
       int polycubeId = polycubePd->GetPointData()->GetArray("SlicePoints")->LookupValue(ptId);
       fprintf(stdout,"POLY ID: %d\n", polycubeId);
@@ -3040,244 +3062,49 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
               missingVals->InsertNextId(polyPatchVals->GetId(k));
           }
 
-          vtkNew(vtkIdList, badVals);
-          for (int k=0; k<surfacePatchVals->GetNumberOfIds(); k++)
+          for (int m=0; m<missingVals->GetNumberOfIds(); m++)
           {
-            if (polyPatchVals->IsId(surfacePatchVals->GetId(k)) == -1)
-              badVals->InsertNextId(surfacePatchVals->GetId(k));
-          }
-          fprintf(stdout,"HOW MANY VALS: %d\n", badVals->GetNumberOfIds());
-
-          std::vector<std::vector<int> > allNodes;
-
-          int count=1;
-          std::vector<int> tempNodes;
-          tempNodes.push_back(ptId);
-
-          for (int k=0; k<count; k++)
-          {
-            vtkNew(vtkIdList, badCells);
-            this->WorkPd->GetPointCells(tempNodes[k], badCells);
-
-            for (int l=0; l<badCells->GetNumberOfIds(); l++)
+            for (int k=0; k<surfacePatches[patchId].BoundaryEdges.size(); k++)
             {
-              int cellId = badCells->GetId(l);
-              int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(this->WorkPd, tempNodes[k], cellId);
+              int edgeSize = surfacePatches[patchId].BoundaryEdges[k].size();
 
-              vtkNew(vtkIdList, cellEdgeNeighbors);
-              this->WorkPd->GetCellEdgeNeighbors(cellId, tempNodes[k], pointCCWId, cellEdgeNeighbors);
+              int ptId0 = surfacePatches[patchId].BoundaryEdges[k][0];
+              int ptIdN = surfacePatches[patchId].BoundaryEdges[k][edgeSize-1];
 
-              int edgeVal0 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellId);
-              int edgeVal1 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellEdgeNeighbors->GetId(0));
-
-              fprintf(stdout,"AT LEAST HERE\n");
-              if (edgeVal0 == badVals->GetId(0) && edgeVal1 == badVals->GetId(1))
+              if (ptId0 == ptId)
               {
-                tempNodes.push_back(pointCCWId);
-                count++;
-              }
-              else if (missingVals->IsId(edgeVal0) != -1 || missingVals->IsId(edgeVal1) != -1)
-              {
-                allNodes.push_back(tempNodes);
+                vtkNew(vtkIdList, ptIdNList);
+                vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, "PatchIds", ptIdN, ptIdNList);
 
-                if (allNodes.size() == missingVals->GetNumberOfIds())
+                if (ptIdNList->IsId(missingVals->GetId(m)) != -1)
                 {
-                  count = -1;
-                  break;
-                }
+                  fprintf(stdout,"FIXING WITH EDGE STARTING WITH %d AND ENDING WITH %d.\n", ptId0, ptIdN);
+                  for (int l=1; l<surfacePatches[patchId].BoundaryEdges[k].size(); l++)
+                  {
+                    int testPtId = surfacePatches[patchId].BoundaryEdges[k][l];
 
-                tempNodes.clear();
-                tempNodes.push_back(ptId);
-                int tmpVal = badVals->GetId(0);
-                badVals->SetId(0, badVals->GetId(1));
-                badVals->SetId(1, tmpVal);
-                count=1;
-                k=-1;
-                break;
-              }
-            }
-            if (tempNodes.size() == 1 && allNodes.size() == 0)
-            {
-              int tmpVal = badVals->GetId(0);
-              badVals->SetId(0, badVals->GetId(1));
-              badVals->SetId(1, tmpVal);
-              count=1;
-              k=-1;
-            }
-          }
+                    vtkNew(vtkIdList, pointCells);
+                    this->WorkPd->GetPointCells(testPtId, pointCells);
 
-          for (int k=0; k<allNodes.size(); k++)
-          {
-            fprintf(stdout,"\n");
-            for (int l=1; l<allNodes[k].size(); l++)
-            {
-              int ptId = allNodes[k][l];
-
-              vtkNew(vtkIdList, pointCells);
-              this->WorkPd->GetPointCells(ptId, pointCells);
-
-              for (int l=0; l<pointCells->GetNumberOfIds(); l++)
-              {
-                int cellVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(pointCells->GetId(l));
-              fprintf(stdout,"SECOND HERE\n");
-                if (cellVal == badVals->GetId(k))
-                {
-                  this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->SetTuple1(pointCells->GetId(l), missingVals->GetId(j));
+                    for (int r=0; r<pointCells->GetNumberOfIds(); r++)
+                    {
+                      int cellVal = this->WorkPd->GetCellData()->GetArray("PatchIds")->GetTuple1(pointCells->GetId(r));
+                      if (cellVal == surfacePatches[patchId].IndexCluster)
+                      {
+                        this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(pointCells->GetId(r), missingVals->GetId(m));
+                      }
+                    }
+                  }
+                  fprintf(stdout,"\n");
                 }
               }
             }
+
           }
-          fprintf(stdout,"\n");
         }
       }
     }
   }
-
-  //if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not correcto boundaries of surface");
-  //  return SV_ERROR;
-  //}
-
-  //if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not smootho boundaries of surface");
-  //  return SV_ERROR;
-  //}
-
-  //for (int i=0; i<critPts->GetNumberOfIds(); i++)
-  //{
-  //  int halfId = critPts->GetId(i);
-
-  //  vtkNew(vtkIdList, checkVals);
-  //  vtkSVGeneralUtils::GetPointCellsValues(origPd, this->GroupIdsArrayName, halfId, checkVals);
-
-  //  vtkNew(vtkIdList, finalVals);
-  //  vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, halfId, finalVals);
-  //  if (finalVals->GetNumberOfIds() != 4)
-  //  {
-  //      fprintf(stdout,"SPLITTING CELLS AROUND POINT: %d\n", halfId);
-  //    this->SplitCellsAroundPoint(this->WorkPd, halfId);
-  //    this->SplitCellsAroundPoint(origPd, halfId);
-  //  }
-  //}
-
-  //// Get new normals
-  //vtkNew(vtkPolyDataNormals, normaler);
-  //normaler->SetInputData(this->WorkPd);
-  //normaler->ComputePointNormalsOff();
-  //normaler->ComputeCellNormalsOn();
-  //normaler->SplittingOff();
-  //normaler->Update();
-  //this->WorkPd->DeepCopy(normaler->GetOutput());
-  //this->WorkPd->BuildLinks();
-
-  //for (int i=0; i<critPts->GetNumberOfIds(); i++)
-  //{
-  //  int halfId = critPts->GetId(i);
-
-  //  vtkNew(vtkIdList, checkVals);
-  //  vtkSVGeneralUtils::GetPointCellsValues(origPd, this->GroupIdsArrayName, halfId, checkVals);
-
-  //  vtkNew(vtkIdList, finalVals);
-  //  vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, halfId, finalVals);
-  //  if (finalVals->GetNumberOfIds() != 4)
-  //  {
-
-  //    vtkNew(vtkIdList, missingVals);
-  //    for (int j=0; j<checkVals->GetNumberOfIds(); j++)
-  //    {
-  //      if (finalVals->IsId(checkVals->GetId(j)) == -1)
-  //        missingVals->InsertNextId(checkVals->GetId(j));
-  //    }
-
-  //    vtkNew(vtkIdList, badVals);
-  //    for (int j=0; j<finalVals->GetNumberOfIds(); j++)
-  //    {
-  //      if (checkVals->IsId(finalVals->GetId(j)) == -1)
-  //        badVals->InsertNextId(finalVals->GetId(j));
-  //    }
-
-  //    std::vector<std::vector<int> > allNodes;
-
-  //    int count=1;
-  //    std::vector<int> tempNodes;
-  //    tempNodes.push_back(halfId);
-
-  //    for (int j=0; j<count; j++)
-  //    {
-  //      vtkNew(vtkIdList, badCells);
-  //      this->WorkPd->GetPointCells(tempNodes[j], badCells);
-
-  //      for (int k=0; k<badCells->GetNumberOfIds(); k++)
-  //      {
-  //        int cellId = badCells->GetId(k);
-  //        int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(this->WorkPd, tempNodes[j], cellId);
-
-  //        vtkNew(vtkIdList, cellEdgeNeighbors);
-  //        this->WorkPd->GetCellEdgeNeighbors(cellId, tempNodes[j], pointCCWId, cellEdgeNeighbors);
-
-  //        int edgeVal0 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellId);
-  //        int edgeVal1 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellEdgeNeighbors->GetId(0));
-
-  //        if (edgeVal0 == badVals->GetId(0) && edgeVal1 == badVals->GetId(1))
-  //        {
-  //          tempNodes.push_back(pointCCWId);
-  //          count++;
-  //        }
-  //        else if (missingVals->IsId(edgeVal0) != -1 || missingVals->IsId(edgeVal1) != -1)
-  //        {
-  //          allNodes.push_back(tempNodes);
-
-  //          if (allNodes.size() == missingVals->GetNumberOfIds())
-  //          {
-  //            count = -1;
-  //            break;
-  //          }
-
-  //          tempNodes.clear();
-  //          tempNodes.push_back(halfId);
-  //          int tmpVal = badVals->GetId(0);
-  //          badVals->SetId(0, badVals->GetId(1));
-  //          badVals->SetId(1, tmpVal);
-  //          count=1;
-  //          j=-1;
-  //          break;
-  //        }
-  //      }
-  //      if (tempNodes.size() == 1 && allNodes.size() == 0)
-  //      {
-  //        int tmpVal = badVals->GetId(0);
-  //        badVals->SetId(0, badVals->GetId(1));
-  //        badVals->SetId(1, tmpVal);
-  //        count=1;
-  //        j=-1;
-  //      }
-  //    }
-
-  //    for (int j=0; j<allNodes.size(); j++)
-  //    {
-  //      fprintf(stdout,"\n");
-  //      for (int k=1; k<allNodes[j].size(); k++)
-  //      {
-  //        int ptId = allNodes[j][k];
-
-  //        vtkNew(vtkIdList, pointCells);
-  //        this->WorkPd->GetPointCells(ptId, pointCells);
-
-  //        for (int l=0; l<pointCells->GetNumberOfIds(); l++)
-  //        {
-  //          int cellVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(pointCells->GetId(l));
-  //          if (cellVal == badVals->GetId(j))
-  //          {
-  //            this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->SetTuple1(pointCells->GetId(l), missingVals->GetId(j));
-  //          }
-  //        }
-  //      }
-  //    }
-  //    fprintf(stdout,"\n");
-  //  }
-  //}
 
   return SV_OK;
 }
@@ -3799,6 +3626,7 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
     branchPolycube->BuildLinks();
 
+    fprintf(stdout,"FORMING PARA VOLUME FOR GROUP %d\n", groupId);
     vtkNew(vtkStructuredGrid, paraHexMesh);
     if (this->FormParametricHexMesh(branchPolycube, paraHexMesh, w_div,
                                     l_div, h_div) != SV_OK)
@@ -4052,320 +3880,6 @@ int vtkSVGroupsSegmenter::ConvertUGToSG(vtkUnstructuredGrid *ug,
 int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
                                                 const int w_div, int &l_div, const int h_div)
 {
-  //// GetFace 0, right side face
-  //vtkIdType f0npts, *f0PtIds;
-  //polycubePd->GetCellPoints(0, f0npts, f0PtIds);
-
-  //// GetFace 1, face underneath
-  //vtkIdType f1npts, *f1PtIds;
-  //polycubePd->GetCellPoints(1, f1npts, f1PtIds);
-
-  //// GetFace 2, left side face
-  //vtkIdType f2npts, *f2PtIds;
-  //polycubePd->GetCellPoints(2, f2npts, f2PtIds);
-
-  //// GetFace 3, face on top
-  //vtkIdType f3npts, *f3PtIds;
-  //polycubePd->GetCellPoints(3, f3npts, f3PtIds);
-
-  //double pt0[3], pt1[3], pt2[3], pt3[3];
-
-  //// bottom lower left corner
-  //polycubePd->GetPoint(f1PtIds[0], pt0);
-
-  //// bottom lower right corner
-  //polycubePd->GetPoint(f0PtIds[0], pt1);
-
-  //// bottom upper right corner
-  //polycubePd->GetPoint(f0PtIds[1], pt2);
-
-  //// top lower right corner
-  //polycubePd->GetPoint(f2PtIds[0], pt3);
-
-  //// Set boundary
-  //double w = vtkSVMathUtils::Distance(pt1, pt0);
-  //double w_vec[3];
-  //vtkMath::Subtract(pt1, pt0, w_vec);
-  //vtkMath::Normalize(w_vec);
-
-  //double l = vtkSVMathUtils::Distance(pt2, pt1);
-  //double l_vec[3];
-  //vtkMath::Subtract(pt2, pt1, l_vec);
-  //vtkMath::Normalize(l_vec);
-
-  //double h = vtkSVMathUtils::Distance(pt3, pt0);
-  //double h_vec[3];
-  //vtkMath::Subtract(pt3, pt0, h_vec);
-  //vtkMath::Normalize(h_vec);
-
-  //// If top cube, need to use top of cube, not bottom
-  //if (f0npts == 4 && f1npts == 5)
-  //{
-  //  double pt4[3];
-  //  polycubePd->GetPoint(f1PtIds[1], pt4);
-
-  //  double pt5[3];
-  //  polycubePd->GetPoint(f1PtIds[2], pt5);
-
-  //  double tmpVec[3];
-  //  vtkMath::Subtract(pt5, pt4, tmpVec);
-  //  vtkMath::Normalize(tmpVec);
-
-  //  double test_dot = vtkMath::Dot(tmpVec, l_vec);
-  //  if (test_dot < 1.0e-6 && test_dot > -1.0e-6)
-  //  {
-  //    w = vtkSVMathUtils::Distance(pt5, pt4);
-  //    vtkMath::Subtract(pt5, pt4, w_vec);
-  //    vtkMath::Normalize(w_vec);
-
-  //    l = vtkSVMathUtils::Distance(pt4, pt0);
-  //    vtkMath::Subtract(pt4, pt0, l_vec);
-  //    vtkMath::Normalize(l_vec);
-  //  }
-  //}
-
-  //l_div = floor(l/(this->PolycubeUnitLength));
-  //double w_dist = w/(w_div-1);
-  //double l_dist = l/(l_div-1);
-  //double h_dist = h/(h_div-1);
-
-  //vtkNew(vtkPoints, paraPoints);
-  //int dim[3]; dim[0] = w_div; dim[1] = l_div; dim[2] = h_div;
-  //paraHexMesh->SetDimensions(dim);
-  //paraHexMesh->SetPoints(paraPoints);
-  //paraHexMesh->GetPoints()->SetNumberOfPoints(w_div*l_div*h_div);
-
-  //for (int i=0; i<w_div; i++)
-  //{
-  //  for (int j=0; j<l_div; j++)
-  //  {
-  //    for (int k=0; k<h_div; k++)
-  //    {
-  //      double x_vec[3], y_vec[3], z_vec[3];
-  //      for (int l=0; l<3; l++)
-  //      {
-  //        x_vec[l] = w_vec[l]*i*w_dist;
-  //        y_vec[l] = l_vec[l]*j*l_dist;
-  //        z_vec[l] = h_vec[l]*k*h_dist;
-  //      }
-  //      double x_pt[3], y_pt[3], final_pt[3];
-  //      vtkMath::Add(pt0, x_vec, x_pt);
-  //      vtkMath::Add(x_pt, y_vec, y_pt);
-  //      vtkMath::Add(y_pt, z_vec, final_pt);
-
-  //      int pos[3]; pos[0]= i; pos[1] = j; pos[2] = k;
-  //      int pId = vtkStructuredData::ComputePointId(dim, pos);
-  //      paraHexMesh->GetPoints()->SetPoint(pId, final_pt);
-  //    }
-  //  }
-  //}
-
-  //if (f0npts == 4)
-  //{
-  //  if (f1npts == 5)
-  //  {
-  //    double pt4[3];
-  //    polycubePd->GetPoint(f1PtIds[1], pt4);
-
-  //    double pt5[3];
-  //    polycubePd->GetPoint(f1PtIds[2], pt5);
-
-  //    double tmpVec[3];
-  //    vtkMath::Subtract(pt5, pt4, tmpVec);
-  //    vtkMath::Normalize(tmpVec);
-
-  //    double test_dot = vtkMath::Dot(tmpVec, l_vec);
-  //    if (test_dot < 1.0e-6 && test_dot > -1.0e-6)
-  //    {
-  //      double bottomLeftPt[3];
-  //      polycubePd->GetPoint(f1PtIds[0], bottomLeftPt);
-
-  //      double bottomRightPt[3];
-  //      polycubePd->GetPoint(f1PtIds[3], bottomRightPt);
-
-  //      double bottomMidPt0[3];
-  //      polycubePd->GetPoint(f1PtIds[4], bottomMidPt0);
-
-  //      double bottomMidPt1[3];
-  //      polycubePd->GetPoint(f3PtIds[4], bottomMidPt1);
-
-  //      this->PushStructuredGridZAxis(paraHexMesh, bottomLeftPt, bottomRightPt, bottomMidPt0, bottomMidPt1, 1);
-  //    }
-  //    else
-  //    {
-  //      double topLeftPt[3];
-  //      polycubePd->GetPoint(f1PtIds[1], topLeftPt);
-
-  //      double topRightPt[3];
-  //      polycubePd->GetPoint(f1PtIds[3], topRightPt);
-
-  //      double topMidPt0[3];
-  //      polycubePd->GetPoint(f1PtIds[2], topMidPt0);
-
-  //      double topMidPt1[3];
-  //      polycubePd->GetPoint(f3PtIds[2], topMidPt1);
-
-  //      this->PushStructuredGridZAxis(paraHexMesh, topLeftPt, topRightPt, topMidPt0, topMidPt1, 0);
-  //    }
-  //  }
-  //  else if (f1npts == 6)
-  //  {
-  //    double topLeftPt[3];
-  //    polycubePd->GetPoint(f1PtIds[1], topLeftPt);
-
-  //    double topRightPt[3];
-  //    polycubePd->GetPoint(f1PtIds[3], topRightPt);
-
-  //    double topMidPt0[3];
-  //    polycubePd->GetPoint(f1PtIds[2], topMidPt0);
-
-  //    double topMidPt1[3];
-  //    polycubePd->GetPoint(f3PtIds[2], topMidPt1);
-
-  //    this->PushStructuredGridZAxis(paraHexMesh, topLeftPt, topRightPt, topMidPt0, topMidPt1, 0);
-
-  //    double bottomLeftPt[3];
-  //    polycubePd->GetPoint(f1PtIds[0], bottomLeftPt);
-
-  //    double bottomRightPt[3];
-  //    polycubePd->GetPoint(f1PtIds[4], bottomRightPt);
-
-  //    double bottomMidPt0[3];
-  //    polycubePd->GetPoint(f1PtIds[5], bottomMidPt0);
-
-  //    double bottomMidPt1[3];
-  //    polycubePd->GetPoint(f3PtIds[5], bottomMidPt1);
-
-  //    this->PushStructuredGridZAxis(paraHexMesh, bottomLeftPt, bottomRightPt, bottomMidPt0, bottomMidPt1, 1);
-  //  }
-  //}
-  //else if (f0npts == 5)
-  //{
-  //  if (f1npts == 4)
-  //  {
-  //    double sideBottomPt[3];
-  //    polycubePd->GetPoint(f2PtIds[3], sideBottomPt);
-
-  //    double sideTopPt[3];
-  //    polycubePd->GetPoint(f2PtIds[1], sideTopPt);
-
-  //    double sideMidPt0[3];
-  //    polycubePd->GetPoint(f2PtIds[2], sideMidPt0);
-
-  //    double sideMidPt1[3];
-  //    polycubePd->GetPoint(f0PtIds[2], sideMidPt1);
-
-  //    this->PushStructuredGridXAxis(paraHexMesh, sideBottomPt, sideTopPt, sideMidPt0, sideMidPt1, 0);
-  //  }
-  //  else if (f1npts == 5)
-  //  {
-  //    double pt4[3];
-  //    polycubePd->GetPoint(f1PtIds[1], pt4);
-
-  //    double pt5[3];
-  //    polycubePd->GetPoint(f1PtIds[2], pt5);
-
-  //    double tmpVec[3];
-  //    vtkMath::Subtract(pt5, pt4, tmpVec);
-  //    vtkMath::Normalize(tmpVec);
-
-  //    double test_dot = vtkMath::Dot(tmpVec, l_vec);
-  //    if (test_dot < 1.0e-6 && test_dot > -1.0e-6)
-  //    {
-  //      double bottomLeftPt[3];
-  //      polycubePd->GetPoint(f1PtIds[0], bottomLeftPt);
-
-  //      double bottomRightPt[3];
-  //      polycubePd->GetPoint(f1PtIds[3], bottomRightPt);
-
-  //      double bottomMidPt0[3];
-  //      polycubePd->GetPoint(f1PtIds[4], bottomMidPt0);
-
-  //      double bottomMidPt1[3];
-  //      polycubePd->GetPoint(f3PtIds[4], bottomMidPt1);
-
-  //      this->PushStructuredGridZAxis(paraHexMesh, bottomLeftPt, bottomRightPt, bottomMidPt0, bottomMidPt1, 1);
-
-  //      double sideBottomPt[3];
-  //      polycubePd->GetPoint(f2PtIds[3], sideBottomPt);
-
-  //      double sideTopPt[3];
-  //      polycubePd->GetPoint(f2PtIds[1], sideTopPt);
-
-  //      double sideMidPt0[3];
-  //      polycubePd->GetPoint(f2PtIds[2], sideMidPt0);
-
-  //      double sideMidPt1[3];
-  //      polycubePd->GetPoint(f0PtIds[2], sideMidPt1);
-
-  //      this->PushStructuredGridXAxis(paraHexMesh, sideBottomPt, sideTopPt, sideMidPt0, sideMidPt1, 0);
-  //    }
-  //    else
-  //    {
-  //      double topLeftPt[3];
-  //      polycubePd->GetPoint(f1PtIds[1], topLeftPt);
-
-  //      double topRightPt[3];
-  //      polycubePd->GetPoint(f1PtIds[3], topRightPt);
-
-  //      double topMidPt0[3];
-  //      polycubePd->GetPoint(f1PtIds[2], topMidPt0);
-
-  //      double topMidPt1[3];
-  //      polycubePd->GetPoint(f3PtIds[2], topMidPt1);
-
-  //      this->PushStructuredGridZAxis(paraHexMesh, topLeftPt, topRightPt, topMidPt0, topMidPt1, 0);
-
-  //      double sideBottomPt[3];
-  //      polycubePd->GetPoint(f2PtIds[3], sideBottomPt);
-
-  //      double sideTopPt[3];
-  //      polycubePd->GetPoint(f2PtIds[0], sideTopPt);
-
-  //      double sideMidPt0[3];
-  //      polycubePd->GetPoint(f2PtIds[4], sideMidPt0);
-
-  //      double sideMidPt1[3];
-  //      polycubePd->GetPoint(f0PtIds[4], sideMidPt1);
-
-  //      this->PushStructuredGridXAxis(paraHexMesh, sideBottomPt, sideTopPt, sideMidPt0, sideMidPt1, 1);
-  //    }
-  //  }
-  //}
-  //else if (f0npts == 6)
-  //{
-  //  if (f1npts == 4)
-  //  {
-  //    double sideBottomPt0[3];
-  //    polycubePd->GetPoint(f2PtIds[3], sideBottomPt0);
-
-  //    double sideTopPt0[3];
-  //    polycubePd->GetPoint(f2PtIds[1], sideTopPt0);
-
-  //    double sideMidPt0[3];
-  //    polycubePd->GetPoint(f2PtIds[2], sideMidPt0);
-
-  //    double sideMidPt1[3];
-  //    polycubePd->GetPoint(f0PtIds[2], sideMidPt1);
-
-  //    this->PushStructuredGridXAxis(paraHexMesh, sideBottomPt0, sideTopPt0, sideMidPt0, sideMidPt1, 0);
-
-  //    double sideBottomPt1[3];
-  //    polycubePd->GetPoint(f2PtIds[4], sideBottomPt1);
-
-  //    double sideTopPt1[3];
-  //    polycubePd->GetPoint(f2PtIds[0], sideTopPt1);
-
-  //    double sideMidPt2[3];
-  //    polycubePd->GetPoint(f2PtIds[5], sideMidPt2);
-
-  //    double sideMidPt3[3];
-  //    polycubePd->GetPoint(f0PtIds[5], sideMidPt3);
-
-  //    this->PushStructuredGridXAxis(paraHexMesh, sideBottomPt1, sideTopPt1, sideMidPt2, sideMidPt3, 1);
-  //  }
-  //}
-
   // GetFace 0, right side face
   vtkIdType f0npts, *f0PtIds;
   polycubePd->GetCellPoints(0, f0npts, f0PtIds);
@@ -4431,20 +3945,20 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     if (testDot0 < 1.0e-6 && testDot0 > -1.0e-6)
     {
       if (testDot1 < 1.0e-6 && testDot1 > -1.0e-6)
-      {
         topHorzWedge = 1;
-        polycubePd->GetPoint(f0PtIds[3], f0Pts[2]);
-        polycubePd->GetPoint(f0PtIds[4], f0Pts[3]);
-        polycubePd->GetPoint(f2PtIds[4], f2Pts[0]);
-        polycubePd->GetPoint(f2PtIds[3], f2Pts[1]);
-      }
       else
-      {
         botHorzWedge = 1;
-      }
     }
     else
-      botHorzWedge = 1;
+      topHorzWedge = 1;
+  }
+
+  if (topHorzWedge)
+  {
+    polycubePd->GetPoint(f0PtIds[3], f0Pts[2]);
+    polycubePd->GetPoint(f0PtIds[4], f0Pts[3]);
+    polycubePd->GetPoint(f2PtIds[4], f2Pts[0]);
+    polycubePd->GetPoint(f2PtIds[3], f2Pts[1]);
   }
 
   double f1Pts[4][3], f3Pts[4][3];
@@ -4471,7 +3985,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     polycubePd->GetPoint(f1PtIds[3], f1Pts[1]);
   }
 
-  if (f1npts == 5)
+  if (f3npts == 5)
   {
     // Get vector around face 0
     double vec0[3], vec1[3], vec2[3];
@@ -4489,21 +4003,24 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     if (testDot0 < 1.0e-6 && testDot0 > -1.0e-6)
     {
       if (testDot1 < 1.0e-6 && testDot1 > -1.0e-6)
-      {
         topVertWedge = 1;
-        polycubePd->GetPoint(f3PtIds[3], f3Pts[2]);
-        polycubePd->GetPoint(f3PtIds[4], f3Pts[3]);
-        polycubePd->GetPoint(f1PtIds[4], f1Pts[0]);
-        polycubePd->GetPoint(f1PtIds[3], f1Pts[1]);
-      }
       else
-      {
         botVertWedge = 1;
-      }
     }
     else
-      botVertWedge = 1;
+      topVertWedge = 1;
   }
+
+  if (topVertWedge)
+  {
+    polycubePd->GetPoint(f3PtIds[3], f3Pts[2]);
+    polycubePd->GetPoint(f3PtIds[4], f3Pts[3]);
+    polycubePd->GetPoint(f1PtIds[4], f1Pts[0]);
+    polycubePd->GetPoint(f1PtIds[3], f1Pts[1]);
+  }
+
+  fprintf(stdout,"THIS SAYS TOP VERT WEDGE: %d, HORZ WEDGE: %d\n", topVertWedge, topHorzWedge);
+  fprintf(stdout,"THIS SAYS BOT VERT WEDGE: %d, HORZ WEDGE: %d\n", botVertWedge, botHorzWedge);
 
   double face0Vec0[3], face0Vec1[3];
   vtkMath::Subtract(f0Pts[3], f0Pts[0], face0Vec0);
@@ -4624,13 +4141,12 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     }
   }
 
-  double dummy0[3], dummy1[3];
   double midPt0[3], midPt1[3];
   if (topHorzWedge)
   {
     polycubePd->GetPoint(f0PtIds[2], midPt0);
     polycubePd->GetPoint(f2PtIds[2], midPt1);
-    this->PushStructuredGridXAxis(paraHexMesh, dummy0, dummy1, midPt0, midPt1, 0);
+    this->PushStructuredGridXAxis(paraHexMesh, midPt0, midPt1, 0);
   }
 
   if (botHorzWedge)
@@ -4645,14 +4161,14 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     polycubePd->GetPoint(f0PtIds[4], midPt0);
     polycubePd->GetPoint(f2PtIds[4], midPt1);
     }
-    this->PushStructuredGridXAxis(paraHexMesh, dummy0, dummy1, midPt0, midPt1, 1);
+    this->PushStructuredGridXAxis(paraHexMesh, midPt0, midPt1, 1);
   }
 
   if (topVertWedge)
   {
     polycubePd->GetPoint(f1PtIds[2], midPt0);
     polycubePd->GetPoint(f3PtIds[2], midPt1);
-    this->PushStructuredGridZAxis(paraHexMesh, dummy0, dummy1, midPt0, midPt1, 0);
+    this->PushStructuredGridZAxis(paraHexMesh, midPt0, midPt1, 0);
   }
 
   if (botVertWedge)
@@ -4667,7 +4183,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
       polycubePd->GetPoint(f1PtIds[4], midPt0);
       polycubePd->GetPoint(f3PtIds[4], midPt1);
     }
-    this->PushStructuredGridZAxis(paraHexMesh, dummy0, dummy1, midPt0, midPt1, 1);
+    this->PushStructuredGridZAxis(paraHexMesh, midPt0, midPt1, 1);
   }
 
   return SV_OK;
@@ -4677,21 +4193,19 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 // PushStructuredGridZAxis
 // ----------------------
 int vtkSVGroupsSegmenter::PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh,
-                                                  const double pt0[3],
-                                                  const double pt1[3],
-                                                  const double pt2[3],
-                                                  const double pt3[3],
+                                                  const double midPt0[3],
+                                                  const double midPt1[3],
                                                   const int isBottom)
 {
   int dim[3];
   paraHexMesh->GetDimensions(dim);
 
   int h_div = dim[2];
-  double h = vtkSVMathUtils::Distance(pt3, pt2);
+  double h = vtkSVMathUtils::Distance(midPt1, midPt0);
   double h_dist = h/(h_div-1);
 
   double h_vec[3];
-  vtkMath::Subtract(pt3, pt2, h_vec);
+  vtkMath::Subtract(midPt1, midPt0, h_vec);
   vtkMath::Normalize(h_vec);
 
   int w_div = dim[0];
@@ -4716,7 +4230,7 @@ int vtkSVGroupsSegmenter::PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh
       z_vec[j] = h_vec[j]*i*h_dist;
 
     double newPt[3];
-    vtkMath::Add(pt2, z_vec, newPt);
+    vtkMath::Add(midPt0, z_vec, newPt);
 
     // New point in middle
     paraHexMesh->GetPoints()->SetPoint(ptId, newPt);
@@ -4729,6 +4243,7 @@ int vtkSVGroupsSegmenter::PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh
     int firstPtId = vtkStructuredData::ComputePointId(dim, pos);
 
     paraHexMesh->GetPoints()->GetPoint(firstPtId, firstPt);
+    //paraHexMesh->GetPoints()->SetPoint(firstPtId, firstPt);
 
     double first_w = vtkSVMathUtils::Distance(newPt, firstPt);
     double first_w_dist = first_w/(half_w_div);
@@ -4760,6 +4275,7 @@ int vtkSVGroupsSegmenter::PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh
     int lastPtId = vtkStructuredData::ComputePointId(dim, pos);
 
     paraHexMesh->GetPoints()->GetPoint(lastPtId, lastPt);
+    //paraHexMesh->GetPoints()->SetPoint(lastPtId, lastPt);
 
     double last_w = vtkSVMathUtils::Distance(lastPt, newPt);
     double last_w_dist = last_w/(half_w_div);
@@ -4835,21 +4351,19 @@ int vtkSVGroupsSegmenter::PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh
 // PushStructuredGridXAxis
 // ----------------------
 int vtkSVGroupsSegmenter::PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh,
-                                                    const double pt0[3],
-                                                    const double pt1[3],
-                                                    const double pt2[3],
-                                                    const double pt3[3],
+                                                    const double midPt0[3],
+                                                    const double midPt1[3],
                                                     const int isBottom)
 {
   int dim[3];
   paraHexMesh->GetDimensions(dim);
 
   int w_div = dim[0];
-  double w = vtkSVMathUtils::Distance(pt3, pt2);
+  double w = vtkSVMathUtils::Distance(midPt1, midPt0);
   double w_dist = w/(w_div-1);
 
   double w_vec[3];
-  vtkMath::Subtract(pt3, pt2, w_vec);
+  vtkMath::Subtract(midPt1, midPt0, w_vec);
   vtkMath::Normalize(w_vec);
 
   int h_div = dim[2];
@@ -4874,7 +4388,7 @@ int vtkSVGroupsSegmenter::PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh
       x_vec[j] = w_vec[j]*i*w_dist;
 
     double newPt[3];
-    vtkMath::Add(pt2, x_vec, newPt);
+    vtkMath::Add(midPt0, x_vec, newPt);
 
     // New point in middle
     paraHexMesh->GetPoints()->SetPoint(ptId, newPt);
@@ -4887,6 +4401,7 @@ int vtkSVGroupsSegmenter::PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh
     int firstPtId = vtkStructuredData::ComputePointId(dim, pos);
 
     paraHexMesh->GetPoints()->GetPoint(firstPtId, firstPt);
+    //paraHexMesh->GetPoints()->SetPoint(firstPtId, firstPt);
 
     double first_h = vtkSVMathUtils::Distance(newPt, firstPt);
     double first_h_dist = first_h/(half_h_div);
@@ -4918,6 +4433,7 @@ int vtkSVGroupsSegmenter::PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh
     int lastPtId = vtkStructuredData::ComputePointId(dim, pos);
 
     paraHexMesh->GetPoints()->GetPoint(lastPtId, lastPt);
+    //paraHexMesh->GetPoints()->SetPoint(lastPtId, lastPt);
 
     double last_h = vtkSVMathUtils::Distance(lastPt, newPt);
     double last_h_dist = last_h/(half_h_div);
@@ -6376,23 +5892,24 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
               badEdges.size() == 4 && allEdges.size() == 4)
           {
             this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
-            fixed = 1;
+          }
+          else if (surfaceGroups[i].BoundaryEdges.size() == 8 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
+              badEdges.size() == 4 && allEdges.size() == 4)
+          {
+            this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
           }
           else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
               badEdges.size() == 2 && allEdges.size() == 3)
           {
-            fixed = 1;
             this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
           }
           else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
               badEdges.size() == 3 && allEdges.size() == 3)
           {
-            fixed = 1;
             this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
           }
           else
             fprintf(stdout,"NO FIX FOR THIS HAS BEEN DEVISED YET!!!!\n");
-
         }
       }
     }
@@ -6422,7 +5939,7 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
     vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, halfId, finalVals);
     if (finalVals->GetNumberOfIds() != 4)
     {
-        fprintf(stdout,"SPLITTING CELLS AROUND POINT: %d\n", halfId);
+        fprintf(stdout,"NO GOOD, FIX GROUPS AROUND POINT: %d\n", halfId);
       this->SplitCellsAroundPoint(this->WorkPd, halfId);
       this->SplitCellsAroundPoint(origPd, halfId);
     }
@@ -6464,84 +5981,77 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
           badVals->InsertNextId(finalVals->GetId(j));
       }
 
-      std::vector<std::vector<int> > allNodes;
-
-      int count=1;
-      std::vector<int> tempNodes;
-      tempNodes.push_back(halfId);
-
-      for (int j=0; j<count; j++)
+      if (badVals->GetNumberOfIds() == 2)
       {
-        vtkNew(vtkIdList, badCells);
-        this->WorkPd->GetPointCells(tempNodes[j], badCells);
+        std::vector<std::vector<int> > allNodes;
 
-        for (int k=0; k<badCells->GetNumberOfIds(); k++)
+        int count=1;
+        std::vector<int> tempNodes;
+        tempNodes.push_back(halfId);
+
+        for (int j=0; j<count; j++)
         {
-          int cellId = badCells->GetId(k);
-          int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(this->WorkPd, tempNodes[j], cellId);
+          vtkNew(vtkIdList, badCells);
+          this->WorkPd->GetPointCells(tempNodes[j], badCells);
 
-          vtkNew(vtkIdList, cellEdgeNeighbors);
-          this->WorkPd->GetCellEdgeNeighbors(cellId, tempNodes[j], pointCCWId, cellEdgeNeighbors);
-
-          int edgeVal0 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellId);
-          int edgeVal1 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellEdgeNeighbors->GetId(0));
-
-          if (edgeVal0 == badVals->GetId(0) && edgeVal1 == badVals->GetId(1))
+          for (int k=0; k<badCells->GetNumberOfIds(); k++)
           {
-            tempNodes.push_back(pointCCWId);
-            count++;
-          }
-          else if (missingVals->IsId(edgeVal0) != -1 || missingVals->IsId(edgeVal1) != -1)
-          {
-            allNodes.push_back(tempNodes);
+            int cellId = badCells->GetId(k);
+            int pointCCWId = vtkSVGroupsSegmenter::GetCCWPoint(this->WorkPd, tempNodes[j], cellId);
 
-            if (allNodes.size() == missingVals->GetNumberOfIds())
+            vtkNew(vtkIdList, cellEdgeNeighbors);
+            this->WorkPd->GetCellEdgeNeighbors(cellId, tempNodes[j], pointCCWId, cellEdgeNeighbors);
+
+            int edgeVal0 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellId);
+            int edgeVal1 = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(cellEdgeNeighbors->GetId(0));
+
+            if ((edgeVal0 == badVals->GetId(0) && edgeVal1 == badVals->GetId(1)) ||
+                 (edgeVal0 == badVals->GetId(1) && edgeVal1 == badVals->GetId(0)))
             {
-              count = -1;
+              tempNodes.push_back(pointCCWId);
+              count++;
+            }
+            else if (missingVals->IsId(edgeVal0) != -1 || missingVals->IsId(edgeVal1) != -1)
+            {
+              allNodes.push_back(tempNodes);
+
+              if (allNodes.size() == missingVals->GetNumberOfIds())
+              {
+                count = -1;
+                break;
+              }
+
+              tempNodes.clear();
+              tempNodes.push_back(halfId);
+              count=1;
+              j=-1;
               break;
             }
-
-            tempNodes.clear();
-            tempNodes.push_back(halfId);
-            int tmpVal = badVals->GetId(0);
-            badVals->SetId(0, badVals->GetId(1));
-            badVals->SetId(1, tmpVal);
-            count=1;
-            j=-1;
-            break;
           }
         }
-        if (tempNodes.size() == 1 && allNodes.size() == 0)
+
+        for (int j=0; j<allNodes.size(); j++)
         {
-          int tmpVal = badVals->GetId(0);
-          badVals->SetId(0, badVals->GetId(1));
-          badVals->SetId(1, tmpVal);
-          count=1;
-          j=-1;
-        }
-      }
-
-      for (int j=0; j<allNodes.size(); j++)
-      {
-        fprintf(stdout,"\n");
-        for (int k=1; k<allNodes[j].size(); k++)
-        {
-          int ptId = allNodes[j][k];
-
-          vtkNew(vtkIdList, pointCells);
-          this->WorkPd->GetPointCells(ptId, pointCells);
-
-          for (int l=0; l<pointCells->GetNumberOfIds(); l++)
+          fprintf(stdout,"\n");
+          for (int k=1; k<allNodes[j].size(); k++)
           {
-            int cellVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(pointCells->GetId(l));
-            if (cellVal == badVals->GetId(j))
+            int ptId = allNodes[j][k];
+
+            vtkNew(vtkIdList, pointCells);
+            this->WorkPd->GetPointCells(ptId, pointCells);
+
+            for (int l=0; l<pointCells->GetNumberOfIds(); l++)
             {
-              this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->SetTuple1(pointCells->GetId(l), missingVals->GetId(j));
+              int cellVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(pointCells->GetId(l));
+              if (cellVal == badVals->GetId(0) || cellVal == badVals->GetId(1))
+              {
+                this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->SetTuple1(pointCells->GetId(l), missingVals->GetId(j));
+              }
             }
           }
         }
+        fprintf(stdout,"\n");
       }
-      fprintf(stdout,"\n");
     }
   }
 
@@ -6951,6 +6461,10 @@ int vtkSVGroupsSegmenter::FixEdges(vtkPolyData *pd, vtkPolyData *origPd,
           {
             int tmpCellId = tempCells[l];
             branchPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(tmpCellId, newCellValue);
+            int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(tmpCellId);
+            pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(realCellId, newCellValue);
+
+
             vtkIdType npts, *pts;
             branchPd->GetCellPoints(tmpCellId, npts, pts);
             for (int l=0; l<npts; l++)
@@ -6990,19 +6504,6 @@ int vtkSVGroupsSegmenter::FixEdges(vtkPolyData *pd, vtkPolyData *origPd,
         }
       }
     }
-  }
-
-  // Set vals on work pd
-  for (int l=0; l<branchPd->GetNumberOfCells(); l++)
-  {
-    //Get real cell id
-    int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(l);
-
-    // Get val
-    int cellVal = branchPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(l);
-
-    // Set val
-    pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(realCellId, cellVal);
   }
 
   return SV_OK;
@@ -7412,16 +6913,6 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
          }
         }
 
-        vtkNew(vtkIdList, newCell);
-        newCell->SetNumberOfIds(3);
-        newCell->SetId(0, thirdPtId);
-        newCell->SetId(1, newPointId);
-        newCell->SetId(2, ptId1);
-
-        pd->DeleteLinks();
-
-        pd->InsertNextCell(VTK_TRIANGLE, newCell);
-
         vtkIdType replacePts[3];
         replacePts[0] = thirdPtId;
         replacePts[1] = ptId0;
@@ -7429,12 +6920,21 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
 
         pd->ReplaceCell(splitCellId, npts, replacePts);
 
+        vtkNew(vtkIdList, newCell);
+        newCell->SetNumberOfIds(3);
+        newCell->SetId(0, thirdPtId);
+        newCell->SetId(1, newPointId);
+        newCell->SetId(2, ptId1);
+
+        pd->InsertNextCell(VTK_TRIANGLE, newCell);
+
         for (int k=0; k<pd->GetCellData()->GetNumberOfArrays(); k++)
         {
-          pd->GetCellData()->GetArray(k)->InsertNextTuple(
-            pd->GetCellData()->GetArray(k)->GetTuple(splitCellId));
+          pd->GetCellData()->GetArray(k)->InsertNextTuple(splitCellId,
+            pd->GetCellData()->GetArray(k));
         }
 
+        pd->BuildCells();
         pd->BuildLinks();
       }
     }

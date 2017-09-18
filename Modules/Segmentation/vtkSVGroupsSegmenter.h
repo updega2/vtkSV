@@ -280,16 +280,12 @@ protected:
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
   int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters);
   int PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh,
-                              const double pt0[3],
-                              const double pt1[3],
-                              const double pt2[3],
-                              const double pt3[3],
+                              const double midPt0[3],
+                              const double midPt1[3],
                               const int isBottom);
   int PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh,
-                              const double pt0[3],
-                              const double pt1[3],
-                              const double pt2[3],
-                              const double pt3[3],
+                              const double midPt0[3],
+                              const double midPt1[3],
                               const int isBottom);
 
   char *CenterlineGroupIdsArrayName;
