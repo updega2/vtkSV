@@ -3903,6 +3903,75 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   polycubePd->GetPoint(f2PtIds[1], f2Pts[2]);
   polycubePd->GetPoint(f2PtIds[0], f2Pts[3]);
 
+  int topTet0 = 0;
+  int topTet2 = 0;
+  int botTet0 = 0;
+  int botTet2 = 0;
+
+  // Check to see if wedge tet on top
+  if (f0npts == 5 || f0npts == 6)
+  {
+    double vec0[3], vec1[3], vec2[3], vec3[3], vec4[3], vec5[3], vec6[3], vec7[3];
+    vtkMath::Subtract(f0Pts[2], f0Pts[1], vec0);
+    vtkMath::Normalize(vec0);
+    vtkMath::Subtract(f0Pts[3], f0Pts[1], vec1);
+    vtkMath::Normalize(vec1);
+    vtkMath::Subtract(f2Pts[1], f2Pts[2], vec2);
+    vtkMath::Normalize(vec2);
+    vtkMath::Subtract(f2Pts[0], f2Pts[2], vec3);
+    vtkMath::Normalize(vec3);
+
+    if (f0npts == 6)
+    {
+      double f0LastPts[2][3], f2LastPts[2][3];
+      polycubePd->GetPoint(f0PtIds[4], f0LastPts[0]);
+      polycubePd->GetPoint(f0PtIds[5], f0LastPts[1]);
+      polycubePd->GetPoint(f2PtIds[5], f2LastPts[0]);
+      polycubePd->GetPoint(f2PtIds[4], f2LastPts[1]);
+
+      // Get vector around face 0
+      vtkMath::Subtract(f0LastPts[1], f0Pts[0], vec4);
+      vtkMath::Normalize(vec4);
+      vtkMath::Subtract(f0LastPts[2], f0Pts[0], vec5);
+      vtkMath::Normalize(vec5);
+      vtkMath::Subtract(f2LastPts[2], f2Pts[3], vec6);
+      vtkMath::Normalize(vec6);
+      vtkMath::Subtract(f2LastPts[1], f2Pts[3], vec7);
+      vtkMath::Normalize(vec7);
+    }
+    else
+    {
+      double f0LastPt[3], f2LastPt[3];
+      polycubePd->GetPoint(f0PtIds[4], f0LastPt);
+      polycubePd->GetPoint(f2PtIds[4], f2LastPt);
+
+      // Get vector around face 0
+      vtkMath::Subtract(f0Pts[3], f0Pts[0], vec4);
+      vtkMath::Normalize(vec4);
+      vtkMath::Subtract(f0LastPt, f0Pts[0], vec5);
+      vtkMath::Normalize(vec5);
+      vtkMath::Subtract(f2Pts[0], f2Pts[3], vec6);
+      vtkMath::Normalize(vec6);
+      vtkMath::Subtract(f2LastPt, f2Pts[3], vec7);
+      vtkMath::Normalize(vec7);
+    }
+
+    double testDot0 = vtkMath::Dot(vec0, vec1);
+    double testDot1 = vtkMath::Dot(vec2, vec3);
+    double testDot2 = vtkMath::Dot(vec4, vec5);
+    double testDot3 = vtkMath::Dot(vec6, vec7);
+
+    if (testDot0 < 1.0+1.0e-6 && testDot0 > 1.0-1.0e-6)
+      topTet2 = 1;
+    if (testDot1 < 1.0+1.0e-6 && testDot1 > 1.0-1.0e-6)
+      topTet0 = 1;
+
+    if (testDot2 < 1.0+1.0e-6 && testDot2 > 1.0-1.0e-6)
+      botTet2 = 1;
+    if (testDot3 < 1.0+1.0e-6 && testDot3 > 1.0-1.0e-6)
+      botTet0 = 1;
+  }
+
   // Check to see if wedge top
   int topHorzWedge = 0;
   int botHorzWedge = 0;
@@ -3934,16 +4003,14 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
     if (testDot0 < 1.0e-6 && testDot0 > -1.0e-6)
     {
-      if (testDot1 < 1.0e-6 && testDot1 > -1.0e-6)
-        topHorzWedge = 1;
-      else
+      if (!(testDot1 < 1.0e-6 && testDot1 > -1.0e-6))
         botHorzWedge = 1;
     }
     else
       topHorzWedge = 1;
   }
 
-  if (topHorzWedge)
+  if (topHorzWedge || topTet0 || topTet2)
   {
     polycubePd->GetPoint(f0PtIds[3], f0Pts[2]);
     polycubePd->GetPoint(f0PtIds[4], f0Pts[3]);
@@ -3960,6 +4027,75 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   polycubePd->GetPoint(f1PtIds[2], f1Pts[1]);
   polycubePd->GetPoint(f1PtIds[1], f1Pts[2]);
   polycubePd->GetPoint(f1PtIds[0], f1Pts[3]);
+
+  int topTet1 = 0;
+  int topTet3 = 0;
+  int botTet1 = 0;
+  int botTet3 = 0;
+
+  // Check to see if wedge tet on top
+  if (f3npts == 5 || f3npts == 6)
+  {
+    double vec0[3], vec1[3], vec2[3], vec3[3], vec4[3], vec5[3], vec6[3], vec7[3];
+    vtkMath::Subtract(f3Pts[2], f3Pts[1], vec0);
+    vtkMath::Normalize(vec0);
+    vtkMath::Subtract(f3Pts[3], f3Pts[1], vec1);
+    vtkMath::Normalize(vec1);
+    vtkMath::Subtract(f1Pts[1], f1Pts[2], vec2);
+    vtkMath::Normalize(vec2);
+    vtkMath::Subtract(f1Pts[0], f1Pts[2], vec3);
+    vtkMath::Normalize(vec3);
+
+    if (f3npts == 6)
+    {
+      double f3LastPts[2][3], f1LastPts[2][3];
+      polycubePd->GetPoint(f3PtIds[4], f3LastPts[0]);
+      polycubePd->GetPoint(f3PtIds[5], f3LastPts[1]);
+      polycubePd->GetPoint(f1PtIds[5], f1LastPts[0]);
+      polycubePd->GetPoint(f1PtIds[4], f1LastPts[1]);
+
+      // Get vector around face 0
+      vtkMath::Subtract(f3LastPts[1], f3Pts[0], vec4);
+      vtkMath::Normalize(vec4);
+      vtkMath::Subtract(f3LastPts[2], f3Pts[0], vec5);
+      vtkMath::Normalize(vec5);
+      vtkMath::Subtract(f1LastPts[2], f1Pts[3], vec6);
+      vtkMath::Normalize(vec6);
+      vtkMath::Subtract(f1LastPts[1], f1Pts[3], vec7);
+      vtkMath::Normalize(vec7);
+    }
+    else
+    {
+      double f3LastPt[3], f1LastPt[3];
+      polycubePd->GetPoint(f3PtIds[4], f3LastPt);
+      polycubePd->GetPoint(f1PtIds[4], f1LastPt);
+
+      // Get vector around face 0
+      vtkMath::Subtract(f3Pts[3], f3Pts[0], vec4);
+      vtkMath::Normalize(vec4);
+      vtkMath::Subtract(f3LastPt, f3Pts[0], vec5);
+      vtkMath::Normalize(vec5);
+      vtkMath::Subtract(f1Pts[0], f1Pts[3], vec6);
+      vtkMath::Normalize(vec6);
+      vtkMath::Subtract(f1LastPt, f1Pts[3], vec7);
+      vtkMath::Normalize(vec7);
+    }
+
+    double testDot0 = vtkMath::Dot(vec0, vec1);
+    double testDot1 = vtkMath::Dot(vec2, vec3);
+    double testDot2 = vtkMath::Dot(vec4, vec5);
+    double testDot3 = vtkMath::Dot(vec6, vec7);
+
+    if (testDot0 < 1.0+1.0e-6 && testDot0 > 1.0-1.0e-6)
+      topTet1 = 1;
+    if (testDot1 < 1.0+1.0e-6 && testDot1 > 1.0-1.0e-6)
+      topTet3 = 1;
+
+    if (testDot2 < 1.0+1.0e-6 && testDot2 > 1.0-1.0e-6)
+      botTet1 = 1;
+    if (testDot3 < 1.0+1.0e-6 && testDot3 > 1.0-1.0e-6)
+      botTet3 = 1;
+  }
 
   // Check to see if wedge top
   int topVertWedge = 0;
@@ -3992,16 +4128,14 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
     if (testDot0 < 1.0e-6 && testDot0 > -1.0e-6)
     {
-      if (testDot1 < 1.0e-6 && testDot1 > -1.0e-6)
-        topVertWedge = 1;
-      else
+      if (!(testDot1 < 1.0e-6 && testDot1 > -1.0e-6))
         botVertWedge = 1;
     }
     else
       topVertWedge = 1;
   }
 
-  if (topVertWedge)
+  if (topVertWedge || topTet1 || topTet3)
   {
     polycubePd->GetPoint(f3PtIds[3], f3Pts[2]);
     polycubePd->GetPoint(f3PtIds[4], f3Pts[3]);
@@ -4009,9 +4143,110 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     polycubePd->GetPoint(f1PtIds[3], f1Pts[1]);
   }
 
+  // Check to see if tet on top
+  int topTet4 = 0;
+  int topTet5 = 0;
+
+  if (f0npts == 4 && f3npts == 4)
+  {
+    double vec0[3], vec1[3], vec2[3], vec3[3];
+    vtkMath::Subtract(f1Pts[2], f3Pts[1], vec0);
+    vtkMath::Normalize(vec0);
+    vtkMath::Subtract(f3Pts[2], f3Pts[1], vec1);
+    vtkMath::Normalize(vec1);
+    vtkMath::Subtract(f1Pts[1], f3Pts[2], vec2);
+    vtkMath::Normalize(vec2);
+    vtkMath::Subtract(f1Pts[2], f3Pts[2], vec3);
+    vtkMath::Normalize(vec3);
+
+    double normal0[3], normal1[3];
+    vtkMath::Cross(vec0, vec1, normal0);
+    vtkMath::Normalize(normal0);
+    vtkMath::Cross(vec2, vec3, normal1);
+    vtkMath::Normalize(normal1);
+
+    double testDot0 = vtkMath::Dot(normal0, normal1);
+
+    if (!(testDot0 < 1.0+1.0e-6 && testDot0 > 1.0-1.0e-6))
+    {
+      double vec4[3], vec5[3];
+
+      vtkMath::Subtract(f3Pts[1], f3Pts[0], vec4);
+      vtkMath::Normalize(vec4);
+      vtkMath::Subtract(f3Pts[2], f3Pts[3], vec5);
+      vtkMath::Normalize(vec5);
+
+      double testDot1 = vtkMath::Dot(vec4, vec0);
+      double testDot2 = vtkMath::Dot(vec5, vec2);
+
+      if (!(testDot1 < 1.0e-6 && testDot1 > -1.0e-6))
+        topTet4 = 1;
+      if (!(testDot2 < 1.0e-6 && testDot2 > -1.0e-6))
+        topTet5 = 1;
+    }
+  }
+
+
+  // Check to see if tet on bottom
+  int botTet4 = 0;
+  int botTet5 = 0;
+
+  if (f0npts == 4 && f3npts == 4)
+  {
+    double vec0[3], vec1[3], vec2[3], vec3[3];
+    vtkMath::Subtract(f1Pts[3], f3Pts[0], vec0);
+    vtkMath::Normalize(vec0);
+    vtkMath::Subtract(f1Pts[0], f3Pts[0], vec1);
+    vtkMath::Normalize(vec1);
+    vtkMath::Subtract(f1Pts[0], f3Pts[3], vec2);
+    vtkMath::Normalize(vec2);
+    vtkMath::Subtract(f3Pts[0], f3Pts[3], vec3);
+    vtkMath::Normalize(vec3);
+
+    double normal0[3], normal1[3];
+    vtkMath::Cross(vec0, vec1, normal0);
+    vtkMath::Normalize(normal0);
+    vtkMath::Cross(vec2, vec3, normal1);
+    vtkMath::Normalize(normal1);
+
+    double testDot0 = vtkMath::Dot(normal0, normal1);
+
+    if (!(testDot0 < 1.0+1.0e-6 && testDot0 > 1.0-1.0e-6))
+    {
+      double vec4[3], vec5[3];
+
+      vtkMath::Subtract(f3Pts[0], f3Pts[1], vec4);
+      vtkMath::Normalize(vec4);
+      vtkMath::Subtract(f3Pts[3], f3Pts[2], vec5);
+      vtkMath::Normalize(vec5);
+
+      double testDot1 = vtkMath::Dot(vec4, vec0);
+      double testDot2 = vtkMath::Dot(vec5, vec2);
+
+      if (!(testDot1 < 1.0e-6 && testDot1 > -1.0e-6))
+        botTet4 = 1;
+      if (!(testDot2 < 1.0e-6 && testDot2 > -1.0e-6))
+        botTet5 = 1;
+    }
+  }
+
   fprintf(stdout,"THIS SAYS TOP VERT WEDGE: %d, HORZ WEDGE: %d\n", topVertWedge, topHorzWedge);
   fprintf(stdout,"THIS SAYS BOT VERT WEDGE: %d, HORZ WEDGE: %d\n", botVertWedge, botHorzWedge);
+  fprintf(stdout,"THIS SAYS TOP TET 0: %d\n", topTet0);
+  fprintf(stdout,"THIS SAYS TOP TET 1: %d\n", topTet1);
+  fprintf(stdout,"THIS SAYS TOP TET 2: %d\n", topTet2);
+  fprintf(stdout,"THIS SAYS TOP TET 3: %d\n", topTet3);
+  fprintf(stdout,"THIS SAYS TOP TET 4: %d\n", topTet4);
+  fprintf(stdout,"THIS SAYS TOP TET 5: %d\n", topTet5);
+  fprintf(stdout,"THIS SAYS BOT TET 0: %d\n", botTet0);
+  fprintf(stdout,"THIS SAYS BOT TET 1: %d\n", botTet1);
+  fprintf(stdout,"THIS SAYS BOT TET 2: %d\n", botTet2);
+  fprintf(stdout,"THIS SAYS BOT TET 3: %d\n", botTet3);
+  fprintf(stdout,"THIS SAYS BOT TET 4: %d\n", botTet4);
+  fprintf(stdout,"THIS SAYS BOT TET 5: %d\n", botTet5);
+  fprintf(stdout,"\n");
 
+  // Sides of cube
   double face0Vec0[3], face0Vec1[3];
   vtkMath::Subtract(f0Pts[3], f0Pts[0], face0Vec0);
   vtkMath::Normalize(face0Vec0);
@@ -4032,64 +4267,365 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
   l_div = floor(vtkSVMathUtils::Distance(f0Pts[1], f0Pts[0])/(this->PolycubeUnitLength));
 
-  vtkNew(vtkPoints, f0GridPts);
-  f0GridPts->SetNumberOfPoints(h_div*l_div);
-  vtkNew(vtkPoints, f2GridPts);
-  f2GridPts->SetNumberOfPoints(h_div*l_div);
+  //vtkNew(vtkPoints, f0GridPts);
+  //f0GridPts->SetNumberOfPoints(h_div*l_div);
+  //vtkNew(vtkPoints, f2GridPts);
+  //f2GridPts->SetNumberOfPoints(h_div*l_div);
 
-  int dim2D[3]; dim2D[0] = h_div; dim2D[1] = l_div; dim2D[2] = 1;
+  //int dim2D_0[3]; dim2D_0[0] = h_div; dim2D_0[1] = l_div; dim2D_0[2] = 1;
 
-  for (int i=0; i<h_div; i++)
+  //for (int i=0; i<h_div; i++)
+  //{
+  //  double z0Vec0[3], z0Vec1[3], z2Vec0[3], z2Vec1[3];
+  //  for (int j=0; j<3; j++)
+  //  {
+  //    z0Vec0[j] = face0Vec0[j]*i*(face0Dist0/(h_div-1));
+  //    z0Vec1[j] = face0Vec1[j]*i*(face0Dist1/(h_div-1));
+
+  //    z2Vec0[j] = face2Vec0[j]*i*(face2Dist0/(h_div-1));
+  //    z2Vec1[j] = face2Vec1[j]*i*(face2Dist1/(h_div-1));
+  //  }
+
+  //  double f0Start[3], f0End[3], f2Start[3], f2End[3];
+  //  vtkMath::Add(f0Pts[0], z0Vec0, f0Start);
+  //  vtkMath::Add(f0Pts[1], z0Vec1, f0End);
+
+  //  vtkMath::Add(f2Pts[0], z2Vec0, f2Start);
+  //  vtkMath::Add(f2Pts[1], z2Vec1, f2End);
+
+  //  double f0LVec[3], f2LVec[3];
+  //  vtkMath::Subtract(f0End, f0Start, f0LVec);
+  //  vtkMath::Normalize(f0LVec);
+  //  double f0LDist = vtkSVMathUtils::Distance(f0End, f0Start);
+
+  //  vtkMath::Subtract(f2End, f2Start, f2LVec);
+  //  vtkMath::Normalize(f2LVec);
+  //  double f2LDist = vtkSVMathUtils::Distance(f2End, f2Start);
+
+  //  for (int j=0; j<l_div; j++)
+  //  {
+  //    double y0Vec[3], y2Vec[3];
+  //    for (int k=0; k<3; k++)
+  //    {
+  //      y0Vec[k] = f0LVec[k]*j*(f0LDist/(l_div-1));
+  //      y2Vec[k] = f2LVec[k]*j*(f2LDist/(l_div-1));
+  //    }
+
+  //    double new0Pt[3], new2Pt[3];
+  //    vtkMath::Add(f0Start, y0Vec, new0Pt);
+
+  //    vtkMath::Add(f2Start, y2Vec, new2Pt);
+
+  //    int pos[3]; pos[0]= i; pos[1] = j; pos[2] = 0;
+  //    int pId = vtkStructuredData::ComputePointId(dim2D_0, pos);
+
+  //    f0GridPts->SetPoint(pId, new0Pt);
+  //    f2GridPts->SetPoint(pId, new2Pt);
+  //  }
+  //}
+
+  // Top and bottom of cube
+  double face5Vec0[3], face5Vec1[3];
+  vtkMath::Subtract(f1Pts[0], f1Pts[3], face5Vec0);
+  vtkMath::Normalize(face5Vec0);
+  double face5Dist0 = vtkSVMathUtils::Distance(f1Pts[0], f1Pts[3]);
+
+  vtkMath::Subtract(f3Pts[0], f3Pts[3], face5Vec1);
+  vtkMath::Normalize(face5Vec1);
+  double face5Dist1 = vtkSVMathUtils::Distance(f3Pts[0], f3Pts[3]);
+
+  double face4Vec0[3], face4Vec1[3];
+  vtkMath::Subtract(f1Pts[1], f1Pts[2], face4Vec0);
+  vtkMath::Normalize(face4Vec0);
+  double face4Dist0 = vtkSVMathUtils::Distance(f1Pts[1], f1Pts[2]);
+
+  vtkMath::Subtract(f3Pts[1], f3Pts[2], face4Vec1);
+  vtkMath::Normalize(face4Vec1);
+  double face4Dist1 = vtkSVMathUtils::Distance(f3Pts[1], f3Pts[2]);
+
+  vtkNew(vtkPoints, f5GridPts);
+  f5GridPts->SetNumberOfPoints(w_div*h_div);
+  vtkNew(vtkPoints, f4GridPts);
+  f4GridPts->SetNumberOfPoints(w_div*h_div);
+
+  int dim2D_1[3]; dim2D_1[0] = w_div; dim2D_1[1] = h_div; dim2D_1[2] = 1;
+
+  for (int i=0; i<w_div; i++)
   {
-    double pt0[3], pt1[3];
+    double x5Vec0[3], x5Vec1[3], x4Vec0[3], x4Vec1[3];
 
-    double z0Vec0[3], z0Vec1[3], z2Vec0[3], z2Vec1[3];
     for (int j=0; j<3; j++)
     {
-      z0Vec0[j] = face0Vec0[j]*i*(face0Dist0/(h_div-1));
-      z0Vec1[j] = face0Vec1[j]*i*(face0Dist1/(h_div-1));
+      x5Vec0[j] = face5Vec0[j]*i*(face5Dist0/(w_div-1));
+      x5Vec1[j] = face5Vec1[j]*i*(face5Dist1/(w_div-1));
 
-      z2Vec0[j] = face2Vec0[j]*i*(face2Dist0/(h_div-1));
-      z2Vec1[j] = face2Vec1[j]*i*(face2Dist1/(h_div-1));
+      x4Vec0[j] = face4Vec0[j]*i*(face4Dist0/(w_div-1));
+      x4Vec1[j] = face4Vec1[j]*i*(face4Dist1/(w_div-1));
     }
 
-    double f0Start[3], f0End[3], f2Start[3], f2End[3];
-    vtkMath::Add(f0Pts[0], z0Vec0, f0Start);
-    vtkMath::Add(f0Pts[1], z0Vec1, f0End);
+    double f5Start[3], f5End[3], f4Start[3], f4End[3];
+    vtkMath::Add(f1Pts[3], x5Vec0, f5Start);
+    vtkMath::Add(f3Pts[3], x5Vec1, f5End);
 
-    vtkMath::Add(f2Pts[0], z2Vec0, f2Start);
-    vtkMath::Add(f2Pts[1], z2Vec1, f2End);
+    vtkMath::Add(f1Pts[2], x4Vec0, f4Start);
+    vtkMath::Add(f3Pts[2], x4Vec1, f4End);
 
-    double f0LVec[3], f2LVec[3];
-    vtkMath::Subtract(f0End, f0Start, f0LVec);
-    vtkMath::Normalize(f0LVec);
-    double f0LDist = vtkSVMathUtils::Distance(f0End, f0Start);
+    double f5HVec[3], f4HVec[3];
+    vtkMath::Subtract(f5End, f5Start, f5HVec);
+    vtkMath::Normalize(f5HVec);
+    double f5HDist = vtkSVMathUtils::Distance(f5End, f5Start);
 
-    vtkMath::Subtract(f2End, f2Start, f2LVec);
-    vtkMath::Normalize(f2LVec);
-    double f2LDist = vtkSVMathUtils::Distance(f2End, f2Start);
+    vtkMath::Subtract(f4End, f4Start, f4HVec);
+    vtkMath::Normalize(f4HVec);
+    double f4HDist = vtkSVMathUtils::Distance(f4End, f4Start);
 
-    for (int j=0; j<l_div; j++)
+    // Another tet top face
+    double face4DiagVecs[2][3], x4DiagVecs[2][3], x4DiagPts[2][3];
+    double x4ToDiag[3], x4FromDiag[3];
+    double face4DiagDists[2], x4ToDiagDist, x4FromDiagDist;
+    if (topTet1)
     {
-      double y0Vec[3], y2Vec[3];
-      for (int k=0; k<3; k++)
+      double midPt[3];
+      polycubePd->GetPoint(f1PtIds[2], midPt);
+
+      vtkMath::Subtract(midPt, f3Pts[2], face4DiagVecs[0]);
+      vtkMath::Normalize(face4DiagVecs[0]);
+      face4DiagDists[0] = vtkSVMathUtils::Distance(midPt, f3Pts[2]);
+
+      vtkMath::Subtract(midPt, f3Pts[1], face4DiagVecs[1]);
+      vtkMath::Normalize(face4DiagVecs[1]);
+      face4DiagDists[1] = vtkSVMathUtils::Distance(midPt, f3Pts[1]);
+
+      for (int j=0; j<3; j++)
       {
-        y0Vec[k] = f0LVec[k]*j*(f0LDist/(l_div-1));
-        y2Vec[k] = f2LVec[k]*j*(f2LDist/(l_div-1));
+        x4DiagVecs[0][j] = face4DiagVecs[0][j]*i*(face4DiagDists[0]/(w_div-1));
+        x4DiagVecs[1][j] = face4DiagVecs[1][j]*i*(face4DiagDists[1]/(w_div-1));
+      }
 
-        double new0Pt[3], new2Pt[3];
-        vtkMath::Add(f0Start, y0Vec, new0Pt);
+      vtkMath::Add(f3Pts[2], x4DiagVecs[0], x4DiagPts[0]);
+      vtkMath::Add(f3Pts[1], x4DiagVecs[1], x4DiagPts[1]);
 
-        vtkMath::Add(f2Start, y2Vec, new2Pt);
+      if (i <= w_div/2)
+      {
+        vtkMath::Subtract(x4DiagPts[0], f4Start, x4ToDiag);
+        vtkMath::Normalize(x4ToDiag);
+        x4ToDiagDist = vtkSVMathUtils::Distance(x4DiagPts[0], f4Start);
 
-        int pos[3]; pos[0]= i; pos[1] = j; pos[2] = 0;
-        int pId = vtkStructuredData::ComputePointId(dim2D, pos);
+        vtkMath::Subtract(f4End, x4DiagPts[0], x4FromDiag);
+        vtkMath::Normalize(x4FromDiag);
+        x4FromDiagDist = vtkSVMathUtils::Distance(f4End, x4DiagPts[0]);
+      }
+      else
+      {
+        vtkMath::Subtract(x4DiagPts[1], f4Start, x4ToDiag);
+        vtkMath::Normalize(x4ToDiag);
+        x4ToDiagDist = vtkSVMathUtils::Distance(x4DiagPts[1], f4Start);
 
-        f0GridPts->SetPoint(pId, new0Pt);
-        f2GridPts->SetPoint(pId, new2Pt);
+        vtkMath::Subtract(f4End, x4DiagPts[1], x4FromDiag);
+        vtkMath::Normalize(x4FromDiag);
+        x4FromDiagDist = vtkSVMathUtils::Distance(f4End, x4DiagPts[1]);
       }
     }
+
+    // Tet top face
+    double face4DiagVec[3], x4DiagVec[3], x4DiagPoint[3];
+    double face4DiagDist;
+    if (topTet4)
+    {
+      vtkMath::Subtract(f3Pts[1], f1Pts[2], face4DiagVec);
+      vtkMath::Normalize(face4DiagVec);
+      face4DiagDist = vtkSVMathUtils::Distance(f3Pts[1], f1Pts[2]);
+
+      for (int j=0; j<3; j++)
+        x4DiagVec[j] = face4DiagVec[j]*i*(face4DiagDist/(w_div-1));
+
+      vtkMath::Add(f1Pts[2], x4DiagVec, x4DiagPoint);
+    }
+    if (topTet5)
+    {
+      vtkMath::Subtract(f1Pts[1], f3Pts[2], face4DiagVec);
+      vtkMath::Normalize(face4DiagVec);
+      face4DiagDist = vtkSVMathUtils::Distance(f1Pts[1], f3Pts[2]);
+
+      for (int j=0; j<3; j++)
+        x4DiagVec[j] = face4DiagVec[j]*i*(face4DiagDist/(w_div-1));
+
+      vtkMath::Add(f3Pts[2], x4DiagVec, x4DiagPoint);
+    }
+
+    if (topTet4 || topTet5)
+    {
+      vtkMath::Subtract(x4DiagPoint, f4Start, x4ToDiag);
+      vtkMath::Normalize(x4ToDiag);
+      x4ToDiagDist = vtkSVMathUtils::Distance(x4DiagPoint, f4Start);
+
+      vtkMath::Subtract(f4End, x4DiagPoint, x4FromDiag);
+      vtkMath::Normalize(x4FromDiag);
+      x4FromDiagDist = vtkSVMathUtils::Distance(f4End, x4DiagPoint);
+    }
+
+    // Tet bot face
+    double face5DiagVec[3], x5DiagVec[3], x5DiagPoint[3], x5ToDiag[3], x5FromDiag[3];
+    double face5DiagDist, x5ToDiagDist, x5FromDiagDist;
+
+    if (botTet4)
+    {
+      vtkMath::Subtract(f3Pts[0], f1Pts[3], face5DiagVec);
+      vtkMath::Normalize(face5DiagVec);
+      face5DiagDist = vtkSVMathUtils::Distance(f3Pts[0], f1Pts[3]);
+
+      for (int j=0; j<3; j++)
+        x5DiagVec[j] = face5DiagVec[j]*i*(face5DiagDist/(w_div-1));
+
+      vtkMath::Add(f1Pts[3], x5DiagVec, x5DiagPoint);
+    }
+    if (botTet5)
+    {
+      vtkMath::Subtract(f1Pts[0], f3Pts[3], face5DiagVec);
+      vtkMath::Normalize(face5DiagVec);
+      face5DiagDist = vtkSVMathUtils::Distance(f1Pts[0], f3Pts[1]);
+
+      for (int j=0; j<3; j++)
+        x5DiagVec[j] = face5DiagVec[j]*i*(face5DiagDist/(w_div-1));
+
+      vtkMath::Add(f3Pts[3], x5DiagVec, x5DiagPoint);
+    }
+
+    if (botTet4 || botTet5)
+    {
+      vtkMath::Subtract(x5DiagPoint, f5Start, x5ToDiag);
+      vtkMath::Normalize(x5ToDiag);
+      x5ToDiagDist = vtkSVMathUtils::Distance(x5DiagPoint, f5Start);
+
+      vtkMath::Subtract(f5End, x5DiagPoint, x5FromDiag);
+      vtkMath::Normalize(x5FromDiag);
+      x5FromDiagDist = vtkSVMathUtils::Distance(f5End, x5DiagPoint);
+    }
+
+    for (int j=0; j<h_div; j++)
+    {
+      double z5Vec[3], z4Vec[3];
+      for (int k=0; k<3; k++)
+      {
+        z5Vec[k] = f5HVec[k]*j*(f5HDist/(h_div-1));
+        z4Vec[k] = f4HVec[k]*j*(f4HDist/(h_div-1));
+      }
+
+      double new5Pt[3], new4Pt[3];
+      vtkMath::Add(f5Start, z5Vec, new5Pt);
+      vtkMath::Add(f4Start, z4Vec, new4Pt);
+
+      if (topTet4)
+      {
+        if (j <= i)
+        {
+          int diag_div = i;
+          if (diag_div == 0)
+            diag_div = 1;
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/diag_div);
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4FromDiag[k]*(j-i)*(x4FromDiagDist/(w_div-i-1));
+          vtkMath::Add(x4DiagPoint, z4Vec, new4Pt);
+        }
+      }
+      if (topTet5)
+      {
+        if (j <= i)
+        {
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4ToDiag[k]*(w_div-j-1)*(x4ToDiagDist/(w_div-i-1));
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4FromDiag[k]*(j-i)*(x4FromDiagDist/i);
+          vtkMath::Add(x4DiagPoint, z4Vec, new4Pt);
+        }
+      }
+
+      if (botTet4)
+      {
+        if (j <= i)
+        {
+          int diag_div = i;
+          if (diag_div == 0)
+            diag_div = 1;
+          for (int k=0; k<3; k++)
+            z5Vec[k] = x5ToDiag[k]*j*(x5ToDiagDist/diag_div);
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+            z5Vec[k] = x5FromDiag[k]*(j-i)*(x5FromDiagDist/(w_div-i-1));
+          vtkMath::Add(x5DiagPoint, z5Vec, new5Pt);
+        }
+      }
+      if (botTet5)
+      {
+        if (j <= i)
+        {
+          for (int k=0; k<3; k++)
+            z5Vec[k] = x5ToDiag[k]*(w_div-j-1)*(x5ToDiagDist/(w_div-i-1));
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+            z5Vec[k] = x5FromDiag[k]*(j-i)*(x5FromDiagDist/i);
+          vtkMath::Add(x5DiagPoint, z5Vec, new5Pt);
+        }
+      }
+
+      if (topTet1)
+      {
+        if (i <= w_div/2)
+        {
+          if (j <= w_div - 2*i)
+          {
+            for (int k=0; k<3; k++)
+              z4Vec[k] = x4ToDiag[k]*(w_div-j-1)*(x4ToDiagDist/(w_div-i-1));
+          }
+          else
+          {
+            for (int k=0; k<3; k++)
+              z4Vec[k] = x4FromDiag[k]*(j-i)*(x4FromDiagDist/i);
+            vtkMath::Add(x4DiagPoint, z4Vec, new4Pt);
+          }
+        }
+        else
+        {
+          if (j <= 2*i)
+          {
+            int diag_div = i;
+            if (diag_div == 0)
+              diag_div = 1;
+            for (int k=0; k<3; k++)
+              z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/diag_div);
+          }
+          else
+          {
+            for (int k=0; k<3; k++)
+              z4Vec[k] = x4FromDiag[k]*(j-i)*(x4FromDiagDist/(w_div-i-1));
+            vtkMath::Add(x4DiagPoint, z4Vec, new4Pt);
+          }
+        }
+      }
+
+      int pos[3]; pos[0]= i; pos[1] = j; pos[2] = 0;
+      int pId = vtkStructuredData::ComputePointId(dim2D_1, pos);
+
+      f5GridPts->SetPoint(pId, new5Pt);
+      f4GridPts->SetPoint(pId, new4Pt);
+    }
   }
+
+  vtkNew(vtkPolyData, grid5Poly);
+  grid5Poly->SetPoints(f5GridPts);
+  vtkNew(vtkPolyData, grid4Poly);
+  grid4Poly->SetPoints(f4GridPts);
 
   vtkNew(vtkPoints, paraPoints);
   int dim[3]; dim[0] = w_div; dim[1] = l_div; dim[2] = h_div;
@@ -4103,26 +4639,47 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
     {
       for (int k=0; k<h_div; k++)
       {
-        int pos2D[3]; pos2D[0] = k; pos2D[1] = j; pos2D[2] = 0;
-        int getId = vtkStructuredData::ComputePointId(dim2D, pos2D);
+        //int pos2D_0[3]; pos2D_0[0] = k; pos2D_0[1] = j; pos2D_0[2] = 0;
+        //int getId0 = vtkStructuredData::ComputePointId(dim2D_0, pos2D_0);
 
-        double startPt[3], endPt[3];
-        f0GridPts->GetPoint(getId, startPt);
-        f2GridPts->GetPoint(getId, endPt);
+        //double startPt0[3], endPt0[3];
+        //f0GridPts->GetPoint(getId0, startPt0);
+        //f2GridPts->GetPoint(getId0, endPt0);
 
-        double wLVec[3];
-        vtkMath::Subtract(startPt, endPt, wLVec);
-        vtkMath::Normalize(wLVec);
-        double wLDist = vtkSVMathUtils::Distance(endPt, startPt);
+        int pos2D_1[3]; pos2D_1[0] = i; pos2D_1[1] = k; pos2D_1[2] = 0;
+        int getId1 = vtkStructuredData::ComputePointId(dim2D_1, pos2D_1);
 
-        double xVec[3];
+        double startPt1[3], endPt1[3];
+        f5GridPts->GetPoint(getId1, startPt1);
+        f4GridPts->GetPoint(getId1, endPt1);
+
+        //double wLVec[3];
+        //vtkMath::Subtract(startPt0, endPt0, wLVec);
+        //vtkMath::Normalize(wLVec);
+        //double wLDist = vtkSVMathUtils::Distance(endPt0, startPt0);
+
+        //double xVec[3];
+        //for (int l=0; l<3; l++)
+        //{
+        //  xVec[l] = wLVec[l]*i*(wLDist/(1 - w_div));
+        //}
+        //
+        //double newPt[3];
+        //vtkMath::Add(startPt0, xVec, newPt);
+
+        double hLVec[3];
+        vtkMath::Subtract(startPt1, endPt1, hLVec);
+        vtkMath::Normalize(hLVec);
+        double hLDist = vtkSVMathUtils::Distance(endPt1, startPt1);
+
+        double yVec[3];
         for (int l=0; l<3; l++)
         {
-          xVec[l] = wLVec[l]*i*(wLDist/(1 - w_div));
+          yVec[l] = hLVec[l]*j*(hLDist/(1 - l_div));
         }
 
         double newPt[3];
-        vtkMath::Add(startPt, xVec, newPt);
+        vtkMath::Add(startPt1, yVec, newPt);
 
         int pos[3]; pos[0]= i; pos[1] = j; pos[2] = k;
         int pId = vtkStructuredData::ComputePointId(dim, pos);
@@ -4134,8 +4691,8 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   double midPt0[3], midPt1[3];
   if (topHorzWedge)
   {
-    polycubePd->GetPoint(f0PtIds[2], midPt0);
-    polycubePd->GetPoint(f2PtIds[2], midPt1);
+    polycubePd->GetPoint(f2PtIds[2], midPt0);
+    polycubePd->GetPoint(f0PtIds[2], midPt1);
     this->PushStructuredGridXAxis(paraHexMesh, midPt0, midPt1, 0);
   }
 
@@ -4143,13 +4700,13 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   {
     if (topHorzWedge)
     {
-    polycubePd->GetPoint(f0PtIds[5], midPt0);
-    polycubePd->GetPoint(f2PtIds[5], midPt1);
+    polycubePd->GetPoint(f2PtIds[5], midPt0);
+    polycubePd->GetPoint(f0PtIds[5], midPt1);
     }
     else
     {
-    polycubePd->GetPoint(f0PtIds[4], midPt0);
-    polycubePd->GetPoint(f2PtIds[4], midPt1);
+    polycubePd->GetPoint(f2PtIds[4], midPt0);
+    polycubePd->GetPoint(f0PtIds[4], midPt1);
     }
     this->PushStructuredGridXAxis(paraHexMesh, midPt0, midPt1, 1);
   }
