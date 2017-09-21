@@ -254,7 +254,7 @@ protected:
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
   int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
-                            const int w_div, int &l_div, const int h_div);
+                            int w_div, int &l_div, int h_div);
   int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
                            vtkPolyData *pdWithCleanInterior,
                            vtkPolyData *pdWithoutInterior,
