@@ -31,20 +31,36 @@ vtkStandardNewMacro(vtkSVCleanUnstructuredGrid);
 //----------------------------------------------------------------------------
 vtkSVCleanUnstructuredGrid::vtkSVCleanUnstructuredGrid()
 {
-  this->Locator = vtkMergePoints::New();
+  this->Locator = NULL;
+  this->ToleranceIsAbsolute  = 0;
+  this->Tolerance            = 0.0;
+  this->AbsoluteTolerance    = 1.0;
 }
 
 //----------------------------------------------------------------------------
 vtkSVCleanUnstructuredGrid::~vtkSVCleanUnstructuredGrid()
 {
-  this->Locator->Delete();
-  this->Locator = NULL;
+  this->SetLocator(NULL);
 }
 
 //----------------------------------------------------------------------------
 void vtkSVCleanUnstructuredGrid::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+  os << indent << "ToleranceIsAbsolute: "
+     << (this->ToleranceIsAbsolute ? "On\n" : "Off\n");
+  os << indent << "Tolerance: "
+     << (this->Tolerance ? "On\n" : "Off\n");
+  os << indent << "AbsoluteTolerance: "
+     << (this->AbsoluteTolerance ? "On\n" : "Off\n");
+  if ( this->Locator )
+  {
+    os << indent << "Locator: " << this->Locator << "\n";
+  }
+  else
+  {
+    os << indent << "Locator: (none)\n";
+  }
 }
 
 //----------------------------------------------------------------------------
@@ -83,6 +99,15 @@ int vtkSVCleanUnstructuredGrid::RequestData(vtkInformation* vtkNotUsed(request),
   vtkIdType* ptMap = new vtkIdType[num];
   double pt[3];
 
+  this->CreateDefaultLocator(input);
+  if (this->ToleranceIsAbsolute)
+  {
+    this->Locator->SetTolerance(this->AbsoluteTolerance);
+  }
+  else
+  {
+    this->Locator->SetTolerance(this->Tolerance*input->GetLength());
+  }
   this->Locator->InitPointInsertion(newPts, input->GetBounds(), num);
 
   vtkIdType progressStep = num / 100;
@@ -142,8 +167,57 @@ int vtkSVCleanUnstructuredGrid::RequestData(vtkInformation* vtkNotUsed(request),
   return 1;
 }
 
+void vtkSVCleanUnstructuredGrid::CreateDefaultLocator(vtkDataSet *input)
+{
+  double tol;
+  if (this->ToleranceIsAbsolute)
+  {
+    tol = this->AbsoluteTolerance;
+  }
+  else
+  {
+    if (input)
+    {
+      tol = this->Tolerance*input->GetLength();
+    }
+    else
+    {
+      tol = this->Tolerance;
+    }
+  }
+
+  if ( this->Locator == NULL)
+  {
+    if (tol==0.0)
+    {
+      this->Locator = vtkMergePoints::New();
+      this->Locator->Register(this);
+      this->Locator->Delete();
+    }
+    else
+    {
+      this->Locator = vtkPointLocator::New();
+      this->Locator->Register(this);
+      this->Locator->Delete();
+    }
+  }
+  else
+  {
+    // check that the tolerance wasn't changed from zero to non-zero
+    if ((tol>0.0) && (this->GetLocator()->GetTolerance()==0.0))
+    {
+      this->SetLocator(NULL);
+      this->Locator = vtkPointLocator::New();
+      this->Locator->Register(this);
+      this->Locator->Delete();
+    }
+  }
+}
+
 int vtkSVCleanUnstructuredGrid::FillInputPortInformation(int vtkNotUsed(port), vtkInformation* info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkDataSet");
   return 1;
 }
+
+

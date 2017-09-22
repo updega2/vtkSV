@@ -3666,6 +3666,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   paraHexCleanSurface->DeepCopy(cleaner->GetOutput());
 
   vtkNew(vtkSVCleanUnstructuredGrid, cleaner2);
+  cleaner2->ToleranceIsAbsoluteOn();
+  cleaner2->SetAbsoluteTolerance(1.0e-6);
   cleaner2->SetInputData(paraHexVolume);
   cleaner2->Update();
 
@@ -3675,6 +3677,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
   vtkNew(vtkPolyData, cleanSurface);
   cleanSurface->DeepCopy(surfacer2->GetOutput());
+
+  this->RemoveInteriorCells(cleanSurface);
 
   std::vector<int> surfacePtMap;
   std::vector<std::vector<int> > invPtMap;
@@ -3715,9 +3719,6 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
   this->FixInteriorBoundary(mappedSurface, invPtMap);
 
-  std::string filenamer = "/Users/adamupdegrove/Desktop/tmp/DOUBLE_CHECK.vtp";
-  vtkSVIOUtils::WriteVTPFile(filenamer, mappedSurface);
-
   vtkNew(vtkAppendFilter, volumeAppender);
   for (int i=0; i<numGroups; i++)
   {
@@ -3752,6 +3753,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   mappedVolume->DeepCopy(volumeAppender->GetOutput());
 
   vtkNew(vtkSVCleanUnstructuredGrid, cleaner3);
+  cleaner3->ToleranceIsAbsoluteOn();
+  cleaner3->SetAbsoluteTolerance(1.0e-6);
   cleaner3->SetInputData(volumeAppender->GetOutput());
   cleaner3->Update();
 
@@ -4267,10 +4270,10 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
   l_div = floor(vtkSVMathUtils::Distance(f0Pts[1], f0Pts[0])/(this->PolycubeUnitLength));
 
-  if (topTet0 || topTet1 || botTet0 || botTet1)
-    w_div *= 2;
-  if (topTet2 || topTet3 || botTet2 || botTet3)
-    h_div *= 2;
+  if (topTet1 || topTet3 || botTet1 || botTet3)
+    w_div = 2*w_div-1;
+  if (topTet0 || topTet2 || botTet0 || botTet2)
+    h_div = 2*h_div-1;
 
   //vtkNew(vtkPoints, f0GridPts);
   //f0GridPts->SetNumberOfPoints(h_div*l_div);
@@ -4355,7 +4358,6 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
   int dim2D_1[3]; dim2D_1[0] = w_div; dim2D_1[1] = h_div; dim2D_1[2] = 1;
 
-  vtkNew(vtkPoints, testPts);
   for (int i=0; i<w_div; i++)
   {
     double x5Vec0[3], x5Vec1[3], x4Vec0[3], x4Vec1[3];
@@ -4387,8 +4389,8 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
     // Another tet top face
     double face4DiagVecs[2][3], x4DiagVecs[2][3], x4DiagPts[2][3];
-    double x4ToDiag[3], x4FromDiag[3];
-    double face4DiagDists[2], x4ToDiagDist, x4FromDiagDist;
+    double x4ToDiag[3], x4FromDiag[3], x4AcrossDiag[3];
+    double face4DiagDists[2], x4ToDiagDist, x4FromDiagDist, x4AcrossDiagDist;
     if (topTet1)
     {
       double midPt[3];
@@ -4415,13 +4417,13 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
       for (int j=0; j<3; j++)
       {
         startPtVecs[0][j] = startVecs[0][j]*i*(startVecDists[0]/(h_div-1));
-        startPtVecs[1][j] = startVecs[1][j]*((i%(h_div-1))+1)*(startVecDists[1]/(h_div-1));
+        startPtVecs[1][j] = startVecs[1][j]*((i+1)%h_div)*(startVecDists[1]/(h_div-1));
         x4DiagVecs[0][j] = face4DiagVecs[0][j]*i*(face4DiagDists[0]/(h_div-1));
-        x4DiagVecs[1][j] = face4DiagVecs[1][j]*((i%(h_div-1))+1)*(face4DiagDists[1]/(h_div-1));
+        x4DiagVecs[1][j] = face4DiagVecs[1][j]*((i+1)%h_div)*(face4DiagDists[1]/(h_div-1));
       }
 
 
-      if (i < w_div/2)
+      if (i <= h_div-1)
       {
         vtkMath::Add(f1Pts[2], startPtVecs[0], f4Start);
         vtkMath::Add(f3Pts[2], x4DiagVecs[0], x4DiagPts[0]);
@@ -4447,7 +4449,57 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         vtkMath::Normalize(x4FromDiag);
         x4FromDiagDist = vtkSVMathUtils::Distance(f4End, x4DiagPts[1]);
       }
-      testPts->InsertNextPoint(f4Start);
+    }
+
+    if (topTet2)
+    {
+      double midPt[3];
+      polycubePd->GetPoint(f2PtIds[2], midPt);
+
+      double startVecs[2][3], startPtVecs[2][3], startVecDists[2];
+
+      vtkMath::Subtract(f0Pts[1], f2Pts[1], startVecs[0]);
+      vtkMath::Normalize(startVecs[0]);
+      startVecDists[0] = vtkSVMathUtils::Distance(f0Pts[1], f2Pts[1]);
+
+      vtkMath::Subtract(f0Pts[2], f2Pts[2], startVecs[1]);
+      vtkMath::Normalize(startVecs[1]);
+      startVecDists[1] = vtkSVMathUtils::Distance(f0Pts[2], f2Pts[2]);
+
+      vtkMath::Subtract(f0Pts[1], midPt, face4DiagVecs[0]);
+      vtkMath::Normalize(face4DiagVecs[0]);
+      face4DiagDists[0] = vtkSVMathUtils::Distance(midPt, f0Pts[1]);
+
+      vtkMath::Subtract(f0Pts[2], midPt, face4DiagVecs[1]);
+      vtkMath::Normalize(face4DiagVecs[1]);
+      face4DiagDists[1] = vtkSVMathUtils::Distance(midPt, f0Pts[2]);
+
+      for (int j=0; j<3; j++)
+      {
+        startPtVecs[0][j] = startVecs[0][j]*i*(startVecDists[0]/(w_div-1));
+        startPtVecs[1][j] = startVecs[1][j]*i*(startVecDists[1]/(w_div-1));
+        x4DiagVecs[0][j] = face4DiagVecs[0][j]*i*(face4DiagDists[0]/(w_div-1));
+        x4DiagVecs[1][j] = face4DiagVecs[1][j]*i*(face4DiagDists[1]/(w_div-1));
+      }
+
+
+      vtkMath::Add(f2Pts[1], startPtVecs[0], f4Start);
+      vtkMath::Add(f2Pts[2], startPtVecs[1], f4End);
+      vtkMath::Add(midPt, x4DiagVecs[0], x4DiagPts[0]);
+      vtkMath::Add(midPt, x4DiagVecs[1], x4DiagPts[1]);
+
+      vtkMath::Subtract(x4DiagPts[0], f4Start, x4ToDiag);
+      vtkMath::Normalize(x4ToDiag);
+      x4ToDiagDist = vtkSVMathUtils::Distance(x4DiagPts[0], f4Start);
+
+      vtkMath::Subtract(x4DiagPts[1], x4DiagPts[0], x4AcrossDiag);
+      vtkMath::Normalize(x4AcrossDiag);
+      x4AcrossDiagDist = vtkSVMathUtils::Distance(x4DiagPts[1], x4DiagPts[0]);
+
+      vtkMath::Subtract(f4End, x4DiagPts[1], x4FromDiag);
+      vtkMath::Normalize(x4FromDiag);
+      x4FromDiagDist = vtkSVMathUtils::Distance(f4End, x4DiagPts[1]);
+
     }
 
     // Tet top face
@@ -4552,7 +4604,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         else
         {
           for (int k=0; k<3; k++)
-            z4Vec[k] = x4FromDiag[k]*(j-i)*(x4FromDiagDist/(w_div-i-1));
+            z4Vec[k] = x4FromDiag[k]*(j-i)*(x4FromDiagDist/((w_div-1)-i));
           vtkMath::Add(x4DiagPoint, z4Vec, new4Pt);
         }
       }
@@ -4561,7 +4613,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         if (j <= i)
         {
           for (int k=0; k<3; k++)
-            z4Vec[k] = x4ToDiag[k]*(w_div-j-1)*(x4ToDiagDist/(w_div-i-1));
+            z4Vec[k] = x4ToDiag[k]*((w_div-j)-1)*(x4ToDiagDist/((w_div-1)-i));
           vtkMath::Add(f4Start, z4Vec, new4Pt);
         }
         else
@@ -4586,7 +4638,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         else
         {
           for (int k=0; k<3; k++)
-            z5Vec[k] = x5FromDiag[k]*(j-i)*(x5FromDiagDist/(w_div-i-1));
+            z5Vec[k] = x5FromDiag[k]*(j-i)*(x5FromDiagDist/((w_div-1)-i));
           vtkMath::Add(x5DiagPoint, z5Vec, new5Pt);
         }
       }
@@ -4595,7 +4647,7 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         if (j <= i)
         {
           for (int k=0; k<3; k++)
-            z5Vec[k] = x5ToDiag[k]*(w_div-j-1)*(x5ToDiagDist/(w_div-i-1));
+            z5Vec[k] = x5ToDiag[k]*((w_div-1)-j)*(x5ToDiagDist/((w_div-i)));
           vtkMath::Add(f5Start, z5Vec, new5Pt);
         }
         else
@@ -4608,39 +4660,72 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
       if (topTet1)
       {
-        if (i < w_div/2)
+        if (i <= h_div-1)
         {
-          if (j < h_div - i)
+          if (j < h_div-i)
           {
-            fprintf(stdout,"IN FIRST: i=%d j=%d\n", i, j);
+            int diag_div = ((h_div-1)-i);
+            if (diag_div == 0)
+              diag_div = 1;
             for (int k=0; k<3; k++)
-              z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/(h_div-i));
+              z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/diag_div);
             vtkMath::Add(f4Start, z4Vec, new4Pt);
           }
           else
           {
-            fprintf(stdout,"IN SECOND: i=%d j=%d\n", i, j);
             for (int k=0; k<3; k++)
-              z4Vec[k] = x4FromDiag[k]*(j-(h_div-i))*(x4FromDiagDist/i);
+              z4Vec[k] = x4FromDiag[k]*(j-((h_div-1)-i))*(x4FromDiagDist/i);
             vtkMath::Add(x4DiagPts[0], z4Vec, new4Pt);
           }
         }
         else
         {
-          if (j < i%(h_div-1))
+          if (j < (i+1)%h_div)
           {
-            fprintf(stdout,"IN THIRD: i=%d j=%d\n", i, j);
             for (int k=0; k<3; k++)
-              z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/(i%(h_div-1)));
+              z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/((i+1)%h_div));
             vtkMath::Add(f4Start, z4Vec, new4Pt);
           }
           else
           {
-            fprintf(stdout,"IN FOURTH: i=%d j=%d\n", i, j);
+            int diag_div = ((h_div-1)-((i+1)%h_div));
+            if (diag_div == 0)
+              diag_div = 1;
             for (int k=0; k<3; k++)
-              z4Vec[k] = x4FromDiag[k]*(j-(i%(h_div-1)))*(x4FromDiagDist/(h_div-(i%(h_div-1))));
+              z4Vec[k] = x4FromDiag[k]*(j-((i+1)%h_div))*(x4FromDiagDist/diag_div);
             vtkMath::Add(x4DiagPts[1], z4Vec, new4Pt);
           }
+        }
+      }
+
+      if (topTet2)
+      {
+        if (j <= (w_div-1)-i)
+        {
+          int diag_div = (w_div-1)-i;
+          if (diag_div == 0)
+            diag_div = 1;
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4ToDiag[k]*j*(x4ToDiagDist/diag_div);
+          vtkMath::Add(f4Start, z4Vec, new4Pt);
+        }
+        else if (j > (w_div-1)-i && j <= ((w_div-1)-i)+2*i)
+        {
+          int diag_div = 2*i;
+          if (diag_div == 0)
+            diag_div = 1;
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4AcrossDiag[k]*(j-((w_div-1)-i))*(x4AcrossDiagDist/diag_div);
+          vtkMath::Add(x4DiagPts[0], z4Vec, new4Pt);
+        }
+        else
+        {
+          int diag_div = (w_div-1)-i;
+          if (diag_div == 0)
+            diag_div = 1;
+          for (int k=0; k<3; k++)
+            z4Vec[k] = x4FromDiag[k]*(((j+1)%w_div)-i)*(x4FromDiagDist/diag_div);
+          vtkMath::Add(x4DiagPts[1], z4Vec, new4Pt);
         }
       }
 
@@ -4716,14 +4801,6 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         paraHexMesh->GetPoints()->SetPoint(pId, newPt);
       }
     }
-  }
-
-  if (topTet1)
-  {
-    vtkNew(vtkPolyData, testPoly);
-    testPoly->SetPoints(testPts);
-    std::string mine = "/Users/adamupdegrove/Desktop/tmp/MINE.vtp";
-    vtkSVIOUtils::WriteVTPFile(mine, testPoly);
   }
 
   double midPt0[3], midPt1[3];
@@ -5657,6 +5734,64 @@ int vtkSVGroupsSegmenter::SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const
 }
 
 // ----------------------
+// RemoveInteriorCells
+// ----------------------
+int vtkSVGroupsSegmenter::RemoveInteriorCells(vtkPolyData *quadMesh)
+{
+  quadMesh->BuildLinks();
+  int numCells = quadMesh->GetNumberOfCells();
+  int numPoints = quadMesh->GetNumberOfPoints();
+
+  for (int i=0; i<numCells; i++)
+  {
+    if (quadMesh->GetCellType(i) != VTK_QUAD)
+    {
+      fprintf(stdout,"All cells must be hexes\n");
+      return SV_ERROR;
+    }
+  }
+
+  vtkNew(vtkIdList, pointDeleteList);
+  for (int i=0; i<numCells; i++)
+  {
+    vtkCell *cell = quadMesh->GetCell(i);
+
+    int neighCount = 0;
+    for (int l=0; l<4; l++)
+    {
+      vtkNew(vtkIdList, threePtIds);
+      threePtIds->InsertNextId(cell->PointIds->GetId(l));
+      threePtIds->InsertNextId(cell->PointIds->GetId((l+1)%4));
+      threePtIds->InsertNextId(cell->PointIds->GetId((l+2)%4));
+
+      vtkNew(vtkIdList, neighCellIds);
+      quadMesh->GetCellNeighbors(i, threePtIds, neighCellIds);
+      if (neighCellIds->GetNumberOfIds() != 0)
+        neighCount++;
+    }
+
+    if (neighCount != 0)
+      quadMesh->DeleteCell(i);
+  }
+
+  quadMesh->RemoveDeletedCells();
+  quadMesh->BuildLinks();
+  quadMesh->BuildCells();
+
+  vtkNew(vtkCleanPolyData, cleaner);
+  cleaner->SetInputData(quadMesh);
+  cleaner->Update();
+
+  quadMesh->DeepCopy(cleaner->GetOutput());
+
+  quadMesh->BuildLinks();
+  quadMesh->BuildCells();
+
+  return SV_OK;
+}
+
+
+// ----------------------
 // SmoothUnstructuredGrid
 // ----------------------
 int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters)
@@ -5701,9 +5836,23 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
 
         if (checkable)
         {
-          vtkNew(vtkIdList, neighCellIds);
-          hexMesh->GetCellNeighbors(ptCellIds->GetId(j), face->PointIds, neighCellIds);
-          if (neighCellIds->GetNumberOfIds() == 0)
+          // Have to do this for special interior cells in which multiple boundaries
+          // meeting as four points of one face may not actually correspons to
+          // just one cell. Essentially, interior of anything > bifurcation.
+          int neighCount = 0;
+          for (int l=0; l<4; l++)
+          {
+            vtkNew(vtkIdList, threePtIds);
+            threePtIds->InsertNextId(face->PointIds->GetId(l));
+            threePtIds->InsertNextId(face->PointIds->GetId((l+1)%4));
+            threePtIds->InsertNextId(face->PointIds->GetId((l+2)%4));
+
+            vtkNew(vtkIdList, neighCellIds);
+            hexMesh->GetCellNeighbors(ptCellIds->GetId(j), threePtIds, neighCellIds);
+            if (neighCellIds->GetNumberOfIds() != 0)
+              neighCount++;
+          }
+          if (neighCount == 0)
             interiorPoint = 0;
         }
       }
@@ -5734,7 +5883,7 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
   {
     for (int i=0; i<numPoints; i++)
     {
-      // If 6 neighbors, that means this is interior son
+      // If > 0 neighbors, that means this is interior son
       int numPtNeighbors = ptEdgeNeighbors[i].size();
       if (numPtNeighbors > 0)
       {

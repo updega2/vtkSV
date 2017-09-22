@@ -279,6 +279,7 @@ protected:
                     const int w_div, const int l_div, const int h_div);
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
   int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters);
+  int RemoveInteriorCells(vtkPolyData *quadMesh);
   int PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh,
                               const double midPt0[3],
                               const double midPt1[3],

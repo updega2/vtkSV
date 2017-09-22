@@ -32,8 +32,7 @@
 
 #include "vtkSVCommonModule.h" //needed for exports
 #include "vtkUnstructuredGridAlgorithm.h"
-
-class vtkPointLocator;
+#include "vtkIncrementalPointLocator.h"
 
 class VTKSVCOMMON_EXPORT vtkSVCleanUnstructuredGrid
   : public vtkUnstructuredGridAlgorithm
@@ -42,6 +41,47 @@ public:
   static vtkSVCleanUnstructuredGrid* New();
 
   vtkTypeMacro(vtkSVCleanUnstructuredGrid, vtkUnstructuredGridAlgorithm);
+  //@{
+  /**
+   * Set/Get a spatial locator for speeding the search process. By
+   * default an instance of vtkMergePoints is used.
+   */
+  vtkSetObjectMacro(Locator, vtkIncrementalPointLocator);
+  vtkGetObjectMacro(Locator, vtkIncrementalPointLocator);
+  //@}
+
+  //@{
+  /**
+   * By default ToleranceIsAbsolute is false and Tolerance is
+   * a fraction of Bounding box diagonal, if true, AbsoluteTolerance is
+   * used when adding points to locator (merging)
+   */
+  vtkSetMacro(ToleranceIsAbsolute,int);
+  vtkBooleanMacro(ToleranceIsAbsolute,int);
+  vtkGetMacro(ToleranceIsAbsolute,int);
+  //@}
+
+  //@{
+  /**
+   * Specify tolerance in terms of fraction of bounding box length.
+   * Default is 0.0.
+   */
+  vtkSetClampMacro(Tolerance,double,0.0,1.0);
+  vtkGetMacro(Tolerance,double);
+  //@}
+
+  //@{
+  /**
+   * Specify tolerance in absolute terms. Default is 1.0.
+   */
+  vtkSetClampMacro(AbsoluteTolerance,double,0.0,VTK_DOUBLE_MAX);
+  vtkGetMacro(AbsoluteTolerance,double);
+  //@}
+
+  /**
+   * Create default locator. Used to create one when none is specified.
+   */
+  void CreateDefaultLocator(vtkDataSet *input = 0);
 
   void PrintSelf(ostream& os, vtkIndent indent);
 
@@ -49,7 +89,11 @@ protected:
   vtkSVCleanUnstructuredGrid();
   ~vtkSVCleanUnstructuredGrid();
 
-  vtkPointLocator* Locator;
+  double Tolerance;
+  double AbsoluteTolerance;
+  int ToleranceIsAbsolute;
+
+  vtkIncrementalPointLocator *Locator;
 
   virtual int RequestData(
     vtkInformation*, vtkInformationVector**, vtkInformationVector*);
