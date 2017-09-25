@@ -115,11 +115,14 @@ public:
     NONE = 0,
     VERT_WEDGE,
     HORZ_WEDGE,
-    SPEC_WEDGE,
-    TET_0,
-    TET_1,
-    TET_2,
-    TET_3,
+    C_TET_0, // Corner tets
+    C_TET_1,
+    C_TET_2,
+    C_TET_3,
+    S_TET_0, // Side tets
+    S_TET_1,
+    S_TET_2,
+    S_TET_3,
     NOTHANDLED
   };
 

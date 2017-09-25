@@ -5837,7 +5837,7 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
         if (checkable)
         {
           // Have to do this for special interior cells in which multiple boundaries
-          // meeting as four points of one face may not actually correspons to
+          // meeting as four points of one face may not actually correspond to
           // just one cell. Essentially, interior of anything > bifurcation.
           int neighCount = 0;
           for (int l=0; l<4; l++)

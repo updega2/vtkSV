@@ -821,7 +821,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         int begType, begSplitType;
         gCell->GetBeginningType(begType, begSplitType);
 
-        if (begType >= TET_0 && begType <= TET_3)
+        if (begType >= C_TET_0 && begType <= S_TET_3)
         {
           if (begSplitType == BI)
           {
@@ -864,8 +864,8 @@ int vtkSVCenterlineGraph::GetGraphPoints()
 
         int parentBegType, parentBegSplitType;
         parent->GetBeginningType(parentBegType, parentBegSplitType);
-        int endType, endSplitType;
-        parent->GetEndType(endType, endSplitType);
+        int parentEndType, parentEndSplitType;
+        parent->GetEndType(parentEndType, parentEndSplitType);
 
         double grandParentVec[3];
         vtkMath::Subtract(grandParent->StartPt, grandParent->EndPt, grandParentVec);
@@ -875,8 +875,8 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-        if ((parentBegType == VERT_WEDGE && endType == HORZ_WEDGE) ||
-             parentBegType == HORZ_WEDGE && endType == VERT_WEDGE)
+        if ((parentBegType == VERT_WEDGE && parentEndType == HORZ_WEDGE) ||
+             parentBegType == HORZ_WEDGE && parentEndType == VERT_WEDGE)
         {
           double tempVec[3];
           if (parentBegType == VERT_WEDGE)
@@ -917,8 +917,31 @@ int vtkSVCenterlineGraph::GetGraphPoints()
           vtkMath::Cross(parentVec, tempVec, crossVec);
           vtkMath::Normalize(crossVec);
 
-          if (begType >= TET_0 && begType <= TET_3)
+          // Rotate vec around line
+          if (gCell->BranchDir == RIGHT)
+            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else if (gCell->BranchDir == LEFT)
+            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else if (gCell->BranchDir == BACK)
+            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+          else if (gCell->BranchDir == FRONT)
+            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+        }
+        else
+        {
+          if (begType >= C_TET_0 && begType <= S_TET_3)
           {
+            if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
+              vtkMath::Cross(grandParentVec, parentVec, crossVec);
+            else
+            {
+              double tmpVec[3];
+              vtkMath::Cross(grandParentVec, parentVec, tmpVec);
+              vtkMath::Normalize(tmpVec);
+              vtkMath::Cross(parentVec, tmpVec, crossVec);
+            }
+            vtkMath::Normalize(crossVec);
+
             if (begSplitType == BI)
             {
               // Rotate vec around line
@@ -946,65 +969,13 @@ int vtkSVCenterlineGraph::GetGraphPoints()
           }
           else
           {
-            // Rotate vec around line
-            if (gCell->BranchDir == RIGHT)
-              this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-            else if (gCell->BranchDir == LEFT)
-              this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-            else if (gCell->BranchDir == BACK)
-              this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-            else if (gCell->BranchDir == FRONT)
-              this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-          }
-        }
-        else
-        {
-          //if (begType >= TET_0 && begType <= TET_3)
-          //{
-          //  if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
-          //    vtkMath::Cross(grandParentVec, parentVec, crossVec);
-          //  else
-          //  {
-          //    vtkMath::Cross(grandParentVec, parentVec, crossVec);
-          //    vtkMath::Normalize(crossVec);
-          //    vtkMath::Cross(grandParentVec, crossVec, crossVec);
-          //  }
-          //  vtkMath::Normalize(crossVec);
-
-          //  if (begSplitType == BI)
-          //  {
-          //    // Rotate vec around line
-          //    if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-          //      this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-          //    else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-          //      this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
-          //  }
-          //  else if (begSplitType == TRI)
-          //  {
-          //    if (gCell->Id == parent->Children[parent->AligningChild]->Id)
-          //    {
-          //      // Rotate vec around line
-          //      this->RotateVecAroundLine(rotateVec, 180.0, crossVec, lineDir);
-          //    }
-          //    else
-          //    {
-          //      // Rotate vec around line
-          //      if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-          //        this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-          //      else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-          //        this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
-          //    }
-          //  }
-          //}
-          //else
-          //{
             vtkMath::Cross(grandParentVec, parentVec, crossVec);
             vtkMath::Normalize(crossVec);
             if (gCell->BranchDir == parent->BranchDir)
               this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
             else
               this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-          //}
+          }
         }
       }
       vtkMath::Normalize(lineDir);
