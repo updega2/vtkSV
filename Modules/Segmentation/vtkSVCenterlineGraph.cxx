@@ -931,14 +931,28 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         {
           if (begType >= C_TET_0 && begType <= S_TET_3)
           {
-            if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
-              vtkMath::Cross(grandParentVec, parentVec, crossVec);
+            double tempVec[3];
+            if ((grandParent->BranchDir + parent->BranchDir)%2 == 0)
+            {
+              if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+                vtkMath::Cross(parentVec, grandParentVec, crossVec);
+              else
+              {
+                vtkMath::Cross(grandParentVec, parentVec, tempVec);
+                vtkMath::Normalize(tempVec);
+                vtkMath::Cross(parentVec, tempVec, crossVec);
+              }
+            }
             else
             {
-              double tmpVec[3];
-              vtkMath::Cross(grandParentVec, parentVec, tmpVec);
-              vtkMath::Normalize(tmpVec);
-              vtkMath::Cross(parentVec, tmpVec, crossVec);
+              if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+                vtkMath::Cross(parentVec, grandParentVec, crossVec);
+              else
+              {
+                vtkMath::Cross(grandParentVec, parentVec, tempVec);
+                vtkMath::Normalize(tempVec);
+                vtkMath::Cross(parentVec, tempVec, crossVec);
+              }
             }
             vtkMath::Normalize(crossVec);
 
