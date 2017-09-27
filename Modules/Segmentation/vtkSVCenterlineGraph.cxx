@@ -762,6 +762,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
   {
     // Corresponding GCell
     vtkSVCenterlineGCell *gCell = this->GetCell(i);
+    fprintf(stdout,"PROCESSING GRAPH POINTS OF %d\n", gCell->GroupId);
 
     // cell id in the vtkPolyData
     int cellId = this->Lines->GetCellData()->GetArray(
@@ -805,18 +806,49 @@ int vtkSVCenterlineGraph::GetGraphPoints()
       double crossVec[3];
       double lineDir[3];
 
+      double rotationAngle;
       vtkSVCenterlineGCell *grandParent = parent->Parent;
       if (grandParent == NULL)
       {
+        fprintf(stdout,"NO GRANDPARENT\n");
         double parentVec[3];
         vtkMath::Subtract(parent->StartPt, parent->EndPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-        if (gCell->BranchDir == RIGHT || gCell->BranchDir == LEFT)
-          vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
-        else
-          vtkMath::Cross(parentVec, this->ReferenceVecs[2], crossVec);
+        vtkMath::Cross(parentVec, this->ReferenceVecs[1], crossVec);
         vtkMath::Normalize(crossVec);
+
+        if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+        {
+          if (parent->BranchDir == gCell->BranchDir)
+          {
+            fprintf(stdout,"PARENT AND CHILD SAME\n");
+          }
+          else
+          {
+            fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+            for (int j=0; j<3; j++)
+              crossVec[j] = -1.0*crossVec[j];
+          }
+        }
+        else
+        {
+          double tempVec[3];
+          vtkMath::Cross(parentVec, crossVec, tempVec);
+          vtkMath::Normalize(tempVec);
+          if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+          {
+            fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+            for (int j=0; j<3; j++)
+              crossVec[j] = 1.0*tempVec[j];
+          }
+          else
+          {
+            for (int j=0; j<3; j++)
+              crossVec[j] = -1.0*tempVec[j];
+            fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+          }
+        }
 
         int begType, begSplitType;
         gCell->GetBeginningType(begType, begSplitType);
@@ -824,38 +856,17 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         if (begType >= C_TET_0 && begType <= S_TET_3)
         {
           if (begSplitType == BI)
-          {
-            // Rotate vec around line
-            if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-              this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-            else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-              this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
-          }
+            rotationAngle = 90.0;
           else if (begSplitType == TRI)
           {
             if (gCell->Id == parent->Children[parent->AligningChild]->Id)
-            {
-              // Rotate vec around line
-              this->RotateVecAroundLine(rotateVec, 180.0, crossVec, lineDir);
-            }
+              rotationAngle = 180.0;
             else
-            {
-              // Rotate vec around line
-              if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-                this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-              else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-                this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
-            }
+              rotationAngle = 90.0;
           }
         }
         else
-        {
-          // Rotate vec around line
-          if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-          else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-        }
+          rotationAngle = 180.0*gCell->RefAngle/SV_PI;
       }
       else
       {
@@ -875,129 +886,114 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-        if ((parentBegType == VERT_WEDGE && parentEndType == HORZ_WEDGE) ||
-             parentBegType == HORZ_WEDGE && parentEndType == VERT_WEDGE)
+        double tempVec[3];
+        vtkMath::Cross(grandParentVec, parentVec, tempVec);
+        vtkMath::Normalize(tempVec);
+
+        vtkMath::Cross(tempVec, parentVec, crossVec);
+        vtkMath::Normalize(crossVec);
+
+        if ((grandParent->BranchDir + parent->BranchDir)%2 != 0)
         {
-          double tempVec[3];
-          if (parentBegType == VERT_WEDGE)
-          {
-            if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
-            {
-              if (parent->BranchDir == LEFT || parent->BranchDir == FRONT)
-                vtkMath::Cross(grandParentVec, parentVec, tempVec);
-              else
-                vtkMath::Cross(parentVec, grandParentVec, tempVec);
-            }
-            else
-            {
-              if (parent->BranchDir == RIGHT || parent->BranchDir == BACK)
-                vtkMath::Cross(parentVec, grandParentVec, tempVec);
-              else
-                vtkMath::Cross(grandParentVec, parentVec, tempVec);
-            }
-          }
-          else if (parentBegType == HORZ_WEDGE)
-          {
-            if (grandParent->BranchDir == LEFT || grandParent->BranchDir == FRONT)
-            {
-              if (parent->BranchDir == RIGHT || parent->BranchDir == BACK)
-                vtkMath::Cross(grandParentVec, parentVec, tempVec);
-              else
-                vtkMath::Cross(parentVec, grandParentVec, tempVec);
-            }
-            else
-            {
-              if (parent->BranchDir == LEFT || parent->BranchDir == FRONT)
-                vtkMath::Cross(parentVec, grandParentVec, tempVec);
-              else
-                vtkMath::Cross(grandParentVec, parentVec, tempVec);
-            }
-          }
+          fprintf(stdout,"GRANDPARENT AND PARENT SWITCH\n");
+          vtkMath::Cross(parentVec, crossVec, tempVec);
           vtkMath::Normalize(tempVec);
-          vtkMath::Cross(parentVec, tempVec, crossVec);
-          vtkMath::Normalize(crossVec);
+          for (int j=0; j<3; j++)
+            crossVec[j] = tempVec[j];
 
-          // Rotate vec around line
-          if (gCell->BranchDir == RIGHT)
-            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-          else if (gCell->BranchDir == LEFT)
-            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-          else if (gCell->BranchDir == BACK)
-            this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-          else if (gCell->BranchDir == FRONT)
-            this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
-        }
-        else
-        {
-          if (begType >= C_TET_0 && begType <= S_TET_3)
+          if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
           {
-            double tempVec[3];
-            if ((grandParent->BranchDir + parent->BranchDir)%2 == 0)
+            if (parent->BranchDir == gCell->BranchDir)
             {
-              if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
-                vtkMath::Cross(parentVec, grandParentVec, crossVec);
-              else
-              {
-                vtkMath::Cross(grandParentVec, parentVec, tempVec);
-                vtkMath::Normalize(tempVec);
-                vtkMath::Cross(parentVec, tempVec, crossVec);
-              }
+              fprintf(stdout,"PARENT AND CHILD SAME\n");
             }
             else
             {
-              if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
-                vtkMath::Cross(parentVec, grandParentVec, crossVec);
-              else
-              {
-                vtkMath::Cross(grandParentVec, parentVec, tempVec);
-                vtkMath::Normalize(tempVec);
-                vtkMath::Cross(parentVec, tempVec, crossVec);
-              }
-            }
-            vtkMath::Normalize(crossVec);
-
-            if (begSplitType == BI)
-            {
-              // Rotate vec around line
-              if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-                this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-              else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-                this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
-            }
-            else if (begSplitType == TRI)
-            {
-              if (gCell->Id == parent->Children[parent->AligningChild]->Id)
-              {
-                // Rotate vec around line
-                this->RotateVecAroundLine(rotateVec, 180.0, crossVec, lineDir);
-              }
-              else
-              {
-                // Rotate vec around line
-                if (gCell->BranchDir == RIGHT || gCell->BranchDir == BACK)
-                  this->RotateVecAroundLine(rotateVec, 90.0, crossVec, lineDir);
-                else if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-                  this->RotateVecAroundLine(rotateVec, -90.0, crossVec, lineDir);
-              }
+              fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*crossVec[j];
             }
           }
           else
           {
-            vtkMath::Cross(grandParentVec, parentVec, crossVec);
-            vtkMath::Normalize(crossVec);
-            if (gCell->BranchDir == parent->BranchDir)
-              this->RotateVecAroundLine(rotateVec, 180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+            vtkMath::Cross(crossVec, parentVec, tempVec);
+            vtkMath::Normalize(tempVec);
+            if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+            {
+              fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = 1.0*tempVec[j];
+            }
             else
-              this->RotateVecAroundLine(rotateVec, -180.0*gCell->RefAngle/SV_PI, crossVec, lineDir);
+            {
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*tempVec[j];
+              fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+            }
           }
         }
+        else
+        {
+          fprintf(stdout,"GRANDPARENT AND PARENT SAME OR OPPOSITE\n");
+          if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+          {
+            vtkMath::Cross(parentVec, crossVec, tempVec);
+            vtkMath::Normalize(tempVec);
+            for (int j=0; j<3; j++)
+              crossVec[j] = tempVec[j];
+            if (parent->BranchDir == gCell->BranchDir)
+            {
+              fprintf(stdout,"PARENT AND CHILD SAME\n");
+            }
+            else
+            {
+              fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*crossVec[j];
+            }
+          }
+          else
+          {
+            if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+            {
+              fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = 1.0*crossVec[j];
+            }
+            else
+            {
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*crossVec[j];
+              fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+            }
+          }
+        }
+
+        if (begType >= C_TET_0 && begType <= S_TET_3)
+        {
+          if (begSplitType == BI)
+            rotationAngle = 90.0;
+          else if (begSplitType == TRI)
+          {
+            if (gCell->Id == parent->Children[parent->AligningChild]->Id)
+              rotationAngle = 180.0;
+            else
+              rotationAngle = 90.0;
+          }
+        }
+        else
+          rotationAngle = 180.0*gCell->RefAngle/SV_PI;
+
       }
+
+      this->RotateVecAroundLine(rotateVec, rotationAngle, crossVec, lineDir);
       vtkMath::Normalize(lineDir);
 
       // Get end point from new direction
       vtkMath::MultiplyScalar(lineDir, length);
       vtkMath::Add(gCell->StartPt, lineDir, gCell->EndPt);
     }
+    fprintf(stdout,"\n");
   }
 
   return SV_OK;

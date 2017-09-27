@@ -117,8 +117,6 @@ public:
     BACK,
     LEFT,
     FRONT,
-    UP,
-    DOWN
   };
 
   /// \brief possible split types
