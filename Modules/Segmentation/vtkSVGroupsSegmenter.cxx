@@ -711,19 +711,19 @@ int vtkSVGroupsSegmenter::RunFilter()
   // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
   // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  vtkNew(vtkPolyData, fullMapPd);
-  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  {
-    fprintf(stderr,"WRONG\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkPolyData, fullMapPd);
+  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  //{
+  //  fprintf(stderr,"WRONG\n");
+  //  return SV_ERROR;
+  //}
 
-  vtkNew(vtkUnstructuredGrid, loftedVolume);
-  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  {
-    fprintf(stderr,"Failed doing volume stuffs\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkUnstructuredGrid, loftedVolume);
+  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  //{
+  //  fprintf(stderr,"Failed doing volume stuffs\n");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
@@ -1792,7 +1792,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
     }
 
     allRegions[i].NumberOfCorners = tempCornerPoints.size();
-    //fprintf(stdout,"NUM CORNS: %d\n", allRegions[i].NumberOfCorners);
+    fprintf(stdout,"NUM CORNS: %d\n", allRegions[i].NumberOfCorners);
 
     if (allRegions[i].NumberOfCorners != 0)
     {
@@ -1824,6 +1824,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
             {
               tempNodes.push_back(pointCCWId);
               allRegions[i].BoundaryEdges.push_back(tempNodes);
+              fprintf(stdout,"FOUND EDGE BACK TO START: %d %d\n", tempNodes[0], tempNodes[tempNodes.size()-1]);
 
               tempNodes.clear();
 
@@ -1859,6 +1860,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
             }
             else
             {
+              fprintf(stdout,"FOUND EDGE: %d %d\n", tempNodes[0], tempNodes[tempNodes.size()-1]);
               tempNodes.push_back(pointCCWId);
               allRegions[i].CornerPoints.push_back(pointCCWId);
               allRegions[i].BoundaryEdges.push_back(tempNodes);

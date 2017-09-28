@@ -1092,6 +1092,11 @@ int vtkSVCenterlineGraph::GetGraphDirections()
     {
       this->Lines->GetPoint(pts[j-1], pt0);
       this->Lines->GetPoint(pts[j], pt1);
+
+      double checkVec[3];
+      for (int k=0; k<3; k++)
+        checkVec[k] = refVecs[0][k];
+
       if (gCell->Parent == NULL)
         vtkMath::Subtract(pt1, pt0, refVecs[0]);
       else
@@ -1101,6 +1106,16 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
+
+      if (vtkMath::Dot(checkVec, refVecs[0]) < 0)
+      {
+        for (int k=0; k<3; k++)
+        {
+          refVecs[1][k] = -1.0*refVecs[1][k];
+          refVecs[2][k] = -1.0*refVecs[2][k];
+        }
+      }
+
 
       localArrayX->SetTuple(pts[j], refVecs[1]);
       localArrayY->SetTuple(pts[j], refVecs[2]);

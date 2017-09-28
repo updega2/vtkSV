@@ -204,9 +204,9 @@ int vtkSVCenterlineGCell::GetBeginningType(int &beginningType, int &splitType)
       else
       {
         if (brother->BranchDir == 0 || this->BranchDir == 0)
-          beginningType = C_TET_1;
-        else
           beginningType = C_TET_3;
+        else
+          beginningType = C_TET_1;
       }
     }
     else
@@ -330,9 +330,9 @@ int vtkSVCenterlineGCell::GetEndType(int &endType, int &splitType)
       else
       {
         if (this->Children[this->DivergingChild]->BranchDir == 0 || this->Children[this->AligningChild]->BranchDir == 0)
-          endType = C_TET_1;
-        else
           endType = C_TET_3;
+        else
+          endType = C_TET_1;
       }
     }
     else
@@ -593,10 +593,9 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (begSplitType == BI)
   {
-    //if (begType >= TET_0 && begType <= TET_3)
-    if (begType >= C_TET_0 && begType <= S_TET_3)
+    if (begType >= C_TET_0 && begType <= C_TET_3)
     {
-      fprintf(stdout,"BEG BI TET\n");
+      fprintf(stdout,"BEG BI CORNER TET\n");
       // Get ending bifurcation points
       this->FormBifurcation(this->EndPt, this->StartPt,
                            parent->StartPt, parent->EndPt,
@@ -609,17 +608,16 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       vtkMath::Subtract(this->EndPt, this->StartPt, myVec);
       vtkMath::Normalize(myVec);
 
-      // get front vector
+      // get vectors to form square
       vtkMath::Cross(myVec, vecs[1], begVec);
       vtkMath::Normalize(begVec);
 
-      // Flip if diver branch is left or front
-      if (this->BranchDir == LEFT || this->BranchDir == FRONT)
+      if (this->BranchDir == LEFT|| this->BranchDir == FRONT)
         vtkMath::MultiplyScalar(begVec, -1.0);
 
       if (this->BranchDir == BACK || this->BranchDir == FRONT)
       {
-        vtkMath::MultiplyScalar(begVec, -1.0);
+        vtkMath::MultiplyScalar(vecs[1], -1.0);
         this->GetSquare(this->StartPt, begVec, vecs[1],
                         height, width, begPoints);
       }
@@ -634,15 +632,29 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       vtkMath::Normalize(halfVec);
       vtkMath::MultiplyScalar(halfVec, width/2.);
 
+      int pushBackInt;
+      if (this->BranchDir == LEFT || this->BranchDir == BACK)
+      {
+        if ((this->BranchDir + 1)%4 == brother->BranchDir)
+          pushBackInt = 3;
+        else
+          pushBackInt = 2;
+      }
+      else
+      {
+        if ((this->BranchDir + 1)%4 == brother->BranchDir)
+          pushBackInt = 2;
+        else
+          pushBackInt = 3;
+      }
+
       for (int i=0; i<4; i++)
       {
         double pt[3];
         begPoints->GetPoint(i, pt);
 
         double newPt[3];
-        if (i == 2 && this->BranchDir == RIGHT)
-          vtkMath::Add(pt, halfVec, newPt);
-        else if (i == 0 && this->BranchDir == BACK)
+        if (i == pushBackInt)
           vtkMath::Add(pt, halfVec, newPt);
         else
           vtkMath::Subtract(pt, halfVec, newPt);
@@ -681,31 +693,103 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       else
         this->GetWedge(triPts[0], this->StartPt, triPts[1], begVec,
                        height, begPoints);
-
     }
   }
   else if (begSplitType == TRI)
   {
-    //if (begType >= TET_0 && begType <= TET_3)
-    if (begType >= C_TET_0 && begType <= S_TET_3)
+    if (begType >= C_TET_0 && begType <= C_TET_3)
     {
-      fprintf(stdout,"BEG TRI TET\n");
+      fprintf(stdout,"BEG TRI CORNER TET\n");
 
-      if (parent->Children[parent->AligningChild]->Id != this->Id)
-        brother = parent->Children[parent->AligningChild];
+      if ((parent->Children[myLoc]->BranchDir + parent->Children[(myLoc+1)%3]->BranchDir)%2 == 0)
+        brother = parent->Children[(myLoc+1)%3];
       else
+        brother = parent->Children[(myLoc+2)%3];
+
+      // Get ending bifurcation points
+      this->FormBifurcation(this->EndPt, this->StartPt,
+                           parent->StartPt, parent->EndPt,
+                           brother->EndPt, brother->StartPt,
+                           this->StartPt,
+                           width/2., vecs, triPts);
+
+      // get vectors to form square
+      vtkMath::Cross(vecs[2], vecs[1], begVec);
+      vtkMath::Normalize(begVec);
+
+      if (brother->BranchDir == LEFT|| brother->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(begVec, -1.0);
+
+      if (brother->BranchDir == BACK || brother->BranchDir == FRONT)
       {
-        if ((parent->Children[myLoc]->BranchDir + parent->Children[(myLoc+1)%3]->BranchDir)%2 == 0)
+        double broVec[3];
+        if (brother->BranchDir == BACK)
         {
-          brother = parent->Children[(myLoc+1)%3];
-          sister  = parent->Children[(myLoc+2)%3];
+          for (int j=0; j<3; j++)
+            broVec[j] = -1.0*vecs[2][j];
         }
         else
         {
-          brother = parent->Children[(myLoc+2)%3];
-          sister  = parent->Children[(myLoc+1)%3];
+          for (int j=0; j<3; j++)
+            broVec[j] = 1.0*vecs[2][j];
         }
+        this->GetSquare(this->StartPt, begVec, broVec,
+                        height, width, begPoints);
       }
+      else
+      {
+        double broVec[3];
+        if (brother->BranchDir == LEFT)
+        {
+          for (int j=0; j<3; j++)
+            broVec[j] = -1.0*vecs[2][j];
+        }
+        else
+        {
+          for (int j=0; j<3; j++)
+            broVec[j] = 1.0*vecs[2][j];
+        }
+        this->GetSquare(this->StartPt, broVec, begVec,
+                        height, width, begPoints);
+      }
+
+      double halfVec[3];
+      vtkMath::Subtract(this->StartPt, this->EndPt, halfVec);
+      vtkMath::Normalize(halfVec);
+      vtkMath::MultiplyScalar(halfVec, width/2.);
+
+      int pushBackInt;
+      if (begType == C_TET_0)
+        pushBackInt = 2;
+      else if (begType == C_TET_1)
+        pushBackInt = 1;
+      else if (begType == C_TET_2)
+        pushBackInt = 0;
+      else
+        pushBackInt = 3;
+
+      for (int i=0; i<4; i++)
+      {
+        double pt[3];
+        begPoints->GetPoint(i, pt);
+
+        double newPt[3];
+        if (i == pushBackInt)
+        {
+          for (int j=0; j<3; j++)
+            newPt[j] = pt[j];
+        }
+        else
+          vtkMath::Subtract(pt, halfVec, newPt);
+
+        begPoints->SetPoint(i, newPt);
+      }
+    }
+    else if (begType >= S_TET_0 && begType <= S_TET_3)
+    {
+      fprintf(stdout,"BEG TRI SIDE TET\n");
+
+      brother = parent->Children[parent->AligningChild];
 
       // Get ending bifurcation points
       this->FormBifurcation(this->EndPt, this->StartPt,
@@ -719,111 +803,113 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       vtkMath::Normalize(halfVec);
       vtkMath::MultiplyScalar(halfVec, width/2.);
 
-      if (parent->Children[parent->AligningChild]->Id != this->Id)
+      // get diverging vector towards top of cube
+      double myVec[3];
+      vtkMath::Subtract(this->EndPt, this->StartPt, myVec);
+      vtkMath::Normalize(myVec);
+
+      // get front vector
+      vtkMath::Cross(myVec, vecs[1], begVec);
+      vtkMath::Normalize(begVec);
+
+      // Flip if diver branch is left or front
+      if (this->BranchDir == LEFT || this->BranchDir == FRONT)
+        vtkMath::MultiplyScalar(begVec, -1.0);
+
+      if (this->BranchDir == BACK || this->BranchDir == FRONT)
       {
-        // get diverging vector towards top of cube
-        double myVec[3];
-        vtkMath::Subtract(this->EndPt, this->StartPt, myVec);
-        vtkMath::Normalize(myVec);
-
-        // get front vector
-        vtkMath::Cross(myVec, vecs[1], begVec);
-        vtkMath::Normalize(begVec);
-
-        // Flip if diver branch is left or front
-        //if (this->BranchDir == LEFT || this->BranchDir == FRONT)
-        //  vtkMath::MultiplyScalar(begVec, -1.0);
-
-        if (this->BranchDir == BACK || this->BranchDir == FRONT)
+        double parVec[3];
+        if (this->BranchDir == BACK)
         {
-          vtkMath::MultiplyScalar(begVec, -1.0);
-          this->GetSquare(this->StartPt, begVec, vecs[1],
-                          height, width, begPoints);
+          for (int j=0; j<3; j++)
+            parVec[j] = -1.0*vecs[1][j];
         }
         else
         {
-          this->GetSquare(this->StartPt, vecs[1], begVec,
-                          height, width, begPoints);
+          for (int j=0; j<3; j++)
+            parVec[j] = 1.0*vecs[1][j];
         }
-
-        double midPt0[3], midPt1[3];
-        double pt0[3], pt1[3];
-        if (parent->DivergingChild == myLoc)
-        {
-          begPoints->GetPoint(3, pt0);
-          begPoints->GetPoint(0, pt1);
-        }
-        else
-        {
-          begPoints->GetPoint(2, pt0);
-          begPoints->GetPoint(3, pt1);
-        }
-        vtkMath::Add(pt0, pt1, midPt0);
-        vtkMath::MultiplyScalar(midPt0, 1./2);
-        vtkMath::Add(midPt0, halfVec, midPt0);
-
-        for (int i=0; i<4; i++)
-        {
-          double pt[3];
-          begPoints->GetPoint(i, pt);
-
-          double newPt[3];
-          vtkMath::Subtract(pt, halfVec, newPt);
-          begPoints->SetPoint(i, newPt);
-        }
-
-        if (parent->DivergingChild == myLoc)
-        {
-          begPoints->GetPoint(1, pt0);
-          begPoints->GetPoint(2, pt1);
-        }
-        else
-        {
-          begPoints->GetPoint(0, pt0);
-          begPoints->GetPoint(1, pt1);
-        }
-        vtkMath::Add(pt0, pt1, midPt1);
-        vtkMath::MultiplyScalar(midPt1, 1./2);
-
-        begPoints->InsertNextPoint(midPt1);
-
-        begPoints->InsertNextPoint(midPt0);
+        this->GetSquare(this->StartPt, begVec, parVec,
+                        height, width, begPoints);
       }
       else
       {
-
-        double brotherVec[3], sisterVec[3];
-        for (int i=0; i<3; i++)
+        double parVec[3];
+        if (this->BranchDir == LEFT)
         {
-          brotherVec[i] = brother->EndPt[i] -  brother->StartPt[i];
-          begVec[i]     = sister->EndPt[i] -  sister->StartPt[i];
-          sisterVec[i]  = sister->EndPt[i] -  sister->StartPt[i];
+          for (int j=0; j<3; j++)
+            parVec[j] = -1.0*vecs[1][j];
         }
-        vtkMath::Normalize(brotherVec);
-        vtkMath::Normalize(sisterVec);
-        vtkMath::Normalize(begVec);
-
-        fprintf(stdout,"BROTHER: %d\n", brother->GroupId);
-        fprintf(stdout,"SISTER: %d\n", sister->GroupId);
-
-        this->GetSquare(this->StartPt, brotherVec, sisterVec,
+        else
+        {
+          for (int j=0; j<3; j++)
+            parVec[j] = 1.0*vecs[1][j];
+        }
+        this->GetSquare(this->StartPt, parVec, begVec,
                         height, width, begPoints);
-
-        for (int i=0; i<4; i++)
-        {
-          double pt[3];
-          begPoints->GetPoint(i, pt);
-
-          if (i != 3)
-          {
-            double newPt[3];
-            vtkMath::Subtract(pt, halfVec, newPt);
-            begPoints->SetPoint(i, newPt);
-          }
-        }
       }
 
+      double midPt0[3], midPt1[3];
+      double pt0[3], pt1[3];
+      if (begType == S_TET_0)
+      {
+        begPoints->GetPoint(0, pt0);
+        begPoints->GetPoint(1, pt1);
+      }
+      else if (begType == S_TET_1)
+      {
+        begPoints->GetPoint(0, pt0);
+        begPoints->GetPoint(3, pt1);
+      }
+      else if (begType == S_TET_2)
+      {
+        begPoints->GetPoint(2, pt0);
+        begPoints->GetPoint(3, pt1);
+      }
+      else
+      {
+        begPoints->GetPoint(1, pt0);
+        begPoints->GetPoint(2, pt1);
+      }
+      vtkMath::Add(pt0, pt1, midPt0);
+      vtkMath::MultiplyScalar(midPt0, 1./2);
+      vtkMath::Add(midPt0, halfVec, midPt0);
 
+      for (int i=0; i<4; i++)
+      {
+        double pt[3];
+        begPoints->GetPoint(i, pt);
+
+        double newPt[3];
+        vtkMath::Subtract(pt, halfVec, newPt);
+        begPoints->SetPoint(i, newPt);
+      }
+
+      if (begType == S_TET_0)
+      {
+        begPoints->GetPoint(2, pt0);
+        begPoints->GetPoint(3, pt1);
+      }
+      else if (begType == S_TET_1)
+      {
+        begPoints->GetPoint(1, pt0);
+        begPoints->GetPoint(2, pt1);
+      }
+      else if (begType == S_TET_2)
+      {
+        begPoints->GetPoint(0, pt0);
+        begPoints->GetPoint(1, pt1);
+      }
+      else
+      {
+        begPoints->GetPoint(0, pt0);
+        begPoints->GetPoint(3, pt1);
+      }
+      vtkMath::Add(pt0, pt1, midPt1);
+      vtkMath::MultiplyScalar(midPt1, 1./2);
+
+      begPoints->InsertNextPoint(midPt0);
+      begPoints->InsertNextPoint(midPt1);
     }
     else
     {
@@ -931,7 +1017,6 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (endSplitType == BI)
   {
-    //if (endType >= TET_0 && endType <= TET_3)
     if (endType >= C_TET_0 && endType <= S_TET_3)
     {
       fprintf(stdout,"END BI TET\n");
@@ -1006,10 +1091,9 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
   else if (endSplitType == TRI)
   {
-    //if (endType >= TET_0 && endType <= TET_3)
-    if (endType >= C_TET_0 && endType <= S_TET_3)
+    if (endType >= C_TET_0 && endType <= C_TET_3)
     {
-      fprintf(stdout,"END TRI TET\n");
+      fprintf(stdout,"END TRI CORNER TET\n");
       // Get square from end pt
       if (begSplitType == ZERO)
         this->GetSquare(this->EndPt, this->RefDirs[1], begVec,
@@ -1037,19 +1121,32 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
       vtkMath::Normalize(halfVec);
       vtkMath::MultiplyScalar(halfVec, width/2.);
 
+      int pushBackInt;
+      if (endType == C_TET_0)
+        pushBackInt = 2;
+      else if (endType == C_TET_1)
+        pushBackInt = 1;
+      else if (endType == C_TET_2)
+        pushBackInt = 0;
+      else
+        pushBackInt = 3;
+
       for (int i=0; i<4; i++)
       {
         double pt[3];
         endPoints->GetPoint(i, pt);
 
-        if (i != 3)
+        double newPt[3];
+        if (i == pushBackInt)
         {
-          double newPt[3];
-          vtkMath::Subtract(pt, halfVec, newPt);
-          endPoints->SetPoint(i, newPt);
+          for (int j=0; j<3; j++)
+            newPt[j] = pt[j];
         }
-      }
+        else
+          vtkMath::Subtract(pt, halfVec, newPt);
 
+        endPoints->SetPoint(i, newPt);
+      }
     }
     else
     {
@@ -1103,6 +1200,8 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     fprintf(stderr,"END NOT_HANDLED\n");
   }
 
+  // NOW THAT WE HAVE ALL THE POINTS, WE CAN NOW ADD THEM TO THEIR
+  // RESPECTIVE FACES
   std::vector<std::vector<int> > facesPtIds(6);
   // -----------------------------------------------------------------------
   // FACE 3
@@ -1111,15 +1210,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // END
   if (endType == NONE)
   {
-    if (begType >= C_TET_0 && endType <= S_TET_3)
-    {
-      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
-      //facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
-    }
-    else
-    {
-      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
-    }
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
   }
   else if (endType == VERT_WEDGE)
   {
@@ -1129,7 +1220,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
   }
-  else if (endType >= C_TET_0 && endType <= S_TET_3)
+  else if (endType >= C_TET_0 && endType <= C_TET_3)
+  {
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
+  }
+  else if (endType >= S_TET_0 && endType <= S_TET_3)
   {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
   }
@@ -1151,30 +1246,25 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
   }
-  else if (begType >= C_TET_0 && begType <= S_TET_3)
+  else if (begType >= C_TET_0 && begType <= C_TET_3)
   {
-    //facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-    //facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-    if (begSplitType == TRI && parent->DivergingChild == myLoc)
-    {
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
+  }
+  else if (begType >= S_TET_0 && begType <= S_TET_3)
+  {
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
+    if (begType == S_TET_3)
       facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
-    }
+    if (begType == S_TET_1)
+      facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
     facesPtIds[3].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
   }
 
   // END
   if (endType == NONE)
   {
-    if (begType >= C_TET_0 && endType <= S_TET_3)
-    {
-      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
-      //facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
-    }
-    else
-    {
-      facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
-    }
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   }
   else if (endType == VERT_WEDGE)
   {
@@ -1185,7 +1275,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   }
-  else if (endType >= C_TET_0 && endType <= S_TET_3)
+  else if (endType >= C_TET_0 && endType <= C_TET_3)
+  {
+    facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
+  }
+  else if (endType >= S_TET_0 && endType <= S_TET_3)
   {
     facesPtIds[3].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   }
@@ -1198,15 +1292,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // END
   if (endType == NONE)
   {
-    if (begType >= C_TET_0 && endType <= S_TET_3)
-    {
-      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
-      //facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(1)));
-    }
-    else
-    {
-      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
-    }
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   }
   else if (endType == VERT_WEDGE)
   {
@@ -1216,7 +1302,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(5)));
   }
-  else if (endType >= C_TET_0 && endType <= S_TET_3)
+  else if (endType >= C_TET_0 && endType <= C_TET_3)
+  {
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
+  }
+  else if (endType >= S_TET_0 && endType <= S_TET_3)
   {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(3)));
   }
@@ -1238,30 +1328,25 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
-  else if (begType >= C_TET_0 && begType <= S_TET_3)
+  else if (begType >= C_TET_0 && begType <= C_TET_3)
   {
-    //facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(1)));
-    //facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(2)));
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
-    if (begSplitType == TRI && parent->DivergingChild == myLoc)
-    {
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
+  }
+  else if (begType >= S_TET_0 && begType <= S_TET_3)
+  {
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(3)));
+    if (begType == S_TET_3)
       facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
-    }
+    if (begType == S_TET_1)
+      facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
     facesPtIds[1].push_back(allPoints->InsertNextPoint(begPoints->GetPoint(0)));
   }
 
   // END
   if (endType == NONE)
   {
-    if (begType >= C_TET_0 && endType <= S_TET_3)
-    {
-      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
-      //facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
-    }
-    else
-    {
-      facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
-    }
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
   }
   else if (endType == VERT_WEDGE)
   {
@@ -1272,7 +1357,11 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(2)));
   }
-  else if (endType >= C_TET_0 && endType <= S_TET_3)
+  else if (endType >= C_TET_0 && endType <= C_TET_3)
+  {
+    facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
+  }
+  else if (endType >= S_TET_0 && endType <= S_TET_3)
   {
     facesPtIds[1].push_back(allPoints->InsertNextPoint(endPoints->GetPoint(0)));
   }
@@ -1299,8 +1388,7 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   }
 
   // BEG TRI TET
-  if (begSplitType == TRI && begType >= C_TET_0 && begType <= S_TET_3 &&
-      parent->AligningChild != myLoc && parent->DivergingChild != myLoc)
+  if (begType == S_TET_0 || begType == S_TET_2)
   {
     begInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(4)));
     begInterPtIds.push_back(allPoints->InsertNextPoint(begPoints->GetPoint(5)));
@@ -1336,9 +1424,13 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // INT
   if (begType == HORZ_WEDGE)
     facesPtIds[0].push_back(begInterPtIds[0]);
-  else if (begSplitType == TRI && begType >= C_TET_0 && begType <= S_TET_3 &&
-           parent->AligningChild != myLoc && parent->DivergingChild != myLoc)
+
+  else if (begType == S_TET_0)
     facesPtIds[0].push_back(begInterPtIds[0]);
+
+  else if (begType == S_TET_2)
+    facesPtIds[0].push_back(begInterPtIds[1]);
+
 
   // BEG
   if (begType == NONE)
@@ -1396,9 +1488,12 @@ int vtkSVCenterlineGCell::GetCubePoints(const double height,
   // INT
   if (begType == HORZ_WEDGE)
     facesPtIds[2].push_back(begInterPtIds[1]);
-  else if (begSplitType == TRI && begType >= C_TET_0 && begType <= S_TET_3 &&
-           parent->AligningChild != myLoc && parent->DivergingChild != myLoc)
+
+  else if (begType == S_TET_0)
     facesPtIds[2].push_back(begInterPtIds[1]);
+
+  else if (begType == S_TET_2)
+    facesPtIds[2].push_back(begInterPtIds[0]);
 
   // BEG
   if (begType == NONE)
