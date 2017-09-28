@@ -701,12 +701,12 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  //// For checking purposes
-  //if (this->FixPatchesWithPolycubeOld() != SV_OK)
-  //{
-  //  fprintf(stderr,"Couldn't fix patches\n");
-  //  return SV_ERROR;
-  //}
+  ////// For checking purposes
+  ////if (this->FixPatchesWithPolycubeOld() != SV_OK)
+  ////{
+  ////  fprintf(stderr,"Couldn't fix patches\n");
+  ////  return SV_ERROR;
+  ////}
 
   // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
   // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
@@ -1792,7 +1792,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
     }
 
     allRegions[i].NumberOfCorners = tempCornerPoints.size();
-    fprintf(stdout,"NUM CORNS: %d\n", allRegions[i].NumberOfCorners);
+    //fprintf(stdout,"NUM CORNS: %d OF GROUP %d\n", allRegions[i].NumberOfCorners, allRegions[i].IndexCluster);
 
     if (allRegions[i].NumberOfCorners != 0)
     {
@@ -1824,7 +1824,6 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
             {
               tempNodes.push_back(pointCCWId);
               allRegions[i].BoundaryEdges.push_back(tempNodes);
-              fprintf(stdout,"FOUND EDGE BACK TO START: %d %d\n", tempNodes[0], tempNodes[tempNodes.size()-1]);
 
               tempNodes.clear();
 
@@ -1860,7 +1859,6 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
             }
             else
             {
-              fprintf(stdout,"FOUND EDGE: %d %d\n", tempNodes[0], tempNodes[tempNodes.size()-1]);
               tempNodes.push_back(pointCCWId);
               allRegions[i].CornerPoints.push_back(pointCCWId);
               allRegions[i].BoundaryEdges.push_back(tempNodes);
@@ -2968,6 +2966,66 @@ int vtkSVGroupsSegmenter::FixPatchesWithPolycube()
   vtkNew(vtkPolyData, polycubePd);
   polycubePd->DeepCopy(triangulator->GetOutput());
   polycubePd->BuildLinks();
+
+  int deletedCell = 0;
+  for (int i=0; i<polycubePd->GetNumberOfCells(); i++)
+  {
+    // Check for non-manifold cell, if found, delete (just the one).
+    vtkIdType npts, *pts;
+    polycubePd->GetCellPoints(i, npts, pts);
+
+    for (int j=0; j<npts; j++)
+    {
+      int ptId0 = pts[j];
+      int ptId1 = pts[(j+1)%npts];
+
+      vtkNew(vtkIdList, cellIds);
+      polycubePd->GetCellEdgeNeighbors(i, ptId0, ptId1, cellIds);
+
+      if (cellIds->GetNumberOfIds() > 1)
+      {
+        // Mark for deletion! but not the current cell
+        for (int k=0; k<cellIds->GetNumberOfIds(); k++)
+        {
+          vtkIdType npts_new, *pts_new;
+          polycubePd->GetCellPoints(cellIds->GetId(k), npts_new, pts_new);
+
+          int ptFound = 0;
+          for (int l=0; l<npts; l++)
+          {
+            for (int m=0; m<npts_new; m++)
+            {
+              if (pts[l] == pts_new[m])
+                ptFound++;
+            }
+          }
+
+          if (ptFound == npts)
+          {
+            fprintf(stdout,"DELETING CELLS: %d %d\n", i, cellIds->GetId(k));
+            polycubePd->DeleteCell(i);
+            polycubePd->DeleteCell(cellIds->GetId(k));
+            deletedCell = 1;
+          }
+        }
+      }
+    }
+  }
+  // Then maybe re-triangulate?
+  if (deletedCell)
+  {
+    fprintf(stdout,"RE-LINKING\n");
+    polycubePd->RemoveDeletedCells();
+
+    vtkNew(vtkCleanPolyData, cleaner);
+    cleaner->SetInputData(polycubePd);
+    cleaner->ToleranceIsAbsoluteOn();
+    cleaner->SetAbsoluteTolerance(1.0e-6);
+    cleaner->Update();
+
+    polycubePd->DeepCopy(cleaner->GetOutput());;
+    polycubePd->BuildLinks();
+  }
 
   fprintf(stdout,"GETTING SURFACE REGIONS\n");
   this->WorkPd->BuildLinks();
@@ -6506,6 +6564,66 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
   polycubePd->DeepCopy(triangulator->GetOutput());
   polycubePd->BuildLinks();
 
+  int deletedCell = 0;
+  for (int i=0; i<polycubePd->GetNumberOfCells(); i++)
+  {
+    // Check for non-manifold cell, if found, delete (just the one).
+    vtkIdType npts, *pts;
+    polycubePd->GetCellPoints(i, npts, pts);
+
+    for (int j=0; j<npts; j++)
+    {
+      int ptId0 = pts[j];
+      int ptId1 = pts[(j+1)%npts];
+
+      vtkNew(vtkIdList, cellIds);
+      polycubePd->GetCellEdgeNeighbors(i, ptId0, ptId1, cellIds);
+
+      if (cellIds->GetNumberOfIds() > 1)
+      {
+        // Mark for deletion! but not the current cell
+        for (int k=0; k<cellIds->GetNumberOfIds(); k++)
+        {
+          vtkIdType npts_new, *pts_new;
+          polycubePd->GetCellPoints(cellIds->GetId(k), npts_new, pts_new);
+
+          int ptFound = 0;
+          for (int l=0; l<npts; l++)
+          {
+            for (int m=0; m<npts_new; m++)
+            {
+              if (pts[l] == pts_new[m])
+                ptFound++;
+            }
+          }
+
+          if (ptFound == npts)
+          {
+            fprintf(stdout,"DELETING CELLS: %d %d\n", i, cellIds->GetId(k));
+            polycubePd->DeleteCell(i);
+            polycubePd->DeleteCell(cellIds->GetId(k));
+            deletedCell = 1;
+          }
+        }
+      }
+    }
+  }
+  // Then maybe re-triangulate?
+  if (deletedCell)
+  {
+    fprintf(stdout,"RE-LINKING\n");
+    polycubePd->RemoveDeletedCells();
+
+    vtkNew(vtkCleanPolyData, cleaner);
+    cleaner->SetInputData(polycubePd);
+    cleaner->ToleranceIsAbsoluteOn();
+    cleaner->SetAbsoluteTolerance(1.0e-6);
+    cleaner->Update();
+
+    polycubePd->DeepCopy(cleaner->GetOutput());;
+    polycubePd->BuildLinks();
+  }
+
   fprintf(stdout,"GETTING SURFACE GROUPS\n");
   std::vector<Region> surfaceGroups;
   if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, surfaceGroups) != SV_OK)
@@ -6635,6 +6753,11 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
             this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
           }
           else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
+              badEdges.size() == 2 && allEdges.size() == 3)
+          {
+            this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+          }
+          else if (surfaceGroups[i].BoundaryEdges.size() == 5 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
               badEdges.size() == 2 && allEdges.size() == 3)
           {
             this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
