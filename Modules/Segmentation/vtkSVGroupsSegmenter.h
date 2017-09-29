@@ -255,6 +255,9 @@ protected:
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
   int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
                             int w_div, int &l_div, int h_div);
+  int CheckFace(vtkPolyData *polycubePd, int faceId,
+                int &nTopPts, int &nBotPts,
+                int &flatTop, int &flatBot);
   int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
                            vtkPolyData *pdWithCleanInterior,
                            vtkPolyData *pdWithoutInterior,
