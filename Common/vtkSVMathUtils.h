@@ -64,7 +64,7 @@ public:
    *  reach before exiting. */
   static int ConjugateGradient(vtkSVSparseMatrix *a,
                                 const double *b, int num_iterations,
-                                double *x, double epsilon);
+                                double *x, const double epsilon);
 
   /** \brief Does exactly what it says. Multiplies A transpose with A and then
    *  with column vector b.
@@ -82,7 +82,7 @@ public:
    *  \param b second vector.
    *  \param n size of the vectors.
    *  \return inner product. */
-  static double InnerProduct(const double a[], const double b[], int n);
+  static double InnerProduct(const double a[], const double b[], int n, double &product);
 
   /** \brief Function to add to vectors with the possiblity of multiplying by a scalar.
    *  \param a First vector.

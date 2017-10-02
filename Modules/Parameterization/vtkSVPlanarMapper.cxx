@@ -153,6 +153,12 @@ vtkSVPlanarMapper::~vtkSVPlanarMapper()
     this->AHarm->Delete();
     this->AHarm = NULL;
   }
+
+  if (this->BoundaryMapper != NULL)
+  {
+    this->BoundaryMapper->Delete();
+    this->BoundaryMapper = NULL;
+  }
 }
 
 // ----------------------
@@ -419,14 +425,16 @@ int vtkSVPlanarMapper::SolveSystem()
 {
   int numPoints = this->WorkPd->GetNumberOfPoints();
 
+  double epsilon = 1.0e-8;
+
   vtkSVMathUtils::ConjugateGradient(this->ATutte, &this->Bu[0], numPoints,
-                                    &this->Xu[0], 1.0e-8);
+                                    &this->Xu[0], epsilon);
   vtkSVMathUtils::ConjugateGradient(this->AHarm,  &this->Bu[0], numPoints,
-                                    &this->Xu[0], 1.0e-8);
+                                    &this->Xu[0], epsilon);
   vtkSVMathUtils::ConjugateGradient(this->ATutte, &this->Bv[0], numPoints,
-                                    &this->Xv[0], 1.0e-8);
+                                    &this->Xv[0], epsilon);
   vtkSVMathUtils::ConjugateGradient(this->AHarm,  &this->Bv[0], numPoints,
-                                    &this->Xv[0], 1.0e-8);
+                                    &this->Xv[0], epsilon);
 
   // Get pt from boundary for stationary dir axis
   double origPt[3];

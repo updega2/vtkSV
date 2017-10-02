@@ -204,12 +204,12 @@ int vtkSVPointSetBoundaryMapper::SetBoundary(vtkIntArray *actualIds)
   for (int i=0; i<numBoundaryPts; i++)
   {
     //fprintf(stdout,"Looping to next point: %d\n", i);
-    double currCoords[3], endCoords[3], dir[3];
+    double currCoords[3], endCoords[3], newDir[3];
     this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1((i)%numBoundaryPts), currCoords);
     this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1((i+1)%numBoundaryPts), endCoords);
 
-    vtkMath::Subtract(endCoords, currCoords, dir);
-    vtkMath::Normalize(dir);
+    vtkMath::Subtract(endCoords, currCoords, newDir);
+    vtkMath::Normalize(newDir);
 
     double paraLength = sqrt(pow(endCoords[0]-currCoords[0], 2.0) +
                         pow(endCoords[1]-currCoords[1], 2.0) +
@@ -244,12 +244,12 @@ int vtkSVPointSetBoundaryMapper::SetBoundary(vtkIntArray *actualIds)
 
       // Get the length of the unit we need to fill until we get to next boundary point
       double updateLength = dist/this->BoundaryLengths->GetTuple1(i)*paraLength;
-      vtkMath::Normalize(dir);
-      vtkMath::MultiplyScalar(dir, updateLength);
+      vtkMath::Normalize(newDir);
+      vtkMath::MultiplyScalar(newDir, updateLength);
 
       // need to update our current coordinates differently.
       double tmpCoords[3];
-      vtkMath::Add(currCoords, dir, tmpCoords);
+      vtkMath::Add(currCoords, newDir, tmpCoords);
       for (int k=0; k<3; k++)
         currCoords[k] = tmpCoords[k];
 

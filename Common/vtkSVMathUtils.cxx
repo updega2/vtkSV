@@ -59,12 +59,11 @@ void vtkSVMathUtils::Multiply_ATA_b(vtkSVSparseMatrix *a_trans,
 // ----------------------
 // InnerProduct
 // ----------------------
-double vtkSVMathUtils::InnerProduct(const double a[], const double b[], int n)
+double vtkSVMathUtils::InnerProduct(const double a[], const double b[], int n, double &product)
 {
-  double result = 0.0;
+  product = 0.0;
   for (int c = 0; c < n; c++)
-    result += a[c] * b[c];
-  return result;
+    product += a[c] * b[c];
 }
 
 // ----------------------
@@ -124,7 +123,7 @@ int vtkSVMathUtils::MultiplyScalar(double a[], double scalar, const int size)
 int vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
                                        const double *b,
                                        int num_iterations,
-                                       double *x, double epsilon)
+                                       double *x, const double epsilon)
 {
   vtkNew(vtkSVSparseMatrix, a_trans);
   a->Transpose(a_trans);
@@ -148,7 +147,8 @@ int vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
   std::copy(r, r + a_trans->GetNumberOfRows(), p);
 
   // rs_old = r' * r
-  double rs_old = vtkSVMathUtils::InnerProduct(r, r, a_trans->GetNumberOfRows());
+  double rs_old = 0.0;
+  vtkSVMathUtils::InnerProduct(r, r, a_trans->GetNumberOfRows(), rs_old);
 
   if (sqrt(rs_old) < epsilon) {
     printf("The initial solution is good.\n");
@@ -168,7 +168,9 @@ int vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
     vtkSVMathUtils::Multiply_ATA_b(a_trans, a, p, temp);
 
     // alpha = rs_old / (p' * temp)
-    double alpha = rs_old / vtkSVMathUtils::InnerProduct(p, temp, a_trans->GetNumberOfRows());
+    double alpha_den = 0.0;
+    vtkSVMathUtils::InnerProduct(p, temp, a_trans->GetNumberOfRows(), alpha_den);
+    double alpha = rs_old / alpha_den;
 
     // x = x + alpha * p
     vtkSVMathUtils::Add(x, p, alpha, a_trans->GetNumberOfRows(), x);
@@ -177,7 +179,8 @@ int vtkSVMathUtils::ConjugateGradient(vtkSVSparseMatrix *a,
     vtkSVMathUtils::Add(r, temp, -alpha, a_trans->GetNumberOfRows(), r);
 
     // rs_new = r' * r
-    double rs_new = vtkSVMathUtils::InnerProduct(r, r, a_trans->GetNumberOfRows());
+    double rs_new = 0.0;
+    vtkSVMathUtils::InnerProduct(r, r, a_trans->GetNumberOfRows(), rs_new);
 
     // Traditionally, if norm(rs_new) is small enough, the iteration can stop.
     if (sqrt(rs_new) < epsilon)
