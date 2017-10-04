@@ -122,7 +122,7 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->CutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   this->ClipValue = 0.0;
   this->UseRadiusInformation = 1;
-  this->PolycubeUnitLength = 0.1;
+  this->PolycubeUnitLength = 0.05;
 }
 
 // ----------------------
@@ -708,22 +708,22 @@ int vtkSVGroupsSegmenter::RunFilter()
   ////  return SV_ERROR;
   ////}
 
-  // NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  // TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  vtkNew(vtkPolyData, fullMapPd);
-  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  {
-    fprintf(stderr,"WRONG\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkPolyData, fullMapPd);
+  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  //{
+  //  fprintf(stderr,"WRONG\n");
+  //  return SV_ERROR;
+  //}
 
-  vtkNew(vtkUnstructuredGrid, loftedVolume);
-  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  {
-    fprintf(stderr,"Failed doing volume stuffs\n");
-    return SV_ERROR;
-  }
+  //vtkNew(vtkUnstructuredGrid, loftedVolume);
+  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  //{
+  //  fprintf(stderr,"Failed doing volume stuffs\n");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
