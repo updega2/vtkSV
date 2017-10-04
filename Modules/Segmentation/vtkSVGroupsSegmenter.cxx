@@ -8334,7 +8334,24 @@ int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId)
 
   int numSplitCells = pointCells->GetNumberOfIds();
 
-  fprintf(stdout,"SPLITTING %d cells\n", numSplitCells);
+  fprintf(stdout,"SPLITTING %d CELLS\n", numSplitCells);
+
+  // Because of poor dynamic editting of data in vtk, we need to
+  // create a new set of cells
+  int numCurrentCells = pd->GetNumberOfCells();
+  int numNewCells     = numCurrentCells + 2*numSplitCells;
+
+  vtkNew(vtkCellArray, newCells);
+  newCells->Allocate(numNewCells);
+  vtkNew(vtkIdList, cellPtIds);
+
+  for (int i=0; i<numCurrentCells; i++)
+  {
+    pd->GetCellPoints(i, cellPtIds);
+    newCells->InsertNextCell(cellPtIds);
+  }
+
+  std::vector<std::vector<int> > splitCells;
   for (int i=0; i<numSplitCells; i++)
   {
     int cellId = pointCells->GetId(i);
@@ -8349,49 +8366,37 @@ int vtkSVGroupsSegmenter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId)
 
       if (ptId0 != ptId && ptId1 != ptId)
       {
-        fprintf(stdout,"SPLITTING THIS EDGE OF CELL: %d\n", j);
-        this->SplitEdge(pd, cellId, ptId0, ptId1);
+        this->SplitEdge(pd, cellId, ptId0, ptId1, newCells, splitCells);
         break;
       }
     }
   }
+
+  pd->SetPolys(newCells);
+  pd->BuildCells();
+  pd->BuildLinks();
+
+  for (int i=0; i<splitCells.size(); i++)
+  {
+    int replaceCellId = splitCells[i][0];
+    int oldPtId = splitCells[i][1];
+    int newPtId = splitCells[i][2];
+    pd->ReplaceCellPoint(replaceCellId, oldPtId, newPtId);
+  }
+
   return SV_OK;
 }
 
 // ----------------------
 // SplitEdge
 // ----------------------
-int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1)
+int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
+                                    vtkCellArray *newCells, std::vector<std::vector<int> > &splitCells)
 
 {
-  // Because of poor dynamic editting of data in vtk, we need to
-  // create a new set of cells, cell data, and point data
+  // Num pts
   int numCurrentPts   = pd->GetNumberOfPoints();
   int numNewPts       = numCurrentPts + 1;
-  int numCurrentCells = pd->GetNumberOfCells();
-  int numNewCells     = numCurrentCells + 2;
-
-  vtkNew(vtkPoints, newPoints); newPoints->SetNumberOfPoints(numNewPts);
-  for (int i=0; i<numCurrentPts; i++)
-    newPoints->SetPoint(i, pd->GetPoint(i));
-
-  vtkNew(vtkCellArray, newCells);
-  vtkNew(vtkIdList, cellPtIds);
-  for (int i=0; i<numCurrentCells; i++)
-  {
-    pd->GetCellPoints(i, cellPtIds);
-    newCells->InsertNextCell(cellPtIds);
-  }
-
-  vtkNew(vtkPointData, newPointData);
-  newPointData->CopyAllocate(pd->GetPointData(), numNewPts);
-  for (int i=0; i<numCurrentPts; i++)
-    newPointData->CopyData(pd->GetPointData(), i, i);
-
-  vtkNew(vtkCellData, newCellData);
-  newCellData->CopyAllocate(pd->GetCellData(), numNewCells);
-  for (int i=0; i<numCurrentCells; i++)
-    newCellData->CopyData(pd->GetCellData(), i, i);
 
   // Now do stuff
   vtkNew(vtkIdList, edgeCells);
@@ -8399,10 +8404,6 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
 
   if (cellId != -1)
     edgeCells->InsertNextId(cellId);
-
-  vtkNew(vtkIdList, replaceCellList);
-  vtkNew(vtkIdList, oldPtIdList);
-  vtkNew(vtkIdList, newPtIdList);
 
   int pointAdded = 0;
   int newPointId = numNewPts-1;
@@ -8432,10 +8433,10 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
 
         if (!pointAdded)
         {
-          newPoints->SetPoint(newPointId, newPt);
+          pd->GetPoints()->InsertNextPoint(newPt);
           pointAdded = 1;
 
-         newPointData->CopyData(pd->GetPointData(), ptId0, newPointId);
+         pd->GetPointData()->CopyData(pd->GetPointData(), ptId0, newPointId);
 
          for (int k=0; k<pd->GetPointData()->GetNumberOfArrays(); k++)
          {
@@ -8446,14 +8447,18 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
            interpIds->SetId(0, ptId0);
            interpIds->SetId(1, ptId1);
 
-           newPointData->GetArray(k)->InterpolateTuple(newPointId,
+           pd->GetPointData()->GetArray(k)->InsertNextTuple(
+             pd->GetPointData()->GetArray(k)->GetTuple(ptId0));
+           pd->GetPointData()->GetArray(k)->InterpolateTuple(newPointId,
                interpIds, pd->GetPointData()->GetArray(k), weights);
          }
         }
 
-        replaceCellList->InsertNextId(splitCellId);
-        oldPtIdList->InsertNextId(ptId1);
-        newPtIdList->InsertNextId(newPointId);
+        std::vector<int> splitCellInfo(3);
+        splitCellInfo[0] = splitCellId;
+        splitCellInfo[1] = ptId1;
+        splitCellInfo[2] = newPointId;
+        splitCells.push_back(splitCellInfo);
 
         vtkNew(vtkIdList, newCell);
         newCell->SetNumberOfIds(3);
@@ -8463,27 +8468,15 @@ int vtkSVGroupsSegmenter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int 
 
         int newCellId = newCells->InsertNextCell(newCell);
 
-        newCellData->CopyData(pd->GetCellData(), splitCellId, newCellId);
+        for (int k=0; k<pd->GetCellData()->GetNumberOfArrays(); k++)
+        {
+          pd->GetCellData()->GetArray(k)->InsertNextTuple(
+            pd->GetCellData()->GetArray(k)->GetTuple(splitCellId));
+        }
+        pd->GetCellData()->CopyData(pd->GetCellData(), splitCellId, newCellId);
       }
     }
   }
-
-  vtkNew(vtkPolyData, newPd);
-  newPd->SetPoints(newPoints);
-  newPd->SetPolys(newCells);
-  newPd->GetPointData()->PassData(newPointData);
-  newPd->GetCellData()->PassData(newCellData);
-
-  newPd->BuildLinks();
-  for (int i=0; i<replaceCellList->GetNumberOfIds(); i++)
-  {
-    int replaceCellId = replaceCellList->GetId(i);
-    int oldPtId = oldPtIdList->GetId(i);
-    int newPtId = newPtIdList->GetId(i);
-    newPd->ReplaceCellPoint(replaceCellId, oldPtId, newPtId);
-  }
-
-  pd->DeepCopy(newPd);
 
   return SV_OK;
 }
