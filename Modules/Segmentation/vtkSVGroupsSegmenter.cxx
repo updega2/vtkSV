@@ -122,7 +122,7 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->CutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   this->ClipValue = 0.0;
   this->UseRadiusInformation = 1;
-  this->PolycubeUnitLength = 0.05;
+  this->PolycubeUnitLength = 0.1;
 }
 
 // ----------------------
@@ -619,14 +619,14 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    if (this->MergedCenterlines->GetNumberOfCells() > 1)
-    {
-      if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
-      {
-        vtkErrorMacro("Error matching end patches");
-        return SV_ERROR;
-      }
-    }
+    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    //{
+    //  if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
+    //  {
+    //    vtkErrorMacro("Error matching end patches");
+    //    return SV_ERROR;
+    //  }
+    //}
 
     // Set vals on work pd
     for (int j=0; j<branchPd->GetNumberOfCells(); j++)
@@ -672,12 +672,20 @@ int vtkSVGroupsSegmenter::RunFilter()
       targetPatches->SetId(4*i+j, 6*i+j);
   }
 
-  // For checking purposes
-  if (this->FixPatchesWithPolycube() != SV_OK)
+  // TODO: IF SOMETHIGN WRONG, LOOK HERE FIRST!!! MAY BE MOVING PATCH OFF
+  // OF SLICE POINT
+  if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
   {
-    fprintf(stderr,"Couldn't fix patches\n");
+    vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
+
+  //// For checking purposes
+  //if (this->FixPatchesWithPolycube() != SV_OK)
+  //{
+  //  fprintf(stderr,"Couldn't fix patches\n");
+  //  return SV_ERROR;
+  //}
 
   if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
   {
@@ -701,12 +709,12 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  ////// For checking purposes
-  ////if (this->FixPatchesWithPolycubeOld() != SV_OK)
-  ////{
-  ////  fprintf(stderr,"Couldn't fix patches\n");
-  ////  return SV_ERROR;
-  ////}
+  ////////// For checking purposes
+  ////////if (this->FixPatchesWithPolycubeOld() != SV_OK)
+  ////////{
+  ////////  fprintf(stderr,"Couldn't fix patches\n");
+  ////////  return SV_ERROR;
+  ////////}
 
   //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
   //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
@@ -2333,93 +2341,96 @@ int vtkSVGroupsSegmenter::CurveFitBoundaries(vtkPolyData *pd, std::string arrayN
       }
 
       int numPoints = edgeSize-1;
-      std::vector<double> lengthRatio(edgeSize, 0.0);
-
-      std::vector<XYZ> inputNodes(edgeSize);
-      std::vector<XYZ> outputNodes(edgeSize);
-
-      const int sampleSize = 1000;
-      std::vector<XYZ> outputRes(sampleSize);
-
-      for (int k=0; k<edgeSize; k++)
+      if (numPoints > 4)
       {
-        int pointId = allRegions[i].BoundaryEdges[j][k];
-        double pt[3];
-        pd->GetPoint(pointId, pt);
-        inputNodes[k].x = pt[0];
-        inputNodes[k].y = pt[1];
-        inputNodes[k].z = pt[2];
+        std::vector<double> lengthRatio(edgeSize, 0.0);
+
+        std::vector<XYZ> inputNodes(edgeSize);
+        std::vector<XYZ> outputNodes(edgeSize);
+
+        const int sampleSize = 1000;
+        std::vector<XYZ> outputRes(sampleSize);
+
+        for (int k=0; k<edgeSize; k++)
+        {
+          int pointId = allRegions[i].BoundaryEdges[j][k];
+          double pt[3];
+          pd->GetPoint(pointId, pt);
+          inputNodes[k].x = pt[0];
+          inputNodes[k].y = pt[1];
+          inputNodes[k].z = pt[2];
+        }
+
+        int deg = 4;
+        std::vector<int> knots(numPoints+deg+1);
+
+        vtkSVGroupsSegmenter::SplineKnots(knots, numPoints, deg);
+
+        double totalLength = 0.0;
+
+        for (int k = 1; k < edgeSize; k++)
+        {
+
+          int pointId = allRegions[i].BoundaryEdges[j][k];
+          int prevPointId = allRegions[i].BoundaryEdges[j][k-1];
+
+          double pt0[3], pt1[3];
+          pd->GetPoint(pointId, pt0);
+          pd->GetPoint(prevPointId, pt1);
+
+          totalLength += vtkSVMathUtils::Distance(pt0, pt1);
+        }
+
+        double tempLength = 0.0;
+        for (int k = 1; k < edgeSize; k++)
+        {
+          int pointId = allRegions[i].BoundaryEdges[j][k];
+          int prevPointId = allRegions[i].BoundaryEdges[j][k-1];
+
+          double pt0[3], pt1[3];
+          pd->GetPoint(pointId, pt0);
+          pd->GetPoint(prevPointId, pt1);
+
+          tempLength += vtkSVMathUtils::Distance(pt0, pt1);
+
+          lengthRatio[k] = tempLength / totalLength;
+        }
+
+        SplineCurve(inputNodes, numPoints, knots, deg, outputRes, sampleSize);
+
+        double minDist = VTK_SV_LARGE_DOUBLE;
+        int tempCount=0;
+        for (int k = 0; k < edgeSize; k++)
+        {
+          minDist = VTK_SV_LARGE_DOUBLE;
+          int pointId = allRegions[i].BoundaryEdges[j][k];
+          double pt[3];
+          pd->GetPoint(pointId, pt);
+          for (int l = 0; l < sampleSize; l++)
+          {
+            double outputPt[3];
+            outputPt[0] = outputRes[l].x;
+            outputPt[1] = outputRes[l].y;
+            outputPt[2] = outputRes[l].z;
+
+            double dist = vtkSVMathUtils::Distance(pt, outputPt);
+
+            if (dist < minDist)
+            {
+              minDist = dist;
+              tempCount = l;
+            }
+
+          }
+
+          double newPoint[3];
+          newPoint[0] = outputRes[tempCount].x;
+          newPoint[1] = outputRes[tempCount].y;
+          newPoint[2] = outputRes[tempCount].z;
+
+          pd->GetPoints()->SetPoint(pointId, newPoint);
+        }
       }
-
-      int deg = 4;
-      std::vector<int> knots(numPoints+deg+1);
-
-      vtkSVGroupsSegmenter::SplineKnots(knots, numPoints, deg);
-
-      double totalLength = 0.0;
-
-			for (int k = 1; k < edgeSize; k++)
-			{
-
-				int pointId = allRegions[i].BoundaryEdges[j][k];
-				int prevPointId = allRegions[i].BoundaryEdges[j][k-1];
-
-        double pt0[3], pt1[3];
-        pd->GetPoint(pointId, pt0);
-        pd->GetPoint(prevPointId, pt1);
-
-				totalLength += vtkSVMathUtils::Distance(pt0, pt1);
-			}
-
-			double tempLength = 0.0;
-			for (int k = 1; k < edgeSize; k++)
-			{
-				int pointId = allRegions[i].BoundaryEdges[j][k];
-				int prevPointId = allRegions[i].BoundaryEdges[j][k-1];
-
-        double pt0[3], pt1[3];
-        pd->GetPoint(pointId, pt0);
-        pd->GetPoint(prevPointId, pt1);
-
-        tempLength += vtkSVMathUtils::Distance(pt0, pt1);
-
-				lengthRatio[k] = tempLength / totalLength;
-			}
-
-			SplineCurve(inputNodes, numPoints, knots, deg, outputRes, sampleSize);
-
-			double minDist = VTK_SV_LARGE_DOUBLE;
-			int tempCount=0;
-			for (int k = 0; k < edgeSize; k++)
-			{
-				minDist = VTK_SV_LARGE_DOUBLE;
-				int pointId = allRegions[i].BoundaryEdges[j][k];
-        double pt[3];
-        pd->GetPoint(pointId, pt);
-				for (int l = 0; l < sampleSize; l++)
-				{
-          double outputPt[3];
-          outputPt[0] = outputRes[l].x;
-          outputPt[1] = outputRes[l].y;
-          outputPt[2] = outputRes[l].z;
-
-          double dist = vtkSVMathUtils::Distance(pt, outputPt);
-
-					if (dist < minDist)
-					{
-						minDist = dist;
-						tempCount = l;
-					}
-
-				}
-
-        double newPoint[3];
-        newPoint[0] = outputRes[tempCount].x;
-        newPoint[1] = outputRes[tempCount].y;
-        newPoint[2] = outputRes[tempCount].z;
-
-        pd->GetPoints()->SetPoint(pointId, newPoint);
-			}
     }
   }
   return SV_OK;
@@ -3664,7 +3675,7 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
   vtkSVIOUtils::WriteVTPFile(filename, fullMapPd);
 
   vtkNew(vtkPolyData, mappedPd);
-  this->InterpolateMapOntoTarget(polycubePd, this->WorkPd, fullMapPd, mappedPd);
+  this->InterpolateMapOntoTarget(polycubePd, this->WorkPd, fullMapPd, mappedPd, this->GroupIdsArrayName);
 
   std::string filename5 = "/Users/adamupdegrove/Desktop/tmp/Mapped_Out.vtp";
   vtkSVIOUtils::WriteVTPFile(filename5, mappedPd);
@@ -3692,8 +3703,12 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
   std::vector<vtkSmartPointer<vtkStructuredGrid> > paraHexVolumes(numGroups);
 
-  int w_div = 100*this->PolycubeUnitLength + 1;
-  int h_div = 100*this->PolycubeUnitLength + 1;
+  int w_div = 100*this->PolycubeUnitLength;
+  if (w_div%2 == 0)
+    w_div++;
+  int h_div = 100*this->PolycubeUnitLength;
+  if (h_div%2 == 0)
+    h_div++;
   int l_div = 0; // Determined by length of cube
 
   for (int i=0; i<numGroups; i++)
@@ -3714,7 +3729,9 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
       fprintf(stderr,"Couldn't do the dirt\n");
       return SV_ERROR;
     }
-    fprintf(stdout,"WHAT IS MY L_DVE: %d\n", l_div);
+    fprintf(stdout,"WDIV: %d\n", w_div);
+    fprintf(stdout,"HDIV: %d\n", h_div);
+    fprintf(stdout,"LDIV: %d\n", l_div);
     vtkNew(vtkIntArray, groupIdsArray);
     groupIdsArray->SetNumberOfTuples(paraHexMesh->GetNumberOfCells());
     groupIdsArray->SetName(this->GroupIdsArrayName);
@@ -3774,8 +3791,14 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   std::vector<std::vector<int> > invPtMap;
   this->GetInteriorPointMaps(paraHexSurface, paraHexCleanSurface, cleanSurface, surfacePtMap, invPtMap);
 
+  std::string fn = "/Users/adamupdegrove/Desktop/tmp/Mapping_All2.vtp";
+  vtkSVIOUtils::WriteVTPFile(fn, fullMapPd);
+  std::string fn2 = "/Users/adamupdegrove/Desktop/tmp/ParaHexSurface.vtp";
+  vtkSVIOUtils::WriteVTPFile(fn2, paraHexSurface);
   vtkNew(vtkPolyData, mappedSurface);
-  this->InterpolateMapOntoTarget(paraHexSurface, this->WorkPd, fullMapPd, mappedSurface);
+  this->InterpolateMapOntoTarget(paraHexSurface, this->WorkPd, fullMapPd, mappedSurface, this->GroupIdsArrayName);
+  std::string filename5 = "/Users/adamupdegrove/Desktop/tmp/Mapped_Out2.vtp";
+  vtkSVIOUtils::WriteVTPFile(filename5, mappedSurface);
 
   vtkNew(vtkIdFilter, ider2);
   ider2->SetInputData(mappedSurface);
@@ -4318,24 +4341,28 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
   if (nTopPts0 == 3)
   {
+    fprintf(stdout,"N TOP PTS 0: %d\n", nTopPts0);
     polycubePd->GetPoint(f0PtIds[3], f0Pts[2]);
     polycubePd->GetPoint(f0PtIds[4], f0Pts[3]);
   }
 
   if (nTopPts2 == 3)
   {
+    fprintf(stdout,"N TOP PTS 2: %d\n", nTopPts2);
     polycubePd->GetPoint(f2PtIds[4], f2Pts[0]);
     polycubePd->GetPoint(f2PtIds[3], f2Pts[1]);
   }
 
   if (nTopPts1 == 3)
   {
+    fprintf(stdout,"N TOP PTS 1: %d\n", nTopPts1);
     polycubePd->GetPoint(f1PtIds[4], f1Pts[0]);
     polycubePd->GetPoint(f1PtIds[3], f1Pts[1]);
   }
 
   if (nTopPts3 == 3)
   {
+    fprintf(stdout,"N TOP PTS 3: %d\n", nTopPts3);
     polycubePd->GetPoint(f3PtIds[3], f3Pts[2]);
     polycubePd->GetPoint(f3PtIds[4], f3Pts[3]);
   }
@@ -4763,6 +4790,8 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   double face2Dist1 = vtkSVMathUtils::Distance(f2Pts[2], f2Pts[1]);
 
   l_div = floor(vtkSVMathUtils::Distance(f0Pts[1], f0Pts[0])/(this->PolycubeUnitLength));
+  if (l_div < 20)
+    l_div = 20;
 
   if (topSTet1 || topSTet3 || botSTet1 || botSTet3)
     w_div = 2*w_div-1;
@@ -4916,7 +4945,6 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
         x4DiagVecs[0][j] = face4DiagVecs[0][j]*i*(face4DiagDists[0]/(h_div-1));
         x4DiagVecs[1][j] = face4DiagVecs[1][j]*((i+1)%h_div)*(face4DiagDists[1]/(h_div-1));
       }
-
 
       if (i <= h_div-1)
       {
@@ -6710,13 +6738,19 @@ int vtkSVGroupsSegmenter::FindPointMatchingValues(vtkPointSet *ps, std::string a
 int vtkSVGroupsSegmenter::InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
                                                          vtkPolyData *targetPd,
                                                          vtkPolyData *targetBasePd,
-                                                         vtkPolyData *mappedPd)
+                                                         vtkPolyData *mappedPd,
+                                                         std::string dataMatchingArrayName)
 {
   vtkNew(vtkSVMapInterpolator, interpolator);
   interpolator->SetInputData(0, sourceBasePd);
   interpolator->SetInputData(1, targetPd);
   interpolator->SetInputData(2, targetBasePd);
   interpolator->SetNumSourceSubdivisions(0);
+  if (dataMatchingArrayName.c_str() != NULL)
+  {
+    interpolator->SetEnableDataMatching(1);
+    interpolator->SetDataMatchingArrayName(dataMatchingArrayName.c_str());
+  }
   interpolator->Update();
 
   mappedPd->DeepCopy(interpolator->GetOutput());
@@ -7396,6 +7430,11 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
           {
             this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
           }
+          else if (surfaceGroups[i].BoundaryEdges.size() == 6 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
+              badEdges.size() == 4 && allEdges.size() == 4)
+          {
+            this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+          }
           else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
               badEdges.size() == 2 && allEdges.size() == 3)
           {
@@ -7407,6 +7446,11 @@ int vtkSVGroupsSegmenter::FixGroupsWithPolycube()
             this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
           }
           else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
+              badEdges.size() == 3 && allEdges.size() == 3)
+          {
+            this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
+          }
+          else if (surfaceGroups[i].BoundaryEdges.size() == 5 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
               badEdges.size() == 3 && allEdges.size() == 3)
           {
             this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);

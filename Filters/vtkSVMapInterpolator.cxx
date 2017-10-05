@@ -70,7 +70,9 @@ vtkSVMapInterpolator::vtkSVMapInterpolator()
   // Three input ports
   this->SetNumberOfInputPorts(3);
 
+  this->RemoveInternalIds     = 1;
   this->NumSourceSubdivisions = 0;
+  this->EnableDataMatching    = 0;
   this->HasBoundary           = 0;
 
   this->SourceBaseDomainPd = vtkPolyData::New();
@@ -80,6 +82,9 @@ vtkSVMapInterpolator::vtkSVMapInterpolator()
 
   this->TargetBoundary = vtkIntArray::New();
   this->SourceBoundary = vtkIntArray::New();
+
+  this->InternalIdsArrayName  = NULL;
+  this->DataMatchingArrayName = NULL;
 }
 
 // ----------------------
@@ -90,26 +95,43 @@ vtkSVMapInterpolator::~vtkSVMapInterpolator()
   if (this->SourceBaseDomainPd != NULL)
   {
     this->SourceBaseDomainPd->Delete();
+    this->SourceBaseDomainPd = NULL;
   }
   if (this->TargetPd != NULL)
   {
     this->TargetPd->Delete();
+    this->TargetPd = NULL;
   }
   if (this->TargetBaseDomainPd != NULL)
   {
     this->TargetBaseDomainPd->Delete();
+    this->TargetBaseDomainPd = NULL;
   }
   if (this->SourceOnTargetPd != NULL)
   {
     this->SourceOnTargetPd->Delete();
+    this->SourceOnTargetPd = NULL;
   }
   if (this->TargetBoundary != NULL)
   {
     this->TargetBoundary->Delete();
+    this->TargetBoundary = NULL;
   }
   if (this->SourceBoundary != NULL)
   {
     this->SourceBoundary->Delete();
+    this->SourceBoundary = NULL;
+  }
+
+  if (this->DataMatchingArrayName != NULL)
+  {
+    delete [] this->DataMatchingArrayName;
+    this->DataMatchingArrayName = NULL;
+  }
+  if (this->InternalIdsArrayName)
+  {
+    delete [] this->InternalIdsArrayName;
+    this->InternalIdsArrayName = NULL;
   }
 }
 
@@ -119,7 +141,12 @@ vtkSVMapInterpolator::~vtkSVMapInterpolator()
 void vtkSVMapInterpolator::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
+  if (this->InternalIdsArrayName != NULL)
+    os << indent << "Internal Ids array name: " << this->InternalIdsArrayName << "\n";
+  if (this->DataMatchingArrayName != NULL)
+    os << indent << "Data Matching array name: " << this->DataMatchingArrayName << "\n";
   os << indent << "Number of source subdivisions: " << this->NumSourceSubdivisions << "\n";
+  os << indent << "Enable Data Matching: " << this->EnableDataMatching << "\n";
   os << indent << "Has Boundary: " << this->HasBoundary << "\n";
 }
 
@@ -155,6 +182,12 @@ int vtkSVMapInterpolator::RequestData(vtkInformation *vtkNotUsed(request),
     vtkErrorMacro("Filter failed");
     output->DeepCopy(input1);
     return SV_ERROR;
+  }
+
+  if (this->RemoveInternalIds)
+  {
+    this->TargetBaseDomainPd->GetPointData()->RemoveArray(this->InternalIdsArrayName);
+    this->TargetBaseDomainPd->GetCellData()->RemoveArray(this->InternalIdsArrayName);
   }
 
   // copy to output and pass data
@@ -221,6 +254,40 @@ int vtkSVMapInterpolator::PrepFilter()
     return SV_ERROR;
   }
 
+  if (this->EnableDataMatching)
+  {
+    if (this->DataMatchingArrayName == NULL)
+    {
+      vtkErrorMacro("Must provide cell data array name if matching data");
+      return SV_ERROR;
+    }
+    if (vtkSVGeneralUtils::CheckArrayExists(this->SourceBaseDomainPd, 1, this->DataMatchingArrayName) != SV_OK)
+    {
+      vtkErrorMacro(<< this->DataMatchingArrayName << " does not exist on source base domain");
+      return SV_OK;
+    }
+    if (vtkSVGeneralUtils::CheckArrayExists(this->TargetBaseDomainPd, 1, this->DataMatchingArrayName) != SV_OK)
+    {
+      vtkErrorMacro(<< this->DataMatchingArrayName << " does not exist on target base domain");
+      return SV_OK;
+    }
+
+    // Check if internal id array name is given
+    if (!this->InternalIdsArrayName)
+    {
+      vtkDebugMacro("Internal Ids Array Name not given, setting to InternalIds");
+      this->InternalIdsArrayName = new char[strlen("InternalIds") + 1];
+      strcpy(this->InternalIdsArrayName, "InternalIds");
+    }
+    // Check if array internal ids is already on pd
+    if (vtkSVGeneralUtils::CheckArrayExists(this->TargetBaseDomainPd, 1, this->InternalIdsArrayName))
+    {
+      this->RemoveInternalIds = 0;
+    }
+    else
+      vtkSVGeneralUtils::GiveIds(this->TargetBaseDomainPd, this->InternalIdsArrayName);
+  }
+
   if (this->MatchBoundaries() != SV_OK)
   {
     vtkErrorMacro("Error matching the boundaries of the surfaces");
@@ -238,6 +305,11 @@ int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
                                             vtkPolyData *originalTargetPd,
                                             vtkPolyData *sourceOnTargetPd)
 {
+  vtkNew(vtkIntArray, dataCheckArray);
+  dataCheckArray->SetNumberOfTuples(sourceBaseDomainPd->GetNumberOfPoints());
+  dataCheckArray->FillComponent(0, -1);
+  dataCheckArray->SetName("MYDUMBARRAY");
+
   // create a locator using the base domain
   vtkNew(vtkCellLocator, locator);
 
@@ -246,18 +318,76 @@ int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
 
   sourceOnTargetPd->DeepCopy(sourceBaseDomainPd);
   int numPts = sourceBaseDomainPd->GetNumberOfPoints();
+
+  double closestPt[3];
+  vtkIdType closestCell;
+  int subId;
+  double distance;
+  vtkNew(vtkGenericCell, genericCell);
   for (int i=0; i<numPts; i++)
   {
     double pt[3];
     sourceBaseDomainPd->GetPoint(i, pt);
 
-    double closestPt[3];
-    vtkIdType closestCell;
-    int subId;
-    double distance;
-    vtkNew(vtkGenericCell, genericCell);
     locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
                               distance);
+
+    if (this->EnableDataMatching)
+    {
+      if (distance < 1.0e-6)
+      {
+        vtkNew(vtkIdList, pointCellsValues);
+        vtkSVGeneralUtils::GetPointCellsValues(sourceBaseDomainPd, this->DataMatchingArrayName,
+                                               i, pointCellsValues);
+
+        int firstCheckVal = targetBaseDomainPd->GetCellData()->GetArray(
+          this->DataMatchingArrayName)->GetTuple1(closestCell);
+
+        if (pointCellsValues->IsId(firstCheckVal) == -1)
+        {
+          vtkIdType npts, *pts;
+          targetBaseDomainPd->GetCellPoints(closestCell, npts, pts);
+
+          vtkNew(vtkIdList, cellCloseVals);
+          for (int j=0; j<npts; j++)
+          {
+            vtkNew(vtkIdList, tmpList);
+            vtkSVGeneralUtils::GetPointCellsValues(targetBaseDomainPd, this->DataMatchingArrayName,
+              pts[j], tmpList);
+
+            for (int k=0; k<tmpList->GetNumberOfIds(); k++)
+              cellCloseVals->InsertUniqueId(tmpList->GetId(k));
+          }
+
+          // Check to see if in any in point cell vals
+          int doublecheck = 1;
+          for (int j=0; j<cellCloseVals->GetNumberOfIds(); j++)
+          {
+            if (pointCellsValues->IsId(cellCloseVals->GetId(j)) != -1)
+              doublecheck = 0;
+          }
+
+          if (doublecheck)
+          {
+            dataCheckArray->SetTuple1(i, 1);
+            // We found a bad cell delete this guy and try again
+            int iter=0;
+            int newCellId = -1;
+            vtkSVMapInterpolator::DeleteCellAndRefind(targetBaseDomainPd,
+                                                      pt,
+                                                      closestCell,
+                                                      newCellId,
+                                                      pointCellsValues,
+                                                      iter);
+            if (newCellId != -1)
+            {
+              closestCell = targetBaseDomainPd->GetCellData()->
+                GetArray(this->InternalIdsArrayName)->LookupValue(newCellId);
+            }
+          }
+        }
+      }
+    }
 
     vtkIdType npts, *pts;
     targetBaseDomainPd->GetCellPoints(closestCell, npts, pts);
@@ -278,6 +408,77 @@ int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
       newPoint[j] = a0*realPt0[j] + a1*realPt1[j] + a2*realPt2[j];
     }
     sourceOnTargetPd->GetPoints()->InsertPoint(i, newPoint);
+  }
+
+  sourceOnTargetPd->GetPointData()->AddArray(dataCheckArray);
+
+  return SV_OK;
+}
+
+// ----------------------
+// DeleteCellAndRefind
+// ----------------------
+int vtkSVMapInterpolator::DeleteCellAndRefind(vtkPolyData *targetBaseDomainPd,
+                                              double findPt[3],
+                                              const int closeCellId,
+                                              int &newCellId,
+                                              vtkIdList *pointCellsValues,
+                                              int &iter)
+{
+  if (iter >= 2)
+  {
+    newCellId = -1;
+    return SV_OK;
+  }
+  vtkNew(vtkPolyData, tmpPd);
+  tmpPd->DeepCopy(targetBaseDomainPd);
+
+  tmpPd->DeleteCell(closeCellId);
+  tmpPd->RemoveDeletedCells();
+  tmpPd->BuildLinks();
+  tmpPd->BuildCells();
+
+  // Not sure why this happens, but the tmp ids array value does not get
+  // removed, all the other data removed with cell in RemoveDeletedCells
+  for (int i=0; i<tmpPd->GetCellData()->GetNumberOfArrays(); i++)
+  {
+    if (tmpPd->GetCellData()->GetArray(i)->GetNumberOfTuples() >
+        tmpPd->GetNumberOfCells())
+    {
+      tmpPd->GetCellData()->GetArray(i)->RemoveTuple(closeCellId);
+    }
+  }
+
+  vtkNew(vtkCellLocator, locator);
+  locator->SetDataSet(tmpPd);
+  locator->BuildLocator();
+
+  double closestPt[3];
+  vtkIdType closestCell;
+  int subId;
+  double distance;
+  vtkNew(vtkGenericCell, genericCell);
+  locator->FindClosestPoint(findPt, closestPt, genericCell, closestCell, subId,
+                              distance);
+
+  int closeCellVal = tmpPd->GetCellData()->GetArray(
+    this->DataMatchingArrayName)->GetTuple1(closestCell);
+
+  if (pointCellsValues->IsId(closeCellVal) == -1)
+  {
+    // We found a bad cell delete this guy and try again
+    iter++;
+    vtkSVMapInterpolator::DeleteCellAndRefind(tmpPd,
+                                              findPt,
+                                              closestCell,
+                                              newCellId,
+                                              pointCellsValues,
+                                              iter);
+  }
+  else
+  {
+    newCellId = tmpPd->GetCellData()->GetArray(this->InternalIdsArrayName)
+      ->GetTuple1(closestCell);
   }
 
   return SV_OK;
@@ -371,6 +572,11 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
   locator->SetDataSet(this->TargetBaseDomainPd);
   locator->BuildLocator();
 
+  double closestPt[3];
+  vtkIdType closestCell;
+  int subId;
+  double distance;
+  vtkNew(vtkGenericCell, genericCell);
   // Loop through points
   for (int i=0; i<numPoints; i++)
   {
@@ -382,11 +588,6 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
       this->SourceBaseDomainPd->GetPoint(i, pt);
 
       // Set up and get closest cell on target base domain
-      double closestPt[3];
-      vtkIdType closestCell;
-      int subId;
-      double distance;
-      vtkNew(vtkGenericCell, genericCell);
       locator->FindClosestPoint(pt, closestPt, genericCell, closestCell, subId,
 				distance);
 

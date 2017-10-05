@@ -199,7 +199,8 @@ public:
   static int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
                                       vtkPolyData *targetPd,
                                       vtkPolyData *targetBasePd,
-                                      vtkPolyData *mappedPd);
+                                      vtkPolyData *mappedPd,
+                                      std::string dataMatchingArrayName);
 
   const static double GlobalCoords[3][3];
 
