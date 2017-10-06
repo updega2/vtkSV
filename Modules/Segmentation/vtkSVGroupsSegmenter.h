@@ -234,6 +234,10 @@ protected:
   int CheckSidePatches(vtkPolyData *pd,
                       std::vector<Region> endRegions,
                       std::vector<int> &wholePatchFix);
+  int GetOpenBoundaryEdges(vtkPolyData *branchPd, std::vector<Region> regions,
+                           std::string arrayName,
+                           std::vector<int> &openCornerPoints,
+                           std::vector<std::vector<int> > &openEdges);
   int CheckGroups();
   int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                const Region region, std::vector<int> allEdges,
@@ -250,7 +254,8 @@ protected:
                             std::vector<int> allEdges,
                             std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
-  int GetConnectedEdges(const Region region, std::vector<std::vector<int> > &connectedCornerPts);
+  int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
+                        std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
   int FixPatchesWithPolycubeOld();
   int ParameterizeSurface(vtkPolyData *fullMapPd);

@@ -1093,6 +1093,25 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       this->Lines->GetPoint(pts[j-1], pt0);
       this->Lines->GetPoint(pts[j], pt1);
 
+      //if (gCell->GroupId == 2 && j == 1)
+      //{
+      //  int cellId = this->Lines->GetCellData()->GetArray(
+      //   this->GroupIdsArrayName.c_str())->LookupValue(gCell->Parent->Children[gCell->Parent->DivergingChild]->GroupId);
+      //  vtkIdType ndivpts, *divpts;
+      //  this->Lines->GetCellPoints(cellId, ndivpts, divpts);
+
+      //  double tmpPt0[3], tmpPt1[3];
+      //  this->Lines->GetPoint(divpts[0], tmpPt0);
+      //  this->Lines->GetPoint(divpts[1], tmpPt1);
+      //  vtkMath::Subtract(tmpPt0, tmpPt1, refVecs[0]);
+      //  vtkMath::Normalize(refVecs[0]);
+
+      //  double superTmp0[3], superTmp1[3];
+      //  this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], superTmp0, superTmp1);
+      //  for (int k=0; k<3; k++)
+      //    refVecs[1][k] = superTmp0[k];
+      //}
+
       double checkVec[3];
       for (int k=0; k<3; k++)
         checkVec[k] = refVecs[0][k];
@@ -1102,6 +1121,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       else
         vtkMath::Subtract(pt0, pt1, refVecs[0]);
       vtkMath::Normalize(refVecs[0]);
+
 
       this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
       for (int k=0; k<3; k++)
@@ -1115,7 +1135,6 @@ int vtkSVCenterlineGraph::GetGraphDirections()
           refVecs[2][k] = -1.0*refVecs[2][k];
         }
       }
-
 
       localArrayX->SetTuple(pts[j], refVecs[1]);
       localArrayY->SetTuple(pts[j], refVecs[2]);
@@ -1289,9 +1308,9 @@ int vtkSVCenterlineGraph::UpdateBranchDirs(vtkSVCenterlineGCell *gCell, const in
 // ComputeLocalCoordinateSystem
 // ----------------------
 int vtkSVCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
-                                                               const double vstart[3],
-                                                               double vx[3],
-                                                               double vy[3])
+                                                       const double vstart[3],
+                                                       double vx[3],
+                                                       double vy[3])
 {
 	double tempArray[3];
   double tempLength = vtkMath::Dot(vstart, vz);
