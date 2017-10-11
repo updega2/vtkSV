@@ -1081,6 +1081,9 @@ int vtkSVCenterlineGraph::GetGraphDirections()
     //for (int j=0; j<3; j++)
     //  refVecs[1][j] = tmpX[j];
 
+    int begType, begSplitType;
+    gCell->GetBeginningType(begType, begSplitType);
+
     if (gCell->Parent == NULL)
     {
       localArrayX->SetTuple(pts[0], refVecs[1]);
@@ -1093,23 +1096,31 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       this->Lines->GetPoint(pts[j-1], pt0);
       this->Lines->GetPoint(pts[j], pt1);
 
-      //if (gCell->GroupId == 2 && j == 1)
+      //// TODO: SPECIALLLL!!! CLEANUP
+      //if (j == 1)
       //{
-      //  int cellId = this->Lines->GetCellData()->GetArray(
-      //   this->GroupIdsArrayName.c_str())->LookupValue(gCell->Parent->Children[gCell->Parent->DivergingChild]->GroupId);
-      //  vtkIdType ndivpts, *divpts;
-      //  this->Lines->GetCellPoints(cellId, ndivpts, divpts);
+      //  if (begSplitType == TRI && (begType == VERT_WEDGE || begType == HORZ_WEDGE))
+      //  {
+      //    if (gCell->Parent->Children[gCell->Parent->DivergingChild]->Id != gCell->Id &&
+      //        gCell->Parent->Children[gCell->Parent->AligningChild]->Id != gCell->Id)
+      //    {
+      //      int cellId = this->Lines->GetCellData()->GetArray(
+      //       this->GroupIdsArrayName.c_str())->LookupValue(gCell->Parent->Children[gCell->Parent->DivergingChild]->GroupId);
+      //      vtkIdType ndivpts, *divpts;
+      //      this->Lines->GetCellPoints(cellId, ndivpts, divpts);
 
-      //  double tmpPt0[3], tmpPt1[3];
-      //  this->Lines->GetPoint(divpts[0], tmpPt0);
-      //  this->Lines->GetPoint(divpts[1], tmpPt1);
-      //  vtkMath::Subtract(tmpPt0, tmpPt1, refVecs[0]);
-      //  vtkMath::Normalize(refVecs[0]);
+      //      double tmpPt0[3], tmpPt1[3];
+      //      this->Lines->GetPoint(divpts[0], tmpPt0);
+      //      this->Lines->GetPoint(divpts[1], tmpPt1);
+      //      vtkMath::Subtract(tmpPt0, tmpPt1, refVecs[0]);
+      //      vtkMath::Normalize(refVecs[0]);
 
-      //  double superTmp0[3], superTmp1[3];
-      //  this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], superTmp0, superTmp1);
-      //  for (int k=0; k<3; k++)
-      //    refVecs[1][k] = superTmp0[k];
+      //      double superTmp0[3], superTmp1[3];
+      //      this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], superTmp0, superTmp1);
+      //      for (int k=0; k<3; k++)
+      //        refVecs[1][k] = superTmp0[k];
+      //    }
+      //  }
       //}
 
       double checkVec[3];

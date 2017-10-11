@@ -234,6 +234,9 @@ protected:
   int CheckSidePatches(vtkPolyData *pd,
                       std::vector<Region> endRegions,
                       std::vector<int> &wholePatchFix);
+  int GetOpenBoundaryEdges(vtkPolyData *branchPd,
+                           std::vector<int> &openCornerPoints,
+                           std::vector<std::vector<int> > &openEdges);
   int GetOpenBoundaryEdges(vtkPolyData *branchPd, std::vector<Region> regions,
                            std::string arrayName,
                            std::vector<int> &openCornerPoints,

@@ -49,6 +49,7 @@ vtkSVGeneralCVT::vtkSVGeneralCVT()
   this->CVTDataArray =    NULL;
   this->PatchIdsArray =   NULL;
   this->GeneratorsArray = NULL;
+  this->FixedIdsList = NULL;
 
   this->CVTDataArrayName =    NULL;
   this->PatchIdsArrayName =   NULL;
@@ -91,6 +92,11 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
       this->PatchIdsArray->Delete();
       this->PatchIdsArray = NULL;
     }
+  }
+  if (this->FixedIdsList != NULL)
+  {
+    this->FixedIdsList->Delete();
+    this->FixedIdsList = NULL;
   }
 
   if (this->CVTDataArrayName != NULL)
@@ -331,6 +337,19 @@ int vtkSVGeneralCVT::RunFilter()
   else if (this->UsePointArray)
     numDatas = this->WorkPd->GetNumberOfPoints();
 
+  // Set fixed values
+  this->FixedIds.resize(numDatas);
+  for (int i=0; i<numDatas; i++)
+    this->FixedIds[i] = 0;
+
+  if (this->FixedIdsList != NULL)
+  {
+    for (int i=0; i<numDatas; i++)
+    {
+      if (this->FixedIdsList->IsId(i) != -1)
+        this->FixedIds[i] = 1;
+    }
+  }
 
   int iter=0;
   int eval=1e26;
@@ -346,7 +365,7 @@ int vtkSVGeneralCVT::RunFilter()
     // Loop through cells
     for (int i=0; i<numDatas; i++)
     {
-      if (this->UseCellArray && this->IsBoundaryCell(i))
+      if (this->UseCellArray && this->IsBoundaryCell(i) && !this->FixedIds[i])
       {
         // Set for check of new generator
         int oldGenerator = this->PatchIdsArray->GetTuple1(i);

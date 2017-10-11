@@ -119,6 +119,12 @@ public:
   vtkSetMacro(Threshold, double);
   //@}
 
+  //@{
+  /// \brief Set a threshold criteria. Default is 2 transferred patchs.
+  vtkGetObjectMacro(FixedIdsList, vtkIdList);
+  vtkSetObjectMacro(FixedIdsList, vtkIdList);
+  //@}
+
 protected:
   vtkSVGeneralCVT();
   ~vtkSVGeneralCVT();
@@ -147,6 +153,9 @@ protected:
   vtkDataArray *CVTDataArray;  // Array on input containing info to patch
   vtkDataArray *GeneratorsArray;  // If using array on generators, the array
   vtkIntArray    *PatchIdsArray; // Patch ids array
+  vtkIdList      *FixedIdsList;
+
+  std::vector<int> FixedIds;
 
   char *CVTDataArrayName; // Array name on input with data to patch
   char *PatchIdsArrayName; // Array containing patch id info

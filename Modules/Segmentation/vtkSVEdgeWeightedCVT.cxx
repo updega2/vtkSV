@@ -302,6 +302,15 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
     edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
   }
 
+  // Now check the neighbors
+  int numFixedNeighbors = 0;
+  for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
+  {
+    if (this->FixedIds[this->Neighbors[evalId][i]] == 1 &&
+        this->PatchIdsArray->GetTuple1(this->Neighbors[evalId][i]) == generatorId)
+      numFixedNeighbors++;
+  }
+
   // Divide by the number of neighboring cells
   edgeWeighting /= this->NumberOfNeighbors[evalId];
 
