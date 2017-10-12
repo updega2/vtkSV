@@ -46,6 +46,7 @@
 #include "vtkSVMapInterpolator.h"
 #include "vtkSVLoftNURBSVolume.h"
 #include "vtkSVMUPFESNURBSWriter.h"
+#include "vtkSVPERIGEENURBSWriter.h"
 
 #include "vtkAppendPolyData.h"
 #include "vtkAppendFilter.h"
@@ -809,10 +810,13 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    if (this->FixSidePatches(branchPd) != SV_OK)
+    if (this->MergedCenterlines->GetNumberOfCells() > 1)
     {
-      vtkErrorMacro("Error fixing side patches");
-      return SV_ERROR;
+      if (this->FixSidePatches(branchPd) != SV_OK)
+      {
+        vtkErrorMacro("Error fixing side patches");
+        return SV_ERROR;
+      }
     }
 
     vtkNew(vtkIdList, noEndPatches);
@@ -4280,54 +4284,62 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
   vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
 
-  //vtkNew(vtkAppendFilter, loftAppender);
-  //for (int i=0; i<numGroups; i++)
-  //{
-  //  int groupId = groupIds->GetId(i);
+  vtkNew(vtkAppendFilter, loftAppender);
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = groupIds->GetId(i);
 
-  //  vtkNew(vtkUnstructuredGrid, mappedBranch);
-  //  vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
+    vtkNew(vtkUnstructuredGrid, mappedBranch);
+    vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
 
-  //  vtkNew(vtkStructuredGrid, realHexMesh);
-  //  if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_div, l_div, h_div) != SV_OK)
-  //  {
-  //    fprintf(stderr,"Couldn't do the dirt\n");
-  //    return SV_ERROR;
-  //  }
+    vtkNew(vtkStructuredGrid, realHexMesh);
+    if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_div, l_div, h_div) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't do the dirt\n");
+      return SV_ERROR;
+    }
 
-  //  // Set up the volume
-  //  vtkNew(vtkUnstructuredGrid, emptyGrid);
-  //  vtkNew(vtkSVLoftNURBSVolume, lofter);
-  //  lofter->SetInputData(emptyGrid);
-  //  lofter->SetInputGrid(realHexMesh);
-  //  lofter->SetUDegree(2);
-  //  lofter->SetVDegree(2);
-  //  lofter->SetWDegree(2);
-  //  lofter->SetUnstructuredGridUSpacing(1./w_div);
-  //  lofter->SetUnstructuredGridVSpacing(1./l_div);
-  //  lofter->SetUnstructuredGridWSpacing(1./h_div);
-  //  lofter->SetUKnotSpanType("average");
-  //  lofter->SetUParametricSpanType("chord");
-  //  lofter->SetVKnotSpanType("average");
-  //  lofter->SetVParametricSpanType("chord");
-  //  lofter->SetWKnotSpanType("average");
-  //  lofter->SetWParametricSpanType("chord");
-  //  lofter->Update();
+    // Set up the volume
+    vtkNew(vtkUnstructuredGrid, emptyGrid);
+    vtkNew(vtkSVLoftNURBSVolume, lofter);
+    lofter->SetInputData(emptyGrid);
+    lofter->SetInputGrid(realHexMesh);
+    lofter->SetUDegree(2);
+    lofter->SetVDegree(2);
+    lofter->SetWDegree(2);
+    lofter->SetUnstructuredGridUSpacing(1./w_div);
+    lofter->SetUnstructuredGridVSpacing(1./l_div);
+    lofter->SetUnstructuredGridWSpacing(1./h_div);
+    lofter->SetUKnotSpanType("average");
+    lofter->SetUParametricSpanType("chord");
+    lofter->SetVKnotSpanType("average");
+    lofter->SetVParametricSpanType("chord");
+    lofter->SetWKnotSpanType("average");
+    lofter->SetWParametricSpanType("chord");
+    lofter->Update();
 
-  //  loftAppender->AddInputData(lofter->GetOutput());
+    loftAppender->AddInputData(lofter->GetOutput());
 
-  //  if (this->MergedCenterlines->GetNumberOfCells() == 1)
-  //  {
-  //    std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
-  //    vtkNew(vtkSVMUPFESNURBSWriter, writer);
-  //    writer->SetInputData(lofter->GetVolume());
-  //    writer->SetFileName(mfsname.c_str());
-  //    writer->Write();
-  //  }
-  //}
+    //if (this->MergedCenterlines->GetNumberOfCells() == 1)
+    //{
+    //  std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
+    //  vtkNew(vtkSVMUPFESNURBSWriter, writer);
+    //  writer->SetInputData(lofter->GetVolume());
+    //  writer->SetFileName(mfsname.c_str());
+    //  writer->Write();
+    //}
+    if (this->MergedCenterlines->GetNumberOfCells() == 1)
+    {
+      std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/geometry_Adam_nurbs_cylinder.txt";
+      vtkNew(vtkSVPERIGEENURBSWriter, writer);
+      writer->SetInputData(lofter->GetVolume());
+      writer->SetFileName(mfsname.c_str());
+      writer->Write();
+    }
+  }
 
-  //loftAppender->Update();
-  //loftedVolume->DeepCopy(loftAppender->GetOutput());
+  loftAppender->Update();
+  loftedVolume->DeepCopy(loftAppender->GetOutput());
 
   return SV_OK;
 }

@@ -455,7 +455,7 @@ int vtkSVCenterlineGraph::ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *pa
         maxChild = i;
       }
       fprintf(stdout,"Vec %d: %.4f %.4f %.4f\n", i, parent->Children[i]->BranchVec[0], parent->Children[i]->BranchVec[1], parent->Children[i]->BranchVec[2]);
-      fprintf(stdout,"Angle %d: %4f\n", i, 180*parent->Children[i]->RefAngle/M_PI);
+      fprintf(stdout,"Angle %d: %4f\n", i, 180*parent->Children[i]->RefAngle/SV_PI);
     }
     vtkMath::Cross(this->ReferenceVecs[0], parent->Children[minChild]->BranchVec, this->ReferenceVecs[2]);
     vtkMath::Normalize(this->ReferenceVecs[2]);
@@ -559,7 +559,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
       maxChild = i;
     }
     fprintf(stdout,"Vec %d: %.4f %.4f %.4f\n", i, parent->Children[i]->BranchVec[0], parent->Children[i]->BranchVec[1], parent->Children[i]->BranchVec[2]);
-    fprintf(stdout,"Angle %d: %4f\n", i, 180*parent->Children[i]->RefAngle/M_PI);
+    fprintf(stdout,"Angle %d: %4f\n", i, 180*parent->Children[i]->RefAngle/SV_PI);
   }
 
   double vec3[3];
@@ -1183,7 +1183,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       double angleVec1[3];
       vtkMath::Cross(refVecs[1], projVec, angleVec1);
       double updateAngle = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(refVecs[1], projVec));
-      updateAngle = (180.0*updateAngle/M_PI) * (1./(npts-1));
+      updateAngle = (180.0*updateAngle/SV_PI) * (1./(npts-1));
 
       if (updateAngle > 45.0)
       {

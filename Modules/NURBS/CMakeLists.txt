@@ -32,10 +32,30 @@ set(module vtkSVNURBS)
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkSVNURBSUtils.cxx vtkSVControlGrid.cxx vtkSVNURBSCurve.cxx vtkSVNURBSSurface.cxx vtkSVNURBSVolume.cxx
-  vtkSVLoftNURBSCurve.cxx vtkSVLoftNURBSSurface.cxx vtkSVLoftNURBSVolume.cxx vtkSVNURBSCurveCollection.cxx vtkSVNURBSSurfaceCollection.cxx vtkSVMUPFESNURBSWriter.cxx)
-set(HDRS vtkSVNURBSUtils.h   vtkSVControlGrid.h   vtkSVNURBSCurve.h   vtkSVNURBSSurface.h vtkSVNURBSVolume.h
-  vtkSVLoftNURBSCurve.h   vtkSVLoftNURBSSurface.h vtkSVLoftNURBSVolume.h vtkSVNURBSCurveCollection.h vtkSVNURBSSurfaceCollection.h vtkSVMUPFESNURBSWriter.h)
+set(SRCS vtkSVNURBSUtils.cxx
+  vtkSVControlGrid.cxx
+  vtkSVNURBSCurve.cxx
+  vtkSVNURBSSurface.cxx
+  vtkSVNURBSVolume.cxx
+  vtkSVLoftNURBSCurve.cxx
+  vtkSVLoftNURBSSurface.cxx
+  vtkSVLoftNURBSVolume.cxx
+  vtkSVNURBSCurveCollection.cxx
+  vtkSVNURBSSurfaceCollection.cxx
+  vtkSVMUPFESNURBSWriter.cxx
+  vtkSVPERIGEENURBSWriter.cxx)
+set(HDRS vtkSVNURBSUtils.h
+  vtkSVControlGrid.h
+  vtkSVNURBSCurve.h
+  vtkSVNURBSSurface.h
+  vtkSVNURBSVolume.h
+  vtkSVLoftNURBSCurve.h
+  vtkSVLoftNURBSSurface.h
+  vtkSVLoftNURBSVolume.h
+  vtkSVNURBSCurveCollection.h
+  vtkSVNURBSSurfaceCollection.h
+  vtkSVMUPFESNURBSWriter.h
+  vtkSVPERIGEENURBSWriter.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

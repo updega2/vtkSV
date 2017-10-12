@@ -70,8 +70,8 @@ int TestLoftNURBSSurface(int argc, char *argv[])
   xdata->SetNumberOfTuples(nU);
   vtkNew(vtkDoubleArray, ydata);
   ydata->SetNumberOfTuples(nV);
-  vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nU, xdata);
-  vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nV, ydata);
+  vtkSVNURBSUtils::LinSpace(0, 2*SV_PI, nU, xdata);
+  vtkSVNURBSUtils::LinSpace(0, 2*SV_PI, nV, ydata);
 
   // Set end derivatives in u
   vtkNew(vtkDoubleArray, uders);

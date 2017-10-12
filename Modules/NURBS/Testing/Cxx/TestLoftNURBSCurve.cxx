@@ -56,14 +56,14 @@ int TestLoftNURBSCurve(int argc, char *argv[])
   // Set up input data
   vtkNew(vtkDoubleArray, x_data);
   x_data->SetNumberOfTuples(nc);
-  vtkSVNURBSUtils::LinSpace(0, 2*M_PI, nc, x_data);
+  vtkSVNURBSUtils::LinSpace(0, 2*SV_PI, nc, x_data);
 
   vtkNew(vtkPoints, inputPoints);
   inputPoints->Reset();
   for (int i=0; i<nc; i++)
   {
     double xval = x_data->GetTuple1(i);
-    double yval = sin(xval - M_PI/2.0);
+    double yval = sin(xval - SV_PI/2.0);
     double zval = 0.0;
 
     inputPoints->InsertNextPoint(xval, yval, zval);

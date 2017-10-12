@@ -616,6 +616,9 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   this->Volume->SetKnotVector(vKnots, 1);
   this->Volume->SetKnotVector(wKnots, 2);
   this->Volume->SetControlPoints(cPoints);
+  this->Volume->SetUDegree(p);
+  this->Volume->SetVDegree(q);
+  this->Volume->SetWDegree(r);
   //fprintf(stdout,"X knots\n");
   //vtkSVNURBSUtils::PrintArray(uKnots);
   //fprintf(stdout,"Y knots\n");
