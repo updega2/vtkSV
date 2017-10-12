@@ -47,6 +47,7 @@
 
 #include "vtkDoubleArray.h"
 #include "vtkIntArray.h"
+#include "vtkIdList.h"
 
 #include <vector>
 
