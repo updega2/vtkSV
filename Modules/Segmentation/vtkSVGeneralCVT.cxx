@@ -352,15 +352,15 @@ int vtkSVGeneralCVT::RunFilter()
   }
 
   int iter=0;
-  int eval=1e26;
+  int eval=0;
 
   // iterate until threshold met
   while (eval >= this->Threshold && iter < this->MaximumNumberOfIterations)
   {
 
     // If using transferred patches
-    if (this->UseTransferredPatchesAsThreshold)
-      eval = 0;
+    //if (this->UseTransferredPatchesAsThreshold)
+    eval = 0;
 
     // Loop through cells
     for (int i=0; i<numDatas; i++)
@@ -381,8 +381,8 @@ int vtkSVGeneralCVT::RunFilter()
           this->UpdateConnectivity(i, oldGenerator, newGenerator);
           //this->UpdateGenerators();
           this->PatchIdsArray->SetTuple1(i, newGenerator);
-          if (this->UseTransferredPatchesAsThreshold)
-            eval++;
+          //if (this->UseTransferredPatchesAsThreshold)
+          eval++;
         }
       }
     }
