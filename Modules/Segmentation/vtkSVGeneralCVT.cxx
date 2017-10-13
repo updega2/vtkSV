@@ -352,7 +352,7 @@ int vtkSVGeneralCVT::RunFilter()
   }
 
   int iter=0;
-  int eval=0;
+  int eval=this->Threshold + 1;
 
   // iterate until threshold met
   while (eval >= this->Threshold && iter < this->MaximumNumberOfIterations)

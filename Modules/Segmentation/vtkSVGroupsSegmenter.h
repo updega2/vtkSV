@@ -221,6 +221,7 @@ protected:
   int GetPatches();
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
+  int GetApproximatePolycubeSize(double &polycubeSize);
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
   int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
                 vtkCellArray *newCells, std::vector<std::vector<int> >  &splitCells);
@@ -319,6 +320,7 @@ protected:
 
   double CutoffRadiusFactor;
   double ClipValue;
+  int PolycubeDivisions;
   double PolycubeUnitLength;
 
   vtkSVCenterlineGraph *CenterlineGraph;
