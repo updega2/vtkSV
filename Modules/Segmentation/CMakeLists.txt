@@ -33,14 +33,30 @@ set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx vtkSVGeneralCVT.cxx vtkSVEdgeWeightedCVT.cxx vtkSVCenterlinesBasedNormals.cxx
-  vtkSVCenterlinesEdgeWeightedCVT.cxx vtkSVEdgeWeightedSmoother.cxx
-  vtkSVPolyBallLine.cxx vtkSVGroupsClipper.cxx vtkSVGroupsSegmenter.cxx vtkSVCenterlineGraph.cxx vtkSVCenterlineGCell.cxx)
+  vtkSVGeneralizedPolycube.cxx
+  vtkSVGeneralCVT.cxx
+  vtkSVEdgeWeightedCVT.cxx
+  vtkSVCenterlinesBasedNormals.cxx
+  vtkSVCenterlinesEdgeWeightedCVT.cxx
+  vtkSVEdgeWeightedSmoother.cxx
+  vtkSVPolyBallLine.cxx
+  vtkSVGroupsClipper.cxx
+  vtkSVGroupsSegmenter.cxx
+  vtkSVCenterlineGraph.cxx
+  vtkSVCenterlineGCell.cxx)
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h vtkSVGeneralCVT.h vtkSVEdgeWeightedCVT.h vtkSVCenterlinesBasedNormals.h
-  vtkSVCenterlinesEdgeWeightedCVT.h vtkSVEdgeWeightedSmoother.h
-  vtkSVPolyBallLine.h vtkSVGroupsClipper.h vtkSVGroupsSegmenter.h vtkSVCenterlineGraph.h vtkSVCenterlineGCell.h)
+  vtkSVGeneralizedPolycube.h
+  vtkSVGeneralCVT.h
+  vtkSVEdgeWeightedCVT.h
+  vtkSVCenterlinesBasedNormals.h
+  vtkSVCenterlinesEdgeWeightedCVT.h
+  vtkSVEdgeWeightedSmoother.h
+  vtkSVPolyBallLine.h
+  vtkSVGroupsClipper.h
+  vtkSVGroupsSegmenter.h
+  vtkSVCenterlineGraph.h
+  vtkSVCenterlineGCell.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

@@ -63,6 +63,15 @@ public:
   //Destructor
   ~vtkSVCenterlineGraph();
 
+  //Macros
+  //@{
+  /// \brief Get/Set number of cells, points
+  vtkSetMacro(NumberOfCells,int);
+  vtkGetMacro(NumberOfCells,int);
+  vtkSetMacro(NumberOfNodes,int);
+  vtkGetMacro(NumberOfNodes,int);
+  //@}
+
   //Member functions
   vtkSVCenterlineGCell* GetCell(const int findId);
   vtkSVCenterlineGCell* LookUp(vtkSVCenterlineGCell *lookCell, const int findId);

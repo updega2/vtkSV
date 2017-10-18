@@ -32,8 +32,24 @@ set(module vtkSVVMTK)
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx vtkvmtkReferenceSystemUtilities.cxx vtkvmtkCenterlineUtilities.cxx vtkvmtkMergeCenterlines.cxx vtkvmtkMath.cxx)
-set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h   vtkvmtkReferenceSystemUtilities.h   vtkvmtkCenterlineUtilities.h   vtkvmtkMergeCenterlines.h   vtkvmtkWin32Header.h vtkvmtkConstants.h vtkvmtkConfigure.h vtkvmtkMath.h)
+set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
+  vtkvmtkReferenceSystemUtilities.cxx
+  vtkvmtkCenterlineUtilities.cxx
+  vtkvmtkMergeCenterlines.cxx
+  vtkvmtkMath.cxx
+  vtkvmtkPolyDataCenterlineGroupsClipper.cxx
+  vtkvmtkPolyBallLine.cxx)
+
+set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
+  vtkvmtkReferenceSystemUtilities.h
+  vtkvmtkCenterlineUtilities.h
+  vtkvmtkMergeCenterlines.h
+  vtkvmtkWin32Header.h
+  vtkvmtkConstants.h
+  vtkvmtkConfigure.h
+  vtkvmtkMath.h
+  vtkvmtkPolyDataCenterlineGroupsClipper.h
+  vtkvmtkPolyBallLine.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

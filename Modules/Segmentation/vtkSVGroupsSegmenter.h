@@ -218,6 +218,13 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int MergeCenterlines();
+  int FixCenterlines();
+  int CheckCenterlineChildren(vtkPolyData *centerlinesPd,
+                              double distPt[3],
+                              double newPt[3],
+                              std::vector<int> &testChildren,
+                              std::vector<int> &newPointIds,
+                              std::vector<int> &newChildren);
   int GetPatches();
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
@@ -317,6 +324,7 @@ protected:
 
   int ClipAllCenterlineGroupIds;
   int UseRadiusInformation;
+  int UseVmtkClipping;
 
   double CutoffRadiusFactor;
   double ClipValue;
