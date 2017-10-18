@@ -846,13 +846,10 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    if (groupId == 3)
+    if (this->FixEndPatches(branchPd) != SV_OK)
     {
-      if (this->FixEndPatches(branchPd) != SV_OK)
-      {
-        vtkErrorMacro("Error fixing end patches");
-        return SV_ERROR;
-      }
+      vtkErrorMacro("Error fixing end patches");
+      return SV_ERROR;
     }
 
     //if (this->MergedCenterlines->GetNumberOfCells() > 1)
