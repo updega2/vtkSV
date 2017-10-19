@@ -32,16 +32,39 @@ set(module vtkSVFilters)
 
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
-set(SRCS vtkSVFindGeodesicPath.cxx vtkSVFindSeparateRegions.cxx vtkSVGetBoundaryFaces.cxx
-  vtkSVHausdorffDistance.cxx vtkSVMapInterpolator.cxx vtkSVPassDataArray.cxx vtkSVPullApartPolyData.cxx
-  vtkSVPlacePointsOnS2.cxx vtkSVCheckRotation.cxx vtkSVGetSphereRegions.cxx
-  vtkSVFillHolesFilterWithIds.cxx vtkSVIntegrateFlowThroughSurface.cxx
-  vtkSVLoftPolyDataSolid.cxx vtkSVIntegrateAttributes.cxx vtkSVSurfaceVectors.cxx)
-set(HDRS vtkSVFindGeodesicPath.h   vtkSVFindSeparateRegions.h   vtkSVGetBoundaryFaces.h
-  vtkSVHausdorffDistance.h vtkSVMapInterpolator.h   vtkSVPassDataArray.cxx vtkSVPullApartPolyData.h
-  vtkSVPlacePointsOnS2.h vtkSVCheckRotation.h vtkSVGetSphereRegions.h
-  vtkSVFillHolesFilterWithIds.h vtkSVIntegrateFlowThroughSurface.h
-  vtkSVLoftPolyDataSolid.h vtkSVIntegrateAttributes.h vtkSVSurfaceVectors.h)
+set(SRCS vtkSVFindGeodesicPath.cxx
+  vtkSVFindSeparateRegions.cxx
+  vtkSVGetBoundaryFaces.cxx
+  vtkSVHausdorffDistance.cxx
+  vtkSVMapInterpolator.cxx
+  vtkSVPassDataArray.cxx
+  vtkSVPullApartPolyData.cxx
+  vtkSVPlacePointsOnS2.cxx
+  vtkSVCheckRotation.cxx
+  vtkSVGetSphereRegions.cxx
+  vtkSVFillHolesFilterWithIds.cxx
+  vtkSVIntegrateFlowThroughSurface.cxx
+  vtkSVLoftPolyDataSolid.cxx
+  vtkSVIntegrateAttributes.cxx
+  vtkSVSurfaceVectors.cxx
+  vtkSVUpdeSmoothing.cxx
+  )
+set(HDRS vtkSVFindGeodesicPath.h
+  vtkSVFindSeparateRegions.h
+  vtkSVGetBoundaryFaces.h
+  vtkSVHausdorffDistance.h
+  vtkSVMapInterpolator.h
+  vtkSVPassDataArray.cxx
+  vtkSVPullApartPolyData.h
+  vtkSVPlacePointsOnS2.h
+  vtkSVCheckRotation.h
+  vtkSVGetSphereRegions.h
+  vtkSVFillHolesFilterWithIds.h
+  vtkSVIntegrateFlowThroughSurface.h
+  vtkSVLoftPolyDataSolid.h
+  vtkSVIntegrateAttributes.h
+  vtkSVSurfaceVectors.h
+  vtkSVUpdeSmoothing.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -102,7 +125,7 @@ endif()
 # Executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXE_LIST FindGeodesicPath FindSeparateRegions GetBoundaryFaces
-    HausdorffDistance PassDataArray RawToVtk RawToVtp RawToVtu VtkToRaw)
+    HausdorffDistance PassDataArray RawToVtk RawToVtp RawToVtu VtkToRaw UpdeSmoothing)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
     target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME} ${SV_LIB_VTKSVCOMMON_NAME})
