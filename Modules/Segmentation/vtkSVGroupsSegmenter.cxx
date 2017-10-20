@@ -407,7 +407,7 @@ int vtkSVGroupsSegmenter::RunFilter()
     vtkNew(vtkSVCenterlinesEdgeWeightedCVT, CVT);
     CVT->SetInputData(this->WorkPd);
     CVT->SetGenerators(this->MergedCenterlines);
-    CVT->SetNumberOfRings(3);
+    CVT->SetNumberOfRings(2);
     CVT->SetThreshold(stopCellNumber);
     CVT->SetUseCurvatureWeight(1);
     CVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
@@ -427,7 +427,7 @@ int vtkSVGroupsSegmenter::RunFilter()
   }
 
   smoother->SetGenerators(this->MergedCenterlines);
-  smoother->SetNumberOfRings(3);
+  smoother->SetNumberOfRings(2);
   smoother->SetThreshold(stopCellNumber);
   smoother->SetUseCurvatureWeight(0);
   smoother->SetNoInitialization(1);
@@ -553,151 +553,151 @@ int vtkSVGroupsSegmenter::RunFilter()
     // Loop through points to evaluate function at each point
     fprintf(stdout,"Computing boundary vectors of group %d...\n", groupId);
 
-    //// Do boundary cell stuffs
-    //// Get open boundary edges
-    //std::vector<int> openCornerPoints;
-    //std::vector<std::vector<int> > openEdges;
+    // Do boundary cell stuffs
+    // Get open boundary edges
+    std::vector<int> openCornerPoints;
+    std::vector<std::vector<int> > openEdges;
 
-    //if (this->GetOpenBoundaryEdges(branchPd, openCornerPoints, openEdges) != SV_OK)
-    //{
-    //  fprintf(stderr,"Error getting open boundary edges\n");
-    //  return SV_ERROR;
-    //}
+    if (this->GetOpenBoundaryEdges(branchPd, openCornerPoints, openEdges) != SV_OK)
+    {
+      fprintf(stderr,"Error getting open boundary edges\n");
+      return SV_ERROR;
+    }
 
-    //std::vector<std::vector<int> > shiftedOpenEdges;
-    //for (int j=0; j<openEdges.size(); j++)
-    //{
-    //  int edgeSize = openEdges[j].size();
-    //  int shiftCount = 0;
-    //  for (int k=0; k<edgeSize-1; k++)
-    //  {
-    //    int edgePtId0 = openEdges[j][k];
-    //    int isSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(edgePtId0);
+    std::vector<std::vector<int> > shiftedOpenEdges;
+    for (int j=0; j<openEdges.size(); j++)
+    {
+      int edgeSize = openEdges[j].size();
+      int shiftCount = 0;
+      for (int k=0; k<edgeSize-1; k++)
+      {
+        int edgePtId0 = openEdges[j][k];
+        int isSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(edgePtId0);
 
-    //    if (isSlicePoint == 1)
-    //    {
-    //      std::vector<int> shiftedEdges(edgeSize);
-    //      for (int l=0; l<edgeSize-1; l++)
-    //      {
-    //        shiftedEdges[l] = openEdges[j][(l+shiftCount)%(edgeSize-1)];
-    //      }
-    //      shiftedEdges[edgeSize-1] = edgePtId0;
-    //      shiftedOpenEdges.push_back(shiftedEdges);
-    //      break;
-    //    }
-    //    shiftCount++;
-    //  }
-    //}
-    //
+        if (isSlicePoint == 1)
+        {
+          std::vector<int> shiftedEdges(edgeSize);
+          for (int l=0; l<edgeSize-1; l++)
+          {
+            shiftedEdges[l] = openEdges[j][(l+shiftCount)%(edgeSize-1)];
+          }
+          shiftedEdges[edgeSize-1] = edgePtId0;
+          shiftedOpenEdges.push_back(shiftedEdges);
+          break;
+        }
+        shiftCount++;
+      }
+    }
 
-    //vtkNew(vtkDoubleArray, avgVecs);
-    //avgVecs->SetNumberOfComponents(3);
-    //avgVecs->SetNumberOfTuples(4*shiftedOpenEdges.size());
-    //std::vector<std::vector<int> > sliceEdges;
-    //int count = 0;
-    //for (int j=0; j<shiftedOpenEdges.size(); j++)
-    //{
-    //  int edgeSize = shiftedOpenEdges[j].size();
-    //  for (int k=0; k<edgeSize-1 ; k++)
-    //  {
-    //    int isSlicePoint = -1;
-    //    double avgVec[3]; avgVec[0] = 0.0; avgVec[1] = 0.0; avgVec[2] = 0.0;
-    //    int edgeCount  = 0;
-    //    std::vector<int> newSliceEdge;
-    //    while(isSlicePoint == -1)
-    //    {
-    //      int edgePtId0 = shiftedOpenEdges[j][k];
-    //      int edgePtId1 = shiftedOpenEdges[j][k+1];
 
-    //      vtkNew(vtkIdList, edgeCell);
-    //      branchPd->GetCellEdgeNeighbors(-1, edgePtId0, edgePtId1, edgeCell);
+    vtkNew(vtkDoubleArray, avgVecs);
+    avgVecs->SetNumberOfComponents(3);
+    avgVecs->SetNumberOfTuples(4*shiftedOpenEdges.size());
+    std::vector<std::vector<int> > sliceEdges;
+    int count = 0;
+    for (int j=0; j<shiftedOpenEdges.size(); j++)
+    {
+      int edgeSize = shiftedOpenEdges[j].size();
+      for (int k=0; k<edgeSize-1 ; k++)
+      {
+        int isSlicePoint = -1;
+        double avgVec[3]; avgVec[0] = 0.0; avgVec[1] = 0.0; avgVec[2] = 0.0;
+        int edgeCount  = 0;
+        std::vector<int> newSliceEdge;
+        while(isSlicePoint == -1)
+        {
+          int edgePtId0 = shiftedOpenEdges[j][k];
+          int edgePtId1 = shiftedOpenEdges[j][k+1];
 
-    //      if (edgeCell->GetNumberOfIds() != 1)
-    //      {
-    //        vtkErrorMacro("Something went wrong in getting open edges");
-    //        return SV_ERROR;
-    //      }
+          vtkNew(vtkIdList, edgeCell);
+          branchPd->GetCellEdgeNeighbors(-1, edgePtId0, edgePtId1, edgeCell);
 
-    //      double pts[3][3];
-    //      vtkIdType npts, *ptids;
-    //      branchPd->GetCellPoints(edgeCell->GetId(0), npts, ptids);
-    //      for (int j=0; j<npts; j++)
-    //        branchPd->GetPoint(ptids[j], pts[j]);
+          if (edgeCell->GetNumberOfIds() != 1)
+          {
+            vtkErrorMacro("Something went wrong in getting open edges");
+            return SV_ERROR;
+          }
 
-    //      // Get center
-    //      double center[3];
-    //      vtkTriangle::TriangleCenter(pts[0], pts[1], pts[2], center);
+          double pts[3][3];
+          vtkIdType npts, *ptids;
+          branchPd->GetCellPoints(edgeCell->GetId(0), npts, ptids);
+          for (int j=0; j<npts; j++)
+            branchPd->GetPoint(ptids[j], pts[j]);
 
-    //      // Evaluate function at point!
-    //      groupTubes->EvaluateFunction(center);
+          // Get center
+          double center[3];
+          vtkTriangle::TriangleCenter(pts[0], pts[1], pts[2], center);
 
-    //      //TODO: JUST TESTING SOMETHING OUT!!!
-    //      double closePt[3];
-    //      groupTubes->GetLastPolyBallCenter(closePt);
+          // Evaluate function at point!
+          groupTubes->EvaluateFunction(center);
 
-    //      double vec[3];
-    //      vtkMath::Subtract(center, closePt, vec);
-    //      vtkMath::Normalize(vec);
+          //TODO: JUST TESTING SOMETHING OUT!!!
+          double closePt[3];
+          groupTubes->GetLastPolyBallCenter(closePt);
 
-    //      for (int l=0; l<3; l++)
-    //        avgVec[l] += vec[l];
-    //      edgeCount++;
+          double vec[3];
+          vtkMath::Subtract(center, closePt, vec);
+          vtkMath::Normalize(vec);
 
-    //      isSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(edgePtId1);
+          for (int l=0; l<3; l++)
+            avgVec[l] += vec[l];
+          edgeCount++;
 
-    //      newSliceEdge.push_back(edgePtId0);
+          isSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(edgePtId1);
 
-    //      if (isSlicePoint == -1)
-    //        k++;
-    //      else
-    //        newSliceEdge.push_back(edgePtId1);
-    //    }
-    //    vtkMath::MultiplyScalar(avgVec, 1./(edgeCount));
-    //    avgVecs->SetTuple(count, avgVec);
-    //    count++;
-    //    sliceEdges.push_back(newSliceEdge);
-    //  }
+          newSliceEdge.push_back(edgePtId0);
 
-    //}
+          if (isSlicePoint == -1)
+            k++;
+          else
+            newSliceEdge.push_back(edgePtId1);
+        }
+        vtkMath::MultiplyScalar(avgVec, 1./(edgeCount));
+        avgVecs->SetTuple(count, avgVec);
+        count++;
+        sliceEdges.push_back(newSliceEdge);
+      }
 
-    //vtkNew(vtkIntArray, patchDirs);
-    //patchDirs->SetNumberOfComponents(1);
-    //patchDirs->SetNumberOfTuples(sliceEdges.size());
-    //for (int j=0; j<sliceEdges.size(); j++)
-    //{
-    //  fprintf(stdout,"LOOKING AT EDGE %d\n", j);
-    //  int edgeSize = sliceEdges[j].size();
+    }
 
-    //  int edgePtId0 = branchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(sliceEdges[j][0]);
-    //  int edgePtIdN = branchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(sliceEdges[j][edgeSize-1]);
+    vtkNew(vtkIntArray, patchDirs);
+    patchDirs->SetNumberOfComponents(1);
+    patchDirs->SetNumberOfTuples(sliceEdges.size());
+    for (int j=0; j<sliceEdges.size(); j++)
+    {
+      fprintf(stdout,"LOOKING AT EDGE %d\n", j);
+      int edgeSize = sliceEdges[j].size();
 
-    //  int polyPtId0 = polyBranchPd->GetPointData()->GetArray("SlicePoints")->LookupValue(edgePtId0);
-    //  int polyPtIdN = polyBranchPd->GetPointData()->GetArray("SlicePoints")->LookupValue(edgePtIdN);
+      int edgePtId0 = branchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(sliceEdges[j][0]);
+      int edgePtIdN = branchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(sliceEdges[j][edgeSize-1]);
 
-    //  if (polyPtId0 == -1 || polyPtIdN == -1)
-    //  {
-    //    vtkErrorMacro("Slice point does not exist on polycube!");
-    //    return SV_ERROR;
-    //  }
+      int polyPtId0 = polyBranchPd->GetPointData()->GetArray("SlicePoints")->LookupValue(edgePtId0);
+      int polyPtIdN = polyBranchPd->GetPointData()->GetArray("SlicePoints")->LookupValue(edgePtIdN);
 
-    //  vtkNew(vtkIdList, polyPtId0List);
-    //  vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", polyPtId0, polyPtId0List);
+      if (polyPtId0 == -1 || polyPtIdN == -1)
+      {
+        vtkErrorMacro("Slice point does not exist on polycube!");
+        return SV_ERROR;
+      }
 
-    //  vtkNew(vtkIdList, polyPtIdNList);
-    //  vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", polyPtIdN, polyPtIdNList);
+      vtkNew(vtkIdList, polyPtId0List);
+      vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", polyPtId0, polyPtId0List);
 
-    //  polyPtId0List->IntersectWith(polyPtIdNList);
+      vtkNew(vtkIdList, polyPtIdNList);
+      vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", polyPtIdN, polyPtIdNList);
 
-    //  if (polyPtId0List->GetNumberOfIds() != 1)
-    //  {
-    //    vtkErrorMacro("Should be one patch between slice points, there is %d\n");
-    //    return SV_ERROR;
-    //  }
+      polyPtId0List->IntersectWith(polyPtIdNList);
 
-    //  int patchId = polyPtId0List->GetId(0);
-    //  int patchDir = patchId%6;
-    //  patchDirs->SetTuple1(j, patchDir);
-    //}
+      if (polyPtId0List->GetNumberOfIds() != 1)
+      {
+        vtkErrorMacro("Should be one patch between slice points, there is %d\n");
+        return SV_ERROR;
+      }
+
+      int patchId = polyPtId0List->GetId(0);
+      int patchDir = patchId%6;
+      patchDirs->SetTuple1(j, patchDir);
+    }
 
     vtkIdType nlinepts, *linepts;
     int centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
@@ -753,34 +753,34 @@ int vtkSVGroupsSegmenter::RunFilter()
 
       double cellNormal[3];
       vtkMath::Add(cellNormal1, cellNormal2, cellNormal);
-      double alpha = 0.5;
+      double alpha = 0.8;
 
-      //double linePtId = groupTubes->GetLastPolyBallCellSubId();
-      //double startNum = 9;
-      //if (nlinepts <= startNum)
-      //  startNum = nlinepts/3;
-      //if (linePtId < startNum)
-      //{
-      //  alpha = 0.1*linePtId;
+      double linePtId = groupTubes->GetLastPolyBallCellSubId();
+      double startNum = 9;
+      if (nlinepts <= startNum)
+        startNum = nlinepts/3;
+      if (linePtId < startNum)
+      {
+        alpha = 0.1*linePtId;
 
-      //  double maxDot = -1.0;
-      //  int maxDir = -1;
-      //  for (int j=0; j<4; j++)
-      //  {
-      //    double avgVec[3];
-      //    avgVecs->GetTuple(j, avgVec);
+        double maxDot = -1.0;
+        int maxDir = -1;
+        for (int j=0; j<4; j++)
+        {
+          double avgVec[3];
+          avgVecs->GetTuple(j, avgVec);
 
-      //    double testDot = vtkMath::Dot(cellNormal2, avgVec);
+          double testDot = vtkMath::Dot(cellNormal2, avgVec);
 
-      //    if (testDot > maxDot)
-      //    {
-      //      maxDot = testDot;
-      //      maxDir = patchDirs->GetTuple1(j);
-      //    }
-      //  }
-      //  for (int j=0; j<3; j++)
-      //    cellNormal2[j] = locals[maxDir][j];
-      //}
+          if (testDot > maxDot)
+          {
+            maxDot = testDot;
+            maxDir = patchDirs->GetTuple1(j);
+          }
+        }
+        for (int j=0; j<3; j++)
+          cellNormal2[j] = locals[maxDir][j];
+      }
 
       for (int j=0; j<3; j++)
         cellNormal[j] = alpha*cellNormal1[j] + (1-alpha)*cellNormal2[j];
@@ -852,14 +852,14 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
-    //{
-    //  if (this->FixSidePatches(branchPd) != SV_OK)
-    //  {
-    //    vtkErrorMacro("Error fixing side patches");
-    //    return SV_ERROR;
-    //  }
-    //}
+    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    {
+      if (this->FixSidePatches(branchPd) != SV_OK)
+      {
+        vtkErrorMacro("Error fixing side patches");
+        return SV_ERROR;
+      }
+    }
 
     vtkNew(vtkIdList, noEndPatches);
     noEndPatches->SetNumberOfIds(4);
@@ -1006,6 +1006,7 @@ int vtkSVGroupsSegmenter::GetApproximatePolycubeSize(double &polycubeSize)
   avgRadius = avgRadius/numPoints;
 
   polycubeSize = 2*avgRadius;
+  polycubeSize = avgRadius;
 
   return SV_OK;
 }
@@ -1036,7 +1037,7 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
   this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
   this->MergedCenterlines->BuildLinks();
 
-  int fixCenterlines = 1;
+  int fixCenterlines = 0;
   if (fixCenterlines)
   {
     if (this->FixCenterlines() != SV_OK)
@@ -1046,7 +1047,7 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
     }
   }
 
-  int removeEndPts = 1;
+  int removeEndPts = 0;
   int numRemove = 5;
   if (removeEndPts)
   {
