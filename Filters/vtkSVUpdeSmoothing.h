@@ -75,6 +75,8 @@ protected:
   int RunFilter(vtkPolyData *original, vtkPolyData *output);
 
   int NumSmoothOperations;
+  double Alpha;
+  double Beta;
 
 private:
   vtkSVUpdeSmoothing(const vtkSVUpdeSmoothing&);  // Not implemented.

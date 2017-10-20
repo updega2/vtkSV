@@ -72,7 +72,9 @@ vtkStandardNewMacro(vtkSVUpdeSmoothing);
 // ----------------------
 vtkSVUpdeSmoothing::vtkSVUpdeSmoothing()
 {
-    this->NumSmoothOperations = 100;
+    this->NumSmoothOperations = 1000;
+    this->Alpha = 0.8;
+    this->Beta = 0.8;
 }
 
 // ----------------------
@@ -124,15 +126,15 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       return SV_OK;
   }
 
-  vtkNew(vtkCellLocator, locator);
-  locator->SetDataSet(input);
-  locator->BuildLocator();
-
-  double closestPt[3];
-  vtkIdType closestCell;
-  int subId;
-  double distance;
-  vtkNew(vtkGenericCell, genericCell);
+  //vtkNew(vtkCellLocator, locator);
+  //locator->SetDataSet(input);
+  //locator->BuildLocator();
+  //
+  //double closestPt[3];
+  //vtkIdType closestCell;
+  //int subId;
+  //double distance;
+  //vtkNew(vtkGenericCell, genericCell);
 
   vtkNew(vtkPolyData, tmp);
   tmp->DeepCopy(input);
@@ -141,32 +143,87 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   {
     vtkNew(vtkSmoothPolyDataFilter, smoother);
     smoother->SetInputData(tmp);
-    smoother->SetNumberOfIterations(100);
+    smoother->SetNumberOfIterations(10);
     smoother->Update();
 
     vtkNew(vtkPolyData, smoothedPd);
     smoothedPd->DeepCopy(smoother->GetOutput());
 
-    int numPoints = input->GetNumberOfPoints();
+    int numPoints = tmp->GetNumberOfPoints();
 
     input->BuildLinks();
     smoothedPd->BuildLinks();
 
     for (int i=0; i<numPoints; i++)
     {
-      double origPt[3];
-      input->GetPoint(i, origPt);
+      vtkNew(vtkIdList, usedPtList);
+      vtkNew(vtkIdList, pointCellIds);
+      input->GetPointCells(i, pointCellIds);
 
-      double newPt[3];
-      smoothedPd->GetPoint(i, newPt);
+      double avgPushVec[3];
+      avgPushVec[0] = 0.0; avgPushVec[1] = 0.0; avgPushVec[2] = 0.0;
 
-      double vec[3];
-      vtkMath::Subtract(origPt, newPt, vec);
+      for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
+      {
+        int cellId = pointCellIds->GetId(j);
+        vtkIdType npts, *pts;
 
-      locator->FindClosestPoint(newPt, closestPt, genericCell, closestCell, subId,
-                                distance);
+        input->GetCellPoints(cellId, npts, pts);
 
-      tmp->GetPoints()->SetPoint(i, closestPt);
+        for (int k=0; k<npts; k++)
+        {
+          if (usedPtList->IsId(pts[k]) == -1 && pts[k] != i)
+          {
+            usedPtList->InsertNextId(pts[k]);
+
+            double origPt[3];
+            input->GetPoint(pts[k], origPt);
+
+            double modPt[3];
+            tmp->GetPoint(pts[k], modPt);
+
+            double newPt[3];
+            smoothedPd->GetPoint(pts[k], newPt);
+
+            double vec[3];
+            for (int l=0; l<3; l++)
+            {
+              vec[l] = newPt[l] - (this->Alpha * origPt[l] + ((1 - this->Alpha) * modPt[l]));
+              avgPushVec[l] += vec[l];
+            }
+          }
+        }
+
+      }
+
+      vtkMath::MultiplyScalar(avgPushVec, -1.0/usedPtList->GetNumberOfIds());
+
+
+      //locator->FindClosestPoint(newPt, closestPt, genericCell, closestCell, subId,
+      //                          distance);
+
+      double oPt[3];
+      input->GetPoint(i, oPt);
+
+      double mPt[3];
+      tmp->GetPoint(i, mPt);
+
+      double nPt[3];
+      smoothedPd->GetPoint(i, nPt);
+
+      double oVec[3];
+      for (int j=0; j<3; j++)
+        oVec[j] = nPt[j] - (this->Alpha * oPt[j] + ((1 - this->Alpha) * mPt[j]));
+
+      double addVec[3];
+      for (int j=0; j<3; j++)
+        addVec[j] = this->Beta * oVec[j] + ((1 - this->Beta) * avgPushVec[j]);
+
+      double finalPt[3];
+      for (int j=0; j<3; j++)
+        finalPt[j] = nPt[j] - addVec[j];
+
+      tmp->GetPoints()->SetPoint(i, finalPt);
     }
   }
 
