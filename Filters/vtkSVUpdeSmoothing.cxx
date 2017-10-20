@@ -58,6 +58,7 @@
 #include "vtkPolyDataNormals.h"
 #include "vtkGenericCell.h"
 #include "vtkMath.h"
+#include "vtkTriangle.h"
 #include "vtkWindowedSincPolyDataFilter.h"
 
 #include <iostream>
@@ -72,8 +73,8 @@ vtkStandardNewMacro(vtkSVUpdeSmoothing);
 // ----------------------
 vtkSVUpdeSmoothing::vtkSVUpdeSmoothing()
 {
-    this->NumSmoothOperations = 1000;
-    this->Alpha = 0.8;
+    this->NumSmoothOperations = 10;
+    this->Alpha = 0.0;
     this->Beta = 0.8;
 }
 
@@ -136,6 +137,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   //double distance;
   //vtkNew(vtkGenericCell, genericCell);
 
+  input->BuildLinks();
   vtkNew(vtkPolyData, tmp);
   tmp->DeepCopy(input);
 
@@ -143,7 +145,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   {
     vtkNew(vtkSmoothPolyDataFilter, smoother);
     smoother->SetInputData(tmp);
-    smoother->SetNumberOfIterations(10);
+    smoother->SetNumberOfIterations(1000);
     smoother->Update();
 
     vtkNew(vtkPolyData, smoothedPd);
@@ -151,7 +153,6 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
     int numPoints = tmp->GetNumberOfPoints();
 
-    input->BuildLinks();
     smoothedPd->BuildLinks();
 
     for (int i=0; i<numPoints; i++)
@@ -160,8 +161,12 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       vtkNew(vtkIdList, pointCellIds);
       input->GetPointCells(i, pointCellIds);
 
-      double avgPushVec[3];
-      avgPushVec[0] = 0.0; avgPushVec[1] = 0.0; avgPushVec[2] = 0.0;
+      double oAvgVec[3];
+      oAvgVec[0] = 0.0; oAvgVec[1] = 0.0; oAvgVec[2] = 0.0;
+      double mAvgVec[3];
+      mAvgVec[0] = 0.0; mAvgVec[1] = 0.0; mAvgVec[2] = 0.0;
+      double nAvgVec[3];
+      nAvgVec[0] = 0.0; nAvgVec[1] = 0.0; nAvgVec[2] = 0.0;
 
       for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
       {
@@ -170,33 +175,59 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
         input->GetCellPoints(cellId, npts, pts);
 
-        for (int k=0; k<npts; k++)
+        double oPtCoords[3][3], mPtCoords[3][3], nPtCoords[3][3];
+        for (int k=0; k<3; k++)
         {
-          if (usedPtList->IsId(pts[k]) == -1 && pts[k] != i)
-          {
-            usedPtList->InsertNextId(pts[k]);
-
-            double origPt[3];
-            input->GetPoint(pts[k], origPt);
-
-            double modPt[3];
-            tmp->GetPoint(pts[k], modPt);
-
-            double newPt[3];
-            smoothedPd->GetPoint(pts[k], newPt);
-
-            double vec[3];
-            for (int l=0; l<3; l++)
-            {
-              vec[l] = newPt[l] - (this->Alpha * origPt[l] + ((1 - this->Alpha) * modPt[l]));
-              avgPushVec[l] += vec[l];
-            }
-          }
+          input->GetPoint(pts[k], oPtCoords[k]);
+          tmp->GetPoint(pts[k], mPtCoords[k]);
+          smoothedPd->GetPoint(pts[k], nPtCoords[k]);
         }
+
+        double oNormal[3], mNormal[3], nNormal[3];
+        vtkTriangle::ComputeNormal(oPtCoords[0], oPtCoords[1], oPtCoords[2], oNormal);
+        vtkTriangle::ComputeNormal(mPtCoords[0], mPtCoords[1], mPtCoords[2], mNormal);
+        vtkTriangle::ComputeNormal(nPtCoords[0], nPtCoords[1], nPtCoords[2], nNormal);
+
+        for (int k=0; k<3; k++)
+        {
+          oAvgVec[k] += oNormal[k];
+          mAvgVec[k] += mNormal[k];
+          nAvgVec[k] += nNormal[k];
+        }
+
+        //for (int k=0; k<npts; k++)
+        //{
+        //  if (usedPtList->IsId(pts[k]) == -1 && pts[k] != i)
+        //  {
+        //    usedPtList->InsertNextId(pts[k]);
+
+        //    double origPt[3];
+        //    input->GetPoint(pts[k], origPt);
+
+        //    double modPt[3];
+        //    tmp->GetPoint(pts[k], modPt);
+
+        //    double newPt[3];
+        //    smoothedPd->GetPoint(pts[k], newPt);
+
+        //    double vec[3];
+        //    for (int l=0; l<3; l++)
+        //    {
+        //      vec[l] = newPt[l] - (this->Alpha * origPt[l] + ((1 - this->Alpha) * modPt[l]));
+        //      oAvgVec[l] += vec[l];
+        //    }
+        //  }
+        //}
 
       }
 
-      vtkMath::MultiplyScalar(avgPushVec, -1.0/usedPtList->GetNumberOfIds());
+      //vtkMath::MultiplyScalar(oAvgVec, -1.0/usedPtList->GetNumberOfIds());
+      vtkMath::MultiplyScalar(oAvgVec, 1.0/pointCellIds->GetNumberOfIds());
+      vtkMath::Normalize(oAvgVec);
+      vtkMath::MultiplyScalar(mAvgVec, 1.0/pointCellIds->GetNumberOfIds());
+      vtkMath::Normalize(mAvgVec);
+      vtkMath::MultiplyScalar(nAvgVec, 1.0/pointCellIds->GetNumberOfIds());
+      vtkMath::Normalize(nAvgVec);
 
 
       //locator->FindClosestPoint(newPt, closestPt, genericCell, closestCell, subId,
@@ -215,13 +246,22 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       for (int j=0; j<3; j++)
         oVec[j] = nPt[j] - (this->Alpha * oPt[j] + ((1 - this->Alpha) * mPt[j]));
 
-      double addVec[3];
-      for (int j=0; j<3; j++)
-        addVec[j] = this->Beta * oVec[j] + ((1 - this->Beta) * avgPushVec[j]);
+      double normalDot = vtkMath::Dot(nAvgVec, oVec);
+      vtkMath::MultiplyScalar(nAvgVec, normalDot);
+
+      double tangVec[3];
+      vtkMath::Subtract(oVec, nAvgVec, tangVec);
+
+      //double addVec[3];
+      //for (int j=0; j<3; j++)
+      //  addVec[j] = this->Beta * oVec[j] + ((1 - this->Beta) * oAvgVec[j]);
+
+      //double finalPt[3];
+      //for (int j=0; j<3; j++)
+      //  finalPt[j] = nPt[j] - addVec[j];
 
       double finalPt[3];
-      for (int j=0; j<3; j++)
-        finalPt[j] = nPt[j] - addVec[j];
+      vtkMath::Add(oPt, tangVec, finalPt);
 
       tmp->GetPoints()->SetPoint(i, finalPt);
     }
