@@ -44,6 +44,7 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
+#include "vtkSVPolyBallLine.h"
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkIdList.h"
@@ -249,6 +250,15 @@ protected:
                            std::string arrayName,
                            std::vector<int> &openCornerPoints,
                            std::vector<std::vector<int> > &openEdges);
+  int ShiftEdgeList(vtkPolyData *branchPd, std::vector<std::vector<int> > &openEdges,
+                    std::vector<std::vector<int> > &shiftedOpenEdges);
+  int GetTrueBoundaryDirections(vtkPolyData *branchPd,
+                                vtkPolyData *polyBranchPd,
+                                const int groupId,
+                                vtkSVPolyBallLine *groupTubes,
+                                std::vector<std::vector<int> > &shiftedOpenEdges,
+                                vtkDoubleArray *avgVecs,
+                                vtkIntArray *patchDirs);
   int CheckGroups();
   int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                const Region region, std::vector<int> allEdges,
@@ -325,6 +335,7 @@ protected:
   int ClipAllCenterlineGroupIds;
   int UseRadiusInformation;
   int UseVmtkClipping;
+  int EnforceBoundaryDirections;
 
   double CutoffRadiusFactor;
   double ClipValue;

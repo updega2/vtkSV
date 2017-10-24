@@ -56,6 +56,7 @@ vtkSVCenterlinesEdgeWeightedCVT::vtkSVCenterlinesEdgeWeightedCVT()
   this->BlankingArrayName = NULL;
   this->CenterlineRadiusArrayName =   NULL;
 
+  this->EdgeWeight = 1.0;
   this->UseRadiusInformation = 1;
   this->UseBifurcationInformation = 1;
   this->UseCurvatureWeight = 1;
@@ -258,6 +259,7 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
   // Current generator
   int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
 
+  // TODO CHECK FOR NORMALS EARLIER!!!!
   // Current cell normal
   vtkDataArray *cellNormals = this->WorkPd->GetCellData()->GetArray("Normals");
   double currNormal[3];

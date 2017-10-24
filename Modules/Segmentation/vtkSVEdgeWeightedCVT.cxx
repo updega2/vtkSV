@@ -52,6 +52,7 @@ vtkSVEdgeWeightedCVT::vtkSVEdgeWeightedCVT()
 {
   this->NumberOfRings = 2;
   this->EdgeWeight = 1.0;
+  this->UseCurvatureWeight = 1;
   this->MaximumNumberOfNeighborPatches = 20;
 }
 
@@ -250,6 +251,12 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
   // Current generator
   int currGenerator = this->PatchIdsArray->GetTuple1(evalId);
 
+  // TODO CHECK FOR NORMALS EARLIER!!!!
+  // Current cell normal
+  vtkDataArray *cellNormals = this->WorkPd->GetCellData()->GetArray("Normals");
+  double currNormal[3];
+  cellNormals->GetTuple(evalId, currNormal);
+
   // Get number of comps in generator and data
   int numComps = this->CVTDataArray->GetNumberOfComponents();
   double *data = new double[numComps];
@@ -290,6 +297,26 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
       break;
     }
   }
+
+  double totalWeight = 0.0;
+  for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
+  {
+    int neighborId = this->Neighbors[evalId][i];
+    int neighborGenerator = this->PatchIdsArray->GetTuple1(neighborId);
+    if (neighborGenerator == generatorId)
+    {
+      double normal[3];
+      cellNormals->GetTuple(neighborId, normal);
+
+      double crossVec[3];
+      vtkMath::Cross(currNormal, normal, crossVec);
+      double ang = atan2(vtkMath::Norm(crossVec), vtkMath::Dot(currNormal, normal));
+
+      totalWeight += ang/SV_PI;
+    }
+  }
+  if (this->UseCurvatureWeight)
+    this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
 
   // Get the edge weighted portion
   double edgeWeighting = 0.0;

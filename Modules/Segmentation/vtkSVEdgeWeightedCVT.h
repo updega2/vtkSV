@@ -67,6 +67,11 @@ public:
   vtkSetMacro(EdgeWeight, double);
   //@}
 
+  /// \brief Get/Set the radius information
+  vtkSetMacro(UseCurvatureWeight,int);
+  vtkGetMacro(UseCurvatureWeight,int);
+  vtkBooleanMacro(UseCurvatureWeight,int);
+
 protected:
   vtkSVEdgeWeightedCVT();
   ~vtkSVEdgeWeightedCVT();
@@ -105,6 +110,7 @@ protected:
 
   int NumberOfRings;
   int MaximumNumberOfNeighborPatches;
+  int UseCurvatureWeight;
   double EdgeWeight;
 
 private:
