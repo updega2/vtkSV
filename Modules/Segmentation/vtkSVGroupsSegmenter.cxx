@@ -666,6 +666,7 @@ int vtkSVGroupsSegmenter::RunFilter()
       vtkMath::Subtract(center, closestPt, cellNormal2);
       vtkMath::Normalize(cellNormal2);
 
+      double orig_alpha = 0.8;
       double alpha = 0.8;
       if (this->EnforceBoundaryDirections)
       {
@@ -676,7 +677,7 @@ int vtkSVGroupsSegmenter::RunFilter()
         else
           div = 4;
 
-        double div_alpha = 0.8/div;
+        double div_alpha = orig_alpha/div;
 
         if (linePtId < div)
         {
@@ -752,7 +753,7 @@ int vtkSVGroupsSegmenter::RunFilter()
           for (int j=0; j<3; j++)
             cellNormal2[j] = locals[maxDir][j];
         }
-        else if (linePtId == nlinepts-1)
+        else if (linePtId >= nlinepts-2)
           alpha = 1.0;
         // TODO ONLY FOR VASCULAR!!!!! NOT FOR OTHER
       }
