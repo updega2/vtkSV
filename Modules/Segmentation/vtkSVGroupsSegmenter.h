@@ -98,6 +98,36 @@ public:
   //@}
 
   //@{
+  /// \brief Get the graph for the model
+  vtkSetObjectMacro(GraphPd,vtkPolyData);
+  vtkGetObjectMacro(GraphPd,vtkPolyData);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for merged centerlines
+  vtkSetObjectMacro(MergedCenterlines,vtkPolyData);
+  vtkGetObjectMacro(MergedCenterlines,vtkPolyData);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for surface polycube
+  vtkSetObjectMacro(PolycubePd,vtkPolyData);
+  vtkGetObjectMacro(PolycubePd,vtkPolyData);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for surface polycube
+  vtkSetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
+  vtkGetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for surface polycube
+  vtkSetObjectMacro(FinalHexMesh,vtkUnstructuredGrid);
+  vtkGetObjectMacro(FinalHexMesh,vtkUnstructuredGrid);
+  //@}
+
+  //@{
   /// \brief Get/Set macro for array name used by the filter. Must
   //  be present on the centerlines.
   vtkSetStringMacro(CenterlineGroupIdsArrayName);
@@ -136,6 +166,72 @@ public:
   vtkSetMacro(UseRadiusInformation,int);
   vtkGetMacro(UseRadiusInformation,int);
   vtkBooleanMacro(UseRadiusInformation,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set the initial group clipper to use
+  vtkSetMacro(UseVmtkClipping,int);
+  vtkGetMacro(UseVmtkClipping,int);
+  vtkBooleanMacro(UseVmtkClipping,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set whether the boundary at separating patches should be more
+  //  strictly enforced.
+  vtkSetMacro(EnforceBoundaryDirections,int);
+  vtkGetMacro(EnforceBoundaryDirections,int);
+  vtkBooleanMacro(EnforceBoundaryDirections,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set the number of divisions to use along width and height of polycube
+  vtkSetMacro(PolycubeDivisions,int);
+  vtkGetMacro(PolycubeDivisions,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set the unit length for each division of the polycube
+  vtkSetMacro(PolycubeUnitLength,double);
+  vtkGetMacro(PolycubeUnitLength,double);
+  //@}
+
+  //@{
+  /// \brief Get/Set the scalar determing how much influence to put on the normal
+  // of the cell and how much influence to put on the position of the cell for
+  // the cube patch clustering.
+  vtkSetMacro(NormalsWeighting,double);
+  vtkGetMacro(NormalsWeighting,double);
+  //@}
+
+  //@{
+  /// \brief Get/Set whether the model is a vascular model with artificial truncated
+  //  boundaries
+  vtkSetMacro(IsVasculature,int);
+  vtkGetMacro(IsVasculature,int);
+  vtkBooleanMacro(IsVasculature,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set If model is not vasculature, indicate how many centerline
+  //  points to remove from the ends
+  vtkSetMacro(NumberOfCenterlineRemovePts,int);
+  vtkGetMacro(NumberOfCenterlineRemovePts,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set whether centerlines should be modified based on a radius
+  //  threshold. Useful if lots of branches close that vmtk clusters all into
+  //  one separation point.
+  vtkSetMacro(ModifyCenterlines,int);
+  vtkGetMacro(ModifyCenterlines,int);
+  vtkBooleanMacro(ModifyCenterlines,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set the radius threshold at which to determine a new branch
+  //  if the ModifyCenterlines flag is set to 1.
+  vtkSetMacro(CenterlineSeparationThreshold,double);
+  vtkGetMacro(CenterlineSeparationThreshold,double);
   //@}
 
   /** \brief Correct cells on the boundary by updating val if they have
@@ -344,15 +440,23 @@ protected:
   vtkPolyData *PolycubePd;
   vtkIdList *CenterlineGroupIds;
 
+  vtkUnstructuredGrid *PolycubeUg;
+  vtkUnstructuredGrid *FinalHexMesh;
+
   int ClipAllCenterlineGroupIds;
   int UseRadiusInformation;
   int UseVmtkClipping;
   int EnforceBoundaryDirections;
+  int IsVasculature;
+  int NumberOfCenterlineRemovePts;
+  int ModifyCenterlines;
+  int PolycubeDivisions;
 
   double CutoffRadiusFactor;
   double ClipValue;
-  int PolycubeDivisions;
   double PolycubeUnitLength;
+  double CenterlineSeparationThreshold;
+  double NormalsWeighting;
 
   vtkSVCenterlineGraph *CenterlineGraph;
 

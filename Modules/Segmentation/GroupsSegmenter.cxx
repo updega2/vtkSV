@@ -60,6 +60,21 @@ int main(int argc, char *argv[])
 
   // Default values for options
   int useRadiusInfo = 1;
+  int useVmtkClipping = 0;
+  int enforceBoundaryDirections = 1;
+  int polycubeDivisions = 10;
+  int isVasculature = 1;
+  int numberOfCenterlineRemovePts = 3;
+  int modifyCenterlines = 0;
+  int writeCenterlineGraph = 0;
+  int writeMergedCenterlines = 0;
+  int writePolycubePd = 0;
+  int writePolycubeUg = 0;
+  int writeFinalHexMesh = 0;
+
+  double polycubeUnitLength = 0.0;
+  double centerlineSeparationThreshold = 0.6;
+  double normalsWeighting = 0.8;
   double clipValue = 0.0;
   double cutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   std::string groupIdsArrayName = "GroupIds";
@@ -82,6 +97,20 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-cutoffradius")  {cutoffRadiusFactor = atof(argv[++iarg]);}
       else if(tmpstr=="-clipvalue")     {clipValue = atof(argv[++iarg]);}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
+      else if(tmpstr=="-usevmtkclipping")               {useVmtkClipping = atoi(argv[++iarg]);}
+      else if(tmpstr=="-enforceboundarydirections")     {enforceBoundaryDirections = atoi(argv[++iarg]);}
+      else if(tmpstr=="-polycubedivisions")             {polycubeDivisions = atoi(argv[++iarg]);}
+      else if(tmpstr=="-polycubeunitlength")            {polycubeUnitLength = atof(argv[++iarg]);}
+      else if(tmpstr=="-normalsweighting")              {normalsWeighting = atof(argv[++iarg]);}
+      else if(tmpstr=="-isvasculature")                 {isVasculature = atoi(argv[++iarg]);}
+      else if(tmpstr=="-numberofcenterlineremovepts")   {numberOfCenterlineRemovePts = atoi(argv[++iarg]);}
+      else if(tmpstr=="-modifycenterlines")             {modifyCenterlines = atoi(argv[++iarg]);}
+      else if(tmpstr=="-centerlineSeparationThreshold") {centerlineSeparationThreshold = atof(argv[++iarg]);}
+      else if(tmpstr=="-writecenterlinegraph")          {writeCenterlineGraph = atoi(argv[++iarg]);}
+      else if(tmpstr=="-writemergedcenterlines")        {writeMergedCenterlines = atoi(argv[++iarg]);}
+      else if(tmpstr=="-writesurfacepolycube")          {writePolycubePd = atoi(argv[++iarg]);}
+      else if(tmpstr=="-writevolumepolycube")           {writePolycubeUg = atoi(argv[++iarg]);}
+      else if(tmpstr=="-writefinalhexmesh")             {writeFinalHexMesh = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -94,16 +123,30 @@ int main(int argc, char *argv[])
     cout << "  GroupsClipper2 -input [Input Filename] -centerlines [Centerlines] -output [Output Filename] -groupids [GroupIds Array Name] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
-    cout << "  -h                  : Display usage and command-line argument summary"<< endl;
-    cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -centerlines        : Centerlines file name (.vtp)"<< endl;
-    cout << "  -output             : Output file name"<< endl;
-    cout << "  -groupids           : Name to be used for group ids [default GroupIds]"<< endl;
-    cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-    cout << "  -blanking           : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
-    cout << "  -cutoffradius       : Value at which a certain distance away from the centerline the function that is used for clipping is set to a large value, essentially clipping everything outside that radius [default 1.0e32]"<< endl;
-    cout << "  -clipvalue          : Value to use for clipping function [default 0.0]"<< endl;
-    cout << "  -useradiusinfo      : Use radius to help in clipping operation [default 1]"<< endl;
+    cout << "  -h                             : Display usage and command-line argument summary"<< endl;
+    cout << "  -input                         : Input file name (.vtp or .stl)"<< endl;
+    cout << "  -centerlines                   : Centerlines file name (.vtp)"<< endl;
+    cout << "  -output                        : Output file name"<< endl;
+    cout << "  -groupids                      : Name to be used for group ids [default GroupIds]"<< endl;
+    cout << "  -radius                        : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
+    cout << "  -blanking                      : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
+    cout << "  -cutoffradius                  : Value at which a certain distance away from the centerline the function that is used for clipping is set to a large value, essentially clipping everything outside that radius [default 1.0e32]"<< endl;
+    cout << "  -clipvalue                     : Value to use for clipping function [default 0.0]"<< endl;
+    cout << "  -useradiusinfo                 : Use radius to help in clipping operation [default 1]"<< endl;
+    cout << "  -usevmtkclipping               : Use the original vmtk clipping algorithm which can use the full centerlines rather than the modified centerline clipping [default 1]" << endl;
+    cout << "  -enforceboundarydirections     : At separating patches, enforce the boundary directions by modifying the clustering vectors [default 1]" << endl;
+    cout << "  -polycubedivisions             : The number of divisions for the width and height of the polycube [default 10]" << endl;
+    cout << "  -polycubeunitlength            : The unit length for each division of the polycube. If 0.0, an approximate size will be found using the average radius of the model [default 0.0]" << endl;
+    cout << "  -normalsweighting              : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
+    cout << "  -isvasculature                 : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
+    cout << "  -numberofcenterlineremovepts   : Number of centerline points to remove from the end of the branches if the model is not vasculature [default 3]" << endl;
+    cout << "  -changetrifurcationcenterlines : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlinesseparationthreshold [efault 0]" << endl;
+    cout << "  -centerlineseparationthreshold : The distance at which a new branch is determinedif the changetrifurcationcenterlines flag is set to 1. Play with this number to find a good centerline separation [default 0.6]" << endl;
+    cout << "  -writecenterlinegraph          : Write the centerline graph to file [default 0]" << endl;
+    cout << "  -writemergedcenterlines        : Write the merged centerlines to file [default 0]" << endl;
+    cout << "  -writesurfacepolycube          : Write the surface polycube to file [default 0]" << endl;
+    cout << "  -writevolumepolycube           : Write the volume polycube to file [default 0]" << endl;
+    cout << "  -writefinalhexmesh             : Write the final hex mesh to file [default 0]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -140,12 +183,31 @@ int main(int argc, char *argv[])
   Grouper->SetClipValue(clipValue);
   Grouper->ClipAllCenterlineGroupIdsOn();
   Grouper->SetUseRadiusInformation(useRadiusInfo);
+  Grouper->SetUseVmtkClipping(useVmtkClipping);
+  Grouper->SetPolycubeDivisions(polycubeDivisions);
+  Grouper->SetPolycubeUnitLength(polycubeUnitLength);
+  Grouper->SetNormalsWeighting(normalsWeighting);
+  Grouper->SetIsVasculature(isVasculature);
+  Grouper->SetNumberOfCenterlineRemovePts(numberOfCenterlineRemovePts);
+  Grouper->SetModifyCenterlines(modifyCenterlines);
+  Grouper->SetCenterlineSeparationThreshold(centerlineSeparationThreshold);
   Grouper->Update();
   std::cout<<"Done"<<endl;
 
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetOutput(0));
+  if (writeCenterlineGraph)
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetGraphPd(), "_CenterlineGraph");
+  if (writeMergedCenterlines)
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetMergedCenterlines(), "_MergedCenterlines");
+  if (writePolycubePd)
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetPolycubePd(), "_PolycubePd");
+  if (writePolycubeUg)
+    vtkSVIOUtils::WriteVTUFile(outputFilename, Grouper->GetPolycubeUg(), "_PolycubeUg");
+  if (writeFinalHexMesh)
+    vtkSVIOUtils::WriteVTUFile(outputFilename, Grouper->GetFinalHexMesh(), "_FinalHexMesh");
+
 
   //Exit the program without errors
   return EXIT_SUCCESS;

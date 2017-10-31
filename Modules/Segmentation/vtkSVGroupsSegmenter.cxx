@@ -119,6 +119,9 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->PolycubePd = vtkPolyData::New();
   this->Centerlines = NULL;
 
+  this->PolycubeUg   = vtkUnstructuredGrid::New();
+  this->FinalHexMesh = vtkUnstructuredGrid::New();
+
   this->CenterlineGroupIdsArrayName = NULL;
   this->CenterlineRadiusArrayName = NULL;
   this->GroupIdsArrayName = NULL;
@@ -131,8 +134,16 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->CutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   this->ClipValue = 0.0;
   this->UseRadiusInformation = 1;
+
   this->PolycubeDivisions = 10;
-  this->PolycubeUnitLength = 0.1;
+  this->PolycubeUnitLength = 0.0;
+
+  this->NormalsWeighting = 0.8;
+  this->IsVasculature = 1;
+  this->NumberOfCenterlineRemovePts = 3;
+
+  this->ModifyCenterlines = 0;
+  this->CenterlineSeparationThreshold = 0.6;
 
 }
 
@@ -171,6 +182,18 @@ vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
   {
     this->CenterlineGroupIds->Delete();
     this->CenterlineGroupIds = NULL;
+  }
+
+  if (this->PolycubeUg != NULL)
+  {
+    this->PolycubeUg->Delete();
+    this->PolycubeUg = NULL;
+  }
+
+  if (this->FinalHexMesh != NULL)
+  {
+    this->FinalHexMesh->Delete();
+    this->FinalHexMesh = NULL;
   }
 
   if (this->CenterlineGroupIdsArrayName != NULL)
@@ -287,31 +310,31 @@ int vtkSVGroupsSegmenter::PrepFilter()
     return SV_OK;
   }
 
-  //if (!this->BlankingArrayName)
-  //{
-  //  vtkDebugMacro("Blanking Array Name not given, setting to Blanking");
-  //  this->BlankingArrayName = new char[strlen("Blanking") + 1];
-  //  strcpy(this->BlankingArrayName, "Blanking");
-  //}
+  if (!this->BlankingArrayName)
+  {
+    vtkDebugMacro("Blanking Array Name not given, setting to Blanking");
+    this->BlankingArrayName = new char[strlen("Blanking") + 1];
+    strcpy(this->BlankingArrayName, "Blanking");
+  }
 
-  //if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->BlankingArrayName) != SV_OK)
-  //{
-  //  vtkErrorMacro(<< "BlankingArrayName with name specified does not exist");
-  //  return SV_ERROR;
-  //}
+  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->BlankingArrayName) != SV_OK)
+  {
+    vtkErrorMacro(<< "BlankingArrayName with name specified does not exist");
+    return SV_ERROR;
+  }
 
-  //if (!this->CenterlineRadiusArrayName)
-  //{
-  //  vtkDebugMacro("Centerline radius Array Name not given, setting to MaximumInscribedSphereRadius");
-  //  this->CenterlineRadiusArrayName = new char[strlen("MaximumInscribedSphereRadius") + 1];
-  //  strcpy(this->CenterlineRadiusArrayName, "MaximumInscribedSphereRadius");
-  //}
+  if (!this->CenterlineRadiusArrayName)
+  {
+    vtkDebugMacro("Centerline radius Array Name not given, setting to MaximumInscribedSphereRadius");
+    this->CenterlineRadiusArrayName = new char[strlen("MaximumInscribedSphereRadius") + 1];
+    strcpy(this->CenterlineRadiusArrayName, "MaximumInscribedSphereRadius");
+  }
 
-  //if (!this->Centerlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
-  //{
-  //  vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
-  //  return SV_ERROR;
-  //}
+  if (!this->Centerlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
+  {
+    vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
+    return SV_ERROR;
+  }
 
   this->CenterlineGraph = new vtkSVCenterlineGraph(0, this->MergedCenterlines,
                                                 this->GroupIdsArrayName);
@@ -322,21 +345,21 @@ int vtkSVGroupsSegmenter::PrepFilter()
     return SV_ERROR;
   }
 
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/CenterlineGraph.vtp";
   this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
-  vtkSVIOUtils::WriteVTPFile(filename, this->GraphPd);
-
   this->MergedCenterlines->DeepCopy(this->CenterlineGraph->Lines);
-  std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/CenterlineDirs.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename2, this->CenterlineGraph->Lines);
 
   double polycubeSize;
-  this->GetApproximatePolycubeSize(polycubeSize);
-  this->PolycubeUnitLength = polycubeSize/this->PolycubeDivisions;
+  if (this->PolycubeUnitLength == 0.0)
+  {
+    this->GetApproximatePolycubeSize(polycubeSize);
+    this->PolycubeUnitLength = polycubeSize/this->PolycubeDivisions;
+  }
+  else
+  {
+    polycubeSize = this->PolycubeUnitLength*this->PolycubeDivisions;
+  }
 
   this->CenterlineGraph->GetSurfacePolycube(polycubeSize, polycubeSize, this->PolycubePd);
-  std::string filename3 = "/Users/adamupdegrove/Desktop/tmp/PolycubePd.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename3, this->PolycubePd);
 
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(this->PolycubePd);
@@ -666,8 +689,8 @@ int vtkSVGroupsSegmenter::RunFilter()
       vtkMath::Subtract(center, closestPt, cellNormal2);
       vtkMath::Normalize(cellNormal2);
 
-      double orig_alpha = 0.8;
-      double alpha = 0.8;
+      double orig_alpha = this->NormalsWeighting;
+      double alpha = this->NormalsWeighting;
       if (this->EnforceBoundaryDirections)
       {
         int div;
@@ -759,7 +782,7 @@ int vtkSVGroupsSegmenter::RunFilter()
           for (int j=0; j<3; j++)
             cellNormal2[j] = locals[maxDir][j];
         }
-        else if (linePtId >= nlinepts-2)
+        else if (linePtId >= nlinepts-2 && this->IsVasculature)
         {
           // TODO ONLY FOR VASCULAR!!!!! NOT FOR OTHER
           alpha = 1.0;
@@ -949,29 +972,29 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  //////////////// For checking purposes
-  //////////////if (this->FixPatchesWithPolycubeOld() != SV_OK)
-  //////////////{
-  //////////////  fprintf(stderr,"Couldn't fix patches\n");
-  //////////////  return SV_ERROR;
-  //////////////}
+  ////////////// For checking purposes
+  ////////////if (this->FixPatchesWithPolycubeOld() != SV_OK)
+  ////////////{
+  ////////////  fprintf(stderr,"Couldn't fix patches\n");
+  ////////////  return SV_ERROR;
+  ////////////}
 
-  ////// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
-  ////// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
+  //// NOW PARAMETERIZE!!, WIILL BE MOVED to vtkSVPolycubeParameterizer
+  //// TODO: RENAME THIS CLASS TO vtkSVCenterlinesSegmenter
 
-  //vtkNew(vtkPolyData, fullMapPd);
-  //if (this->ParameterizeSurface(fullMapPd) != SV_OK)
-  //{
-  //  fprintf(stderr,"WRONG\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkPolyData, fullMapPd);
+  if (this->ParameterizeSurface(fullMapPd) != SV_OK)
+  {
+    fprintf(stderr,"WRONG\n");
+    return SV_ERROR;
+  }
 
-  //vtkNew(vtkUnstructuredGrid, loftedVolume);
-  //if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
-  //{
-  //  fprintf(stderr,"Failed doing volume stuffs\n");
-  //  return SV_ERROR;
-  //}
+  vtkNew(vtkUnstructuredGrid, loftedVolume);
+  if (this->ParameterizeVolume(fullMapPd, loftedVolume) != SV_OK)
+  {
+    fprintf(stderr,"Failed doing volume stuffs\n");
+    return SV_ERROR;
+  }
 
   return SV_OK;
 }
@@ -1024,8 +1047,7 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
   this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
   this->MergedCenterlines->BuildLinks();
 
-  int fixCenterlines = 0;
-  if (fixCenterlines)
+  if (this->ModifyCenterlines)
   {
     if (this->FixCenterlines() != SV_OK)
     {
@@ -1034,10 +1056,9 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
     }
   }
 
-  int removeEndPts = 0;
-  int numRemove = 2;
-  if (removeEndPts)
+  if (!this->IsVasculature)
   {
+    int numRemove = this->NumberOfCenterlineRemovePts;
     vtkNew(vtkPoints, newPoints);
     vtkNew(vtkPointData, newPointData);
     newPointData->CopyAllocate(this->MergedCenterlines->GetPointData(),
@@ -1473,7 +1494,7 @@ int vtkSVGroupsSegmenter::CheckCenterlineChildren(vtkPolyData *centerlinesPd,
 {
   int numChildren = testChildren.size();
 
-  double tol = 0.6;
+  double tol = this->CenterlineSeparationThreshold;
   double minDist = VTK_SV_LARGE_DOUBLE;
   int minChild;
   int minChildCellId;
@@ -4488,11 +4509,6 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
     vtkSVGeneralUtils::ApplyRotationMatrix(tmpPoly, rotMatrix1);
     vtkSVGeneralUtils::ApplyRotationMatrix(tmpPoly, rotMatrix0);
 
-    //std::string filename2 = "/Users/adamupdegrove/Desktop/tmp/Boundary_"+std::to_string(patchId)+".vtp";
-    //vtkSVIOUtils::WriteVTPFile(filename2, boundaryMapper->GetOutput());
-    //std::string filename4 = "/Users/adamupdegrove/Desktop/tmp/Mapping_"+std::to_string(patchId)+".vtp";
-    //vtkSVIOUtils::WriteVTPFile(filename4, mapper->GetOutput());
-
     appender->AddInputData(tmpPoly);
   }
 
@@ -4551,14 +4567,8 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
   fullMapPd->BuildLinks();
 
   // all data on fullMapPd now
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/Mapping_All.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename, fullMapPd);
-
   vtkNew(vtkPolyData, mappedPd);
   this->InterpolateMapOntoTarget(polycubePd, this->WorkPd, fullMapPd, mappedPd, this->GroupIdsArrayName);
-
-  std::string filename5 = "/Users/adamupdegrove/Desktop/tmp/Mapped_Out.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename5, mappedPd);
 
   return SV_OK;
 }
@@ -4630,8 +4640,7 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   }
   appender->Update();
 
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_PARA.vtu";
-  vtkSVIOUtils::WriteVTUFile(filename, appender->GetOutput());
+  this->PolycubeUg->DeepCopy(appender->GetOutput());
 
   vtkNew(vtkUnstructuredGrid, paraHexVolume);
   paraHexVolume->DeepCopy(appender->GetOutput());
@@ -4671,14 +4680,14 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   std::vector<std::vector<int> > invPtMap;
   this->GetInteriorPointMaps(paraHexSurface, paraHexCleanSurface, cleanSurface, surfacePtMap, invPtMap);
 
-  std::string fn = "/Users/adamupdegrove/Desktop/tmp/Mapping_All2.vtp";
-  vtkSVIOUtils::WriteVTPFile(fn, fullMapPd);
-  std::string fn2 = "/Users/adamupdegrove/Desktop/tmp/ParaHexSurface.vtp";
-  vtkSVIOUtils::WriteVTPFile(fn2, paraHexSurface);
+  //std::string fn = "/Users/adamupdegrove/Desktop/tmp/Mapping_All2.vtp";
+  //vtkSVIOUtils::WriteVTPFile(fn, fullMapPd);
+  //std::string fn2 = "/Users/adamupdegrove/Desktop/tmp/ParaHexSurface.vtp";
+  //vtkSVIOUtils::WriteVTPFile(fn2, paraHexSurface);
   vtkNew(vtkPolyData, mappedSurface);
   this->InterpolateMapOntoTarget(paraHexSurface, this->WorkPd, fullMapPd, mappedSurface, this->GroupIdsArrayName);
-  std::string filename5 = "/Users/adamupdegrove/Desktop/tmp/Mapped_Out2.vtp";
-  vtkSVIOUtils::WriteVTPFile(filename5, mappedSurface);
+  //std::string filename5 = "/Users/adamupdegrove/Desktop/tmp/Mapped_Out2.vtp";
+  //vtkSVIOUtils::WriteVTPFile(filename5, mappedSurface);
 
   vtkNew(vtkIdFilter, ider2);
   ider2->SetInputData(mappedSurface);
@@ -4764,13 +4773,14 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     return SV_ERROR;
   }
 
-  filename = "/Users/adamupdegrove/Desktop/tmp/TEST_SMOOTH.vtu";
-  vtkSVIOUtils::WriteVTUFile(filename, smoothVolume);
+  //filename = "/Users/adamupdegrove/Desktop/tmp/TEST_SMOOTH.vtu";
+  //vtkSVIOUtils::WriteVTUFile(filename, smoothVolume);
 
   this->FixVolume(mappedVolume, smoothVolume, volumePtMap);
 
-  filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
-  vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
+  //filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
+  //vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
+  this->FinalHexMesh->DeepCopy(mappedVolume);
 
   //vtkNew(vtkAppendFilter, loftAppender);
   //for (int i=0; i<numGroups; i++)
@@ -5772,7 +5782,6 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
 
   int dim2D_1[3]; dim2D_1[0] = w_div; dim2D_1[1] = h_div; dim2D_1[2] = 1;
 
-  vtkNew(vtkPoints, testPoints);
   for (int i=0; i<w_div; i++)
   {
     double x5Vec0[3], x5Vec1[3], x4Vec0[3], x4Vec1[3];
@@ -6100,7 +6109,6 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
       vtkMath::Subtract(f5End, x5DiagPoint, x5FromDiag);
       vtkMath::Normalize(x5FromDiag);
       x5FromDiagDist = vtkSVMathUtils::Distance(f5End, x5DiagPoint);
-      testPoints->InsertNextPoint(f5Start);
     }
 
     for (int j=0; j<h_div; j++)
@@ -6353,14 +6361,6 @@ int vtkSVGroupsSegmenter::FormParametricHexMesh(vtkPolyData *polycubePd, vtkStru
   grid5Poly->SetPoints(f5GridPts);
   vtkNew(vtkPolyData, grid4Poly);
   grid4Poly->SetPoints(f4GridPts);
-
-  if (botCTet0)
-  {
-    vtkNew(vtkPolyData, testers);
-    testers->SetPoints(testPoints);
-    std::string fn = "/Users/adamupdegrove/Desktop/tmp/POINTERS.vtp";
-    vtkSVIOUtils::WriteVTPFile(fn, testers);
-  }
 
   vtkNew(vtkPoints, paraPoints);
   int dim[3]; dim[0] = w_div; dim[1] = l_div; dim[2] = h_div;
@@ -7675,8 +7675,8 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *po
     if (branchRegions[j].CornerPoints.size() != 4)
     {
       fprintf(stderr,"Number of corners on region %d is %d, needs to be 4\n", j, branchRegions[j].CornerPoints.size());
-      std::string badName = "/Users/adamupdegrove/Desktop/tmp/BADCORNERS.vtp";
-      vtkSVIOUtils::WriteVTPFile(badName, branchPd);
+      //std::string badName = "/Users/adamupdegrove/Desktop/tmp/BADCORNERS.vtp";
+      //vtkSVIOUtils::WriteVTPFile(badName, branchPd);
       return SV_ERROR;
     }
   }
@@ -7874,8 +7874,6 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *po
     if (ccwCount == ccwFullEdges.size() && cwCount == cwFullEdges.size())
     {
       fprintf(stderr,"THIS IS A BIG PROBLEM\n");
-      std::string badName = "/Users/adamupdegrove/Desktop/tmp/NOTONEDGE.vtp";
-      vtkSVIOUtils::WriteVTPFile(badName, branchPd);
       return SV_ERROR;
     }
 
@@ -9474,8 +9472,8 @@ int vtkSVGroupsSegmenter::MatchSurfaceToPolycube()
     }
   }
 
-  std::string polyfile = "/Users/adamupdegrove/Desktop/tmp/PolycubeWithSurfaceIds.vtp";
-  vtkSVIOUtils::WriteVTPFile(polyfile, this->PolycubePd);
+  //std::string polyfile = "/Users/adamupdegrove/Desktop/tmp/PolycubeWithSurfaceIds.vtp";
+  //vtkSVIOUtils::WriteVTPFile(polyfile, this->PolycubePd);
 
   return SV_OK;
 }
