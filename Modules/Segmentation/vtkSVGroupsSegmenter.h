@@ -274,7 +274,19 @@ protected:
                             const Region region, const Region polyRegion,
                             std::vector<int> allEdges,
                             std::vector<int> badEdges, vtkIdList *critPts);
+  int FixCloseGroup(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
+                    std::string arrayName,
+                    const Region region, const Region polyRegion,
+                    std::vector<int> allEdges,
+                    std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
+
+  int GetCellRingNeighbors(vtkPolyData *pd,
+                           vtkIdList *cellIds,
+                           int ringNumber,
+                           int totNumberOfRings,
+                           std::vector<std::vector<int> > &neighbors);
+
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
