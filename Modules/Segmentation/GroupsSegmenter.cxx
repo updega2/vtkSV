@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-isvasculature")                 {isVasculature = atoi(argv[++iarg]);}
       else if(tmpstr=="-numberofcenterlineremovepts")   {numberOfCenterlineRemovePts = atoi(argv[++iarg]);}
       else if(tmpstr=="-modifycenterlines")             {modifyCenterlines = atoi(argv[++iarg]);}
-      else if(tmpstr=="-centerlineSeparationThreshold") {centerlineSeparationThreshold = atof(argv[++iarg]);}
+      else if(tmpstr=="-centerlineseparationthreshold") {centerlineSeparationThreshold = atof(argv[++iarg]);}
       else if(tmpstr=="-writecenterlinegraph")          {writeCenterlineGraph = atoi(argv[++iarg]);}
       else if(tmpstr=="-writemergedcenterlines")        {writeMergedCenterlines = atoi(argv[++iarg]);}
       else if(tmpstr=="-writesurfacepolycube")          {writePolycubePd = atoi(argv[++iarg]);}
@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
     cout << "  -normalsweighting              : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
     cout << "  -isvasculature                 : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
     cout << "  -numberofcenterlineremovepts   : Number of centerline points to remove from the end of the branches if the model is not vasculature [default 3]" << endl;
-    cout << "  -changetrifurcationcenterlines : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlinesseparationthreshold [efault 0]" << endl;
+    cout << "  -changetrifurcationcenterlines : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlineseparationthreshold [efault 0]" << endl;
     cout << "  -centerlineseparationthreshold : The distance at which a new branch is determinedif the changetrifurcationcenterlines flag is set to 1. Play with this number to find a good centerline separation [default 0.6]" << endl;
     cout << "  -writecenterlinegraph          : Write the centerline graph to file [default 0]" << endl;
     cout << "  -writemergedcenterlines        : Write the merged centerlines to file [default 0]" << endl;
@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
   Grouper->ClipAllCenterlineGroupIdsOn();
   Grouper->SetUseRadiusInformation(useRadiusInfo);
   Grouper->SetUseVmtkClipping(useVmtkClipping);
+  Grouper->SetEnforceBoundaryDirections(enforceBoundaryDirections);
   Grouper->SetPolycubeDivisions(polycubeDivisions);
   Grouper->SetPolycubeUnitLength(polycubeUnitLength);
   Grouper->SetNormalsWeighting(normalsWeighting);
