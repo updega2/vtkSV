@@ -41,7 +41,7 @@
 #ifndef vtkSVNURBSCurve_h
 #define vtkSVNURBSCurve_h
 
-#include "vtkDataObject.h"
+#include "vtkSVNURBSObject.h"
 #include "vtkSVNURBSModule.h"
 
 #include "vtkCellArray.h"
@@ -51,9 +51,9 @@
 #include "vtkPolyData.h"
 #include "vtkSVControlGrid.h"
 
-class vtkSVNURBSCurveCollection;
+class vtkSVNURBSCollection;
 
-class VTKSVNURBS_EXPORT vtkSVNURBSCurve : public vtkDataObject
+class VTKSVNURBS_EXPORT vtkSVNURBSCurve : public vtkSVNURBSObject
 {
 public:
   static vtkSVNURBSCurve *New();
@@ -62,7 +62,7 @@ public:
   vtkSVNURBSCurve(int m, vtkPoints *controlPoints, int n, vtkDoubleArray *knotPoints, int deg) {;}
   vtkSVNURBSCurve(int m, vtkPoints *controlPoints, vtkDoubleArray *knotPoints, vtkIntArray *knotMultiplicity, int deg) {;}
 
-  vtkTypeMacro(vtkSVNURBSCurve,vtkDataObject);
+  vtkTypeMacro(vtkSVNURBSCurve,vtkSVNURBSObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
@@ -198,7 +198,7 @@ public:
   int GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *singleKnots);
 
   /** \brief decompose the surface using bezier extraction. */
-  int ExtractBezierCurves(vtkSVNURBSCurveCollection *curves);
+  int ExtractBezierCurves(vtkSVNURBSCollection *curves);
 
   // Description:
   // Retrieve an instance of this class from an information object.
@@ -206,6 +206,8 @@ public:
   static vtkSVNURBSCurve* GetData(vtkInformationVector* v, int i=0);
 
   virtual void DeepCopy(vtkSVNURBSCurve *src);
+
+  virtual std::string GetType() {return "Curve";}
 
 protected:
   vtkSVNURBSCurve();

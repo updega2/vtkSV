@@ -726,7 +726,7 @@ int vtkSVNURBSSurface::GetMultiplicity(const int dim, vtkIntArray *multiplicity,
 // ----------------------
 // ExtractBezierStrips
 // ----------------------
-int vtkSVNURBSSurface::ExtractBezierStrips(const int dim, vtkSVNURBSSurfaceCollection *surfaces)
+int vtkSVNURBSSurface::ExtractBezierStrips(const int dim, vtkSVNURBSCollection *surfaces)
 {
   if (vtkSVNURBSUtils::SurfaceBezierExtraction(this->ControlPointGrid,
                                                this->UKnotVector, this->UDegree,
@@ -743,16 +743,16 @@ int vtkSVNURBSSurface::ExtractBezierStrips(const int dim, vtkSVNURBSSurfaceColle
 // ----------------------
 // ExtractBezierStrips
 // ----------------------
-int vtkSVNURBSSurface::ExtractBezierPatches(vtkSVNURBSSurfaceCollection *surfaces)
+int vtkSVNURBSSurface::ExtractBezierPatches(vtkSVNURBSCollection *surfaces)
 {
-  vtkNew(vtkSVNURBSSurfaceCollection, surfaceStrips);
+  vtkNew(vtkSVNURBSCollection, surfaceStrips);
   this->ExtractBezierStrips(0, surfaceStrips);
 
   for (int i=0; i<surfaceStrips->GetNumberOfItems(); i++)
   {
-    vtkSVNURBSSurface *tmpSurface = surfaceStrips->GetItem(i);
+    vtkSVNURBSSurface *tmpSurface = static_cast<vtkSVNURBSSurface *>(surfaceStrips->GetItem(i));
 
-    vtkNew(vtkSVNURBSSurfaceCollection, surfacePatches);
+    vtkNew(vtkSVNURBSCollection, surfacePatches);
     if (vtkSVNURBSUtils::SurfaceBezierExtraction(tmpSurface->GetControlPointGrid(),
                                                  tmpSurface->GetUKnotVector(), tmpSurface->GetUDegree(),
                                                  tmpSurface->GetVKnotVector(), tmpSurface->GetVDegree(),

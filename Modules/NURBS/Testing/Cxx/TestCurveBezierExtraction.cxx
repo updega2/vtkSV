@@ -83,7 +83,7 @@ int TestCurveBezierExtraction(int argc, char *argv[])
   curve->SetControlPoints(cpoints);
   curve->SetDegree(p);
 
-  vtkNew(vtkSVNURBSCurveCollection, curves);
+  vtkNew(vtkSVNURBSCollection, curves);
   curve->ExtractBezierCurves(curves); // Remove the first knot
 
   // For baseline test
@@ -92,9 +92,12 @@ int TestCurveBezierExtraction(int argc, char *argv[])
   vtkNew(vtkAppendPolyData, appender);
   for (int i=0; i<curves->GetNumberOfItems(); i++)
   {
-    vtkSVNURBSCurve *oneCurve = curves->GetItem(i);
-    oneCurve->GeneratePolyDataRepresentation(0.01);
-    appender->AddInputData(oneCurve->GetCurveRepresentation());
+    if (!strncmp(curves->GetItem(i)->GetType().c_str(),"Curve",5))
+    {
+      vtkSVNURBSCurve *oneCurve = static_cast<vtkSVNURBSCurve *>(curves->GetItem(i));
+      oneCurve->GeneratePolyDataRepresentation(0.01);
+      appender->AddInputData(oneCurve->GetCurveRepresentation());
+    }
   }
   appender->Update();
 

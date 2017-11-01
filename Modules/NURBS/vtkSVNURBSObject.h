@@ -29,8 +29,8 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVNURBSSurfaceCollection
- *  \brief This is a wrapper around vtkCollection for NURBS
+ *  \class vtkSVNURBSObject
+ *  \brief This is a class to represent a NURBS curve
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -38,54 +38,44 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVNURBSSurfaceCollection_h
-#define vtkSVNURBSSurfaceCollection_h
+#ifndef vtkSVNURBSObject_h
+#define vtkSVNURBSObject_h
 
-#include "vtkCollection.h"
+#include "vtkDataObject.h"
 #include "vtkSVNURBSModule.h"
 
-class vtkSVNURBSSurface;
+#include "vtkCellArray.h"
+#include "vtkDenseArray.h"
+#include "vtkDoubleArray.h"
+#include "vtkIntArray.h"
+#include "vtkPolyData.h"
+#include "vtkSVControlGrid.h"
 
-class VTKSVNURBS_EXPORT vtkSVNURBSSurfaceCollection : public vtkCollection
+class VTKSVNURBS_EXPORT vtkSVNURBSObject : public vtkDataObject
 {
 public:
-  vtkTypeMacro(vtkSVNURBSSurfaceCollection,vtkCollection);
+  vtkTypeMacro(vtkSVNURBSObject,vtkDataObject);
 
+  virtual void DeepCopy(vtkSVNURBSObject *src);
+
+  virtual std::string GetType() = 0;
+
+  //@{
   /**
-   * Add a NURBS object to the list.
+   * Retrieve an instance of this class from an information object.
    */
-  void AddItem(vtkSVNURBSSurface *ds);
+  static vtkSVNURBSObject* GetData(vtkInformation* info);
+  static vtkSVNURBSObject* GetData(vtkInformationVector* v, int i=0);
+  //@}
 
-  /**
-   * Get the next NURBS object in the list.
-   */
-  vtkSVNURBSSurface *GetNextItem();
-
-  /**
-   * Get the ith NURBS object in the list.
-   */
-  vtkSVNURBSSurface *GetItem(int i);
-
-  /**
-   * Reentrant safe way to get an object in a collection. Just pass the
-   * same cookie back and forth.
-   */
-  vtkSVNURBSSurface *GetNextDataObject(vtkCollectionSimpleIterator &cookie);
-
-  static vtkSVNURBSSurfaceCollection *New();
 
 protected:
-  vtkSVNURBSSurfaceCollection() {}
-  ~vtkSVNURBSSurfaceCollection() {}
-
+  vtkSVNURBSObject();
+  ~vtkSVNURBSObject();
 
 private:
-  // hide the standard AddItem from the user and the compiler.
-  void AddItem(vtkObject *o) { this->vtkCollection::AddItem(o); };
-
-  vtkSVNURBSSurfaceCollection(const vtkSVNURBSSurfaceCollection&);
-  void operator=(const vtkSVNURBSSurfaceCollection&);
+  vtkSVNURBSObject(const vtkSVNURBSObject&);  // Not implemented.
+  void operator=(const vtkSVNURBSObject&);  // Not implemented.
 };
 
 #endif
-// VTK-HeaderTest-Exclude: vtkCollection.h

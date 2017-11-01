@@ -744,7 +744,7 @@ int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
 // ----------------------
 int vtkSVNURBSUtils::CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
                                            const int degree,
-                                           vtkSVNURBSCurveCollection *curves)
+                                           vtkSVNURBSCollection *curves)
 {
   // Get dimensions of control point grid
   int dims[3];
@@ -3050,7 +3050,7 @@ int vtkSVNURBSUtils::SurfaceBezierExtraction(vtkSVControlGrid *controlPoints,
                                              vtkDoubleArray *uKnots, const int uDegree,
                                              vtkDoubleArray *vKnots, const int vDegree,
                                              const int extractDirection,
-                                             vtkSVNURBSSurfaceCollection *surfaces)
+                                             vtkSVNURBSCollection *surfaces)
 {
   // Get dimensions of control point grid
   int dims[3];

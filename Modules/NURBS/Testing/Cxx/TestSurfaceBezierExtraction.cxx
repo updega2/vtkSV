@@ -100,7 +100,7 @@ int TestSurfaceBezierExtraction(int argc, char *argv[])
   surface->SetUDegree(p);
   surface->SetVDegree(q);
 
-  vtkNew(vtkSVNURBSSurfaceCollection, surfaces);
+  vtkNew(vtkSVNURBSCollection, surfaces);
   surface->ExtractBezierPatches(surfaces); // Remove the first knot
 
   // For baseline test
@@ -109,9 +109,12 @@ int TestSurfaceBezierExtraction(int argc, char *argv[])
   vtkNew(vtkAppendPolyData, appender);
   for (int i=0; i<surfaces->GetNumberOfItems(); i++)
   {
-    vtkSVNURBSSurface *oneSurface = surfaces->GetItem(i);
-    oneSurface->GeneratePolyDataRepresentation(0.01, 0.01);
-    appender->AddInputData(oneSurface->GetSurfaceRepresentation());
+    if (!strncmp(surfaces->GetItem(i)->GetType().c_str(),"Surface",7))
+    {
+      vtkSVNURBSSurface *oneSurface = static_cast<vtkSVNURBSSurface *>(surfaces->GetItem(i));
+      oneSurface->GeneratePolyDataRepresentation(0.01, 0.01);
+      appender->AddInputData(oneSurface->GetSurfaceRepresentation());
+    }
   }
   appender->Update();
 

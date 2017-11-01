@@ -41,7 +41,7 @@
 #ifndef vtkSVNURBSSurface_h
 #define vtkSVNURBSSurface_h
 
-#include "vtkDataObject.h"
+#include "vtkSVNURBSObject.h"
 #include "vtkSVNURBSModule.h"
 
 #include "vtkDenseArray.h"
@@ -49,9 +49,9 @@
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
 #include "vtkSVControlGrid.h"
-#include "vtkSVNURBSSurfaceCollection.h"
+#include "vtkSVNURBSCollection.h"
 
-class VTKSVNURBS_EXPORT vtkSVNURBSSurface : public vtkDataObject
+class VTKSVNURBS_EXPORT vtkSVNURBSSurface : public vtkSVNURBSObject
 {
 public:
   static vtkSVNURBSSurface *New();
@@ -60,7 +60,7 @@ public:
   vtkSVNURBSSurface(int m, vtkPoints *controlPoints, int n, vtkDoubleArray *knotPoints, int deg) {;}
   vtkSVNURBSSurface(int m, vtkPoints *controlPoints, vtkDoubleArray *knotPoints, vtkIntArray *knotMultiplicity, int deg) {;}
 
-  vtkTypeMacro(vtkSVNURBSSurface,vtkDataObject);
+  vtkTypeMacro(vtkSVNURBSSurface,vtkSVNURBSObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
@@ -175,8 +175,8 @@ public:
 
   //@{
   /** \brief functions to extract bezier portions of the surface */
-  int ExtractBezierStrips(const int dim, vtkSVNURBSSurfaceCollection *surfaces);
-  int ExtractBezierPatches(vtkSVNURBSSurfaceCollection *surfaces);
+  int ExtractBezierStrips(const int dim, vtkSVNURBSCollection *surfaces);
+  int ExtractBezierPatches(vtkSVNURBSCollection *surfaces);
   //@}
 
   /** \brief Get structured grid connectivity.
@@ -189,6 +189,8 @@ public:
   static vtkSVNURBSSurface* GetData(vtkInformationVector* v, int i=0);
 
   virtual void DeepCopy(vtkSVNURBSSurface *src);
+
+  virtual std::string GetType() {return "Surface";}
 
 protected:
   vtkSVNURBSSurface();

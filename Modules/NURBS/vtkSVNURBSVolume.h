@@ -41,7 +41,7 @@
 #ifndef vtkSVNURBSVolume_h
 #define vtkSVNURBSVolume_h
 
-#include "vtkDataObject.h"
+#include "vtkSVNURBSObject.h"
 #include "vtkSVNURBSModule.h"
 
 #include "vtkSVControlGrid.h"
@@ -51,12 +51,12 @@
 #include "vtkPolyData.h"
 #include "vtkUnstructuredGrid.h"
 
-class VTKSVNURBS_EXPORT vtkSVNURBSVolume : public vtkDataObject
+class VTKSVNURBS_EXPORT vtkSVNURBSVolume : public vtkSVNURBSObject
 {
 public:
   static vtkSVNURBSVolume *New();
 
-  vtkTypeMacro(vtkSVNURBSVolume,vtkDataObject);
+  vtkTypeMacro(vtkSVNURBSVolume,vtkSVNURBSObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
@@ -171,6 +171,8 @@ public:
   static vtkSVNURBSVolume* GetData(vtkInformationVector* v, int i=0);
 
   virtual void DeepCopy(vtkSVNURBSVolume *src);
+
+  virtual std::string GetType() {return "Volume";}
 
 protected:
   vtkSVNURBSVolume();

@@ -37,7 +37,7 @@
 #define vtkSVMUPFESNURBSWriter_h
 
 #include "vtkSVNURBSModule.h" // For export macro
-#include "vtkSVNURBSVolume.h"
+#include "vtkSVNURBSObject.h"
 #include "vtkWriter.h"
 
 class vtkCellArray;
@@ -55,8 +55,8 @@ public:
   /**
    * Get the input to this writer.
    */
-  vtkSVNURBSVolume* GetInput();
-  vtkSVNURBSVolume* GetInput(int port);
+  vtkSVNURBSObject* GetInput();
+  vtkSVNURBSObject* GetInput(int port);
   //@}
 
   //@{
@@ -76,7 +76,7 @@ protected:
 
   void WriteData();
 
-  void WriteMUPFESFile(vtkSVNURBSVolume *volume);
+  void WriteMUPFESFile(vtkSVNURBSObject *object);
 
   char* FileName;
 

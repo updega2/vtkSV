@@ -1,6 +1,6 @@
 /*=========================================================================
  *
- * Copyright (c) 2014-2015 The Regents of the University of California.
+ * Copyright (c) 2014 The Regents of the University of California.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,64 +28,39 @@
  *
  *=========================================================================*/
 
-/**
- *  \class vtkSVNURBSCurveCollection
- *  \brief This is a wrapper around vtkCollection for NURBS
- *
- *  \author Adam Updegrove
- *  \author updega2@gmail.com
- *  \author UC Berkeley
- *  \author shaddenlab.berkeley.edu
- */
+#include "vtkSVNURBSObject.h"
 
-#ifndef vtkSVNURBSCurveCollection_h
-#define vtkSVNURBSCurveCollection_h
-
-#include "vtkCollection.h"
-#include "vtkSVNURBSModule.h"
-
-class vtkSVNURBSCurve;
-
-class VTKSVNURBS_EXPORT vtkSVNURBSCurveCollection : public vtkCollection
+// ----------------------
+// Constructor
+// ----------------------
+vtkSVNURBSObject::vtkSVNURBSObject()
 {
-public:
-  vtkTypeMacro(vtkSVNURBSCurveCollection,vtkCollection);
+}
 
-  /**
-   * Add a NURBS object to the list.
-   */
-  void AddItem(vtkSVNURBSCurve *ds);
+// ----------------------
+// Destructor
+// ----------------------
+vtkSVNURBSObject::~vtkSVNURBSObject()
+{
+}
 
-  /**
-   * Get the next NURBS object in the list.
-   */
-  vtkSVNURBSCurve *GetNextItem();
+// ----------------------
+// DeepCopy
+// ----------------------
+void vtkSVNURBSObject::DeepCopy(vtkSVNURBSObject *src)
+{
+  this->Superclass::DeepCopy(src);
+}
 
-  /**
-   * Get the ith NURBS object in the list.
-   */
-  vtkSVNURBSCurve *GetItem(int i);
+//----------------------------------------------------------------------------
+vtkSVNURBSObject* vtkSVNURBSObject::GetData(vtkInformation* info)
+{
+  return info? vtkSVNURBSObject::SafeDownCast(info->Get(DATA_OBJECT())) : 0;
+}
 
-  /**
-   * Reentrant safe way to get an object in a collection. Just pass the
-   * same cookie back and forth.
-   */
-  vtkSVNURBSCurve *GetNextDataObject(vtkCollectionSimpleIterator &cookie);
+//----------------------------------------------------------------------------
+vtkSVNURBSObject* vtkSVNURBSObject::GetData(vtkInformationVector* v, int i)
+{
+  return vtkSVNURBSObject::GetData(v->GetInformationObject(i));
+}
 
-  static vtkSVNURBSCurveCollection *New();
-
-protected:
-  vtkSVNURBSCurveCollection() {}
-  ~vtkSVNURBSCurveCollection() {}
-
-
-private:
-  // hide the standard AddItem from the user and the compiler.
-  void AddItem(vtkObject *o) { this->vtkCollection::AddItem(o); };
-
-  vtkSVNURBSCurveCollection(const vtkSVNURBSCurveCollection&);
-  void operator=(const vtkSVNURBSCurveCollection&);
-};
-
-#endif
-// VTK-HeaderTest-Exclude: vtkCollection.h

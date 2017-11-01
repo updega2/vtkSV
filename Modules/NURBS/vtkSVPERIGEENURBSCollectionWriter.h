@@ -29,35 +29,25 @@
  *=========================================================================*/
 
 /**
- * \class   vtkSVPERIGEENURBSWriter
+ * \class   vtkSVPERIGEENURBSCollectionWriter
  * \brief   write ASCII raw file
 */
 
-#ifndef vtkSVPERIGEENURBSWriter_h
-#define vtkSVPERIGEENURBSWriter_h
+#ifndef vtkSVPERIGEENURBSCollectionWriter_h
+#define vtkSVPERIGEENURBSCollectionWriter_h
 
 #include "vtkSVNURBSModule.h" // For export macro
 #include "vtkSVNURBSObject.h"
-#include "vtkWriter.h"
+#include "vtkAlgorithm.h"
+#include "vtkSVNURBSCollection.h"
 
-class vtkCellArray;
-class vtkPoints;
-class vtkPolyData;
 
-class VTKSVNURBS_EXPORT vtkSVPERIGEENURBSWriter : public vtkWriter
+class VTKSVNURBS_EXPORT vtkSVPERIGEENURBSCollectionWriter : public vtkAlgorithm
 {
 public:
-  static vtkSVPERIGEENURBSWriter *New();
-  vtkTypeMacro(vtkSVPERIGEENURBSWriter,vtkWriter);
+  static vtkSVPERIGEENURBSCollectionWriter *New();
+  vtkTypeMacro(vtkSVPERIGEENURBSCollectionWriter,vtkAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
-
-  //@{
-  /**
-   * Get the input to this writer.
-   */
-  vtkSVNURBSObject* GetInput();
-  vtkSVNURBSObject* GetInput(int port);
-  //@}
 
   //@{
   /**
@@ -67,24 +57,55 @@ public:
   vtkGetStringMacro(FileName);
   //@}
 
+  //@{
+  /**
+   * Set/get the input to this writer.
+   */
+  void SetInputData(vtkSVNURBSCollection *input);
+  void SetInputData(int index, vtkDataObject *input);
+  //@}
+
+
 protected:
-  vtkSVPERIGEENURBSWriter();
-  ~vtkSVPERIGEENURBSWriter()
+  vtkSVPERIGEENURBSCollectionWriter();
+  ~vtkSVPERIGEENURBSCollectionWriter()
   {
     delete[] this->FileName;
   }
 
-  void WriteData();
+  int ProcessRequest(vtkInformation*,
+                             vtkInformationVector**,
+                             vtkInformationVector*);
 
-  void WritePERIGEEFile(vtkSVNURBSObject *object);
+  // convenience method
+  virtual int RequestInformation(vtkInformation* request,
+                                 vtkInformationVector** inputVector,
+                                 vtkInformationVector* outputVector);
+
+  /**
+   * This is called by the superclass.
+   * This is the method you should override.
+   */
+  virtual int RequestData(vtkInformation* request,
+                          vtkInformationVector** inputVector,
+                          vtkInformationVector* outputVector);
+
+  /**
+   * This is called by the superclass.
+   * This is the method you should override.
+   */
+  virtual int RequestUpdateExtent(vtkInformation*,
+                                  vtkInformationVector**,
+                                  vtkInformationVector*);
+
 
   char* FileName;
 
   int FillInputPortInformation(int port, vtkInformation *info);
 
 private:
-  vtkSVPERIGEENURBSWriter(const vtkSVPERIGEENURBSWriter&);
-  void operator=(const vtkSVPERIGEENURBSWriter&);
+  vtkSVPERIGEENURBSCollectionWriter(const vtkSVPERIGEENURBSCollectionWriter&);
+  void operator=(const vtkSVPERIGEENURBSCollectionWriter&);
 };
 
 #endif

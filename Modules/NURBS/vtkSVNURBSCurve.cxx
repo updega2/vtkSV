@@ -725,7 +725,7 @@ int vtkSVNURBSCurve::GetMultiplicity(vtkIntArray *multiplicity, vtkDoubleArray *
 // ----------------------
 // ExtractBezierCurves
 // ----------------------
-int vtkSVNURBSCurve::ExtractBezierCurves(vtkSVNURBSCurveCollection *curves)
+int vtkSVNURBSCurve::ExtractBezierCurves(vtkSVNURBSCollection *curves)
 {
   if (vtkSVNURBSUtils::CurveBezierExtraction(this->ControlPointGrid,
                                              this->KnotVector,

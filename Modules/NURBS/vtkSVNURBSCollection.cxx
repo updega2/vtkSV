@@ -28,17 +28,17 @@
  *
  *=========================================================================*/
 
-#include "vtkSVNURBSCurveCollection.h"
+#include "vtkSVNURBSCollection.h"
 #include "vtkObjectFactory.h"
 
-#include "vtkSVNURBSCurve.h"
+#include "vtkSVNURBSObject.h"
 
-vtkStandardNewMacro(vtkSVNURBSCurveCollection);
+vtkStandardNewMacro(vtkSVNURBSCollection);
 
 /**
  * Add a NURBS object to the list.
  */
-void vtkSVNURBSCurveCollection::AddItem(vtkSVNURBSCurve *ds)
+void vtkSVNURBSCollection::AddItem(vtkSVNURBSObject *ds)
 {
   this->vtkCollection::AddItem(ds);
 }
@@ -46,24 +46,24 @@ void vtkSVNURBSCurveCollection::AddItem(vtkSVNURBSCurve *ds)
 /**
  * Get the next NURBS object in the list.
  */
-vtkSVNURBSCurve *vtkSVNURBSCurveCollection::GetNextItem()
+vtkSVNURBSObject *vtkSVNURBSCollection::GetNextItem()
 {
-  return static_cast<vtkSVNURBSCurve *>(this->GetNextItemAsObject());
+  return static_cast<vtkSVNURBSObject *>(this->GetNextItemAsObject());
 }
 
 /**
  * Get the ith NURBS object in the list.
  */
-vtkSVNURBSCurve *vtkSVNURBSCurveCollection::GetItem(int i)
+vtkSVNURBSObject *vtkSVNURBSCollection::GetItem(int i)
 {
-  return static_cast<vtkSVNURBSCurve *>(this->GetItemAsObject(i));
+  return static_cast<vtkSVNURBSObject *>(this->GetItemAsObject(i));
 }
 
 /**
  * Reentrant safe way to get an object in a collection. Just pass the
  * same cookie back and forth.
  */
-vtkSVNURBSCurve *vtkSVNURBSCurveCollection::GetNextDataObject(vtkCollectionSimpleIterator &cookie)
+vtkSVNURBSObject *vtkSVNURBSCollection::GetNextDataObject(vtkCollectionSimpleIterator &cookie)
 {
-  return static_cast<vtkSVNURBSCurve *>(this->GetNextItemAsObject(cookie));
+  return static_cast<vtkSVNURBSObject *>(this->GetNextItemAsObject(cookie));
 }

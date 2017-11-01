@@ -40,6 +40,7 @@
 #include "vtkTriangle.h"
 #include "vtkTriangleStrip.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVNURBSVolume.h"
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 # include <unistd.h> /* unlink */
@@ -58,7 +59,7 @@ vtkSVMUPFESNURBSWriter::vtkSVMUPFESNURBSWriter()
 
 void vtkSVMUPFESNURBSWriter::WriteData()
 {
-  vtkSVNURBSVolume *input = this->GetInput();
+  vtkSVNURBSObject *input = this->GetInput();
 
   if (this->FileName == NULL)
   {
@@ -76,7 +77,7 @@ void vtkSVMUPFESNURBSWriter::WriteData()
   }
 }
 
-void vtkSVMUPFESNURBSWriter::WriteMUPFESFile(vtkSVNURBSVolume *volume)
+void vtkSVMUPFESNURBSWriter::WriteMUPFESFile(vtkSVNURBSObject *object)
 {
   FILE *fp;
   double v[3];
@@ -84,62 +85,67 @@ void vtkSVMUPFESNURBSWriter::WriteMUPFESFile(vtkSVNURBSVolume *volume)
   vtkIdType npts = 0;
   vtkIdType *indx = 0;
 
-  if ((fp = fopen(this->FileName, "w")) == NULL)
+  if (!strncmp(object->GetType().c_str(),"Volume",6))
   {
-    vtkErrorMacro(<< "Couldn't open file: " << this->FileName);
-    this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
-    return;
-  }
-//
-//  Write header
-//
-  vtkDebugMacro("Writing ASCII MUPFES file");
+    vtkSVNURBSVolume *volume = vtkSVNURBSVolume::SafeDownCast(object);
 
-  vtkDoubleArray *uKnots = volume->GetUKnotVector();
-  vtkDoubleArray *vKnots = volume->GetVKnotVector();
-  vtkDoubleArray *wKnots = volume->GetWKnotVector();
-  int nuk = uKnots->GetNumberOfTuples();
-  int nvk = vKnots->GetNumberOfTuples();
-  int nwk = wKnots->GetNumberOfTuples();
-
-  vtkSVControlGrid *controlPoints = volume->GetControlPointGrid();
-
-  int dims[3];
-  controlPoints->GetDimensions(dims);
-  int np = dims[0];
-  int mp = dims[1];
-  int lp = dims[2];
-
-  fprintf(fp,"#knotV %d\n", nuk);
-  for (int i=0; i<nuk; i++)
-    fprintf(fp,"%.6f\n", uKnots->GetTuple1(i));
-  fprintf(fp,"#knotV %d\n", nvk);
-  for (int i=0; i<nvk; i++)
-    fprintf(fp,"%.6f\n", vKnots->GetTuple1(i));
-  fprintf(fp,"#knotV %d\n", nwk);
-  for (int i=0; i<nwk; i++)
-    fprintf(fp,"%.6f\n", wKnots->GetTuple1(i));
-  fprintf(fp,"#ctrlPts %d\n", np*mp*lp);
-  for (int i=0;i<np; i++)
-  {
-    for (int j=0; j<mp; j++)
+    if ((fp = fopen(this->FileName, "w")) == NULL)
     {
-      for (int k=0; k<lp; k++)
+      vtkErrorMacro(<< "Couldn't open file: " << this->FileName);
+      this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
+      return;
+    }
+  //
+  //  Write header
+  //
+    vtkDebugMacro("Writing ASCII MUPFES file");
+
+    vtkDoubleArray *uKnots = volume->GetUKnotVector();
+    vtkDoubleArray *vKnots = volume->GetVKnotVector();
+    vtkDoubleArray *wKnots = volume->GetWKnotVector();
+    int nuk = uKnots->GetNumberOfTuples();
+    int nvk = vKnots->GetNumberOfTuples();
+    int nwk = wKnots->GetNumberOfTuples();
+
+    vtkSVControlGrid *controlPoints = volume->GetControlPointGrid();
+
+    int dims[3];
+    controlPoints->GetDimensions(dims);
+    int np = dims[0];
+    int mp = dims[1];
+    int lp = dims[2];
+
+    fprintf(fp,"#knotV %d\n", nuk);
+    for (int i=0; i<nuk; i++)
+      fprintf(fp,"%.6f\n", uKnots->GetTuple1(i));
+    fprintf(fp,"#knotV %d\n", nvk);
+    for (int i=0; i<nvk; i++)
+      fprintf(fp,"%.6f\n", vKnots->GetTuple1(i));
+    fprintf(fp,"#knotV %d\n", nwk);
+    for (int i=0; i<nwk; i++)
+      fprintf(fp,"%.6f\n", wKnots->GetTuple1(i));
+    fprintf(fp,"#ctrlPts %d\n", np*mp*lp);
+    for (int i=0;i<np; i++)
+    {
+      for (int j=0; j<mp; j++)
       {
-        double pw[4];
-        controlPoints->GetControlPoint(i, j, k, pw);
-        fprintf(fp,"%.6f %.6f %.6f %.6f\n", pw[0], pw[1], pw[2], pw[3]);
+        for (int k=0; k<lp; k++)
+        {
+          double pw[4];
+          controlPoints->GetControlPoint(i, j, k, pw);
+          fprintf(fp,"%.6f %.6f %.6f %.6f\n", pw[0], pw[1], pw[2], pw[3]);
+        }
       }
     }
-  }
 
-  if(fflush(fp))
-  {
-    fclose(fp);
-    this->SetErrorCode(vtkErrorCode::OutOfDiskSpaceError);
-    return;
+    if(fflush(fp))
+    {
+      fclose(fp);
+      this->SetErrorCode(vtkErrorCode::OutOfDiskSpaceError);
+      return;
+    }
+    fclose (fp);
   }
-  fclose (fp);
 }
 
 //----------------------------------------------------------------------------
@@ -154,20 +160,20 @@ void vtkSVMUPFESNURBSWriter::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 //----------------------------------------------------------------------------
-vtkSVNURBSVolume* vtkSVMUPFESNURBSWriter::GetInput()
+vtkSVNURBSObject* vtkSVMUPFESNURBSWriter::GetInput()
 {
-  return vtkSVNURBSVolume::SafeDownCast(this->GetInput(0));
+  return vtkSVNURBSObject::SafeDownCast(this->GetInput(0));
 }
 
 //----------------------------------------------------------------------------
-vtkSVNURBSVolume* vtkSVMUPFESNURBSWriter::GetInput(int port)
+vtkSVNURBSObject* vtkSVMUPFESNURBSWriter::GetInput(int port)
 {
-  return vtkSVNURBSVolume::SafeDownCast(this->Superclass::GetInput(port));
+  return vtkSVNURBSObject::SafeDownCast(this->Superclass::GetInput(port));
 }
 
 //----------------------------------------------------------------------------
 int vtkSVMUPFESNURBSWriter::FillInputPortInformation(int, vtkInformation *info)
 {
-  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkSVNURBSVolume");
+  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkSVNURBSObject");
   return 1;
 }

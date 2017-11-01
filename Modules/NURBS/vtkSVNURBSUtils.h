@@ -52,8 +52,7 @@
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkSVControlGrid.h"
-#include "vtkSVNURBSCurveCollection.h"
-#include "vtkSVNURBSSurfaceCollection.h"
+#include "vtkSVNURBSCollection.h"
 #include "vtkTypedArray.h"
 
 #include <cassert> // assert() in inline implementations.
@@ -329,7 +328,7 @@ public:
    *  \return curves The collection of bezier curves. */
   static int CurveBezierExtraction(vtkSVControlGrid *controlPoints, vtkDoubleArray *knots,
                                    const int degree,
-                                   vtkSVNURBSCurveCollection *curves);
+                                   vtkSVNURBSCollection *curves);
 
   /** \brief Decreases the degree of the curve by first performing bezier
    *  extraction of the curve knot span, the decreasing the degree, and then
@@ -440,7 +439,7 @@ public:
                                      vtkDoubleArray *uKnots, const int uDegree,
                                      vtkDoubleArray *vKnots, const int vDegree,
                                      const int extractDirection,
-                                     vtkSVNURBSSurfaceCollection *surface);
+                                     vtkSVNURBSCollection *surface);
 
   // Volume functions
   /** \brief Get the control points of a volume given the input data points
