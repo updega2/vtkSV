@@ -4829,9 +4829,9 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     lofter->SetUDegree(2);
     lofter->SetVDegree(2);
     lofter->SetWDegree(2);
-    lofter->SetUnstructuredGridUSpacing(1./w_div);
-    lofter->SetUnstructuredGridVSpacing(1./l_div);
-    lofter->SetUnstructuredGridWSpacing(1./h_div);
+    lofter->SetUnstructuredGridUSpacing(1./w_divs[i]);
+    lofter->SetUnstructuredGridVSpacing(1./l_divs[i]);
+    lofter->SetUnstructuredGridWSpacing(1./h_divs[i]);
     lofter->SetUKnotSpanType("average");
     lofter->SetUParametricSpanType("chord");
     lofter->SetVKnotSpanType("average");
