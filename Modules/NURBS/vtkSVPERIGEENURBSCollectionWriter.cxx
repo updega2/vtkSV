@@ -159,7 +159,7 @@ int vtkSVPERIGEENURBSCollectionWriter::RequestData(
         std::string rawName  = vtkSVIOUtils::GetRawName(this->FileName);
         std::string extName  = vtkSVIOUtils::GetExt(this->FileName);
 
-        fn = pathName + "/" + rawName + "_" + std::to_string(i) + "." + extName;
+        fn = pathName + "/" + rawName + "_" + vtkSVIOUtils::IntToString(i) + "." + extName;
       }
 
       vtkNew(vtkSVPERIGEENURBSWriter, objWriter);
