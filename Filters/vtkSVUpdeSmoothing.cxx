@@ -73,8 +73,8 @@ vtkStandardNewMacro(vtkSVUpdeSmoothing);
 // ----------------------
 vtkSVUpdeSmoothing::vtkSVUpdeSmoothing()
 {
-    this->NumSmoothOperations = 10;
-    this->Alpha = 0.0;
+    this->NumSmoothOperations = 30;
+    this->Alpha = 0.5;
     this->Beta = 0.8;
 }
 
