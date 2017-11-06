@@ -35,6 +35,10 @@ set(module vtkSVVMTK)
 set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
   vtkvmtkReferenceSystemUtilities.cxx
   vtkvmtkCenterlineUtilities.cxx
+  vtkvmtkCenterlineAttributesFilter.cxx
+  vtkvmtkCenterlineBranchExtractor.cxx
+  vtkvmtkCenterlineSphereDistance.cxx
+  vtkvmtkCenterlineSplittingAndGroupingFilter.cxx
   vtkvmtkMergeCenterlines.cxx
   vtkvmtkMath.cxx
   vtkvmtkMinHeap.cxx
@@ -51,6 +55,10 @@ set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
 set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkReferenceSystemUtilities.h
   vtkvmtkCenterlineUtilities.h
+  vtkvmtkCenterlineAttributesFilter.h
+  vtkvmtkCenterlineBranchExtractor.h
+  vtkvmtkCenterlineSphereDistance.h
+  vtkvmtkCenterlineSplittingAndGroupingFilter.h
   vtkvmtkMergeCenterlines.h
   vtkvmtkWin32Header.h
   vtkvmtkConstants.h

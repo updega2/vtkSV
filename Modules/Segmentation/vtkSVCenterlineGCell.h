@@ -42,9 +42,9 @@
 
 #include "vtkPolyData.h"
 #include "vtkObject.h"
-#include "vtkSVParameterizationModule.h" // For exports
+#include "vtkSVSegmentationModule.h" // For exports
 
-class VTKSVPARAMETERIZATION_EXPORT vtkSVCenterlineGCell : public vtkObject
+class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineGCell : public vtkObject
 {
 public:
   static vtkSVCenterlineGCell* New();
