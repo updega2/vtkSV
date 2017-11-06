@@ -37,8 +37,16 @@ set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
   vtkvmtkCenterlineUtilities.cxx
   vtkvmtkMergeCenterlines.cxx
   vtkvmtkMath.cxx
+  vtkvmtkMinHeap.cxx
   vtkvmtkPolyDataCenterlineGroupsClipper.cxx
-  vtkvmtkPolyBallLine.cxx)
+  vtkvmtkPolyBallLine.cxx
+  vtkvmtkSteepestDescentLineTracer.cxx
+  vtkvmtkNonManifoldFastMarching.cxx
+  vtkvmtkNonManifoldSteepestDescent.cxx
+  vtkvmtkVoronoiDiagram3D.cxx
+  vtkvmtkSimplifyVoronoiDiagram.cxx
+  vtkvmtkInternalTetrahedraExtractor.cxx
+  vtkvmtkPolyDataCenterlines.cxx)
 
 set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkReferenceSystemUtilities.h
@@ -48,8 +56,16 @@ set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkConstants.h
   vtkvmtkConfigure.h
   vtkvmtkMath.h
+  vtkvmtkMinHeap.h
   vtkvmtkPolyDataCenterlineGroupsClipper.h
-  vtkvmtkPolyBallLine.h)
+  vtkvmtkPolyBallLine.h
+  vtkvmtkSteepestDescentLineTracer.h
+  vtkvmtkNonManifoldFastMarching.h
+  vtkvmtkNonManifoldSteepestDescent.h
+  vtkvmtkVoronoiDiagram3D.h
+  vtkvmtkSimplifyVoronoiDiagram.h
+  vtkvmtkInternalTetrahedraExtractor.h
+  vtkvmtkPolyDataCenterlines.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
