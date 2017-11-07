@@ -133,15 +133,15 @@ int main(int argc, char *argv[])
     cout << "  -cutoffradius                  : Value at which a certain distance away from the centerline the function that is used for clipping is set to a large value, essentially clipping everything outside that radius [default 1.0e32]"<< endl;
     cout << "  -clipvalue                     : Value to use for clipping function [default 0.0]"<< endl;
     cout << "  -useradiusinfo                 : Use radius to help in clipping operation [default 1]"<< endl;
-    cout << "  -usevmtkclipping               : Use the original vmtk clipping algorithm which can use the full centerlines rather than the modified centerline clipping [default 1]" << endl;
+    cout << "  -usevmtkclipping               : Use the original vmtk clipping algorithm which can use the full centerlines rather than the modified centerline clipping [default 0]" << endl;
     cout << "  -enforceboundarydirections     : At separating patches, enforce the boundary directions by modifying the clustering vectors [default 1]" << endl;
     cout << "  -polycubedivisions             : The number of divisions for the width and height of the polycube [default 10]" << endl;
     cout << "  -polycubeunitlength            : The unit length for each division of the polycube. If 0.0, an approximate size will be found using the average radius of the model [default 0.0]" << endl;
     cout << "  -normalsweighting              : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
     cout << "  -isvasculature                 : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
     cout << "  -numberofcenterlineremovepts   : Number of centerline points to remove from the end of the branches if the model is not vasculature [default 3]" << endl;
-    cout << "  -changetrifurcationcenterlines : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlineseparationthreshold [efault 0]" << endl;
-    cout << "  -centerlineseparationthreshold : The distance at which a new branch is determinedif the changetrifurcationcenterlines flag is set to 1. Play with this number to find a good centerline separation [default 0.6]" << endl;
+    cout << "  -modifycenterlines             : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlineseparationthreshold [efault 0]" << endl;
+    cout << "  -centerlineseparationthreshold : The distance at which a new branch is determinedif the modifycenterlines flag is set to 1. Play with this number to find a good centerline separation [default 0.6]" << endl;
     cout << "  -writecenterlinegraph          : Write the centerline graph to file [default 0]" << endl;
     cout << "  -writemergedcenterlines        : Write the merged centerlines to file [default 0]" << endl;
     cout << "  -writesurfacepolycube          : Write the surface polycube to file [default 0]" << endl;

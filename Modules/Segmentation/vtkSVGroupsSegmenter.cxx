@@ -406,6 +406,7 @@ int vtkSVGroupsSegmenter::RunFilter()
   {
     vtkNew(vtkSplineFilter, resampler);
     resampler->SetInputData(this->Centerlines);
+    //resampler->SetInputData(this->MergedCenterlines);
     resampler->SetSubdivideToLength();
     resampler->SetLength(this->Centerlines->GetLength()/100.);
     resampler->Update();
@@ -3389,14 +3390,14 @@ int vtkSVGroupsSegmenter::FixEndPatches(vtkPolyData *pd)
   std::vector<int> wholePatchFix;
   this->CheckEndPatches(pd, endRegions, individualFix, wholePatchFix);
 
-  if (individualFix.size() + wholePatchFix.size() == 1)
+  if (individualFix.size() == 0 && wholePatchFix.size() >= 1)
   {
-    fprintf(stdout,"ONE END HERE, CHECK TO SEE IF ITS THE RIGHT ONE\n");
+    fprintf(stdout,"NO INDIVIDUAL FIX ENDS, THAT MEANS EITHER WE HAVE A GOOD ONE ALREADY OR THE BAD WHOLE PATCH IS THE ONE, CHECK\n");
     int badPatch;
-    if (wholePatchFix.size() == 1)
+    for (int b=0; b<wholePatchFix.size(); b++)
     {
       fprintf(stdout,"ITS A WHOLE PATCH\n");
-      badPatch = wholePatchFix[0];
+      badPatch = wholePatchFix[b];
       vtkNew(vtkIdList, neighborPatchIds);
       for (int i=0; i<endRegions[badPatch].NumberOfElements; i++)
       {
@@ -3428,10 +3429,13 @@ int vtkSVGroupsSegmenter::FixEndPatches(vtkPolyData *pd)
         fprintf(stdout,"  ID: %d\n", neighborPatchIds->GetId(j));
       if (neighborPatchIds->GetNumberOfIds() == 4 &&
           neighborPatchIds->IsId(0) != -1 && neighborPatchIds->IsId(1) != -1 &&
-          neighborPatchIds->IsId(2) != -1 && neighborPatchIds->IsId(3) != -1)
+          neighborPatchIds->IsId(2) != -1 && neighborPatchIds->IsId(3) != -1 &&
+          endRegions[badPatch].NumberOfCorners == 4)
       {
-        // This region is okay
-        return SV_OK;
+        // This region is okay because it has four corners and it touches all four side group ids
+        fprintf(stdout,"WE FOUND OUR GOOD REGION: %d\n", badPatch);
+        wholePatchFix.erase(std::remove(wholePatchFix.begin(), wholePatchFix.end(), badPatch), wholePatchFix.end());
+        break;
       }
     }
   }
@@ -7700,8 +7704,8 @@ int vtkSVGroupsSegmenter::MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *po
     if (branchRegions[j].CornerPoints.size() != 4)
     {
       fprintf(stderr,"Number of corners on region %d is %d, needs to be 4\n", j, branchRegions[j].CornerPoints.size());
-      //std::string badName = "/Users/adamupdegrove/Desktop/tmp/BADCORNERS.vtp";
-      //vtkSVIOUtils::WriteVTPFile(badName, branchPd);
+      std::string badName = "/Users/adamupdegrove/Desktop/tmp/BADCORNERS.vtp";
+      vtkSVIOUtils::WriteVTPFile(badName, branchPd);
       return SV_ERROR;
     }
   }

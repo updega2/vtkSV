@@ -205,6 +205,27 @@ int vtkSVCenterlineGraph::BuildGraph()
 {
   fprintf(stdout,"Building graph!!!\n");
 
+  // Check to see if we need to flip the first line
+  vtkIdType npts, *pts;
+  int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName.c_str())->LookupValue(this->Root->GroupId);
+  this->Lines->GetCellPoints(cellId, npts, pts);
+
+  vtkNew(vtkIdList, point0Cells);
+  this->Lines->GetPointCells(pts[0], point0Cells);
+  vtkNew(vtkIdList, pointNCells);
+  this->Lines->GetPointCells(pts[npts-1], pointNCells);
+
+  if (point0Cells->GetNumberOfIds() > 1 && pointNCells->GetNumberOfIds() > 1)
+  {
+    fprintf(stdout,"Group 0 must be a centerline that has at least one end of the centerline not touching any other group\n");
+    return SV_ERROR;
+  }
+
+  if (point0Cells->GetNumberOfIds() > 1)
+    this->FlipLinePoints(this->Lines, cellId);
+
+
+  // Get connecting groups
   vtkNew(vtkIdList, connectingGroups);
   this->GetConnectingLineGroups(this->Root->GroupId, connectingGroups);
 
@@ -214,7 +235,6 @@ int vtkSVCenterlineGraph::BuildGraph()
     fprintf(stdout,"Only one centerline\n");
     //return SV_OK;
   }
-
 
   for (int i=0; i<connectingGroups->GetNumberOfIds(); i++)
   {
@@ -425,11 +445,11 @@ int vtkSVCenterlineGraph::ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *pa
       thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
       thresholder->Update();
 
-      double startPts[3], secondPts[3];
-      thresholder->GetOutput()->GetPoint(0, startPts);
-      thresholder->GetOutput()->GetPoint(1, secondPts);
+      double startPt[3], secondPt[3];
+      thresholder->GetOutput()->GetPoint(0, startPt);
+      thresholder->GetOutput()->GetPoint(1, secondPt);
 
-      vtkMath::Subtract(secondPts, startPts, parent->Children[i]->BranchVec);
+      vtkMath::Subtract(secondPt, startPt, parent->Children[i]->BranchVec);
       vtkMath::Normalize(parent->Children[i]->BranchVec);
 
       // Get angle between vectors
@@ -529,11 +549,11 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
     thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
     thresholder->Update();
 
-    double startPts[3], secondPts[3];
-    thresholder->GetOutput()->GetPoint(0, startPts);
-    thresholder->GetOutput()->GetPoint(1, secondPts);
+    double startPt[3], secondPt[3];
+    thresholder->GetOutput()->GetPoint(0, startPt);
+    thresholder->GetOutput()->GetPoint(1, secondPt);
 
-    vtkMath::Subtract(secondPts, startPts, parent->Children[i]->BranchVec);
+    vtkMath::Subtract(secondPt, startPt, parent->Children[i]->BranchVec);
     vtkMath::Normalize(parent->Children[i]->BranchVec);
 
     // Get angle between vectors
@@ -566,6 +586,24 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   vtkMath::Cross(vec0, parent->Children[minChild]->BranchVec, vec3);
   vtkMath::Normalize(vec3);
 
+  // Update the reference directions
+  vtkMath::Normalize(vec3);
+  vtkMath::Cross(vec3, vec0, refDirs[1]);
+  vtkMath::Normalize(refDirs[1]);
+  for (int i=0; i<3; i++)
+    refDirs[2][i] = vec3[i];
+
+  // Now children just in case terminating children
+  for (int i=0; i<3; i++)
+  {
+    for (int j=0; j<3; j++)
+    {
+      for (int k=0; k<parent->Children.size(); k++)
+        parent->Children[k]->RefDirs[i][j] = refDirs[i][j];
+    }
+  }
+
+
   parent->DivergingChild = minChild;
   parent->AligningChild  = maxChild;
 
@@ -582,13 +620,13 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   vtkNew(vtkIntArray, alignKeys);
   for (int i=0; i<numChildren; i++)
   {
-    double checkDot = vtkMath::Dot(parent->Children[minChild]->BranchVec, parent->Children[i]->BranchVec);
-    fprintf(stdout,"DOTER WITH DIVERGER %.6f FOR GROUP %d\n", checkDot, parent->Children[i]->GroupId);
+    double checkDot = vtkMath::Dot(refDirs[1], parent->Children[i]->BranchVec);
+    fprintf(stdout,"DOTER WITH DIVERGER REFERENCE DIRECTION: %.6f FOR GROUP %d\n", checkDot, parent->Children[i]->GroupId);
     double checkAng = parent->Children[i]->RefAngle;
 
     if (checkDot < 0)
       checkAng = 2.0*SV_PI - checkAng;
-    fprintf(stdout,"ANGLE WITH DIVERGER %.6f FOR GROUP %d\n", 180.0*checkAng/SV_PI, parent->Children[i]->GroupId);
+    fprintf(stdout,"ANGLE WITH DIVERGER REFERENCE DIRECTION: %.6f FOR GROUP %d\n", 180.0*checkAng/SV_PI, parent->Children[i]->GroupId);
 
     alignVals->InsertNextTuple1(checkAng);
     alignKeys->InsertNextTuple1(i);
@@ -616,23 +654,6 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   }
   parent->DivergingChild = newDiverger;
   parent->AligningChild  = newAligner;
-
-  vtkMath::Normalize(vec3);
-  vtkMath::Cross(vec3, vec0, refDirs[1]);
-  vtkMath::Normalize(refDirs[1]);
-  for (int i=0; i<3; i++)
-    refDirs[2][i] = vec3[i];
-
-  // Now children just in case terminating children
-  for (int i=0; i<3; i++)
-  {
-    for (int j=0; j<3; j++)
-    {
-      for (int k=0; k<parent->Children.size(); k++)
-        parent->Children[k]->RefDirs[i][j] = refDirs[i][j];
-    }
-  }
-
   //Check to see orientation with respect to reference vectors. Angle that
   //it makes with reference vector determines the input angle to a
   //lookup table that tells us the absolute direction that the new branch
