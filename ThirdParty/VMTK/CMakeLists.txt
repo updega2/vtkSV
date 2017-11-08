@@ -35,21 +35,45 @@ set(module vtkSVVMTK)
 set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
   vtkvmtkReferenceSystemUtilities.cxx
   vtkvmtkCenterlineUtilities.cxx
+  vtkvmtkCenterlineAttributesFilter.cxx
+  vtkvmtkCenterlineBranchExtractor.cxx
+  vtkvmtkCenterlineSphereDistance.cxx
+  vtkvmtkCenterlineSplittingAndGroupingFilter.cxx
   vtkvmtkMergeCenterlines.cxx
   vtkvmtkMath.cxx
+  vtkvmtkMinHeap.cxx
   vtkvmtkPolyDataCenterlineGroupsClipper.cxx
-  vtkvmtkPolyBallLine.cxx)
+  vtkvmtkPolyBallLine.cxx
+  vtkvmtkSteepestDescentLineTracer.cxx
+  vtkvmtkNonManifoldFastMarching.cxx
+  vtkvmtkNonManifoldSteepestDescent.cxx
+  vtkvmtkVoronoiDiagram3D.cxx
+  vtkvmtkSimplifyVoronoiDiagram.cxx
+  vtkvmtkInternalTetrahedraExtractor.cxx
+  vtkvmtkPolyDataCenterlines.cxx)
 
 set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkReferenceSystemUtilities.h
   vtkvmtkCenterlineUtilities.h
+  vtkvmtkCenterlineAttributesFilter.h
+  vtkvmtkCenterlineBranchExtractor.h
+  vtkvmtkCenterlineSphereDistance.h
+  vtkvmtkCenterlineSplittingAndGroupingFilter.h
   vtkvmtkMergeCenterlines.h
   vtkvmtkWin32Header.h
   vtkvmtkConstants.h
   vtkvmtkConfigure.h
   vtkvmtkMath.h
+  vtkvmtkMinHeap.h
   vtkvmtkPolyDataCenterlineGroupsClipper.h
-  vtkvmtkPolyBallLine.h)
+  vtkvmtkPolyBallLine.h
+  vtkvmtkSteepestDescentLineTracer.h
+  vtkvmtkNonManifoldFastMarching.h
+  vtkvmtkNonManifoldSteepestDescent.h
+  vtkvmtkVoronoiDiagram3D.h
+  vtkvmtkSimplifyVoronoiDiagram.h
+  vtkvmtkInternalTetrahedraExtractor.h
+  vtkvmtkPolyDataCenterlines.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

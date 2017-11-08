@@ -43,12 +43,12 @@
 #include "vtkPolyData.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkSVCenterlineGCell.h"
-#include "vtkSVParameterizationModule.h" // For exports
+#include "vtkSVSegmentationModule.h" // For exports
 
 #include <map>
 #include <list>
 
-class VTKSVPARAMETERIZATION_EXPORT vtkSVCenterlineGraph : public vtkObject
+class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineGraph : public vtkObject
 {
 public:
   static vtkSVCenterlineGraph* New();
