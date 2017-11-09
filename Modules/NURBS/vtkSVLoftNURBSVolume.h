@@ -161,23 +161,23 @@ public:
   //@{
   /// \brief Get and set object macros for the start derivatives. Should have the
   // same number of values as the input point data in respective direction
-  vtkSetObjectMacro(StartUDerivatives, vtkDoubleArray);
-  vtkGetObjectMacro(StartUDerivatives, vtkDoubleArray);
-  vtkSetObjectMacro(StartVDerivatives, vtkDoubleArray);
-  vtkGetObjectMacro(StartVDerivatives, vtkDoubleArray);
-  vtkSetObjectMacro(StartWDerivatives, vtkDoubleArray);
-  vtkGetObjectMacro(StartWDerivatives, vtkDoubleArray);
+  vtkSetObjectMacro(StartUDerivatives, vtkStructuredGrid);
+  vtkGetObjectMacro(StartUDerivatives, vtkStructuredGrid);
+  vtkSetObjectMacro(StartVDerivatives, vtkStructuredGrid);
+  vtkGetObjectMacro(StartVDerivatives, vtkStructuredGrid);
+  vtkSetObjectMacro(StartWDerivatives, vtkStructuredGrid);
+  vtkGetObjectMacro(StartWDerivatives, vtkStructuredGrid);
   //@}
 
   //@{
   /// \brief Get and set object macros for the end derivatives. Should have the
   // same number of values as the input point data in respective direction
-  vtkSetObjectMacro(EndUDerivatives, vtkDoubleArray);
-  vtkGetObjectMacro(EndUDerivatives, vtkDoubleArray);
-  vtkSetObjectMacro(EndVDerivatives, vtkDoubleArray);
-  vtkGetObjectMacro(EndVDerivatives, vtkDoubleArray);
-  vtkSetObjectMacro(EndWDerivatives, vtkDoubleArray);
-  vtkGetObjectMacro(EndWDerivatives, vtkDoubleArray);
+  vtkSetObjectMacro(EndUDerivatives, vtkStructuredGrid);
+  vtkGetObjectMacro(EndUDerivatives, vtkStructuredGrid);
+  vtkSetObjectMacro(EndVDerivatives, vtkStructuredGrid);
+  vtkGetObjectMacro(EndVDerivatives, vtkStructuredGrid);
+  vtkSetObjectMacro(EndWDerivatives, vtkStructuredGrid);
+  vtkGetObjectMacro(EndWDerivatives, vtkStructuredGrid);
   //@}
 
   //@{
@@ -235,12 +235,12 @@ protected:
   vtkStructuredGrid *InputGrid;
   vtkSVNURBSVolume *Volume;
 
-  vtkDoubleArray *StartUDerivatives;
-  vtkDoubleArray *StartVDerivatives;
-  vtkDoubleArray *StartWDerivatives;
-  vtkDoubleArray *EndUDerivatives;
-  vtkDoubleArray *EndVDerivatives;
-  vtkDoubleArray *EndWDerivatives;
+  vtkStructuredGrid *StartUDerivatives;
+  vtkStructuredGrid *StartVDerivatives;
+  vtkStructuredGrid *StartWDerivatives;
+  vtkStructuredGrid *EndUDerivatives;
+  vtkStructuredGrid *EndVDerivatives;
+  vtkStructuredGrid *EndWDerivatives;
 
 private:
   vtkSVLoftNURBSVolume(const vtkSVLoftNURBSVolume&);  // Not implemented.

@@ -428,6 +428,67 @@ public:
                                       vtkTypedArray<double> *newNPU, vtkTypedArray<double> *newNPV,
                                       vtkTypedArray<double> *newPoints);
 
+  /** \brief Set the specified end derivatives in the linear system for a surface.
+   *  \param NPU The current matrix of basis function evaluations in the u direction.
+   *  \param NPU The current matrix of basis function evaluations in the v direction.
+   *  \param NPW The current matrix of basis function evaluations in the w direction.
+   *  \param points The input data points.
+   *  \param p The degree of the surface in the u direction.
+   *  \param q The degree of the surface in the v direction.
+   *  \param r The degree of the surface in the w direction.
+   *  \param kutype The type of knot span to be used in the u direction. Used
+   *  primarily if the end derivatives need to be specified.
+   *  \param kvtype The type of knot span to be used in the v direction. Used
+   *  primarily if the end derivatives need to be specified.
+   *  \param kwtype The type of knot span to be used in the w direction. Used
+   *  primarily if the end derivatives need to be specified.
+   *  \param DU0 The derivative grid to be used at the beginning in the u
+   *  direction.
+   *  \param DUN The derivative grid to be used at the end in the u direction.
+   *  \param DV0 The derivative grid to be used at the beginning in the v
+   *  direction.
+   *  \param DWN The derivative grid to be used at the end in the v direction.
+   *  \param DW0 The derivative grid to be used at the beginning in the w
+   *  direction.
+   *  \param DVN The derivative grid to be used at the end in the w direction.
+   *  \param U The array of approximating paramter values in the u direction.
+   *  \param V The array of approximating paramter values in the v direction.
+   *  \param W The array of approximating paramter values in the w direction.
+   *  \param uKnots The knot span to use for basis function evaluation.
+   *  \param vKnots The knot span to use for basis function evaluation.
+   *  \param wKnots The knot span to use for basis function evaluation.
+   *  \return newNPU The new matrix filled in with the end derivative info in the
+   *  U direction.
+   *  \return newNPU The new matrix filled in with the end derivative info in the
+   *  V direction.
+   *  \return newNPW The new matrix filled in with the end derivative info in the
+   *  W direction.
+   *  \return newPoints New list of points with end derivative info added. Essentially
+   *  adding the surface boundary conditions to the right hand side. */
+  static int SetVolumeEndDerivatives(vtkTypedArray<double> *NPU,
+                                     vtkTypedArray<double> *NPV,
+                                     vtkTypedArray<double> *NPW,
+                                     vtkTypedArray<double> *points,
+		                                 const int p, const int q, const int r,
+                                     std::string kutype, std::string kvtype,
+                                     std::string kwtype,
+                                     vtkTypedArray<double> *DU0,
+                                     vtkTypedArray<double> *DUN,
+                                     vtkTypedArray<double> *DV0,
+                                     vtkTypedArray<double> *DVN,
+                                     vtkTypedArray<double> *DW0,
+                                     vtkTypedArray<double> *DWN,
+                                     vtkDoubleArray *U,
+                                     vtkDoubleArray *V,
+                                     vtkDoubleArray *W,
+                                     vtkDoubleArray *uKnots,
+                                     vtkDoubleArray *vKnots,
+                                     vtkDoubleArray *wKnots,
+                                     vtkTypedArray<double> *newNPU,
+                                     vtkTypedArray<double> *newNPV,
+                                     vtkTypedArray<double> *newNPW,
+                                     vtkTypedArray<double> *newPoints);
+
   /** \brief Extracts the set of bezier strips from the surface.
    *  \param uKnots The knots of the surface in the u direction.
    *  \param uDegree Degree of the surface in the u direction.
@@ -485,6 +546,12 @@ public:
                                        std::string kutype,
                                        std::string kvtype,
                                        std::string kwtype,
+                                       vtkStructuredGrid *DU0,
+                                       vtkStructuredGrid *DUN,
+                                       vtkStructuredGrid *DV0,
+                                       vtkStructuredGrid *DVN,
+                                       vtkStructuredGrid *DW0,
+                                       vtkStructuredGrid *DWN,
                                        vtkStructuredGrid *cPoints);
 
   static int AddDerivativeRows(vtkTypedArray<double> *NP, vtkTypedArray<double> *newNP,

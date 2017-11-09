@@ -2261,6 +2261,12 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
                                               std::string kutype,
                                               std::string kvtype,
                                               std::string kwtype,
+                                              vtkStructuredGrid *DU0,
+                                              vtkStructuredGrid *DUN,
+                                              vtkStructuredGrid *DV0,
+                                              vtkStructuredGrid *DVN,
+                                              vtkStructuredGrid *DW0,
+                                              vtkStructuredGrid *DWN,
                                               vtkStructuredGrid *cPoints)
 {
   int dim[3];
@@ -2297,30 +2303,35 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
   vtkNew(vtkDenseArray<double>, pointMatFinal);
   vtkSVNURBSUtils::StructuredGridToTypedArray(points, pointMatTmp);
 
-  //if (!strncmp(kvtype.c_str(), "derivative", 10)
-  //    || !strncmp(kutype.c_str(), "derivative", 10))
-  //{
-  //  vtkNew(vtkDenseArray<double>, DU0Vec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DU0, DU0Vec);
-  //  vtkNew(vtkDenseArray<double>, DUNVec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DUN, DUNVec);
-  //  vtkNew(vtkDenseArray<double>, DV0Vec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DV0, DV0Vec);
-  //  vtkNew(vtkDenseArray<double>, DVNVec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DVN, DVNVec);
-  //  vtkSVNURBSUtils::SetSurfaceEndDerivatives(NPUTmp, NPVTmp, pointMatTmp, p, q,
-  //                                          kutype, kvtype,
-  //                                          DU0Vec, DUNVec, DV0Vec, DVNVec, U, V,
-  //                                          uKnots, vKnots,
-  //                                          NPUFinal, NPVFinal, pointMatFinal);
-  //}
-  //else
-  //{
+  if (!strncmp(kvtype.c_str(), "derivative", 10)
+      || !strncmp(kutype.c_str(), "derivative", 10))
+  {
+    vtkNew(vtkDenseArray<double>, DU0Mat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DU0, DU0Mat);
+    vtkNew(vtkDenseArray<double>, DUNMat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DUN, DUNMat);
+    vtkNew(vtkDenseArray<double>, DV0Mat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DV0, DV0Mat);
+    vtkNew(vtkDenseArray<double>, DVNMat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DVN, DVNMat);
+    vtkNew(vtkDenseArray<double>, DW0Mat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DW0, DW0Mat);
+    vtkNew(vtkDenseArray<double>, DWNMat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DWN, DWNMat);
+    vtkSVNURBSUtils::SetVolumeEndDerivatives(NPUTmp, NPVTmp, NPWTmp, pointMatTmp,
+                                             p, q, r, kutype, kvtype, kwtype,
+                                             DU0Mat, DUNMat,  DV0Mat, DVNMat,
+                                             DW0Mat, DWNMat, U, V, W,
+                                             uKnots, vKnots, wKnots,
+                                             NPUFinal, NPVFinal, NPWFinal, pointMatFinal);
+  }
+  else
+  {
     vtkSVNURBSUtils::DeepCopy(NPUTmp, NPUFinal);
     vtkSVNURBSUtils::DeepCopy(NPVTmp, NPVFinal);
     vtkSVNURBSUtils::DeepCopy(NPWTmp, NPWFinal);
     vtkSVNURBSUtils::DeepCopy(pointMatTmp, pointMatFinal);
-  //}
+  }
 
   //fprintf(stdout,"Basis functions U:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPUFinal);
@@ -2526,6 +2537,203 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
   else
   {
     vtkSVNURBSUtils::DeepCopy(tmp2Points, newPoints);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// SetVolumeEndDerivatives
+// ----------------------
+int vtkSVNURBSUtils::SetVolumeEndDerivatives(vtkTypedArray<double> *NPU,
+                                             vtkTypedArray<double> *NPV,
+                                             vtkTypedArray<double> *NPW,
+                                             vtkTypedArray<double> *points,
+                                             const int p,  const int q, const int r,
+                                             std::string kutype, std::string kvtype,
+                                             std::string kwtype,
+                                             vtkTypedArray<double> *DU0,
+                                             vtkTypedArray<double> *DUN,
+                                             vtkTypedArray<double> *DV0,
+                                             vtkTypedArray<double> *DVN,
+                                             vtkTypedArray<double> *DW0,
+                                             vtkTypedArray<double> *DWN,
+                                             vtkDoubleArray *U,
+                                             vtkDoubleArray *V,
+                                             vtkDoubleArray *W,
+                                             vtkDoubleArray *uKnots,
+                                             vtkDoubleArray *vKnots,
+                                             vtkDoubleArray *wKnots,
+                                             vtkTypedArray<double> *newNPU,
+                                             vtkTypedArray<double> *newNPV,
+                                             vtkTypedArray<double> *newNPW,
+                                             vtkTypedArray<double> *newPoints)
+{
+  if (!strncmp(kutype.c_str(), "derivative", 10))
+  {
+    vtkSVNURBSUtils::AddDerivativeRows(NPU, newNPU, p, uKnots);
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(NPU, newNPU);
+  }
+  if (!strncmp(kvtype.c_str(), "derivative", 10))
+  {
+    vtkSVNURBSUtils::AddDerivativeRows(NPV, newNPV, q, vKnots);
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(NPV, newNPV);
+  }
+  if (!strncmp(kwtype.c_str(), "derivative", 10))
+  {
+    vtkSVNURBSUtils::AddDerivativeRows(NPW, newNPW, r, wKnots);
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(NPW, newNPW);
+  }
+
+  int nUKnot = uKnots->GetNumberOfTuples();
+  int nVKnot = vKnots->GetNumberOfTuples();
+  int nWKnot = wKnots->GetNumberOfTuples();
+  int nu = nUKnot - (p + 1);
+  int nv = nVKnot - (q + 1);
+  int nw = nWKnot - (r + 1);
+  vtkArrayExtents size;
+  size.SetExtent(0, vtkArrayRange(0, nu));
+  size.SetExtent(1, vtkArrayRange(0, nv));
+  size.SetExtent(2, vtkArrayRange(0, nw));
+  size.SetExtent(3, vtkArrayRange(0, 3));
+  newPoints->Resize(size);
+
+  int npu = points->GetExtents()[0].GetSize();
+  int npv = points->GetExtents()[1].GetSize();
+  int npw = points->GetExtents()[2].GetSize();
+  vtkNew(vtkDenseArray<double>, tmp0Points);
+  vtkNew(vtkDenseArray<double>, tmp1Points);
+  vtkNew(vtkDenseArray<double>, tmp2Points);
+  vtkNew(vtkDenseArray<double>, tmp3Points);
+  vtkNew(vtkDenseArray<double>, tmp4Points);
+  vtkNew(vtkDenseArray<double>, tmp5Points);
+  vtkNew(vtkDenseArray<double>, tmp6Points);
+  vtkNew(vtkDenseArray<double>, tmp7Points);
+  if (!strncmp(kutype.c_str(), "derivative", 10))
+  {
+    vtkArrayExtents size2;
+    size2.SetExtent(0, vtkArrayRange(0, nu));
+    size2.SetExtent(1, vtkArrayRange(0, npv));
+    size2.SetExtent(2, vtkArrayRange(0, npw));
+    size2.SetExtent(3, vtkArrayRange(0, 3));
+    tmp2Points->Resize(size2);
+
+    for (int i=0; i<npv; i++)
+    {
+      for (int j=0; j<npw; j++)
+      {
+        vtkSVNURBSUtils::GetMatrixComp(points, i, j, 1, tmp0Points);
+        double du0[3], duN[3];
+        for (int k=0; k<3; k++)
+        {
+          du0[k] = DU0->GetValue(i, j, k);
+          duN[k] = DUN->GetValue(i, j, k);
+        }
+        vtkSVNURBSUtils::AddDerivativePoints(tmp0Points, p, du0, duN, U, uKnots, tmp1Points);
+        vtkSVNURBSUtils::SetMatrixComp(tmp1Points, i, j, 1, tmp2Points);
+      }
+    }
+    npu += 2;
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(points, tmp2Points);
+  }
+
+  if (!strncmp(kvtype.c_str(), "derivative", 10))
+  {
+    vtkArrayExtents size5;
+    size5.SetExtent(0, vtkArrayRange(0, npu));
+    size5.SetExtent(1, vtkArrayRange(0, nv));
+    size5.SetExtent(2, vtkArrayRange(0, npw));
+    size5.SetExtent(3, vtkArrayRange(0, 3));
+    tmp5Points->Resize(size5);
+
+    int count = 0;
+    for (int i=0; i<npu; i++)
+    {
+      for (int j=0; j<npw; j++)
+      {
+        double dv0[3], dvN[3];
+        if ((i == 1 || i == nu - 2) && !strncmp(kutype.c_str(), "derivative", 10))
+        {
+          for (int k=0; k<3; k++)
+          {
+            dv0[k] = 0.0;
+            dvN[k] = 0.0;
+          }
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+          {
+            dv0[k] = DV0->GetValue(count, j, k);
+            dvN[k] = DVN->GetValue(count, j, k);
+          }
+          count++;
+        }
+        vtkSVNURBSUtils::GetMatrixComp(tmp2Points, i, j, 1, tmp3Points);
+        vtkSVNURBSUtils::AddDerivativePoints(tmp3Points, q, dv0, dvN, V, vKnots, tmp4Points);
+        vtkSVNURBSUtils::SetMatrixComp(tmp4Points, i, j, 1, tmp5Points);
+      }
+    }
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(tmp2Points, tmp5Points);
+  }
+
+  if (!strncmp(kwtype.c_str(), "derivative", 10))
+  {
+    int count = 0;
+    for (int i=0; i<npu; i++)
+    {
+      for (int j=0; j<npv; j++)
+      {
+        double dw0[3], dwN[3];
+        if ((i == 1 || i == nu - 2) && !strncmp(kutype.c_str(), "derivative", 10))
+        {
+          for (int k=0; k<3; k++)
+          {
+            dw0[k] = 0.0;
+            dwN[k] = 0.0;
+          }
+        }
+        if ((j == 1 || j == nv - 2) && !strncmp(kvtype.c_str(), "derivative", 10))
+        {
+          for (int k=0; k<3; k++)
+          {
+            dw0[k] = 0.0;
+            dwN[k] = 0.0;
+          }
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+          {
+            dw0[k] = DW0->GetValue(count, j, k);
+            dwN[k] = DWN->GetValue(count, j, k);
+          }
+          count++;
+        }
+        vtkSVNURBSUtils::GetMatrixComp(tmp5Points, i, j, 1, tmp6Points);
+        vtkSVNURBSUtils::AddDerivativePoints(tmp6Points, r, dw0, dwN, W, wKnots, tmp7Points);
+        vtkSVNURBSUtils::SetMatrixComp(tmp7Points, i, j, 1, newPoints);
+      }
+    }
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(tmp5Points, newPoints);
   }
 
   return SV_OK;

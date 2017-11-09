@@ -1000,8 +1000,8 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  //std::string fn = "/Users/adamupdegrove/Desktop/tmp/FINAL_NURBS.vtu";
-  //vtkSVIOUtils::WriteVTUFile(fn, loftedVolume);
+  std::string fn = "/Users/adamupdegrove/Desktop/tmp/FINAL_NURBS.vtu";
+  vtkSVIOUtils::WriteVTUFile(fn, loftedVolume);
 
   return SV_OK;
 }
@@ -4826,127 +4826,127 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
       return SV_ERROR;
     }
 
-    //// FOR LOFTING OF VOLUME
-    //// Set up the volume
-    //vtkNew(vtkUnstructuredGrid, emptyGrid);
-    //vtkNew(vtkSVLoftNURBSVolume, lofter);
-    //lofter->SetInputData(emptyGrid);
-    //lofter->SetInputGrid(realHexMesh);
-    //lofter->SetUDegree(2);
-    //lofter->SetVDegree(2);
-    //lofter->SetWDegree(2);
-    //lofter->SetUnstructuredGridUSpacing(1./w_divs[i]);
-    //lofter->SetUnstructuredGridVSpacing(1./h_divs[i]);
-    //lofter->SetUnstructuredGridWSpacing(1./l_divs[i]);
-    //lofter->SetUKnotSpanType("average");
-    //lofter->SetUParametricSpanType("chord");
-    //lofter->SetVKnotSpanType("average");
-    //lofter->SetVParametricSpanType("chord");
-    //lofter->SetWKnotSpanType("average");
-    //lofter->SetWParametricSpanType("chord");
-    //lofter->Update();
+    // FOR LOFTING OF VOLUME
+    // Set up the volume
+    vtkNew(vtkUnstructuredGrid, emptyGrid);
+    vtkNew(vtkSVLoftNURBSVolume, lofter);
+    lofter->SetInputData(emptyGrid);
+    lofter->SetInputGrid(realHexMesh);
+    lofter->SetUDegree(2);
+    lofter->SetVDegree(2);
+    lofter->SetWDegree(2);
+    lofter->SetUnstructuredGridUSpacing(1./w_divs[i]);
+    lofter->SetUnstructuredGridVSpacing(1./h_divs[i]);
+    lofter->SetUnstructuredGridWSpacing(1./l_divs[i]);
+    lofter->SetUKnotSpanType("average");
+    lofter->SetUParametricSpanType("chord");
+    lofter->SetVKnotSpanType("average");
+    lofter->SetVParametricSpanType("chord");
+    lofter->SetWKnotSpanType("average");
+    lofter->SetWParametricSpanType("chord");
+    lofter->Update();
 
-    //loftAppender->AddInputData(lofter->GetOutput());
+    loftAppender->AddInputData(lofter->GetOutput());
 
-    //nurbs->AddItem(lofter->GetVolume());
+    nurbs->AddItem(lofter->GetVolume());
 
-    // FOR USING HEX MESH AS CONTROL GRID
-    int dim[3];
-    realHexMesh->GetDimensions(dim);
-    int nUCon = dim[0];
-    int nVCon = dim[1];
-    int nWCon = dim[2];
-    int p = 2;
-    int q = 2;
-    int r = 2;
-    std::string putype = "chord";
-    std::string pvtype = "chord";
-    std::string pwtype = "chord";
-    std::string kutype = "average";
-    std::string kvtype = "average";
-    std::string kwtype = "average";
+    //// FOR USING HEX MESH AS CONTROL GRID
+    //int dim[3];
+    //realHexMesh->GetDimensions(dim);
+    //int nUCon = dim[0];
+    //int nVCon = dim[1];
+    //int nWCon = dim[2];
+    //int p = 2;
+    //int q = 2;
+    //int r = 2;
+    //std::string putype = "chord";
+    //std::string pvtype = "chord";
+    //std::string pwtype = "chord";
+    //std::string kutype = "average";
+    //std::string kvtype = "average";
+    //std::string kwtype = "average";
 
-    // Set the temporary control points
-    vtkNew(vtkPoints, tmpUPoints);
-    tmpUPoints->SetNumberOfPoints(nUCon);
-    for (int i=0; i<nUCon; i++)
-    {
-      int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      tmpUPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
-    }
+    //// Set the temporary control points
+    //vtkNew(vtkPoints, tmpUPoints);
+    //tmpUPoints->SetNumberOfPoints(nUCon);
+    //for (int i=0; i<nUCon; i++)
+    //{
+    //  int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
+    //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    //  tmpUPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+    //}
 
-    // Get the input point set u representation
-    vtkNew(vtkDoubleArray, U);
-    if (vtkSVNURBSUtils::GetUs(tmpUPoints, putype, U) != SV_OK)
-    {
-      return SV_ERROR;
-    }
+    //// Get the input point set u representation
+    //vtkNew(vtkDoubleArray, U);
+    //if (vtkSVNURBSUtils::GetUs(tmpUPoints, putype, U) != SV_OK)
+    //{
+    //  return SV_ERROR;
+    //}
 
-    // Get the knots in the u direction
-    vtkNew(vtkDoubleArray, uKnots);
-    if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
-    {
-      fprintf(stderr,"Error getting knots\n");
-      return SV_ERROR;
-    }
-    //
-    vtkNew(vtkPoints, tmpVPoints);
-    tmpVPoints->SetNumberOfPoints(nVCon);
-    for (int i=0; i<nVCon; i++)
-    {
-      int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      tmpVPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
-    }
-    // Get the input point set v representation
-    vtkNew(vtkDoubleArray, V);
-    if (vtkSVNURBSUtils::GetUs(tmpVPoints, pvtype, V) != SV_OK)
-    {
-      return SV_ERROR;
-    }
+    //// Get the knots in the u direction
+    //vtkNew(vtkDoubleArray, uKnots);
+    //if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
+    //{
+    //  fprintf(stderr,"Error getting knots\n");
+    //  return SV_ERROR;
+    //}
+    ////
+    //vtkNew(vtkPoints, tmpVPoints);
+    //tmpVPoints->SetNumberOfPoints(nVCon);
+    //for (int i=0; i<nVCon; i++)
+    //{
+    //  int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
+    //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    //  tmpVPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+    //}
+    //// Get the input point set v representation
+    //vtkNew(vtkDoubleArray, V);
+    //if (vtkSVNURBSUtils::GetUs(tmpVPoints, pvtype, V) != SV_OK)
+    //{
+    //  return SV_ERROR;
+    //}
 
-    // Get the knots in the v direction
-    vtkNew(vtkDoubleArray, vKnots);
-    if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
-    {
-      fprintf(stderr,"Error getting knots\n");
-      return SV_ERROR;
-    }
+    //// Get the knots in the v direction
+    //vtkNew(vtkDoubleArray, vKnots);
+    //if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
+    //{
+    //  fprintf(stderr,"Error getting knots\n");
+    //  return SV_ERROR;
+    //}
 
-    vtkNew(vtkPoints, tmpWPoints);
-    tmpWPoints->SetNumberOfPoints(nWCon);
-    for (int i=0; i<nWCon; i++)
-    {
-      int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      tmpWPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
-    }
-    // Get the input point set v representation
-    vtkNew(vtkDoubleArray, W);
-    if (vtkSVNURBSUtils::GetUs(tmpWPoints, pwtype, W) != SV_OK)
-    {
-      return SV_ERROR;
-    }
+    //vtkNew(vtkPoints, tmpWPoints);
+    //tmpWPoints->SetNumberOfPoints(nWCon);
+    //for (int i=0; i<nWCon; i++)
+    //{
+    //  int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
+    //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    //  tmpWPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+    //}
+    //// Get the input point set v representation
+    //vtkNew(vtkDoubleArray, W);
+    //if (vtkSVNURBSUtils::GetUs(tmpWPoints, pwtype, W) != SV_OK)
+    //{
+    //  return SV_ERROR;
+    //}
 
-    // Get the knots in the w direction
-    vtkNew(vtkDoubleArray, wKnots);
-    if (vtkSVNURBSUtils::GetKnots(W, r, kwtype, wKnots) != SV_OK)
-    {
-      fprintf(stderr,"Error getting knots\n");
-      return SV_ERROR;
-    }
+    //// Get the knots in the w direction
+    //vtkNew(vtkDoubleArray, wKnots);
+    //if (vtkSVNURBSUtils::GetKnots(W, r, kwtype, wKnots) != SV_OK)
+    //{
+    //  fprintf(stderr,"Error getting knots\n");
+    //  return SV_ERROR;
+    //}
 
-    vtkNew(vtkSVNURBSVolume, hexMeshControlGrid);
-    hexMeshControlGrid->SetKnotVector(uKnots, 0);
-    hexMeshControlGrid->SetKnotVector(vKnots, 1);
-    hexMeshControlGrid->SetKnotVector(wKnots, 2);
-    hexMeshControlGrid->SetControlPoints(realHexMesh);
-    hexMeshControlGrid->SetUDegree(p);
-    hexMeshControlGrid->SetVDegree(q);
-    hexMeshControlGrid->SetWDegree(r);
+    //vtkNew(vtkSVNURBSVolume, hexMeshControlGrid);
+    //hexMeshControlGrid->SetKnotVector(uKnots, 0);
+    //hexMeshControlGrid->SetKnotVector(vKnots, 1);
+    //hexMeshControlGrid->SetKnotVector(wKnots, 2);
+    //hexMeshControlGrid->SetControlPoints(realHexMesh);
+    //hexMeshControlGrid->SetUDegree(p);
+    //hexMeshControlGrid->SetVDegree(q);
+    //hexMeshControlGrid->SetWDegree(r);
 
-    nurbs->AddItem(hexMeshControlGrid);
+    //nurbs->AddItem(hexMeshControlGrid);
   }
 
   //if (this->MergedCenterlines->GetNumberOfCells() == 1)
@@ -4965,8 +4965,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   writer->SetFileName(pername.c_str());
   writer->Update();
 
-  //loftAppender->Update();
-  //loftedVolume->DeepCopy(loftAppender->GetOutput());
+  loftAppender->Update();
+  loftedVolume->DeepCopy(loftAppender->GetOutput());
 
   return SV_OK;
 }
