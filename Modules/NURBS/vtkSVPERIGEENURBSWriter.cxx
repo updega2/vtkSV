@@ -164,14 +164,14 @@ void vtkSVPERIGEENURBSWriter::WritePERIGEEFile(vtkSVNURBSObject *object)
   //  Control points
   //
     fprintf(fp,"NUM_CP = %d\n", np*mp*lp);
-    for (int i=0;i<np; i++)
+    for (int i=0;i<lp; i++)
     {
       for (int j=0; j<mp; j++)
       {
-        for (int k=0; k<lp; k++)
+        for (int k=0; k<np; k++)
         {
           double pw[4];
-          controlPoints->GetControlPoint(i, j, k, pw);
+          controlPoints->GetControlPoint(k, j, i, pw);
           fprintf(fp,"%.6f %.6f %.6f %.6f\n", pw[0], pw[1], pw[2], pw[3]);
         }
       }
