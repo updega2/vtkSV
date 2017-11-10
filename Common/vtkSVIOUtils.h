@@ -79,6 +79,9 @@ public:
   /** \brief read a polydata file. */
   static int ReadVTPFile(std::string inputFilename, vtkPolyData *polydata);
 
+  /** \brief read a polydata file. */
+  static int ReadVTUFile(std::string inputFilename, vtkUnstructuredGrid *grid);
+
   /** \brief read a raw file. */
   static int ReadPolyDataRawFile(std::string inputFilename, vtkPolyData *polydata);
 

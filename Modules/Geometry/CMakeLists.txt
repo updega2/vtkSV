@@ -41,7 +41,8 @@ set(SRCS
   vtkSVLocalLinearSubdivisionFilter.cxx
   vtkSVLocalLoopSubdivisionFilter.cxx
   vtkSVLocalQuadricDecimation.cxx
-  vtkSVLocalSmoothPolyDataFilter.cxx)
+  vtkSVLocalSmoothPolyDataFilter.cxx
+  vtkSVSmoothVolume.cxx)
 
 set(HDRS
   vtkSVConstrainedBlend.h
@@ -52,7 +53,8 @@ set(HDRS
   vtkSVLocalLinearSubdivisionFilter.h
   vtkSVLocalLoopSubdivisionFilter.h
   vtkSVLocalQuadricDecimation.h
-  vtkSVLocalSmoothPolyDataFilter.h)
+  vtkSVLocalSmoothPolyDataFilter.h
+  vtkSVSmoothVolume.h)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -105,5 +107,18 @@ else()
       DESTINATION ${VTKSV_INSTALL_INCLUDE_DIR}/core COMPONENT CoreHeaders
       )
   endif()
+endif()
+#------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
+# Executables
+if(VTKSV_BUILD_FILTER_EXES)
+  set(EXE_LIST SmoothVolume)
+  foreach(exe ${EXE_LIST})
+    add_executable(${exe} ${exe}.cxx)
+    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVGEOMETRY_NAME} ${SV_LIB_VTKSVCOMMON_NAME})
+    install(TARGETS ${exe}
+      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
+  endforeach()
 endif()
 #------------------------------------------------------------------------------

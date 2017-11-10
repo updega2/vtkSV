@@ -42,6 +42,7 @@
 #include "vtkXMLPolyDataReader.h"
 #include "vtkXMLPolyDataWriter.h"
 #include "vtkXMLStructuredGridWriter.h"
+#include "vtkXMLUnstructuredGridReader.h"
 #include "vtkXMLUnstructuredGridWriter.h"
 
 #include <sys/types.h>
@@ -168,6 +169,28 @@ int vtkSVIOUtils::ReadVTPFile(std::string inputFilename, vtkPolyData *polydata)
   //structure
   polydata->DeepCopy(reader->GetOutput());
   polydata->BuildLinks();
+
+  return SV_OK;
+}
+
+// ----------------------
+// ReadVTUFile
+// ----------------------
+int vtkSVIOUtils::ReadVTUFile(std::string inputFilename, vtkUnstructuredGrid *grid)
+{
+  // Check file exists
+  if (vtkSVIOUtils::CheckFileExists(inputFilename) != SV_OK)
+    return SV_ERROR;
+
+  //Create an STL reader for reading the file
+  vtkNew(vtkXMLUnstructuredGridReader, reader);
+  reader->SetFileName(inputFilename.c_str());
+  reader->Update();
+
+  //Save the output information from the boundary filter to a Poly Data
+  //structure
+  grid->DeepCopy(reader->GetOutput());
+  grid->BuildLinks();
 
   return SV_OK;
 }
