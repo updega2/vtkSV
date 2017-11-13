@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
-  int numSmoothIters        = 1000;
+  int numSmoothIters = 5;
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
     cout << "  -h              : Display usage and command-line argument summary"<< endl;
     cout << "  -input          : Input file name (.vtu)"<< endl;
     cout << "  -output         : Output file name"<< endl;
-    cout << "  -numsmoothiters : Point Id to start from [default 1000]"<< endl;
+    cout << "  -numsmoothiters : Point Id to start from [default 5]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }

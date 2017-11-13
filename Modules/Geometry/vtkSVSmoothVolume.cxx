@@ -60,7 +60,7 @@ vtkStandardNewMacro(vtkSVSmoothVolume);
 vtkSVSmoothVolume::vtkSVSmoothVolume()
 {
   this->WorkUg = vtkUnstructuredGrid::New();
-  this->NumberOfSmoothIterations = 1000;
+  this->NumberOfSmoothIterations = 5;
 }
 
 // ----------------------
@@ -390,8 +390,6 @@ int vtkSVSmoothVolume::SmoothTetMesh()
     {
       // If > 0 neighbors, that means this is interior son
       int numPtNeighbors = ptEdgeNeighbors[i].size();
-      if (iter == 0)
-        fprintf(stdout,"NUM NEIGHBORS: %d\n", numPtNeighbors);
       if (numPtNeighbors > 0)
       {
         double center[3]; center[0] = 0.0; center[1] = 0.0; center[2] = 0.0;
