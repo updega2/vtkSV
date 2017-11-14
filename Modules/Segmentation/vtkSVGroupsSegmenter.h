@@ -63,9 +63,6 @@ struct Region
 
   std::vector<std::vector<int> > BoundaryEdges;
 
-  int numInteriorVerts;
-  std::vector<int> InteriorVerts;
-
   int NumberOfElements;
   std::vector<int> Elements;
 
