@@ -329,6 +329,9 @@ protected:
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
   int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
                 vtkCellArray *newCells, std::vector<std::vector<int> >  &splitCells);
+  int FixMultipleGroups(vtkPolyData *pd, vtkPolyData *polycubePd,
+                        std::vector<Region> surfaceGroups,
+                        std::vector<Region> polycubeGroups);
   int FixEndPatches(vtkPolyData *pd);
   int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
   int CheckEndPatches(vtkPolyData *pd,
