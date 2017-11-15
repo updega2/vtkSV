@@ -189,7 +189,7 @@ public:
   /** \brief Function to get a default set of derivatives if none are given
    *  and a knot span type of derivative is given. */
   int GetDefaultDerivatives(vtkStructuredGrid *input, const int comp,
-                            vtkDoubleArray *D0out, vtkDoubleArray *DNout);
+                            vtkStructuredGrid *D0out, vtkStructuredGrid *DNout);
 
 //ETX
 protected:

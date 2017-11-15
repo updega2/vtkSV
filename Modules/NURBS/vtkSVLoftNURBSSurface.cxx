@@ -546,7 +546,7 @@ int vtkSVLoftNURBSSurface::GetDefaultDerivatives(vtkStructuredGrid *input, const
 
   // Get number of values and derivatives from dim
   int numVals   = dim[comp];
-  int numDerivs = dim[-1*(comp-1)];
+  int numDerivs = dim[(comp+1)%2];
 
   // Set number of tuples for derivatives
   D0out->SetNumberOfTuples(numDerivs);
@@ -554,7 +554,7 @@ int vtkSVLoftNURBSSurface::GetDefaultDerivatives(vtkStructuredGrid *input, const
   for (int i=0; i<numDerivs; i++)
   {
     int pos[3]; pos[2] = 0;
-    pos[-1*(comp-1)] = i;
+    pos[(comp+1)%2] = i;
 
     // Get the point id
     double pt0[3]; pos[comp] = 0;

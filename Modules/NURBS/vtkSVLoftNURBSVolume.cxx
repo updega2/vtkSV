@@ -568,8 +568,11 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
         DUN->GetNumberOfPoints() == 0)
     {
       fprintf(stdout,"Need to provide derivative data\n");
-      return SV_ERROR;
-      //this->GetDefaultDerivatives(inputs, 0, DU0, DUN);
+      vtkNew(vtkPoints, DU0Points);
+      vtkNew(vtkPoints, DUNPoints);
+      DU0->SetPoints(DU0Points);
+      DUN->SetPoints(DUNPoints);
+      this->GetDefaultDerivatives(inputs, 0, DU0, DUN);
     }
   }
 
@@ -583,8 +586,11 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
         DVN->GetNumberOfPoints() == 0)
     {
       fprintf(stdout,"Need to provide derivative data\n");
-      return SV_ERROR;
-      //this->GetDefaultDerivatives(inputs, 1, DV0, DVN);
+      vtkNew(vtkPoints, DV0Points);
+      vtkNew(vtkPoints, DVNPoints);
+      DV0->SetPoints(DV0Points);
+      DVN->SetPoints(DVNPoints);
+      this->GetDefaultDerivatives(inputs, 1, DV0, DVN);
     }
   }
 
@@ -598,8 +604,11 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
         DWN->GetNumberOfPoints() == 0)
     {
       fprintf(stdout,"Need to provide derivative data\n");
-      return SV_ERROR;
-      //this->GetDefaultDerivatives(inputs, 1, DW0, DWN);
+      vtkNew(vtkPoints, DW0Points);
+      vtkNew(vtkPoints, DWNPoints);
+      DW0->SetPoints(DW0Points);
+      DWN->SetPoints(DWNPoints);
+      this->GetDefaultDerivatives(inputs, 1, DW0, DWN);
     }
   }
 
@@ -643,7 +652,40 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
 // ----------------------
 // GetDefaultDerivatives
 // ----------------------
-int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const int comp, vtkDoubleArray *D0out, vtkDoubleArray *DNout)
+int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const int comp, vtkStructuredGrid *D0out, vtkStructuredGrid *DNout)
 {
+  // Get dimensions
+  int dim[3];
+  input->GetDimensions(dim);
+
+  // Get number of values and derivatives from dim
+  int numVals    = dim[comp];
+  int numXDerivs = dim[(comp+1)%3];
+  int numYDerivs = dim[(comp+2)%3];
+
+  // Set number of tuples for derivatives
+  int dim2D[3];
+  dim2D[0] = numXDerivs;
+  dim2D[1] = numYDerivs;
+  dim2D[1] = 0;
+  D0out->SetDimensions(dim2D);
+  D0out->GetPoints()->SetNumberOfPoints(numXDerivs*numYDerivs);
+  DNout->SetDimensions(dim2D);
+  DNout->GetPoints()->SetNumberOfPoints(numXDerivs*numYDerivs);
+
+  // Set tuples
+  for (int i=0; i<numXDerivs; i++)
+  {
+    for (int j=0; j<numYDerivs; j++)
+    {
+      int pos[3]; pos[0] = i; pos[1] = j; pos[2] = 0;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+      double testPt[3]; testPt[0] = 1.0; testPt[1] = 0.0; testPt[2] = 0.0;
+      D0out->GetPoints()->SetPoint(ptId, testPt);
+      DNout->GetPoints()->SetPoint(ptId, testPt);
+    }
+  }
+
   return SV_OK;
 }
