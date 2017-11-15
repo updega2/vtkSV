@@ -296,6 +296,13 @@ public:
                                       vtkPolyData *mappedPd,
                                       std::string dataMatchingArrayName);
 
+  static int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
+
+  static int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
+                               std::vector<int> &cellBool,
+                               int &currRow, const int numRows,
+                               std::vector<int> &allCells);
+
   const static double GlobalCoords[3][3];
 
 
