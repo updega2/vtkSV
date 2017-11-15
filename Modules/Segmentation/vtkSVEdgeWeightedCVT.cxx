@@ -288,18 +288,9 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
   // Square in order to add edge weighted part and take norm
   edgeWeightedDist *= edgeWeightedDist;
 
-  // Get the generator patch id
-  int i;
-  for (i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
-  {
-    if (this->NeighborPatchesIds[evalId][i] == generatorId)
-    {
-      break;
-    }
-  }
-
   double totalWeight = 0.0;
-  for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
+  int i;
+  for (i=0; i<this->NumberOfNeighbors[evalId]; i++)
   {
     int neighborId = this->Neighbors[evalId][i];
     int neighborGenerator = this->PatchIdsArray->GetTuple1(neighborId);
@@ -317,6 +308,15 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
   }
   if (this->UseCurvatureWeight)
     this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
+
+  // Get the generator patch id
+  for (i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
+  {
+    if (this->NeighborPatchesIds[evalId][i] == generatorId)
+    {
+      break;
+    }
+  }
 
   // Get the edge weighted portion
   double edgeWeighting = 0.0;

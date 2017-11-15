@@ -53,7 +53,6 @@ vtkSVGeneralCVT::vtkSVGeneralCVT()
 
   this->CVTDataArrayName =    NULL;
   this->PatchIdsArrayName =   NULL;
-  this->GeneratorsArrayName = NULL;
 
   this->UsePointArray =      0;
   this->UseCellArray  =      1;
@@ -109,11 +108,6 @@ vtkSVGeneralCVT::~vtkSVGeneralCVT()
     delete [] this->PatchIdsArrayName;
     this->PatchIdsArrayName = NULL;
   }
-  if (this->GeneratorsArrayName != NULL)
-  {
-    delete [] this->GeneratorsArrayName;
-    this->GeneratorsArrayName = NULL;
-  }
 
 }
 
@@ -128,8 +122,6 @@ void vtkSVGeneralCVT::PrintSelf(ostream& os, vtkIndent indent)
     os << indent << "CVT data array name: " << this->CVTDataArrayName << "\n";
   if (this->PatchIdsArrayName != NULL)
     os << indent << "Patch ids array name: " << this->PatchIdsArrayName << "\n";
-  if (this->GeneratorsArrayName != NULL)
-    os << indent << "Generators array name: " << this->GeneratorsArrayName << "\n";
 
   os << indent << "Use cell array: " << this->UseCellArray << "\n";
   os << indent << "Use point array: " << this->UsePointArray << "\n";
@@ -282,16 +274,6 @@ int vtkSVGeneralCVT::PrepFilter()
 
   if (this->UseGeneratorsArray)
   {
-    if (this->GeneratorsArrayName == NULL)
-    {
-      vtkErrorMacro("If using generator array, must provide an array name");
-      return SV_ERROR;
-    }
-    if (vtkSVGeneralUtils::CheckArrayExists(this->Generators, 0, this->GeneratorsArrayName) != SV_OK)
-    {
-      vtkErrorMacro("No array named "<< this->GeneratorsArrayName << "on the generators.");
-      return SV_ERROR;
-    }
     if (this->CVTDataArray->GetNumberOfComponents() !=
         this->GeneratorsArray->GetNumberOfComponents())
     {

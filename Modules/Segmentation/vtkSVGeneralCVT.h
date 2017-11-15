@@ -69,8 +69,6 @@ public:
   vtkSetStringMacro(CVTDataArrayName);
   vtkGetStringMacro(PatchIdsArrayName);
   vtkSetStringMacro(PatchIdsArrayName);
-  vtkGetStringMacro(GeneratorsArrayName);
-  vtkSetStringMacro(GeneratorsArrayName);
   //@}
 
   //@{
@@ -160,7 +158,6 @@ protected:
 
   char *CVTDataArrayName; // Array name on input with data to patch
   char *PatchIdsArrayName; // Array containing patch id info
-  char *GeneratorsArrayName; // If using generator array, name of array
 
   int UsePointArray; // Use point info
   int UseCellArray; // Use cell info

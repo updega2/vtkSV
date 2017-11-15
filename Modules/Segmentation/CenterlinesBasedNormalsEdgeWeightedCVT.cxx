@@ -92,7 +92,6 @@ int main(int argc, char *argv[])
   std::string groupIdsArrayName         = "GroupIds";
   std::string cvtDataArrayName          = "CellNormals";
   std::string newCellArrayName          = "CenterlinesBasedCellNormals";
-  std::string generatorsArrayName       = "SliceIds";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -109,7 +108,6 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-groupids")           {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-newcellarray")       {newCellArrayName = argv[++iarg];}
       else if(tmpstr=="-cvtdata")            {CVTDataArrayNameProvided; cvtDataArrayName = argv[++iarg];}
-      else if(tmpstr=="-generatorsarray")    {generatorsArrayName = argv[++iarg];}
       else if(tmpstr=="-numberofrings")      {numberOfRings = atoi(argv[++iarg]);}
       else if(tmpstr=="-usetransferredpatchesasthreshold") {useTransferredPatchesAsThreshold = atoi(argv[++iarg]);}
       else if(tmpstr=="-maximumnumberofiterations")        {maximumNumberOfIterations = atoi(argv[++iarg]);}
@@ -143,7 +141,6 @@ int main(int argc, char *argv[])
     cout << "  -groupids           : Name to be used for group [default GroupIds]"<< endl;
     cout << "  -newcellarray       : Name to be given to output of centerlines normaler [default CenterlinesBasedCellNormals]"<< endl;
     cout << "  -cvtdata            : Name on input with data to be used for cvt [no default]"<< endl;
-    cout << "  -generatorsarray    : Name on generators with data. Requied is usegeneratorsarray turned on [no default]"<< endl;
     cout << "  -threshold          : Threshold criteria for when to stop cvt iterations [default 2]"<< endl;
     cout << "  -edgeweight         : How much influence the edge weighting term should have [default 1.0]"<< endl;
     cout << "  -usetransferredpatchesasthreshold : Instead of using an energy criteria, the number of cells changing corresponding generators in an iteration determines convergence [default 1]"<< endl;
@@ -260,7 +257,6 @@ int main(int argc, char *argv[])
     CVT->SetMaximumNumberOfIterations(maximumNumberOfIterations);
     CVT->SetPatchIdsArrayName(patchIdsArrayName.c_str());
     CVT->SetCVTDataArrayName(newCellArrayName.c_str());
-    CVT->SetGeneratorsArrayName(generatorsArrayName.c_str());
     CVT->Update();
 
   //  appender->AddInputData(CVT->GetOutput());
