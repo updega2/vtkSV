@@ -98,6 +98,18 @@ int vtkSVLoftNURBSCurve::RequestData(
   vtkPolyData *input = vtkPolyData::GetData(inputVector[0], 0);
   vtkPolyData *output = vtkPolyData::GetData(outputVector, 0);
 
+  if (this->KnotSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide knot span type");
+    return SV_ERROR;
+  }
+
+  if (this->ParametricSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide parametric span type");
+    return SV_ERROR;
+  }
+
   if (this->LoftNURBS(input, output) != SV_OK)
   {
     vtkErrorMacro("Lofting failed!");

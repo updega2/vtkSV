@@ -267,6 +267,23 @@ int vtkSVLoftNURBSVolume::RequestData(
     vtkErrorMacro("Need to set the input grid");
     return SV_ERROR;
   }
+
+  if (this->UKnotSpanType == NULL ||
+      this->VKnotSpanType == NULL ||
+      this->WKnotSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide knot span types for u, v, w directions");
+    return SV_ERROR;
+  }
+
+  if (this->UParametricSpanType == NULL ||
+      this->VParametricSpanType == NULL ||
+      this->WParametricSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide parametric span types for u, v, w directions");
+    return SV_ERROR;
+  }
+
   // TODO: Need to make sure knot span and parameteric span types are set
   if (this->LoftNURBS(this->InputGrid,numInputs,output) != SV_OK)
   {
@@ -567,7 +584,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     if (DU0->GetNumberOfPoints() == 0 ||
         DUN->GetNumberOfPoints() == 0)
     {
-      fprintf(stdout,"Need to provide derivative data\n");
+      fprintf(stdout,"Getting default derivatives\n");
       vtkNew(vtkPoints, DU0Points);
       vtkNew(vtkPoints, DUNPoints);
       DU0->SetPoints(DU0Points);
@@ -585,7 +602,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     if (DV0->GetNumberOfPoints() == 0 ||
         DVN->GetNumberOfPoints() == 0)
     {
-      fprintf(stdout,"Need to provide derivative data\n");
+      fprintf(stdout,"Getting default derivatives\n");
       vtkNew(vtkPoints, DV0Points);
       vtkNew(vtkPoints, DVNPoints);
       DV0->SetPoints(DV0Points);
@@ -603,12 +620,12 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     if (DW0->GetNumberOfPoints() == 0 ||
         DWN->GetNumberOfPoints() == 0)
     {
-      fprintf(stdout,"Need to provide derivative data\n");
+      fprintf(stdout,"Getting default derivatives\n");
       vtkNew(vtkPoints, DW0Points);
       vtkNew(vtkPoints, DWNPoints);
       DW0->SetPoints(DW0Points);
       DWN->SetPoints(DWNPoints);
-      this->GetDefaultDerivatives(inputs, 1, DW0, DWN);
+      this->GetDefaultDerivatives(inputs, 2, DW0, DWN);
     }
   }
 
@@ -667,7 +684,7 @@ int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const 
   int dim2D[3];
   dim2D[0] = numXDerivs;
   dim2D[1] = numYDerivs;
-  dim2D[1] = 0;
+  dim2D[2] = 1;
   D0out->SetDimensions(dim2D);
   D0out->GetPoints()->SetNumberOfPoints(numXDerivs*numYDerivs);
   DNout->SetDimensions(dim2D);
@@ -678,12 +695,41 @@ int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const 
   {
     for (int j=0; j<numYDerivs; j++)
     {
-      int pos[3]; pos[0] = i; pos[1] = j; pos[2] = 0;
-      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      int pos[3];
+      pos[(comp+1)%3] = i;
+      pos[(comp+2)%3] = j;
 
-      double testPt[3]; testPt[0] = 1.0; testPt[1] = 0.0; testPt[2] = 0.0;
-      D0out->GetPoints()->SetPoint(ptId, testPt);
-      DNout->GetPoints()->SetPoint(ptId, testPt);
+      // Get the point id
+      double pt0[3]; pos[comp] = 0;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, pt0);
+
+      // Get the point id
+      double pt1[3]; pos[comp] = 1;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, pt1);
+
+      // Get the point id
+      double ptnm1[3]; pos[comp] = numVals - 1;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, ptnm1);
+
+      // Get the point id
+      double ptnm2[3]; pos[comp] = numVals - 2;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, ptnm2);
+
+      // From point ids, compute vectors at ends of data
+      double D0[3], DN[3];
+      vtkMath::Subtract(pt1, pt0, D0);
+      vtkMath::Subtract(ptnm1, ptnm2, DN);
+
+      // From point ids, compute vectors at ends of data
+      pos[comp] = 0;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+      D0out->GetPoints()->SetPoint(ptId, D0);
+      DNout->GetPoints()->SetPoint(ptId, DN);
     }
   }
 

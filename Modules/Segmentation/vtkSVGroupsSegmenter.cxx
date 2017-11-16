@@ -85,6 +85,7 @@
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
 #include "vtkPolyDataNormals.h"
+#include "vtkStructuredGridGeometryFilter.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
 #include "vtkThreshold.h"
@@ -4835,20 +4836,36 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     lofter->SetUDegree(2);
     lofter->SetVDegree(2);
     lofter->SetWDegree(2);
+    //lofter->SetUnstructuredGridUSpacing(1./(10*w_divs[i]));
+    //lofter->SetUnstructuredGridVSpacing(1./(10*h_divs[i]));
+    //lofter->SetUnstructuredGridWSpacing(1./(10*l_divs[i]));
     lofter->SetUnstructuredGridUSpacing(1./w_divs[i]);
     lofter->SetUnstructuredGridVSpacing(1./h_divs[i]);
     lofter->SetUnstructuredGridWSpacing(1./l_divs[i]);
     lofter->SetUKnotSpanType("average");
+    //lofter->SetUKnotSpanType("derivative");
     lofter->SetUParametricSpanType("chord");
     lofter->SetVKnotSpanType("average");
+    //lofter->SetVKnotSpanType("derivative");
     lofter->SetVParametricSpanType("chord");
     lofter->SetWKnotSpanType("average");
+    //lofter->SetWKnotSpanType("derivative");
     lofter->SetWParametricSpanType("chord");
     lofter->Update();
 
     loftAppender->AddInputData(lofter->GetOutput());
 
     nurbs->AddItem(lofter->GetVolume());
+
+    vtkNew(vtkStructuredGridGeometryFilter, converter);
+    converter->SetInputData(lofter->GetVolume()->GetControlPointGrid());
+    converter->Update();
+
+    std::string cpst = "/Users/adamupdegrove/Desktop/tmp/CONTROL_POINTS_STRUCT.vts";
+    vtkSVIOUtils::WriteVTSFile(cpst, lofter->GetVolume()->GetControlPointGrid());
+
+    std::string cps = "/Users/adamupdegrove/Desktop/tmp/CONTROL_POINTS.vtp";
+    vtkSVIOUtils::WriteVTPFile(cps, converter->GetOutput());
 
     //// FOR USING HEX MESH AS CONTROL GRID
     //int dim[3];

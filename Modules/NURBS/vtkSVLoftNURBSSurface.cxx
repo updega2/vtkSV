@@ -246,6 +246,20 @@ int vtkSVLoftNURBSSurface::RequestData(
     inputs[idx] = vtkPolyData::GetData(inputVector[0],idx);
     }
 
+  if (this->UKnotSpanType == NULL ||
+      this->VKnotSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide knot span types for u, v directions");
+    return SV_ERROR;
+  }
+
+  if (this->UParametricSpanType == NULL ||
+      this->VParametricSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide parametric span types for u, v directions");
+    return SV_ERROR;
+  }
+
   // TODO: Need to make sure knot span and parameteric span types are set
   if (this->LoftNURBS(inputs,numInputs,output) != SV_OK)
   {
