@@ -355,6 +355,8 @@ protected:
                            std::vector<std::vector<int> > &openEdges);
   int ShiftEdgeList(vtkPolyData *branchPd, std::vector<std::vector<int> > &openEdges,
                     std::vector<std::vector<int> > &shiftedOpenEdges);
+  int SplitEdgeList(vtkPolyData *branchPd, std::vector<int> &openEdges,
+                    std::vector<std::vector<int> > &shiftedOpenEdges);
   int GetTrueBoundaryDirections(vtkPolyData *branchPd,
                                 vtkPolyData *polyBranchPd,
                                 const int groupId,
