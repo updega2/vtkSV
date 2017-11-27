@@ -50,7 +50,11 @@ set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
   vtkvmtkVoronoiDiagram3D.cxx
   vtkvmtkSimplifyVoronoiDiagram.cxx
   vtkvmtkInternalTetrahedraExtractor.cxx
-  vtkvmtkPolyDataCenterlines.cxx)
+  vtkvmtkPolyDataCenterlines.cxx
+  vtkvmtkPolyDataCenterlineMetricFilter.cxx
+  vtkvmtkPolyDataCenterlineAbscissaMetricFilter.cxx
+  vtkvmtkPolyDataCenterlineAngularMetricFilter.cxx
+  )
 
 set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkReferenceSystemUtilities.h
@@ -73,7 +77,11 @@ set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkVoronoiDiagram3D.h
   vtkvmtkSimplifyVoronoiDiagram.h
   vtkvmtkInternalTetrahedraExtractor.h
-  vtkvmtkPolyDataCenterlines.h)
+  vtkvmtkPolyDataCenterlines.h
+  vtkvmtkPolyDataCenterlineMetricFilter.h
+  vtkvmtkPolyDataCenterlineAbscissaMetricFilter.h
+  vtkvmtkPolyDataCenterlineAngularMetricFilter.h
+  )
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

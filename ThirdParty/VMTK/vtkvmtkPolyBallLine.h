@@ -10,15 +10,15 @@ Version:   $Revision: 1.4 $
   See LICENCE file for details.
 
   Portions of this code are covered under the VTK copyright.
-  See VTKCopyright.txt or http://www.kitware.com/VTKCopyright.htm 
+  See VTKCopyright.txt or http://www.kitware.com/VTKCopyright.htm
   for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
-  // .NAME vtkvmtkPolyBallLine - 
+  // .NAME vtkvmtkPolyBallLine -
   // .SECTION Description
   // ..
 
@@ -30,8 +30,9 @@ Version:   $Revision: 1.4 $
 #include "vtkIdList.h"
 //#include "vtkvmtkComputationalGeometryWin32Header.h"
 #include "vtkvmtkWin32Header.h"
+#include "vtkSVVMTKModule.h"
 
-class VTK_VMTK_COMPUTATIONAL_GEOMETRY_EXPORT vtkvmtkPolyBallLine : public vtkImplicitFunction
+class VTKSVVMTK_EXPORT vtkvmtkPolyBallLine : public vtkImplicitFunction
 {
   public:
 

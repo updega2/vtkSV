@@ -392,6 +392,10 @@ protected:
                            int totNumberOfRings,
                            std::vector<std::vector<int> > &neighbors);
 
+  int GetCellDirectNeighbors(vtkPolyData *pd,
+                             std::vector<std::vector<int> > &neighbors,
+                             std::vector<int> &numNeighbors);
+
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
