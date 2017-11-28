@@ -737,6 +737,8 @@ int vtkSVGroupsSegmenter::RunFilter()
     if (testNeighbors->GetNumberOfIds() == 1)
       isTerminating = 1;
 
+    double maxPCoord = -1.0;
+    double minPCoord = VTK_SV_LARGE_DOUBLE;
     for (int j=0; j<branchNumberOfCells; j++)
     {
       // Get cell point coords
@@ -791,6 +793,11 @@ int vtkSVGroupsSegmenter::RunFilter()
 
       centerlineSubPtIds->SetTuple1(realCellId, absLinePtId);
       centerlinePCoords->SetTuple1(realCellId, absCenterlinePCoord);
+
+      if (absCenterlinePCoord > maxPCoord)
+        maxPCoord = absCenterlinePCoord;
+      if (absCenterlinePCoord < minPCoord)
+        minPCoord = absCenterlinePCoord;
 
       // TRYING ANOTHER METRIC
 
@@ -948,8 +955,7 @@ int vtkSVGroupsSegmenter::RunFilter()
       }
 
       // TODO NEEDS TO BE CHANGED FOR SPECIAL TRI CASE
-      std::vector<int> cellList;
-      std::vector<int> allCellList;
+      std::vector<std::vector<int> > growCellLists;
       std::vector<int> cellBool(branchNumberOfCells);
       for (int j=0; j<branchNumberOfCells; j++)
         cellBool[j] = 0;
@@ -959,6 +965,7 @@ int vtkSVGroupsSegmenter::RunFilter()
         std::vector<std::vector<int> > splitOpenEdges;
         this->SplitEdgeList(branchPd, shiftedOpenEdges[j], splitOpenEdges);
 
+        std::vector<int> allCellList;
         for (int k=0; k<splitOpenEdges.size(); k++)
         {
           int edgeSize = splitOpenEdges[k].size();
@@ -1016,7 +1023,6 @@ int vtkSVGroupsSegmenter::RunFilter()
             }
 
             int branchCellId = splitCellId->GetId(0);
-            cellList.push_back(branchCellId);
             allCellList.push_back(branchCellId);
             cellBool[branchCellId];
 
@@ -1044,13 +1050,53 @@ int vtkSVGroupsSegmenter::RunFilter()
             centerlineBasedNormals->SetTuple(realCellId, boundarySetVec);
           }
         }
+        growCellLists.push_back(allCellList);
+      }
+
+      if (growCellLists.size() == 2)
+      {
+        if (isTerminating)
+        {
+          fprintf(stderr,"Something wrong here, branch is terminating, but we found multiple open edges\n");
+          return SV_ERROR;
+        }
+        double allVals[2]; allVals[0] = 0.0; allVals[1] = 0.0;
+        for (int j=0; j<growCellLists.size(); j++)
+        {
+          for (int k=0; k<growCellLists[j].size(); k++)
+          {
+            int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
+              GetTuple1(growCellLists[j][k]);
+            double pCoordVal = centerlinePCoords->GetTuple1(realCellId);
+            allVals[j] += pCoordVal;
+          }
+        }
+
+        if (!(allVals[0] < allVals[1]))
+        {
+          // Gotta switch
+          std::vector<int> tmpList0, tmpList1;
+          for (int j=0; j<growCellLists[0].size(); j++)
+            tmpList1.push_back(growCellLists[0][j]);
+          for (int j=0; j<growCellLists[1].size(); j++)
+            tmpList0.push_back(growCellLists[1][j]);
+
+          growCellLists.clear();
+          growCellLists.push_back(tmpList0);
+          growCellLists.push_back(tmpList1);
+        }
+      }
+
+      if (growCellLists.size() > 2)
+      {
+        fprintf(stderr,"WE GOT OURSELVES A PROBLEMO\n");
       }
 
       std::vector<std::vector<int> > cellNeighbors;
       std::vector<int> numCellNeighbors;
       this->GetCellDirectNeighbors(branchPd, cellNeighbors, numCellNeighbors);
 
-      double maxPCoordThr = 0.6;
+      double maxPCoordThr = 0.7;
       double pCoordThr = 0.01;
       double begVessel = 0.0;
       double endVessel = 1.0;
@@ -1058,82 +1104,70 @@ int vtkSVGroupsSegmenter::RunFilter()
       int iter = 0;
       while(begVessel < maxPCoordThr)
       {
-        while (cellList.size() > 0)
+        int done = 0;
+        while (!done)
         {
-          std::vector<int> newCellList;
-          for (int j=0; j<cellList.size(); j++)
+          done = 1;
+          for (int listIter=0; listIter<growCellLists.size(); listIter++)
           {
-            int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
-              GetTuple1(cellList[j]);
-
-            int linePtId = centerlineSubPtIds->GetTuple1(realCellId);
-            int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
-
-            for (int k=0; k<numCellNeighbors[cellList[j]]; k++)
+            for (int j=0; j<growCellLists[listIter].size(); j++)
             {
-              int neighborCellId = cellNeighbors[cellList[j]][k];
+              int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
+                GetTuple1(growCellLists[listIter][j]);
 
-              int neighborRealCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
-                GetTuple1(neighborCellId);
+              int linePtId = centerlineSubPtIds->GetTuple1(realCellId);
+              int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
 
-              double pCoordVal = centerlinePCoords->GetTuple1(neighborRealCellId);
-
-              if (cellBool[neighborCellId] == 0)
+              for (int k=0; k<numCellNeighbors[growCellLists[listIter][j]]; k++)
               {
-                if ((pCoordVal >= begVessel && pCoordVal <= begVessel + pCoordThr) ||
-                    (pCoordVal <= endVessel && pCoordVal >= endVessel - pCoordThr))
+                int neighborCellId = cellNeighbors[growCellLists[listIter][j]][k];
 
+                int neighborRealCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
+                  GetTuple1(neighborCellId);
+
+                double pCoordVal = centerlinePCoords->GetTuple1(neighborRealCellId);
+
+                if (cellBool[neighborCellId] == 0)
                 {
-                  newCellList.push_back(neighborCellId);
-                  allCellList.push_back(neighborCellId);
-                  cellBool[neighborCellId] = 1;
-
-                  double currentVec[3];
-                  centerlineBasedNormals->GetTuple(neighborRealCellId, currentVec);
-
-                  double locals[6][3];
-                  centerlineLocalX->GetTuple(neighborRealCellId, locals[0]);
-                  centerlineLocalY->GetTuple(neighborRealCellId, locals[1]);
-                  centerlineLocalZ->GetTuple(neighborRealCellId, locals[4]);
-                  for (int l=0; l<3; l++)
+                  if ((pCoordVal >= begVessel && pCoordVal <= begVessel + pCoordThr && listIter == 0) ||
+                      (pCoordVal <= endVessel && pCoordVal >= endVessel - pCoordThr && listIter == 1))
                   {
-                    locals[2][l] = -1.0*locals[0][l];
-                    locals[3][l] = -1.0*locals[1][l];
-                    locals[5][l] = -1.0*locals[4][l];
+                    done = 0;
+                    growCellLists[listIter].push_back(neighborCellId);
+                    cellBool[neighborCellId] = 1;
+
+                    double currentVec[3];
+                    centerlineBasedNormals->GetTuple(neighborRealCellId, currentVec);
+
+                    double locals[6][3];
+                    centerlineLocalX->GetTuple(neighborRealCellId, locals[0]);
+                    centerlineLocalY->GetTuple(neighborRealCellId, locals[1]);
+                    centerlineLocalZ->GetTuple(neighborRealCellId, locals[4]);
+                    for (int l=0; l<3; l++)
+                    {
+                      locals[2][l] = -1.0*locals[0][l];
+                      locals[3][l] = -1.0*locals[1][l];
+                      locals[5][l] = -1.0*locals[4][l];
+                    }
+
+                    //double beta = (1.0*row)/numRows;
+                    double beta = begVessel/maxPCoordThr;
+
+                    double boundarySetVec[3];
+                    for (int l=0; l<3; l++)
+                      boundarySetVec[l] = beta * currentVec[l] +  (1 - beta) * locals[patchVal][l];
+
+                    centerlineBasedNormals->SetTuple(neighborRealCellId, boundarySetVec);
+                    this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neighborRealCellId, patchVal);
                   }
-
-                  //double beta = (1.0*row)/numRows;
-                  double beta = begVessel/maxPCoordThr;
-
-                  double boundarySetVec[3];
-                  for (int l=0; l<3; l++)
-                    boundarySetVec[l] = beta * currentVec[l] +  (1 - beta) * locals[patchVal][l];
-
-                  centerlineBasedNormals->SetTuple(neighborRealCellId, boundarySetVec);
-                  this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neighborRealCellId, patchVal);
                 }
               }
             }
           }
-
-          cellList.clear();
-          for (int j=0; j<newCellList.size(); j++)
-            cellList.push_back(newCellList[j]);
-        }
-
-        if (groupId == 8)
-        {
-          std::string thenewfn = "/Users/adamupdegrove/Desktop/tmp/ADDINGCELLS_"+std::to_string(iter)+".vtp";
-          vtkSVIOUtils::WriteVTPFile(thenewfn, this->WorkPd);
-          iter++;
         }
 
         begVessel += pCoordThr;
         endVessel -= pCoordThr;
-        cellList.clear();
-        for (int j=0; j<allCellList.size(); j++)
-          cellList.push_back(allCellList[j]);
-
       }
     }
 
