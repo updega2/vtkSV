@@ -925,9 +925,21 @@ int vtkSVGroupsSegmenter::RunFilter()
       centerlineBasedNormals->SetTuple(realCellId, cellClusterVec);
     }
 
+    for (int j=0; j<branchNumberOfCells; j++)
+    {
+      //Get real cell id
+      int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
+
+      double currPCoord = centerlinePCoords->GetTuple1(realCellId);
+      double newPCoord = (currPCoord - minPCoord)/(maxPCoord - minPCoord);
+
+      centerlinePCoords->SetTuple1(realCellId, newPCoord);
+    }
+
     if (this->EnforceBoundaryDirections && this->MergedCenterlines->GetNumberOfCells() > 1)
     {
       fprintf(stdout,"ENFORCING BOUNDARY OF GROUP: %d\n", groupId);
+      fprintf(stdout,"MAX: %.6f MIN: %.6f]n", maxPCoord, minPCoord);
       // Do boundary cell stuffs
       // Get open boundary edges
       std::vector<int> openCornerPoints;
@@ -1096,7 +1108,7 @@ int vtkSVGroupsSegmenter::RunFilter()
       std::vector<int> numCellNeighbors;
       this->GetCellDirectNeighbors(branchPd, cellNeighbors, numCellNeighbors);
 
-      double maxPCoordThr = 0.7;
+      double maxPCoordThr = 0.5;
       double pCoordThr = 0.01;
       double begVessel = 0.0;
       double endVessel = 1.0;
