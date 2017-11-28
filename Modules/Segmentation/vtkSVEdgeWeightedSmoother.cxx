@@ -167,8 +167,14 @@ double vtkSVEdgeWeightedSmoother::GetEdgeWeightedDistance(const int generatorId,
       totalWeight += ang/SV_PI;
     }
   }
+
+  double edgeWeight = this->EdgeWeight;
   if (this->UseCurvatureWeight)
-    this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
+  {
+    if (this->NeighborPatchesNumberOfElements[evalId][i] != 0)
+      edgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
+  }
+
 
   // Get the generator patch id
   for (i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
@@ -183,11 +189,11 @@ double vtkSVEdgeWeightedSmoother::GetEdgeWeightedDistance(const int generatorId,
   double edgeWeighting = 0.0;
   if (currGenerator == generatorId)
   {
-    edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i]);
+    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i]);
   }
   else
   {
-    edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
+    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
   }
   //}
 
@@ -200,6 +206,4 @@ double vtkSVEdgeWeightedSmoother::GetEdgeWeightedDistance(const int generatorId,
   edgeWeightedDist = sqrt(edgeWeightedDist);
 
   return edgeWeightedDist;
-  return SV_OK;
 }
-

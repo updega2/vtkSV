@@ -71,6 +71,8 @@ int main(int argc, char *argv[])
   int writePolycubePd = 0;
   int writePolycubeUg = 0;
   int writeFinalHexMesh = 0;
+  int writeAll = 0;
+  int boundaryEnforceFactor = 1;
 
   double polycubeUnitLength = 0.0;
   double centerlineSeparationThreshold = 0.6;
@@ -106,11 +108,13 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-numberofcenterlineremovepts")   {numberOfCenterlineRemovePts = atoi(argv[++iarg]);}
       else if(tmpstr=="-modifycenterlines")             {modifyCenterlines = atoi(argv[++iarg]);}
       else if(tmpstr=="-centerlineseparationthreshold") {centerlineSeparationThreshold = atof(argv[++iarg]);}
+      else if(tmpstr=="-boundaryenforcefactor")         {boundaryEnforceFactor = atoi(argv[++iarg]);}
       else if(tmpstr=="-writecenterlinegraph")          {writeCenterlineGraph = atoi(argv[++iarg]);}
       else if(tmpstr=="-writemergedcenterlines")        {writeMergedCenterlines = atoi(argv[++iarg]);}
       else if(tmpstr=="-writesurfacepolycube")          {writePolycubePd = atoi(argv[++iarg]);}
       else if(tmpstr=="-writevolumepolycube")           {writePolycubeUg = atoi(argv[++iarg]);}
       else if(tmpstr=="-writefinalhexmesh")             {writeFinalHexMesh = atoi(argv[++iarg]);}
+      else if(tmpstr=="-writeall")                      {writeAll = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -142,11 +146,13 @@ int main(int argc, char *argv[])
     cout << "  -numberofcenterlineremovepts   : Number of centerline points to remove from the end of the branches if the model is not vasculature [default 3]" << endl;
     cout << "  -modifycenterlines             : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlineseparationthreshold [efault 0]" << endl;
     cout << "  -centerlineseparationthreshold : The distance at which a new branch is determinedif the modifycenterlines flag is set to 1. Play with this number to find a good centerline separation [default 0.6]" << endl;
+    cout << "  -boundaryenforcefactor         : Approximately represents the number of centerline points to enforce per branch. Typically a fairly low integer works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems. [default 1]" << endl;
     cout << "  -writecenterlinegraph          : Write the centerline graph to file [default 0]" << endl;
     cout << "  -writemergedcenterlines        : Write the merged centerlines to file [default 0]" << endl;
     cout << "  -writesurfacepolycube          : Write the surface polycube to file [default 0]" << endl;
     cout << "  -writevolumepolycube           : Write the volume polycube to file [default 0]" << endl;
     cout << "  -writefinalhexmesh             : Write the final hex mesh to file [default 0]" << endl;
+    cout << "  -writeall                      : Write everything [default 0]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -157,6 +163,14 @@ int main(int argc, char *argv[])
     // Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
     outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Segmented.vtp";
+  }
+  if (writeAll)
+  {
+    writeCenterlineGraph = 1;
+    writeMergedCenterlines = 1;
+    writePolycubePd = 1;
+    writePolycubeUg = 1;
+    writeFinalHexMesh = 1;
   }
 
   // Call Function to Read File
@@ -192,6 +206,7 @@ int main(int argc, char *argv[])
   Grouper->SetNumberOfCenterlineRemovePts(numberOfCenterlineRemovePts);
   Grouper->SetModifyCenterlines(modifyCenterlines);
   Grouper->SetCenterlineSeparationThreshold(centerlineSeparationThreshold);
+  Grouper->SetBoundaryEnforceFactor(boundaryEnforceFactor);
   Grouper->Update();
   std::cout<<"Done"<<endl;
 

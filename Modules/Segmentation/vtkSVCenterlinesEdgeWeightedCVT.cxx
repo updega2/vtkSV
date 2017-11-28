@@ -189,6 +189,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
       cellGenerator = this->WorkGenerators->GetCellData()->GetArray(
           this->GroupIdsArrayName)->GetTuple1(lastCellId);
 
+      fprintf(stdout,"CELL %d GIVEN %d\n", i, cellGenerator);
       this->PatchIdsArray->SetTuple1(i, cellGenerator);
     }
   }
@@ -297,8 +298,13 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
       totalWeight += ang/SV_PI;
     }
   }
+
+  double edgeWeight = this->EdgeWeight;
   if (this->UseCurvatureWeight)
-    this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
+  {
+    if (this->NeighborPatchesNumberOfElements[evalId][i] != 0)
+      edgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
+  }
 
   // Get the generator patch id
   for (i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
@@ -313,11 +319,11 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
   double edgeWeighting = 0.0;
   if (currGenerator == generatorId)
   {
-    edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i]);
+    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i]);
   }
   else
   {
-    edgeWeighting = 2 * this->EdgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
+    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
   }
   //}
 
