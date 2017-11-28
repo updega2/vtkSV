@@ -446,7 +446,7 @@ int vtkSVGroupsSegmenter::RunFilter()
     CVT->SetGenerators(this->MergedCenterlines);
     CVT->SetNumberOfRings(2);
     CVT->SetThreshold(stopCellNumber);
-    CVT->SetUseCurvatureWeight(0);
+    CVT->SetUseCurvatureWeight(1);
     CVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
     CVT->SetCVTDataArrayName("Normals");
     CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);

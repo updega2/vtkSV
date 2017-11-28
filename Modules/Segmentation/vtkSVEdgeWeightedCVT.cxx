@@ -129,6 +129,7 @@ int vtkSVEdgeWeightedCVT::InitializeConnectivity()
 
       this->NeighborPatchesIds[i][0] = this->PatchIdsArray->GetTuple1(i);
       this->NeighborPatchesNumberOfElements[i][0] = 1;
+
     }
 
     // Get cell patch neighbors
@@ -139,6 +140,7 @@ int vtkSVEdgeWeightedCVT::InitializeConnectivity()
     vtkErrorMacro("Not implemented yet");
     return SV_ERROR;
   }
+
   return SV_OK;
 }
 
@@ -289,8 +291,7 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
   edgeWeightedDist *= edgeWeightedDist;
 
   double totalWeight = 0.0;
-  int i;
-  for (i=0; i<this->NumberOfNeighbors[evalId]; i++)
+  for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
   {
     int neighborId = this->Neighbors[evalId][i];
     int neighborGenerator = this->PatchIdsArray->GetTuple1(neighborId);
@@ -307,31 +308,32 @@ double vtkSVEdgeWeightedCVT::GetEdgeWeightedDistance(const int generatorId, cons
     }
   }
 
-  double edgeWeight = this->EdgeWeight;
-  if (this->UseCurvatureWeight)
-  {
-    if (this->NeighborPatchesNumberOfElements[evalId][i] != 0)
-      this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][i];
-  }
-
   // Get the generator patch id
-  for (i=0; i<this->NumberOfNeighborPatches[evalId]; i++)
+  int stopI;
+  for (stopI=0; stopI<this->NumberOfNeighborPatches[evalId]; stopI++)
   {
-    if (this->NeighborPatchesIds[evalId][i] == generatorId)
+    if (this->NeighborPatchesIds[evalId][stopI] == generatorId)
     {
       break;
     }
+  }
+
+  double edgeWeight = this->EdgeWeight;
+  if (this->UseCurvatureWeight)
+  {
+    if (this->NeighborPatchesNumberOfElements[evalId][stopI] != 0)
+      this->EdgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][stopI];
   }
 
   // Get the edge weighted portion
   double edgeWeighting = 0.0;
   if (currGenerator == generatorId)
   {
-    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i]);
+    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][stopI]);
   }
   else
   {
-    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][i] - 1);
+    edgeWeighting = 2 * edgeWeight * (this->NumberOfNeighbors[evalId] - this->NeighborPatchesNumberOfElements[evalId][stopI] - 1);
   }
 
   // Now check the neighbors
