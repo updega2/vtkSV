@@ -50,6 +50,7 @@
 #include "vtkThreshold.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
+#include "vtkSmartPointer.h"
 #include "vtkIdList.h"
 #include "vtkIdFilter.h"
 #include "vtkInformation.h"
@@ -58,6 +59,9 @@
 #include "vtkVersion.h"
 #include "vtkXMLPolyDataWriter.h"
 
+#include "vtkSVIOUtils.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVCenterlines);
 
@@ -209,7 +213,7 @@ int vtkSVCenterlines::RequestData(
     return 1;
     }
 
-  vtkPolyDataNormals* surfaceNormals = vtkPolyDataNormals::New();
+  vtkNew(vtkPolyDataNormals, surfaceNormals);
 #if (VTK_MAJOR_VERSION <= 5)
   surfaceNormals->SetInput(input);
 #else
@@ -225,7 +229,7 @@ int vtkSVCenterlines::RequestData(
   fprintf(stdout,"GENERATING DELAUNAY TESSELATION...\n");
   if (this->GenerateDelaunayTessellation)
     {
-    vtkDelaunay3D* delaunayTessellator = vtkDelaunay3D::New();
+    vtkNew(vtkDelaunay3D, delaunayTessellator);
     delaunayTessellator->CreateDefaultLocator();
 #if (VTK_MAJOR_VERSION <= 5)
     delaunayTessellator->SetInput(surfaceNormals->GetOutput());
@@ -238,7 +242,7 @@ int vtkSVCenterlines::RequestData(
     vtkUnstructuredGrid* delaunay = delaunayTessellator->GetOutput();
     delaunay->GetPointData()->AddArray(surfaceNormals->GetOutput()->GetPointData()->GetNormals());
 
-    vtkvmtkInternalTetrahedraExtractor* internalTetrahedraExtractor = vtkvmtkInternalTetrahedraExtractor::New();
+    vtkNew(vtkvmtkInternalTetrahedraExtractor, internalTetrahedraExtractor);
 #if (VTK_MAJOR_VERSION <= 5)
     internalTetrahedraExtractor->SetInput(delaunayTessellator->GetOutput());
 #else
@@ -255,12 +259,10 @@ int vtkSVCenterlines::RequestData(
     this->DelaunayTessellation = internalTetrahedraExtractor->GetOutput();
     this->DelaunayTessellation->Register(this);
 
-    delaunayTessellator->Delete();
-    internalTetrahedraExtractor->Delete();
     }
 
   fprintf(stdout,"GENERATING VORONOI DIAGRAM...\n");
-  vtkvmtkVoronoiDiagram3D* voronoiDiagramFilter = vtkvmtkVoronoiDiagram3D::New();
+  vtkNew(vtkvmtkVoronoiDiagram3D, voronoiDiagramFilter);
 #if (VTK_MAJOR_VERSION <= 5)
   voronoiDiagramFilter->SetInput(this->DelaunayTessellation);
 #else
@@ -275,7 +277,7 @@ int vtkSVCenterlines::RequestData(
 
   if (this->SimplifyVoronoi)
     {
-    vtkvmtkSimplifyVoronoiDiagram* voronoiDiagramSimplifier = vtkvmtkSimplifyVoronoiDiagram::New();
+    vtkNew(vtkvmtkSimplifyVoronoiDiagram, voronoiDiagramSimplifier);
 #if (VTK_MAJOR_VERSION <= 5)
     voronoiDiagramSimplifier->SetInput(voronoiDiagramFilter->GetOutput());
 #else
@@ -285,42 +287,39 @@ int vtkSVCenterlines::RequestData(
     voronoiDiagramSimplifier->Update();
     voronoiDiagram = voronoiDiagramSimplifier->GetOutput();
     voronoiDiagram->Register(this);
-    voronoiDiagramSimplifier->Delete();
     }
 
   fprintf(stdout,"PRUNING VORONOI DIAGRAM...\n");
-  vtkTriangleFilter *triangulator = vtkTriangleFilter::New();
+  vtkNew(vtkTriangleFilter, triangulator);
   triangulator->SetInputData(voronoiDiagram);
   triangulator->Update();
 
-  //vtkCleanPolyData *cleaner0 = vtkCleanPolyData::New();
+  //vtkNew(vtkCleanPolyData, cleaner0);
   //cleaner0->SetInputData(triangulator->GetOutput());
   //cleaner0->ToleranceIsAbsoluteOn();
   //cleaner0->SetAbsoluteTolerance(0.001);
   //cleaner0->Update();
 
-  vtkPolyData *triPd = vtkPolyData::New();
+  vtkNew(vtkPolyData, triPd);
   triPd->DeepCopy(triangulator->GetOutput());
   triPd->BuildLinks();
-  triangulator->Delete();
 
   int numCells = triPd->GetNumberOfCells();
   int numPts = triPd->GetNumberOfPoints();
 
-  vtkIntArray *tmpCellArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, tmpCellArray);
   tmpCellArray->SetNumberOfTuples(numCells);
   tmpCellArray->SetName("TmpInternalIds");
   for (int i=0; i<numCells; i++)
     tmpCellArray->SetTuple1(i, i);
   triPd->GetCellData()->AddArray(tmpCellArray);
-  tmpCellArray->Delete();
 
   //Make edge table
   // ------------------------------------------------------------------------
 
   // Start edge insertion for edge table
-  vtkEdgeTable *edgeTable = vtkEdgeTable::New();
-  vtkIntArray *edgeNeighbors = vtkIntArray::New();
+  vtkNew(vtkEdgeTable, edgeTable);
+  vtkNew(vtkIntArray, edgeNeighbors);
   edgeNeighbors->SetNumberOfComponents(2);
   edgeTable->InitEdgeInsertion(numPts, 1);
 
@@ -337,7 +336,7 @@ int vtkSVCenterlines::RequestData(
       vtkIdType p0 = pts[j];
       vtkIdType p1 = pts[(j+1)%npts];
 
-      vtkIdList *neighborCellIds = vtkIdList::New();
+      vtkNew(vtkIdList, neighborCellIds);
       triPd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
       vtkIdType neighborCellId = 0;
 
@@ -361,7 +360,6 @@ int vtkSVCenterlines::RequestData(
         edgeNeighbors->InsertComponent(edgeId, 0, i);
         edgeNeighbors->InsertComponent(edgeId, 1, neighborCellId);
       }
-      neighborCellIds->Delete();
     }
   }
 
@@ -370,7 +368,7 @@ int vtkSVCenterlines::RequestData(
   // ------------------------------------------------------------------------
   // Now make polydata from edge table
 
-  vtkCellArray *edgeCells = vtkCellArray::New();
+  vtkNew(vtkCellArray, edgeCells);
   edgeTable->InitTraversal();
   int edgeId = 0;
   for (edgeId = 0; edgeId < totEdges;  edgeId++)
@@ -378,63 +376,55 @@ int vtkSVCenterlines::RequestData(
     vtkIdType edgePtId0, edgePtId1;
     edgeTable->GetNextEdge(edgePtId0, edgePtId1);
 
-    vtkIdList *newEdgeCell = vtkIdList::New();
+    vtkNew(vtkIdList, newEdgeCell);
     newEdgeCell->SetNumberOfIds(2);
     newEdgeCell->SetId(0, edgePtId0);
     newEdgeCell->SetId(1, edgePtId1);
 
     edgeCells->InsertNextCell(newEdgeCell);
 
-    newEdgeCell->Delete();
   }
   // ------------------------------------------------------------------------
 
-  vtkPolyData *edgePd = vtkPolyData::New();
+  vtkNew(vtkPolyData, edgePd);
   edgePd->SetLines(edgeCells);
   edgePd->SetPoints(triPd->GetPoints());
   edgePd->BuildLinks();
 
-  vtkPolyData *newEdgePd = vtkPolyData::New();
-  vtkPolyData *newTriPd = vtkPolyData::New();
+  vtkNew(vtkPolyData, newEdgePd);
+  vtkNew(vtkPolyData, newTriPd);
 
   this->PruneVoronoiDiagram(triPd, edgePd, newTriPd, newEdgePd, "");
   fprintf(stdout,"DONE COMPUTING REMOVAL ITERATIONS\n");
 
   std::string fullfn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_TRI_REMOVAL.vtp";
-  vtkXMLPolyDataWriter *newWriter = vtkXMLPolyDataWriter::New();
+  vtkNew(vtkXMLPolyDataWriter, newWriter);
   newWriter->SetInputData(newTriPd);
   newWriter->SetFileName(fullfn.c_str());
   newWriter->Write();
-  newWriter->Delete();
 
   std::string edgefn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_EDGE_REMOVAL.vtp";
-  vtkXMLPolyDataWriter *myWriter = vtkXMLPolyDataWriter::New();
+  vtkNew(vtkXMLPolyDataWriter, myWriter);
   myWriter->SetInputData(newEdgePd);
   myWriter->SetFileName(edgefn.c_str());
   myWriter->Write();
-  myWriter->Delete();
 
-  //vtkPolyData *thresholdCellPd = vtkPolyData::New();
-  //vtkPolyData *thresholdEdgePd = vtkPolyData::New();
+  //vtkNew(vtkPolyData, thresholdCellPd);
+  //vtkNew(vtkPolyData, thresholdEdgePd);
   //thresholdCellPd->DeepCopy(newTriPd);
   //thresholdEdgePd->DeepCopy(newEdgePd);
 
-  edgeCells->Delete();
-  edgeNeighbors->Delete();
-  edgeTable->Delete();
-
-  vtkIntArray *tmpEdgeArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, tmpEdgeArray);
   tmpEdgeArray->SetNumberOfTuples(newEdgePd->GetNumberOfCells());
   tmpEdgeArray->SetName("TmpInternalIds");
   for (int i=0; i<newEdgePd->GetNumberOfCells(); i++)
     tmpEdgeArray->SetTuple1(i, i);
   newEdgePd->GetCellData()->AddArray(tmpEdgeArray);
-  tmpEdgeArray->Delete();
 
   int mAbsThr = 3;
   double mAbsRange[2];
   newEdgePd->GetCellData()->GetArray("MAbs")->GetRange(mAbsRange);
-  vtkThreshold *mAbsThresholder = vtkThreshold::New();
+  vtkNew(vtkThreshold, mAbsThresholder);
   mAbsThresholder->SetInputData(newEdgePd);
   mAbsThresholder->SetInputArrayToProcess(0, 0, 0, 1, "MAbs");
   mAbsThresholder->ThresholdBetween(mAbsThr, mAbsRange[1]);
@@ -444,31 +434,27 @@ int vtkSVCenterlines::RequestData(
   double mRelThr = 0.5;
   double mRelRange[2];
   newEdgePd->GetCellData()->GetArray("MRel")->GetRange(mRelRange);
-  vtkThreshold *mRelThresholder = vtkThreshold::New();
+  vtkNew(vtkThreshold, mRelThresholder);
   mRelThresholder->SetInputData(mAbsThresholder->GetOutput());
   mRelThresholder->SetInputArrayToProcess(0, 0, 0, 1, "MRel");
   mRelThresholder->ThresholdBetween(mRelThr, mRelRange[1]);
   mRelThresholder->Update();
   fprintf(stdout,"Thresholded MRel: %d\n", mRelThresholder->GetOutput()->GetNumberOfCells());
 
-  vtkConnectivityFilter *connector = vtkConnectivityFilter::New();
+  vtkNew(vtkConnectivityFilter, connector);
   connector->SetInputData(mRelThresholder->GetOutput());
   connector->SetExtractionModeToAllRegions();
   connector->ColorRegionsOn();
   connector->Update();
 
-  vtkDataSetSurfaceFilter *surfacer = vtkDataSetSurfaceFilter::New();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(connector->GetOutput());
   surfacer->Update();
 
-  vtkPolyData *leftOver = vtkPolyData::New();
+  vtkNew(vtkPolyData, leftOver);
   leftOver->DeepCopy(surfacer->GetOutput());
-  surfacer->Delete();
 
-  mAbsThresholder->Delete();
-  mRelThresholder->Delete();
-
-  vtkIntArray *leaveArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, leaveArray);
   leaveArray->SetNumberOfTuples(edgePd->GetNumberOfCells());
   leaveArray->SetName("MedialEdges");
   for (int i=0; i<edgePd->GetNumberOfCells(); i++)
@@ -477,7 +463,7 @@ int vtkSVCenterlines::RequestData(
   int connectThr = 5;
   for (int i=0; i<connector->GetNumberOfExtractedRegions(); i++)
   {
-    vtkThreshold *regionThresholder = vtkThreshold::New();
+    vtkNew(vtkThreshold, regionThresholder);
     regionThresholder->SetInputData(leftOver);
     regionThresholder->SetInputArrayToProcess(0, 0, 0, 1, "RegionId");
     regionThresholder->ThresholdBetween(i, i);
@@ -494,12 +480,10 @@ int vtkSVCenterlines::RequestData(
     }
   }
 
-  connector->Delete();
   edgePd->GetCellData()->AddArray(leaveArray);
-  leaveArray->Delete();
 
-  vtkPolyData *nextTriPd = vtkPolyData::New();
-  vtkPolyData *nextEdgePd = vtkPolyData::New();
+  vtkNew(vtkPolyData, nextTriPd);
+  vtkNew(vtkPolyData, nextEdgePd);
 
   // --------------------------------------------------------------
   // Now prune again
@@ -508,16 +492,15 @@ int vtkSVCenterlines::RequestData(
   this->PruneVoronoiDiagram(triPd, edgePd, nextTriPd, nextEdgePd, "MedialEdges");
 
   std::string finedgefn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_FINAL_EDGE.vtp";
-  vtkXMLPolyDataWriter *nextWriter = vtkXMLPolyDataWriter::New();
+  vtkNew(vtkXMLPolyDataWriter, nextWriter);
   nextWriter->SetInputData(nextEdgePd);
   nextWriter->SetFileName(finedgefn.c_str());
   nextWriter->Write();
-  nextWriter->Delete();
 
   double finalRange[2];
   nextEdgePd->GetCellData()->GetArray("RemovalIteration")->GetRange(finalRange);
 
-  vtkIntArray *keepCellArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, keepCellArray);
   keepCellArray->SetNumberOfTuples(triPd->GetNumberOfCells());
   keepCellArray->SetName("KeepCellArray");
   for (int i=0; i<triPd->GetNumberOfCells(); i++)
@@ -533,7 +516,7 @@ int vtkSVCenterlines::RequestData(
 
       for (int j=0; j<npts; j++)
       {
-        vtkIdList *pointCellIds = vtkIdList::New();
+        vtkNew(vtkIdList, pointCellIds);
         triPd->GetPointCells(pts[j], pointCellIds);
 
         for (int k=0; k<pointCellIds->GetNumberOfIds(); k++)
@@ -542,66 +525,59 @@ int vtkSVCenterlines::RequestData(
           keepCellArray->SetTuple1(pointCellIds->GetId(k), 1);
         }
 
-        pointCellIds->Delete();
       }
 
-      //vtkIdList *pointIds = vtkIdList::New();
+      //vtkNew(vtkIdList, pointIds);
       //pointIds->SetNumberOfIds(2);
       //pointIds->SetId(0, pts[0]);
       //pointIds->SetId(1, pts[1]);
 
-      //vtkIdList *attachedCellIds = vtkIdList::New();
+      //vtkNew(vtkIdList, attachedCellIds);
 
       //triPd->GetCellNeighbors(-1, pointIds, attachedCellIds);
 
       //for (int j=0; j<attachedCellIds->GetNumberOfIds(); j++)
       //  keepCellArray->SetTuple1(attachedCellIds->GetId(j), 1);
 
-      //pointIds->Delete();
-      //attachedCellIds->Delete();
     }
   }
 
   triPd->GetCellData()->AddArray(keepCellArray);
-  keepCellArray->Delete();
 
-  vtkIntArray *tmpPtArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, tmpPtArray);
   tmpPtArray->SetNumberOfTuples(triPd->GetNumberOfPoints());
   tmpPtArray->SetName("TmpInternalIds");
   for (int i=0; i<triPd->GetNumberOfPoints(); i++)
     tmpPtArray->SetTuple1(i, i);
   triPd->GetPointData()->AddArray(tmpPtArray);
-  tmpPtArray->Delete();
 
-  vtkThreshold *keepThreshold = vtkThreshold::New();
+  vtkNew(vtkThreshold, keepThreshold);
   keepThreshold->SetInputData(triPd);
   keepThreshold->SetInputArrayToProcess(0, 0, 0, 1, "KeepCellArray");
   keepThreshold->ThresholdBetween(1, 1);
   keepThreshold->Update();
 
-  vtkDataSetSurfaceFilter *surfacer2 = vtkDataSetSurfaceFilter::New();
+  vtkNew(vtkDataSetSurfaceFilter, surfacer2);
   surfacer2->SetInputData(keepThreshold->GetOutput());
   surfacer2->Update();
 
-  vtkCleanPolyData *cleaner = vtkCleanPolyData::New();
+  vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(surfacer2->GetOutput());
   cleaner->Update();
 
-  vtkPolyData *reducedVorPd = vtkPolyData::New();
+  vtkNew(vtkPolyData, reducedVorPd);
   reducedVorPd->DeepCopy(cleaner->GetOutput());
-  surfacer2->Delete();
-  cleaner->Delete();
 
   ////
   //// --------------------------------------------------------------
   //// new seed ids
-  //vtkIdList *newSourceSeeds = vtkIdList::New();
-  //vtkIdList *newTargetSeeds = vtkIdList::New();
+  //vtkNew(vtkIdList, newSourceSeeds);
+  //vtkNew(vtkIdList, newTargetSeeds);
 
   //newTargetSeeds->SetNumberOfIds(voronoiTargetSeedIds->GetNumberOfIds());
   //newSourceSeeds->SetNumberOfIds(voronoiSourceSeedIds->GetNumberOfIds());
 
-  //vtkPointLocator *locator = vtkPointLocator::New();
+  //vtkNew(vtkPointLocator, locator);
   //locator->SetDataSet(reducedVorPd);
   ////locator->SetDataSet(triPd);
   //locator->BuildLocator();
@@ -627,14 +603,12 @@ int vtkSVCenterlines::RequestData(
 
   //  newSourceSeeds->SetId(i, ptId);
   //}
-  //newSourceSeeds->Delete();
-  //newTargetSeeds->Delete();
   // --------------------------------------------------------------
   //
-  vtkPolyData *newVoronoiDiagram = vtkPolyData::New();
+  vtkNew(vtkPolyData, newVoronoiDiagram);
   newVoronoiDiagram->DeepCopy(voronoiDiagram);
 
-  vtkDoubleArray *newCostFunctionArray = vtkDoubleArray::New();
+  vtkNew(vtkDoubleArray, newCostFunctionArray);
   newCostFunctionArray->SetNumberOfTuples(newVoronoiDiagram->GetNumberOfPoints());
   newCostFunctionArray->SetName("NewCostArray");
 
@@ -647,7 +621,7 @@ int vtkSVCenterlines::RequestData(
   //reducedVorPd->BuildLinks();
   //for (int i=0; i<reducedVorPd->GetNumberOfPoints(); i++)
   //{
-  //  vtkIdList *ptCellIds = vtkIdList::New();
+  //  vtkNew(vtkIdList, ptCellIds);
   //  reducedVorPd->GetPointCells(i, ptCellIds);
 
   //  if (ptCellIds->GetNumberOfIds() > 2)
@@ -655,12 +629,11 @@ int vtkSVCenterlines::RequestData(
   //    int origPtId = reducedVorPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(i);
   //    newCostFunctionArray->SetTuple1(origPtId, 1000000000.0);
   //  }
-  //  ptCellIds->Delete();
   //}
 
   for (int i=0; i<newVoronoiDiagram->GetNumberOfPoints(); i++)
   {
-    //vtkIdList *pointCellIds = vtkIdList::New();
+    //vtkNew(vtkIdList, pointCellIds);
     //nextTriPd->GetPointCells(i, pointCellIds);
 
     //double mAbsVal = 0.0;
@@ -677,7 +650,6 @@ int vtkSVCenterlines::RequestData(
 
     newCostFunctionArray->SetTuple1(i, 0.000000001);
 
-    //pointCellIds->Delete();
   }
 
   for (int i=0; i<nextEdgePd->GetNumberOfCells(); i++)
@@ -699,17 +671,14 @@ int vtkSVCenterlines::RequestData(
   }
 
   newVoronoiDiagram->GetPointData()->AddArray(newCostFunctionArray);
-  newCostFunctionArray->Delete();
 
   nextEdgePd->GetPointData()->AddArray(triPd->GetPointData()->GetArray(this->RadiusArrayName));
 
   std::string newfn = "/Users/adamupdegrove/Desktop/tmp/EDGES_WITH_RADIUS.vtp";
-  vtkXMLPolyDataWriter *heWriter = vtkXMLPolyDataWriter::New();
+  vtkNew(vtkXMLPolyDataWriter, heWriter);
   heWriter->SetInputData(nextEdgePd);
   heWriter->SetFileName(newfn.c_str());
   heWriter->Write();
-  heWriter->Delete();
-  reducedVorPd->Delete();
 
   double radRange[2];
   voronoiDiagram->GetPointData()->GetArray(this->RadiusArrayName)->GetRange(radRange);
@@ -717,14 +686,35 @@ int vtkSVCenterlines::RequestData(
   fprintf(stdout,"1/RADIUS ARRAY RANGE: %.6f %.6f\n", 1./radRange[0], 1./radRange[1]);
 
   // --------------------------------------------------------------
-  edgePd->Delete();
-  triPd->Delete();
-  newTriPd->Delete();
-  newEdgePd->Delete();
-  nextTriPd->Delete();
-  nextEdgePd->Delete();
 
-//  vtkArrayCalculator* voronoiCostFunctionCalculator = vtkArrayCalculator::New();
+  //=========================GETTING FINAL EDGES============================
+  vtkNew(vtkThreshold, finalThreshold);
+  finalThreshold->SetInputData(nextEdgePd);
+  finalThreshold->SetInputArrayToProcess(0, 0, 0, 1, "RemovalIteration");
+  finalThreshold->ThresholdBetween(finalRange[1], finalRange[1]);
+  finalThreshold->Update();
+
+  vtkNew(vtkDataSetSurfaceFilter, surfacer3);
+  surfacer3->SetInputData(finalThreshold->GetOutput());
+  surfacer3->Update();
+
+  vtkNew(vtkCleanPolyData, cleaner2);
+  cleaner2->SetInputData(surfacer3->GetOutput());
+  cleaner2->Update();
+
+  output->DeepCopy(cleaner2->GetOutput());
+  //========================================================================
+  //
+  //======================NOW TRY SEPARATING INTO SOMETHING=================
+
+  vtkNew(vtkPolyData, linesPd);
+  linesPd->DeepCopy(cleaner2->GetOutput());
+
+  std::vector<int> pointUsed(linesPd->GetNumberOfPoints(), 0);
+  this->RecursiveGetPolylines(linesPd, pointUsed);
+  //========================================================================
+
+//  vtkNew(vtkArrayCalculator* voronoiCostFunctionCalculator);
 ////#if (VTK_MAJOR_VERSION <= 5)
 ////  voronoiCostFunctionCalculator->SetInput(voronoiDiagram);
 ////#else
@@ -738,10 +728,10 @@ int vtkSVCenterlines::RequestData(
 //  voronoiCostFunctionCalculator->SetResultArrayName(this->CostFunctionArrayName);
 //  voronoiCostFunctionCalculator->Update();
 //
-//  vtkIdList* voronoiSourceSeedIds = vtkIdList::New();
-//  vtkIdList* voronoiTargetSeedIds = vtkIdList::New();
+//  vtkNew(vtkIdList, voronoiSourceSeedIds);
+//  vtkNew(vtkIdList, voronoiTargetSeedIds);
 //
-//  vtkIdList* voronoiSeeds = vtkIdList::New();
+//  vtkNew(vtkIdList, voronoiSeeds);
 //
 //  int i;
 //  if (this->CapCenterIds)
@@ -768,7 +758,7 @@ int vtkSVCenterlines::RequestData(
 //      }
 //    }
 //
-//  vtkvmtkNonManifoldFastMarching* voronoiFastMarching = vtkvmtkNonManifoldFastMarching::New();
+//  vtkNew(vtkvmtkNonManifoldFastMarching* voronoiFastMarching);
 //#if (VTK_MAJOR_VERSION <= 5)
 //  voronoiFastMarching->SetInput(vtkPolyData::SafeDownCast(voronoiCostFunctionCalculator->GetOutput()));
 //#else
@@ -786,7 +776,7 @@ int vtkSVCenterlines::RequestData(
 //#endif
 //
 //
-//  vtkvmtkSteepestDescentLineTracer* centerlineBacktracing = vtkvmtkSteepestDescentLineTracer::New();
+//  vtkNew(vtkvmtkSteepestDescentLineTracer* centerlineBacktracing);
 //#if (VTK_MAJOR_VERSION <= 5)
 //  centerlineBacktracing->SetInput(voronoiFastMarching->GetOutput());
 //#else
@@ -810,7 +800,7 @@ int vtkSVCenterlines::RequestData(
 //
 //  vtkIdList* hitTargets = centerlineBacktracing->GetHitTargets();
 //
-//  vtkPoints* endPointPairs = vtkPoints::New();
+//  vtkNew(vtkPoints, endPointPairs);
 //
 //  const vtkIdType numTargetSeedIds = this->TargetSeedIds->GetNumberOfIds();
 //  const vtkIdType numHitTargets = hitTargets->GetNumberOfIds();
@@ -844,11 +834,10 @@ int vtkSVCenterlines::RequestData(
 //  }
 //
 //  std::string thefn = "/Users/adamupdegrove/Desktop/tmp/REG_CENTERLINES.vtp";
-//  vtkXMLPolyDataWriter *duhWriter = vtkXMLPolyDataWriter::New();
+//  vtkNew(vtkXMLPolyDataWriter, duhWriter);
 //  duhWriter->SetInputData(output);
 //  duhWriter->SetFileName(thefn.c_str());
 //  duhWriter->Write();
-//  duhWriter->Delete();
 //
 //  if (this->CenterlineResampling)
 //    {
@@ -856,16 +845,6 @@ int vtkSVCenterlines::RequestData(
 //    }
 //  this->ReverseCenterlines();
 //
-//  surfaceNormals->Delete();
-//  voronoiDiagramFilter->Delete();
-//  voronoiCostFunctionCalculator->Delete();
-//  voronoiSeeds->Delete();
-//  voronoiSourceSeedIds->Delete();
-//  voronoiTargetSeedIds->Delete();
-//  voronoiFastMarching->Delete();
-//  centerlineBacktracing->Delete();
-//  endPointPairs->Delete();
-
   return 1;
 }
 
@@ -1157,8 +1136,8 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
   if (medialEdgeArrayName != "")
     dontTouch = 1;
 
-  vtkPolyData *tmpTriPd = vtkPolyData::New(); tmpTriPd->DeepCopy(inTriPd);
-  vtkPolyData *tmpEdgePd = vtkPolyData::New(); tmpEdgePd->DeepCopy(inEdgePd);
+  vtkNew(vtkPolyData, tmpTriPd); tmpTriPd->DeepCopy(inTriPd);
+  vtkNew(vtkPolyData, tmpEdgePd); tmpEdgePd->DeepCopy(inEdgePd);
   outTriPd->DeepCopy(inTriPd);
   outEdgePd->DeepCopy(inEdgePd);
 
@@ -1170,32 +1149,30 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
   std::vector<int> deletedCell(numCells, 0);
   std::vector<int> deletedEdge(numEdgeCells, 0);
 
-  vtkIntArray *tmpEdgeArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, tmpEdgeArray);
   tmpEdgeArray->SetNumberOfTuples(numEdgeCells);
   tmpEdgeArray->SetName("TmpInternalIds");
   for (int i=0; i<numEdgeCells; i++)
     tmpEdgeArray->SetTuple1(i, i);
   tmpEdgePd->GetCellData()->AddArray(tmpEdgeArray);
-  tmpEdgeArray->Delete();
 
-  vtkIntArray *edgeRemoveIterArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, edgeRemoveIterArray);
   edgeRemoveIterArray->SetNumberOfTuples(numEdgeCells);
   edgeRemoveIterArray->FillComponent(0, -1);
   edgeRemoveIterArray->SetName("RemovalIteration");
 
-  vtkIntArray *edgeIsolatedIterArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, edgeIsolatedIterArray);
   edgeIsolatedIterArray->SetNumberOfTuples(numEdgeCells);
   edgeIsolatedIterArray->FillComponent(0, -1);
   edgeIsolatedIterArray->SetName("IsolatedIteration");
   tmpEdgePd->GetCellData()->AddArray(edgeIsolatedIterArray);
-  edgeIsolatedIterArray->Delete();
 
-  vtkIntArray *endIsolatedIterArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, endIsolatedIterArray);
   endIsolatedIterArray->SetNumberOfTuples(numEdgeCells);
   endIsolatedIterArray->FillComponent(0, -1);
   endIsolatedIterArray->SetName("IsolatedIteration");
 
-  vtkIntArray *removeIterArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, removeIterArray);
   removeIterArray->SetNumberOfTuples(numCells);
   removeIterArray->FillComponent(0, -1);
   removeIterArray->SetName("RemovalIteration");
@@ -1220,8 +1197,8 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
 
         if (npts == 2)
         {
-          vtkIdList *pt0CellIds = vtkIdList::New();
-          vtkIdList *pt1CellIds = vtkIdList::New();
+          vtkNew(vtkIdList, pt0CellIds);
+          vtkNew(vtkIdList, pt1CellIds);
 
           tmpEdgePd->GetPointCells(pts[0], pt0CellIds);
           tmpEdgePd->GetPointCells(pts[1], pt1CellIds);
@@ -1265,8 +1242,6 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
             }
           }
 
-          pt0CellIds->Delete();
-          pt1CellIds->Delete();
         }
       }
     }
@@ -1283,13 +1258,13 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
 
         if (npts == 3)
         {
-          vtkIdList *openEdges = vtkIdList::New();
+          vtkNew(vtkIdList, openEdges);
           for (int j=0; j<npts; j++)
           {
             int ptId0 = pts[j];
             int ptId1 = pts[(j+1)%npts];
 
-            vtkIdList *cellNeighborIds = vtkIdList::New();
+            vtkNew(vtkIdList, cellNeighborIds);
             tmpTriPd->GetCellEdgeNeighbors(i, ptId0, ptId1, cellNeighborIds);
 
             if (cellNeighborIds->GetNumberOfIds() == 0)
@@ -1305,7 +1280,6 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
               if (numDeletedNeighbors == cellNeighborIds->GetNumberOfIds())
                 openEdges->InsertNextId(j);
             }
-            cellNeighborIds->Delete();
           }
           if (openEdges->GetNumberOfIds() == 3)
           {
@@ -1320,12 +1294,12 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
             // Remove on edge pd
             int ptId0 = pts[0];
             int ptId1 = pts[1];
-            vtkIdList *pointIds = vtkIdList::New();
+            vtkNew(vtkIdList, pointIds);
             pointIds->SetNumberOfIds(2);
             pointIds->SetId(0, ptId0);
             pointIds->SetId(1, ptId1);
 
-            vtkIdList *edgeCell = vtkIdList::New();
+            vtkNew(vtkIdList, edgeCell);
             tmpEdgePd->GetCellNeighbors(-1, pointIds, edgeCell);
 
             if (edgeCell->GetNumberOfIds() != 1)
@@ -1353,8 +1327,6 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
               }
             }
 
-            pointIds->Delete();
-            edgeCell->Delete();
             // --------------------------------------------------------------
           }
           else if (openEdges->GetNumberOfIds() == 2)
@@ -1379,13 +1351,13 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
 
             // --------------------------------------------------------------
             // Remove on edge pd
-            vtkIdList *pointIds = vtkIdList::New();
+            vtkNew(vtkIdList, pointIds);
             pointIds->SetNumberOfIds(2);
             pointIds->SetId(0, ptId0);
             pointIds->SetId(1, ptId2);
 
 
-            vtkIdList *edgeCell = vtkIdList::New();
+            vtkNew(vtkIdList, edgeCell);
             tmpEdgePd->GetCellNeighbors(-1, pointIds, edgeCell);
 
             if (edgeCell->GetNumberOfIds() != 1)
@@ -1413,8 +1385,6 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
               }
             }
 
-            pointIds->Delete();
-            edgeCell->Delete();
 
             // --------------------------------------------------------------
           }
@@ -1435,12 +1405,12 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
 
             // --------------------------------------------------------------
             // Remove on edge pd
-            vtkIdList *pointIds = vtkIdList::New();
+            vtkNew(vtkIdList, pointIds);
             pointIds->SetNumberOfIds(2);
             pointIds->SetId(0, ptId0);
             pointIds->SetId(1, ptId1);
 
-            vtkIdList *edgeCell = vtkIdList::New();
+            vtkNew(vtkIdList, edgeCell);
             tmpEdgePd->GetCellNeighbors(-1, pointIds, edgeCell);
 
             if (edgeCell->GetNumberOfIds() != 1)
@@ -1468,11 +1438,8 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
               }
             }
 
-            pointIds->Delete();
-            edgeCell->Delete();
             // --------------------------------------------------------------
           }
-          openEdges->Delete();
         }
       }
     }
@@ -1490,18 +1457,16 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
       deletedEdge[tmpDeletedEdges[i]] = 1;
 
     //std::string fn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_PRUNE" + std::to_string(iter) + ".vtp";
-    //vtkXMLPolyDataWriter *inWriter = vtkXMLPolyDataWriter::New();
+    //vtkNew(vtkXMLPolyDataWriter, inWriter);
     //inWriter->SetInputData(tmpTriPd);
     //inWriter->SetFileName(fn.c_str());
     //inWriter->Write();
-    //inWriter->Delete();
 
     //std::string inefn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_EDGE_PRUNE" + std::to_string(iter) + ".vtp";
-    //vtkXMLPolyDataWriter *inEdgeWriter = vtkXMLPolyDataWriter::New();
+    //vtkNew(vtkXMLPolyDataWriter, inEdgeWriter);
     //inEdgeWriter->SetInputData(tmpEdgePd);
     //inEdgeWriter->SetFileName(inefn.c_str());
     //inEdgeWriter->Write();
-    //inEdgeWriter->Delete();
 
     // --------------------------------------------------------------
     // Now add to edge isolated list
@@ -1518,12 +1483,12 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
 
           if (npts == 2)
           {
-            vtkIdList *pointIds = vtkIdList::New();
+            vtkNew(vtkIdList, pointIds);
             pointIds->SetNumberOfIds(2);
             pointIds->SetId(0, pts[0]);
             pointIds->SetId(1, pts[1]);
 
-            vtkIdList *edgeCellIds = vtkIdList::New();
+            vtkNew(vtkIdList, edgeCellIds);
 
             tmpTriPd->GetCellNeighbors(-1, pointIds, edgeCellIds);
 
@@ -1542,8 +1507,6 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
               tmpEdgePd->GetCellData()->GetArray("IsolatedIteration")->SetTuple1(i, iter);
               nIsolated++;
             }
-            pointIds->Delete();
-            edgeCellIds->Delete();
           }
         }
       }
@@ -1553,20 +1516,18 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
     iter++;
   }
 
-  tmpTriPd->Delete();
 
   outTriPd->GetCellData()->AddArray(removeIterArray);
-  removeIterArray->Delete();
 
   outEdgePd->GetCellData()->AddArray(edgeRemoveIterArray);
   outEdgePd->GetCellData()->AddArray(endIsolatedIterArray);
 
-  vtkIntArray *mAbsArray = vtkIntArray::New();
+  vtkNew(vtkIntArray, mAbsArray);
   mAbsArray->SetNumberOfTuples(numEdgeCells);
   mAbsArray->FillComponent(0, -1);
   mAbsArray->SetName("MAbs");
 
-  vtkDoubleArray *mRelArray = vtkDoubleArray::New();
+  vtkNew(vtkDoubleArray, mRelArray);
   mRelArray->SetNumberOfTuples(numEdgeCells);
   mRelArray->FillComponent(0, -1.0);
   mRelArray->SetName("MRel");
@@ -1597,10 +1558,136 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
   outEdgePd->GetCellData()->AddArray(mAbsArray);
   outEdgePd->GetCellData()->AddArray(mRelArray);
 
-  mAbsArray->Delete();
-  mRelArray->Delete();
-  edgeRemoveIterArray->Delete();
-  endIsolatedIterArray->Delete();
+  return 1;
+}
+
+int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd, std::vector<int> &pointUsed)
+{
+	//int startVertex = 0;
+	int i, j, index, firstVertex, prevVertex, secondVertex, countTotal;
+	double tempDouble[3], tempX[3], tempY[3], tempZ[3], tempXPre[3];
+  vtkNew(vtkIdList, pointCellIds);
+	int stopCriteria;
+
+  int numPts = pd->GetNumberOfPoints();
+  std::vector<int> pointUsed(numPts, 0);
+
+	firstVertex = 0;
+  pd->BuildLinks();
+  for (int i=0; i<pd->GetNumberOfPoints(); i++)
+  {
+    pd->GetPointCells(i, pointCellIds);
+    if (pointCellIds->GetNumberOfIds() == 1)
+    {
+      firstVertex = i;
+      break;
+    }
+  }
+
+	stopCriteria = 0;
+
+	while (!stopCriteria)
+	{
+
+		prevVertex = -1;
+		secondVertex = -1;
+
+    pd->GetPointCells(firstVertex, pointCellIds);
+		if (pointCellIds->GetNumberOfIds() == 1)
+		{
+			index = pointCellIds->GetId(0);;
+			if (pointUsed[index] == 0)
+			{
+				secondVertex = index;
+			}
+			else
+			{
+				prevVertex = index;
+			}
+		}
+		else
+		{
+			for (i = 0; i < pointCellIds->GetNumberOfIds(); i++)
+			{
+				index = pointCellIds->GetId(i);
+				if (pointUsed[index] == 0)
+				{
+					secondVertex = index;
+				}
+				else
+				{
+					prevVertex = index;
+				}
+			}
+		}
+
+		pointUsed[firstVertex] = 1;
+
+		if (pointCellIds->GetNumberOfIds() == 1)
+		{
+
+			index = pointCellIds->GetId(0);
+			if (pointUsed[index] == 1)
+			{
+				stopCriteria = 1;
+			}
+
+		}
+
+		firstVertex = secondVertex;
+	}
+
+	//check all curve-skeleton points
+	int stopCriteriaAll = 1;
+	start_vertex = -1;
+	for (i = 0; i < numPts; i++)
+	{
+		if (pointUsed[i] == 0)
+		{
+
+			stopCriteriaAll = 0;
+			break;
+
+		}
+	}
+
+	if (stopCriteriaAll == 0)
+	{
+		for (i = 0; i < numPts; i++)
+		{
+			if (pointUsed[i] == 0)
+			{
+        pd->GetPointCells(i, pointCellIds);
+				for (j = 0; j < pointCellIds->GetNumberOfIds(); j++)
+				{
+					index = pointCellIds->GetId(j);
+					if (pointUsed[index] == 1)
+					{
+						start_vertex = i;
+						break;
+					}
+				}
+
+				if (start_vertex != -1)
+				{
+					break;
+				}
+			}
+		}
+
+		if (start_vertex == -1)
+		{
+			cout<<"Error in RecursiveLocalCoordinateSystem(start_vertex)!"<<endl;
+		}
+    else
+    {
+		  RecursiveGetPolylines(pd, pointUsed);
+    }
+	}
+	else
+	{
+		return 1;
+	}
 
   return 1;
 }
