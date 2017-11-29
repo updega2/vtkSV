@@ -47,7 +47,6 @@ int main(int argc, char *argv[])
   bool RequestedHelp       = false;
   bool InputProvided       = false;
   bool OutputProvided      = false;
-  bool CenterlinesProvided = false;
 
   // Variables used in processing the commandline
   int iarg, arglength;
@@ -77,11 +76,11 @@ int main(int argc, char *argv[])
       tmpstr.erase(0,arglength);
   }
 
-  if (RequestedHelp || !InputProvided || !CenterlinesProvided)
+  if (RequestedHelp || !InputProvided)
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  GroupsClipper -input [Input Filename] -output [Output Filename] ..." << endl;
+    cout << "  CenterlinesExtractor -input [Input Filename] -output [Output Filename] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
