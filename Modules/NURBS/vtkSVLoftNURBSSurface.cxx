@@ -246,6 +246,20 @@ int vtkSVLoftNURBSSurface::RequestData(
     inputs[idx] = vtkPolyData::GetData(inputVector[0],idx);
     }
 
+  if (this->UKnotSpanType == NULL ||
+      this->VKnotSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide knot span types for u, v directions");
+    return SV_ERROR;
+  }
+
+  if (this->UParametricSpanType == NULL ||
+      this->VParametricSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide parametric span types for u, v directions");
+    return SV_ERROR;
+  }
+
   // TODO: Need to make sure knot span and parameteric span types are set
   if (this->LoftNURBS(inputs,numInputs,output) != SV_OK)
   {
@@ -546,7 +560,7 @@ int vtkSVLoftNURBSSurface::GetDefaultDerivatives(vtkStructuredGrid *input, const
 
   // Get number of values and derivatives from dim
   int numVals   = dim[comp];
-  int numDerivs = dim[-1*(comp-1)];
+  int numDerivs = dim[(comp+1)%2];
 
   // Set number of tuples for derivatives
   D0out->SetNumberOfTuples(numDerivs);
@@ -554,7 +568,7 @@ int vtkSVLoftNURBSSurface::GetDefaultDerivatives(vtkStructuredGrid *input, const
   for (int i=0; i<numDerivs; i++)
   {
     int pos[3]; pos[2] = 0;
-    pos[-1*(comp-1)] = i;
+    pos[(comp+1)%2] = i;
 
     // Get the point id
     double pt0[3]; pos[comp] = 0;

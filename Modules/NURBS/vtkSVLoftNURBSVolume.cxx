@@ -68,25 +68,12 @@ vtkSVLoftNURBSVolume::vtkSVLoftNURBSVolume()
   this->UnstructuredGridVSpacing = 0.1;
   this->UnstructuredGridWSpacing = 0.1;
 
-  this->StartUDerivatives = vtkDoubleArray::New();
-  this->StartVDerivatives = vtkDoubleArray::New();
-  this->StartWDerivatives = vtkDoubleArray::New();
-  this->EndUDerivatives   = vtkDoubleArray::New();
-  this->EndVDerivatives   = vtkDoubleArray::New();
-  this->EndWDerivatives   = vtkDoubleArray::New();
-
-  this->StartUDerivatives->SetNumberOfComponents(3);
-  this->StartUDerivatives->SetNumberOfTuples(1);
-  this->StartVDerivatives->SetNumberOfComponents(3);
-  this->StartVDerivatives->SetNumberOfTuples(1);
-  this->StartWDerivatives->SetNumberOfComponents(3);
-  this->StartWDerivatives->SetNumberOfTuples(1);
-  this->EndUDerivatives->SetNumberOfComponents(3);
-  this->EndUDerivatives->SetNumberOfTuples(1);
-  this->EndVDerivatives->SetNumberOfComponents(3);
-  this->EndVDerivatives->SetNumberOfTuples(1);
-  this->EndWDerivatives->SetNumberOfComponents(3);
-  this->EndWDerivatives->SetNumberOfTuples(1);
+  this->StartUDerivatives = vtkStructuredGrid::New();
+  this->StartVDerivatives = vtkStructuredGrid::New();
+  this->StartWDerivatives = vtkStructuredGrid::New();
+  this->EndUDerivatives   = vtkStructuredGrid::New();
+  this->EndVDerivatives   = vtkStructuredGrid::New();
+  this->EndWDerivatives   = vtkStructuredGrid::New();
 
   this->InputGrid = NULL;
   this->Volume = vtkSVNURBSVolume::New();
@@ -280,6 +267,23 @@ int vtkSVLoftNURBSVolume::RequestData(
     vtkErrorMacro("Need to set the input grid");
     return SV_ERROR;
   }
+
+  if (this->UKnotSpanType == NULL ||
+      this->VKnotSpanType == NULL ||
+      this->WKnotSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide knot span types for u, v, w directions");
+    return SV_ERROR;
+  }
+
+  if (this->UParametricSpanType == NULL ||
+      this->VParametricSpanType == NULL ||
+      this->WParametricSpanType == NULL)
+  {
+    vtkErrorMacro("Need to provide parametric span types for u, v, w directions");
+    return SV_ERROR;
+  }
+
   // TODO: Need to make sure knot span and parameteric span types are set
   if (this->LoftNURBS(this->InputGrid,numInputs,output) != SV_OK)
   {
@@ -386,15 +390,15 @@ void vtkSVLoftNURBSVolume::PrintSelf(ostream& os,
   os << indent << "U Degree: " << this->UDegree << "\n";
   os << indent << "U Knot span type: " << this->UKnotSpanType << "\n";
   os << indent << "U Parametric values span type: " << this->UParametricSpanType << "\n";
-  for (int i=0; i<this->StartUDerivatives->GetNumberOfTuples(); i++)
+  for (int i=0; i<this->StartUDerivatives->GetNumberOfPoints(); i++)
   {
-    double tup[3]; this->StartUDerivatives->GetTuple(i, tup);
+    double tup[3]; this->StartUDerivatives->GetPoint(i, tup);
     os << indent << "Start U Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
-  for (int i=0; i<this->EndUDerivatives->GetNumberOfTuples(); i++)
+  for (int i=0; i<this->EndUDerivatives->GetNumberOfPoints(); i++)
   {
-    double tup[3]; this->EndUDerivatives->GetTuple(i, tup);
+    double tup[3]; this->EndUDerivatives->GetPoint(i, tup);
     os << indent << "End U Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
@@ -403,15 +407,15 @@ void vtkSVLoftNURBSVolume::PrintSelf(ostream& os,
   os << indent << "V Degree: " << this->VDegree << "\n";
   os << indent << "V Knot span type: " << this->VKnotSpanType << "\n";
   os << indent << "V Parametric values span type: " << this->VParametricSpanType << "\n";
-  for (int i=0; i<this->StartVDerivatives->GetNumberOfTuples(); i++)
+  for (int i=0; i<this->StartVDerivatives->GetNumberOfPoints(); i++)
   {
-    double tup[3]; this->StartVDerivatives->GetTuple(i, tup);
+    double tup[3]; this->StartVDerivatives->GetPoint(i, tup);
     os << indent << "Start V Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
-  for (int i=0; i<this->EndVDerivatives->GetNumberOfTuples(); i++)
+  for (int i=0; i<this->EndVDerivatives->GetNumberOfPoints(); i++)
   {
-    double tup[3]; this->EndVDerivatives->GetTuple(i, tup);
+    double tup[3]; this->EndVDerivatives->GetPoint(i, tup);
     os << indent << "End V Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
@@ -419,15 +423,15 @@ void vtkSVLoftNURBSVolume::PrintSelf(ostream& os,
   os << indent << "W Degree: " << this->WDegree << "\n";
   os << indent << "W Knot span type: " << this->WKnotSpanType << "\n";
   os << indent << "W Parametric values span type: " << this->WParametricSpanType << "\n";
-  for (int i=0; i<this->StartWDerivatives->GetNumberOfTuples(); i++)
+  for (int i=0; i<this->StartWDerivatives->GetNumberOfPoints(); i++)
   {
-    double tup[3]; this->StartWDerivatives->GetTuple(i, tup);
+    double tup[3]; this->StartWDerivatives->GetPoint(i, tup);
     os << indent << "Start W Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
-  for (int i=0; i<this->EndWDerivatives->GetNumberOfTuples(); i++)
+  for (int i=0; i<this->EndWDerivatives->GetNumberOfPoints(); i++)
   {
-    double tup[3]; this->EndWDerivatives->GetTuple(i, tup);
+    double tup[3]; this->EndWDerivatives->GetPoint(i, tup);
     os << indent << "End W Derivative " << i << ": " << tup[0] << " ";
     os << tup[1] << " " << tup[2] << "\n";
   }
@@ -571,31 +575,59 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   //fprintf(stdout,"Z knots\n");
   //vtkSVNURBSUtils::PrintArray(wKnots);
 
-  //// Get derivatives in fomrat we need
-  //vtkNew(vtkDoubleArray, DU0); DU0->DeepCopy(this->StartUDerivatives);
-  //vtkNew(vtkDoubleArray, DUN); DUN->DeepCopy(this->EndUDerivatives);
-  //if (!strncmp(kutype.c_str(), "derivative", 10))
-  //{
-  //  // Get default derivatives if we need!
-  //  if (DU0->GetNumberOfTuples() == 1 ||
-  //      DUN->GetNumberOfTuples() == 1)
-  //  {
-  //    this->GetDefaultDerivatives(inputs, 0, DU0, DUN);
-  //  }
-  //}
+  // Get derivatives in fomrat we need
+  vtkNew(vtkStructuredGrid, DU0); DU0->DeepCopy(this->StartUDerivatives);
+  vtkNew(vtkStructuredGrid, DUN); DUN->DeepCopy(this->EndUDerivatives);
+  if (!strncmp(kutype.c_str(), "derivative", 10))
+  {
+    // Get default derivatives if we need!
+    if (DU0->GetNumberOfPoints() == 0 ||
+        DUN->GetNumberOfPoints() == 0)
+    {
+      fprintf(stdout,"Getting default derivatives\n");
+      vtkNew(vtkPoints, DU0Points);
+      vtkNew(vtkPoints, DUNPoints);
+      DU0->SetPoints(DU0Points);
+      DUN->SetPoints(DUNPoints);
+      this->GetDefaultDerivatives(inputs, 0, DU0, DUN);
+    }
+  }
 
-  //// Get derivatives in format we need
-  //vtkNew(vtkDoubleArray, DV0); DV0->DeepCopy(this->StartVDerivatives);
-  //vtkNew(vtkDoubleArray, DVN); DVN->DeepCopy(this->EndVDerivatives);
-  //if (!strncmp(kvtype.c_str(), "derivative", 10))
-  //{
-  //  // Get default derivatives if we need!
-  //  if (DV0->GetNumberOfTuples() == 1 ||
-  //      DVN->GetNumberOfTuples() == 1)
-  //  {
-  //    this->GetDefaultDerivatives(inputs, 1, DV0, DVN);
-  //  }
-  //}
+  // Get derivatives in format we need
+  vtkNew(vtkStructuredGrid, DV0); DV0->DeepCopy(this->StartVDerivatives);
+  vtkNew(vtkStructuredGrid, DVN); DVN->DeepCopy(this->EndVDerivatives);
+  if (!strncmp(kvtype.c_str(), "derivative", 10))
+  {
+    // Get default derivatives if we need!
+    if (DV0->GetNumberOfPoints() == 0 ||
+        DVN->GetNumberOfPoints() == 0)
+    {
+      fprintf(stdout,"Getting default derivatives\n");
+      vtkNew(vtkPoints, DV0Points);
+      vtkNew(vtkPoints, DVNPoints);
+      DV0->SetPoints(DV0Points);
+      DVN->SetPoints(DVNPoints);
+      this->GetDefaultDerivatives(inputs, 1, DV0, DVN);
+    }
+  }
+
+  // Get derivatives in format we need
+  vtkNew(vtkStructuredGrid, DW0); DW0->DeepCopy(this->StartWDerivatives);
+  vtkNew(vtkStructuredGrid, DWN); DWN->DeepCopy(this->EndWDerivatives);
+  if (!strncmp(kwtype.c_str(), "derivative", 10))
+  {
+    // Get default derivatives if we need!
+    if (DW0->GetNumberOfPoints() == 0 ||
+        DWN->GetNumberOfPoints() == 0)
+    {
+      fprintf(stdout,"Getting default derivatives\n");
+      vtkNew(vtkPoints, DW0Points);
+      vtkNew(vtkPoints, DWNPoints);
+      DW0->SetPoints(DW0Points);
+      DWN->SetPoints(DWNPoints);
+      this->GetDefaultDerivatives(inputs, 2, DW0, DWN);
+    }
+  }
 
   // Get the control points of surface, lengthy operation in vtkSVNURBSUtils
   vtkNew(vtkStructuredGrid, cPoints);
@@ -606,6 +638,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
                                                 uWeights, vWeights, wWeights,
                                                 uKnots, vKnots, wKnots,
                                                 p, q, r, kutype, kvtype, kwtype,
+                                                DU0, DUN, DV0, DVN, DW0, DWN,
                                                 cPoints) != SV_OK)
   {
     return SV_ERROR;
@@ -636,7 +669,69 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
 // ----------------------
 // GetDefaultDerivatives
 // ----------------------
-int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const int comp, vtkDoubleArray *D0out, vtkDoubleArray *DNout)
+int vtkSVLoftNURBSVolume::GetDefaultDerivatives(vtkStructuredGrid *input, const int comp, vtkStructuredGrid *D0out, vtkStructuredGrid *DNout)
 {
+  // Get dimensions
+  int dim[3];
+  input->GetDimensions(dim);
+
+  // Get number of values and derivatives from dim
+  int numVals    = dim[comp];
+  int numXDerivs = dim[(comp+1)%3];
+  int numYDerivs = dim[(comp+2)%3];
+
+  // Set number of tuples for derivatives
+  int dim2D[3];
+  dim2D[0] = numXDerivs;
+  dim2D[1] = numYDerivs;
+  dim2D[2] = 1;
+  D0out->SetDimensions(dim2D);
+  D0out->GetPoints()->SetNumberOfPoints(numXDerivs*numYDerivs);
+  DNout->SetDimensions(dim2D);
+  DNout->GetPoints()->SetNumberOfPoints(numXDerivs*numYDerivs);
+
+  // Set tuples
+  for (int i=0; i<numXDerivs; i++)
+  {
+    for (int j=0; j<numYDerivs; j++)
+    {
+      int pos[3];
+      pos[(comp+1)%3] = i;
+      pos[(comp+2)%3] = j;
+
+      // Get the point id
+      double pt0[3]; pos[comp] = 0;
+      int ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, pt0);
+
+      // Get the point id
+      double pt1[3]; pos[comp] = 1;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, pt1);
+
+      // Get the point id
+      double ptnm1[3]; pos[comp] = numVals - 1;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, ptnm1);
+
+      // Get the point id
+      double ptnm2[3]; pos[comp] = numVals - 2;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+      input->GetPoint(ptId, ptnm2);
+
+      // From point ids, compute vectors at ends of data
+      double D0[3], DN[3];
+      vtkMath::Subtract(pt1, pt0, D0);
+      vtkMath::Subtract(ptnm1, ptnm2, DN);
+
+      // From point ids, compute vectors at ends of data
+      pos[comp] = 0;
+      ptId = vtkStructuredData::ComputePointId(dim, pos);
+
+      D0out->GetPoints()->SetPoint(ptId, D0);
+      DNout->GetPoints()->SetPoint(ptId, DN);
+    }
+  }
+
   return SV_OK;
 }

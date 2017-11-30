@@ -2146,11 +2146,6 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
                                              vtkDoubleArray *DV0, vtkDoubleArray *DVN,
                                              vtkStructuredGrid *cPoints)
 {
-  int dim[3];
-  points->GetDimensions(dim);
-  int nUCon = dim[0];
-  int nVCon = dim[1];
-
   vtkNew(vtkSparseArray<double>, NPUTmp);
   vtkNew(vtkSparseArray<double>, NPUFinal);
   if( vtkSVNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != SV_OK)
@@ -2194,6 +2189,9 @@ int vtkSVNURBSUtils::GetControlPointsOfSurface(vtkStructuredGrid *points, vtkDou
     vtkSVNURBSUtils::DeepCopy(NPVTmp, NPVFinal);
     vtkSVNURBSUtils::DeepCopy(pointMatTmp, pointMatFinal);
   }
+
+  int nUCon = pointMatFinal->GetExtents()[0].GetSize();
+  int nVCon = pointMatFinal->GetExtents()[1].GetSize();
 
   //fprintf(stdout,"Basis functions U:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPUFinal);
@@ -2261,14 +2259,14 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
                                               std::string kutype,
                                               std::string kvtype,
                                               std::string kwtype,
+                                              vtkStructuredGrid *DU0,
+                                              vtkStructuredGrid *DUN,
+                                              vtkStructuredGrid *DV0,
+                                              vtkStructuredGrid *DVN,
+                                              vtkStructuredGrid *DW0,
+                                              vtkStructuredGrid *DWN,
                                               vtkStructuredGrid *cPoints)
 {
-  int dim[3];
-  points->GetDimensions(dim);
-  int nUCon = dim[0];
-  int nVCon = dim[1];
-  int nWCon = dim[2];
-
   vtkNew(vtkSparseArray<double>, NPUTmp);
   vtkNew(vtkSparseArray<double>, NPUFinal);
   if( vtkSVNURBSUtils::GetPBasisFunctions(U, uKnots, p, NPUTmp) != SV_OK)
@@ -2297,30 +2295,40 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
   vtkNew(vtkDenseArray<double>, pointMatFinal);
   vtkSVNURBSUtils::StructuredGridToTypedArray(points, pointMatTmp);
 
-  //if (!strncmp(kvtype.c_str(), "derivative", 10)
-  //    || !strncmp(kutype.c_str(), "derivative", 10))
-  //{
-  //  vtkNew(vtkDenseArray<double>, DU0Vec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DU0, DU0Vec);
-  //  vtkNew(vtkDenseArray<double>, DUNVec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DUN, DUNVec);
-  //  vtkNew(vtkDenseArray<double>, DV0Vec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DV0, DV0Vec);
-  //  vtkNew(vtkDenseArray<double>, DVNVec);
-  //  vtkSVNURBSUtils::DoubleArrayToTypedArray(DVN, DVNVec);
-  //  vtkSVNURBSUtils::SetSurfaceEndDerivatives(NPUTmp, NPVTmp, pointMatTmp, p, q,
-  //                                          kutype, kvtype,
-  //                                          DU0Vec, DUNVec, DV0Vec, DVNVec, U, V,
-  //                                          uKnots, vKnots,
-  //                                          NPUFinal, NPVFinal, pointMatFinal);
-  //}
-  //else
-  //{
+  if (!strncmp(kutype.c_str(), "derivative", 10)
+      || !strncmp(kvtype.c_str(), "derivative", 10)
+      || !strncmp(kwtype.c_str(), "derivative", 10))
+  {
+    vtkNew(vtkDenseArray<double>, DU0Mat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DU0, DU0Mat);
+    vtkNew(vtkDenseArray<double>, DUNMat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DUN, DUNMat);
+    vtkNew(vtkDenseArray<double>, DV0Mat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DV0, DV0Mat);
+    vtkNew(vtkDenseArray<double>, DVNMat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DVN, DVNMat);
+    vtkNew(vtkDenseArray<double>, DW0Mat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DW0, DW0Mat);
+    vtkNew(vtkDenseArray<double>, DWNMat);
+    vtkSVNURBSUtils::StructuredGridToTypedArray(DWN, DWNMat);
+    vtkSVNURBSUtils::SetVolumeEndDerivatives(NPUTmp, NPVTmp, NPWTmp, pointMatTmp,
+                                             p, q, r, kutype, kvtype, kwtype,
+                                             DU0Mat, DUNMat,  DV0Mat, DVNMat,
+                                             DW0Mat, DWNMat, U, V, W,
+                                             uKnots, vKnots, wKnots,
+                                             NPUFinal, NPVFinal, NPWFinal, pointMatFinal);
+  }
+  else
+  {
     vtkSVNURBSUtils::DeepCopy(NPUTmp, NPUFinal);
     vtkSVNURBSUtils::DeepCopy(NPVTmp, NPVFinal);
     vtkSVNURBSUtils::DeepCopy(NPWTmp, NPWFinal);
     vtkSVNURBSUtils::DeepCopy(pointMatTmp, pointMatFinal);
-  //}
+  }
+
+  int nUCon = pointMatFinal->GetExtents()[0].GetSize();
+  int nVCon = pointMatFinal->GetExtents()[1].GetSize();
+  int nWCon = pointMatFinal->GetExtents()[2].GetSize();
 
   //fprintf(stdout,"Basis functions U:\n");
   //vtkSVNURBSUtils::PrintMatrix(NPUFinal);
@@ -2380,13 +2388,13 @@ int vtkSVNURBSUtils::GetControlPointsOfVolume(vtkStructuredGrid *points,
     vtkNew(vtkDenseArray<double>, tmpWMat);
     vtkSVNURBSUtils::GetMatrixOfDim4Grid(pointMatFinal, 0, 1, 2, i, 3, tmpWMat);
 
+
     vtkNew(vtkDenseArray<double>, tmpUGrid);
     if (vtkSVNURBSUtils::MatrixMatrixMultiply(NPUinv, 0, 1, tmpWMat, 1, 3, tmpUGrid) != SV_OK)
     {
       fprintf(stderr, "Error in matrix multiply\n");
       return SV_ERROR;
     }
-
     vtkNew(vtkDenseArray<double>, tmpVGrid);
     if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 3, NPVinvT, 0, 1, tmpVGrid) != SV_OK)
     {
@@ -2526,6 +2534,235 @@ int vtkSVNURBSUtils::SetSurfaceEndDerivatives(vtkTypedArray<double> *NPU, vtkTyp
   else
   {
     vtkSVNURBSUtils::DeepCopy(tmp2Points, newPoints);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// SetVolumeEndDerivatives
+// ----------------------
+int vtkSVNURBSUtils::SetVolumeEndDerivatives(vtkTypedArray<double> *NPU,
+                                             vtkTypedArray<double> *NPV,
+                                             vtkTypedArray<double> *NPW,
+                                             vtkTypedArray<double> *points,
+                                             const int p,  const int q, const int r,
+                                             std::string kutype, std::string kvtype,
+                                             std::string kwtype,
+                                             vtkTypedArray<double> *DU0,
+                                             vtkTypedArray<double> *DUN,
+                                             vtkTypedArray<double> *DV0,
+                                             vtkTypedArray<double> *DVN,
+                                             vtkTypedArray<double> *DW0,
+                                             vtkTypedArray<double> *DWN,
+                                             vtkDoubleArray *U,
+                                             vtkDoubleArray *V,
+                                             vtkDoubleArray *W,
+                                             vtkDoubleArray *uKnots,
+                                             vtkDoubleArray *vKnots,
+                                             vtkDoubleArray *wKnots,
+                                             vtkTypedArray<double> *newNPU,
+                                             vtkTypedArray<double> *newNPV,
+                                             vtkTypedArray<double> *newNPW,
+                                             vtkTypedArray<double> *newPoints)
+{
+  if (!strncmp(kutype.c_str(), "derivative", 10))
+  {
+    vtkSVNURBSUtils::AddDerivativeRows(NPU, newNPU, p, uKnots);
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(NPU, newNPU);
+  }
+  if (!strncmp(kvtype.c_str(), "derivative", 10))
+  {
+    vtkSVNURBSUtils::AddDerivativeRows(NPV, newNPV, q, vKnots);
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(NPV, newNPV);
+  }
+  if (!strncmp(kwtype.c_str(), "derivative", 10))
+  {
+    vtkSVNURBSUtils::AddDerivativeRows(NPW, newNPW, r, wKnots);
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(NPW, newNPW);
+  }
+
+  int nUKnot = uKnots->GetNumberOfTuples();
+  int nVKnot = vKnots->GetNumberOfTuples();
+  int nWKnot = wKnots->GetNumberOfTuples();
+  int nu = nUKnot - (p + 1);
+  int nv = nVKnot - (q + 1);
+  int nw = nWKnot - (r + 1);
+  vtkArrayExtents size;
+  size.SetDimensions(4);
+  size.SetExtent(0, vtkArrayRange(0, nu));
+  size.SetExtent(1, vtkArrayRange(0, nv));
+  size.SetExtent(2, vtkArrayRange(0, nw));
+  size.SetExtent(3, vtkArrayRange(0, 3));
+  newPoints->Resize(size);
+
+  int npu = points->GetExtents()[0].GetSize();
+  int npv = points->GetExtents()[1].GetSize();
+  int npw = points->GetExtents()[2].GetSize();
+  vtkNew(vtkDenseArray<double>, tmp0Points);
+  vtkNew(vtkDenseArray<double>, tmp1Points);
+  vtkNew(vtkDenseArray<double>, tmp2Points);
+  vtkNew(vtkDenseArray<double>, tmp3Points);
+  vtkNew(vtkDenseArray<double>, tmp4Points);
+  vtkNew(vtkDenseArray<double>, tmp5Points);
+  vtkNew(vtkDenseArray<double>, tmp6Points);
+  vtkNew(vtkDenseArray<double>, tmp7Points);
+  if (!strncmp(kutype.c_str(), "derivative", 10))
+  {
+    vtkArrayExtents size2;
+    size2.SetDimensions(4);
+    size2.SetExtent(0, vtkArrayRange(0, nu));
+    size2.SetExtent(1, vtkArrayRange(0, npv));
+    size2.SetExtent(2, vtkArrayRange(0, npw));
+    size2.SetExtent(3, vtkArrayRange(0, 3));
+    tmp2Points->Resize(size2);
+
+    for (int i=0; i<npv; i++)
+    {
+      vtkSVNURBSUtils::GetMatrixOfDim4Grid(points, 0, 2, 1, i, 3, tmp0Points);
+      vtkNew(vtkDenseArray<double>, tmpMat);
+      tmpMat->Resize(nu, npw, 3);
+
+      for (int j=0; j<npw; j++)
+      {
+        double du0[3], duN[3];
+        for (int k=0; k<3; k++)
+        {
+          du0[k] = DU0->GetValue(i, j, k);
+          duN[k] = DUN->GetValue(i, j, k);
+        }
+
+        vtkNew(vtkDenseArray<double>, tmpMatComp);
+        vtkSVNURBSUtils::GetMatrixComp(tmp0Points, j, 0, 1, tmpMatComp);
+        vtkSVNURBSUtils::AddDerivativePoints(tmpMatComp, p, du0, duN, U, uKnots, tmp1Points);
+        vtkSVNURBSUtils::SetMatrixComp(tmp1Points, j, 0, 1, tmpMat);
+      }
+      vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpMat, tmp2Points, 0, 2, 1, i, 3);
+    }
+    npu += 2;
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(points, tmp2Points);
+  }
+
+  if (!strncmp(kvtype.c_str(), "derivative", 10))
+  {
+    vtkArrayExtents size5;
+    size5.SetDimensions(4);
+    size5.SetExtent(0, vtkArrayRange(0, npu));
+    size5.SetExtent(1, vtkArrayRange(0, nv));
+    size5.SetExtent(2, vtkArrayRange(0, npw));
+    size5.SetExtent(3, vtkArrayRange(0, 3));
+    tmp5Points->Resize(size5);
+
+    for (int i=0; i<npw; i++)
+    {
+      vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmp2Points, 1, 0, 2, i, 3, tmp3Points);
+      vtkNew(vtkDenseArray<double>, tmpMat);
+      tmpMat->Resize(nv, npu, 3);
+
+      int count = 0;
+      for (int j=0; j<npu; j++)
+      {
+        double dv0[3], dvN[3];
+        if ((j == 1 || j == nu - 2) && !strncmp(kutype.c_str(), "derivative", 10))
+        {
+          for (int k=0; k<3; k++)
+          {
+            dv0[k] = 0.0;
+            dvN[k] = 0.0;
+          }
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+          {
+            dv0[k] = DV0->GetValue(i, count, k);
+            dvN[k] = DVN->GetValue(i, count, k);
+          }
+          count++;
+        }
+
+        vtkNew(vtkDenseArray<double>, tmpMatComp);
+        vtkSVNURBSUtils::GetMatrixComp(tmp3Points, j, 0, 1, tmpMatComp);
+        vtkSVNURBSUtils::AddDerivativePoints(tmpMatComp, q, dv0, dvN, V, vKnots, tmp4Points);
+        vtkSVNURBSUtils::SetMatrixComp(tmp4Points, j, 0, 1, tmpMat);
+      }
+      vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpMat, tmp5Points, 1, 0, 2, i, 3);
+    }
+    npv += 2;
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(tmp2Points, tmp5Points);
+  }
+
+  if (!strncmp(kwtype.c_str(), "derivative", 10))
+  {
+    int uCount = 0;
+    for (int i=0; i<npu; i++)
+    {
+      vtkSVNURBSUtils::GetMatrixOfDim4Grid(tmp5Points, 2, 1, 0, i, 3, tmp6Points);
+      vtkNew(vtkDenseArray<double>, tmpMat);
+      tmpMat->Resize(nw, npv, 3);
+
+      int vCount = 0;
+      for (int j=0; j<npv; j++)
+      {
+        double dw0[3], dwN[3];
+        if ((i == 1 || i == nu - 2) && !strncmp(kutype.c_str(), "derivative", 10))
+        {
+          for (int k=0; k<3; k++)
+          {
+            dw0[k] = 0.0;
+            dwN[k] = 0.0;
+          }
+        }
+        else if ((j == 1 || j == nv - 2) && !strncmp(kvtype.c_str(), "derivative", 10))
+        {
+          for (int k=0; k<3; k++)
+          {
+            dw0[k] = 0.0;
+            dwN[k] = 0.0;
+          }
+        }
+        else
+        {
+          for (int k=0; k<3; k++)
+          {
+            dw0[k] = DW0->GetValue(uCount, vCount, k);
+            dwN[k] = DWN->GetValue(uCount, vCount, k);
+          }
+        }
+
+        if (!((j == 1 || j == nv - 2) && !strncmp(kvtype.c_str(), "derivative", 10)))
+          vCount++;
+
+        vtkNew(vtkDenseArray<double>, tmpMatComp);
+        vtkSVNURBSUtils::GetMatrixComp(tmp6Points, j, 0, 1, tmpMatComp);
+        vtkSVNURBSUtils::AddDerivativePoints(tmpMatComp, r, dw0, dwN, W, wKnots, tmp7Points);
+        vtkSVNURBSUtils::SetMatrixComp(tmp7Points, j, 0, 1, tmpMat);
+      }
+      vtkSVNURBSUtils::SetMatrixOfDim4Grid(tmpMat, newPoints, 2, 1, 0, i, 3);
+
+      if (!((i == 1 || i == nu - 2) && !strncmp(kutype.c_str(), "derivative", 10)))
+        uCount++;
+    }
+    npw += 2;
+  }
+  else
+  {
+    vtkSVNURBSUtils::DeepCopy(tmp5Points, newPoints);
   }
 
   return SV_OK;
@@ -6502,7 +6739,7 @@ int vtkSVNURBSUtils::PrintArray(vtkDataArray *arr)
   {
     for (int j=0; j<comp; j++)
     {
-      fprintf(stdout,"%.4f ", arr->GetComponent(i, j));
+      fprintf(stdout,"%8.4f ", arr->GetComponent(i, j));
     }
     fprintf(stdout,"\n");
   }
@@ -6527,12 +6764,12 @@ int vtkSVNURBSUtils::PrintVector(vtkTypedArray<double> *vec)
     {
       for (int j=0; j<3; j++)
       {
-        fprintf(stdout,"%.4f ", vec->GetValue(i, j));
+        fprintf(stdout,"%8.4f ", vec->GetValue(i, j));
       }
     }
     else
     {
-      fprintf(stdout,"%.4f ", vec->GetValue(i));
+      fprintf(stdout,"%8.4f ", vec->GetValue(i));
     }
     fprintf(stdout,"|");
   }
@@ -6561,12 +6798,12 @@ int vtkSVNURBSUtils::PrintMatrix(vtkTypedArray<double> *mat)
       {
         for (int k=0; k<3; k++)
         {
-          fprintf(stdout,"%.4f ", mat->GetValue(i, j, k));
+          fprintf(stdout,"%8.4f ", mat->GetValue(i, j, k));
         }
       }
       else
       {
-        fprintf(stdout,"%.4f ", mat->GetValue(i, j));
+        fprintf(stdout,"%8.4f ", mat->GetValue(i, j));
       }
       fprintf(stdout,"|");
     }
@@ -6594,7 +6831,7 @@ int vtkSVNURBSUtils::PrintStructuredGrid(vtkStructuredGrid *mat)
       int ptId = vtkStructuredData::ComputePointId(dim, pos);
       double pt[3];
       mat->GetPoint(ptId, pt);
-      fprintf(stdout,"| %.4f %.4f %.4f |", pt[0], pt[1], pt[2]);
+      fprintf(stdout,"| %8.4f %8.4f %8.4f |", pt[0], pt[1], pt[2]);
     }
     fprintf(stdout,"\n");
   }
@@ -6618,7 +6855,7 @@ int vtkSVNURBSUtils::PrintPoints(vtkPoints *points)
     fprintf(stdout,"Pt %d: ", i);
     for (int j=0; j<3; j++)
     {
-      fprintf(stdout,"%.4f ",pt[j]);
+      fprintf(stdout,"%8.4f ",pt[j]);
     }
     fprintf(stdout,"\n");
   }
@@ -6842,7 +7079,7 @@ int vtkSVNURBSUtils::Print2DArray(const double *arr, const int nr, const int nc)
   fprintf(stdout,"----------------------------------------------------------\n");
   for (int i=0; i<nr*nc; i++)
   {
-    fprintf(stdout,"| %.4f |\n", arr[i]);
+    fprintf(stdout,"| %8.4f |\n", arr[i]);
   }
   fprintf(stdout,"----------------------------------------------------------\n");
 
