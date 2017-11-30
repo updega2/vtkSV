@@ -702,16 +702,151 @@ int vtkSVCenterlines::RequestData(
   cleaner2->SetInputData(surfacer3->GetOutput());
   cleaner2->Update();
 
-  output->DeepCopy(cleaner2->GetOutput());
-  //========================================================================
-  //
-  //======================NOW TRY SEPARATING INTO SOMETHING=================
+  ////========================================================================
+  ////
+  ////======================NOW TRY SEPARATING INTO SOMETHING=================
 
   vtkNew(vtkPolyData, linesPd);
   linesPd->DeepCopy(cleaner2->GetOutput());
 
+  // Preprocessing of lines
+  linesPd->BuildLinks();
+
+  vtkIdType npts, *pts;
+  vtkNew(vtkIdList, pointCellIds);
+
+	int firstVertex = -1;
+  std::vector<int> numConnectedPts(linesPd->GetNumberOfPoints());
+  std::vector<std::vector<int> > connectedEdgePts(linesPd->GetNumberOfPoints());
+
+  int firsties = 0;
+  for (int i=0; i<linesPd->GetNumberOfPoints(); i++)
+  {
+    linesPd->GetPointCells(i, pointCellIds);
+    if (pointCellIds->GetNumberOfIds() == 1)
+    {
+      firsties++;
+      if (firstVertex == -1)
+        firstVertex = i;
+    }
+
+    numConnectedPts[i] = pointCellIds->GetNumberOfIds();
+
+    std::vector<int> connectedPts;
+    for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
+    {
+      linesPd->GetCellPoints(pointCellIds->GetId(j), npts, pts);
+
+      for (int k=0; k<npts; k++)
+      {
+        if (pts[k] != i)
+          connectedPts.push_back(pts[k]);
+      }
+    }
+    connectedEdgePts[i] = connectedPts;
+  }
+  fprintf(stdout,"NUM FIRSTIES: %d\n", firsties);
+
+  if (firstVertex == -1)
+  {
+    fprintf(stderr,"No first vertex found, lines must form loop\n");
+    return SV_ERROR;
+  }
+
+
   std::vector<int> pointUsed(linesPd->GetNumberOfPoints(), 0);
-  this->RecursiveGetPolylines(linesPd, pointUsed);
+
+  pointUsed[firstVertex] = 1;
+  int startVertex = connectedEdgePts[firstVertex][0];
+
+  std::vector<std::vector<int> > allEdges;
+  std::vector<int> thisEdge;
+  thisEdge.push_back(firstVertex);
+
+  this->RecursiveGetPolylines(linesPd, numConnectedPts, connectedEdgePts, startVertex, pointUsed, allEdges, thisEdge);
+
+  vtkNew(vtkIdList, pointsEdgeId);
+  vtkNew(vtkIdList, edgePointIds);
+  vtkNew(vtkIntArray, centerlineIds);
+  centerlineIds->SetNumberOfTuples(linesPd->GetNumberOfCells());
+  centerlineIds->SetName("CenterlineIds");
+  centerlineIds->FillComponent(0, 0);
+  for (int i=0; i<allEdges.size(); i++)
+  {
+    for (int j=0; j<allEdges[i].size()-1; j++)
+    {
+      int pointId0 = allEdges[i][j];
+      int pointId1 = allEdges[i][j+1];
+      edgePointIds->Reset();
+      edgePointIds->InsertNextId(pointId0);
+      edgePointIds->InsertNextId(pointId1);
+
+      linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+      if (pointsEdgeId->GetNumberOfIds() == 1)
+        centerlineIds->SetTuple1(pointsEdgeId->GetId(0), i);
+      else
+        fprintf(stdout,"NO CELL FOUND\n");
+    }
+  }
+  linesPd->GetCellData()->AddArray(centerlineIds);
+  output->DeepCopy(linesPd);
+
+  //==========================CALCULATE GENUS================================
+  // Start edge insertion for edge table
+  vtkNew(vtkEdgeTable, surfaceEdgeTable);
+  surfaceEdgeTable->InitEdgeInsertion(numPts, 1);
+  input->BuildLinks();
+
+  // Loop through cells
+  for (int i=0; i<input->GetNumberOfCells(); i++)
+  {
+    // Get cellpoints
+    vtkIdType npts, *pts;
+    input->GetCellPoints(i, npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      // Get each edge of cell
+      vtkIdType p0 = pts[j];
+      vtkIdType p1 = pts[(j+1)%npts];
+
+      vtkNew(vtkIdList, neighborCellIds);
+      input->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
+      vtkIdType neighborCellId = 0;
+
+      // Check to see if it is a boundary edge
+      if (neighborCellIds->GetNumberOfIds() > 0)
+        neighborCellId = neighborCellIds->GetId(0);
+      else
+      {
+        neighborCellId = -1;
+      }
+
+      // Check to see if edge has already been inserted
+      vtkIdType checkEdge = surfaceEdgeTable->IsEdge(p0, p1);
+      if (checkEdge == -1)
+      {
+        // Get new edge id and insert into table
+        vtkIdType edgeId = surfaceEdgeTable->InsertEdge(p0, p1);
+      }
+    }
+  }
+  int ne = surfaceEdgeTable->GetNumberOfEdges();
+  int nv = input->GetNumberOfPoints();
+  int nf = input->GetNumberOfCells();
+  fprintf(stdout,"NUM EDGES: %d\n", ne);
+  fprintf(stdout,"NUM VERTS: %d\n", nv);
+  fprintf(stdout,"NUM FACES: %d\n", nf);
+  int genus = ((ne - nv - nf)/2) + 1;
+  fprintf(stdout,"GENUS: %d\n", genus);
+
+  int nEdgeE = linesPd->GetNumberOfCells();
+  int nEdgeV = linesPd->GetNumberOfPoints();
+  int f = nEdgeE - nEdgeV + 2;
+  fprintf(stdout,"NUM CENTERLINE EDGES: %d\n", nEdgeE);
+  fprintf(stdout,"NUM CENTERLINE VERTS: %d\n", nEdgeV);
+  fprintf(stdout,"CENTERLINE GENUS: %d\n", f);
+
+
   //========================================================================
 
 //  vtkNew(vtkArrayCalculator* voronoiCostFunctionCalculator);
@@ -1561,30 +1696,25 @@ int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
   return 1;
 }
 
-int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd, std::vector<int> &pointUsed)
+int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
+                                            std::vector<int> numConnectedPts,
+                                            std::vector<std::vector<int> > connectedEdgePts,
+                                            int startVertex, std::vector<int> &pointUsed,
+                                            std::vector<std::vector<int> > &allEdges,
+                                            std::vector<int> &thisEdge)
 {
+  fprintf(stdout,"RECURSIVE STARTING AT POINT: %d\n", startVertex);
 	//int startVertex = 0;
-	int i, j, index, firstVertex, prevVertex, secondVertex, countTotal;
+	int i, j, index, testIndex0, testIndex1, firstVertex, prevVertex, secondVertex, countTotal;
 	double tempDouble[3], tempX[3], tempY[3], tempZ[3], tempXPre[3];
   vtkNew(vtkIdList, pointCellIds);
+  vtkNew(vtkIdList, edgePointIds);
 	int stopCriteria;
 
   int numPts = pd->GetNumberOfPoints();
-  std::vector<int> pointUsed(numPts, 0);
-
-	firstVertex = 0;
-  pd->BuildLinks();
-  for (int i=0; i<pd->GetNumberOfPoints(); i++)
-  {
-    pd->GetPointCells(i, pointCellIds);
-    if (pointCellIds->GetNumberOfIds() == 1)
-    {
-      firstVertex = i;
-      break;
-    }
-  }
 
 	stopCriteria = 0;
+  firstVertex = startVertex;
 
 	while (!stopCriteria)
 	{
@@ -1592,10 +1722,9 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd, std::vector<int> &p
 		prevVertex = -1;
 		secondVertex = -1;
 
-    pd->GetPointCells(firstVertex, pointCellIds);
-		if (pointCellIds->GetNumberOfIds() == 1)
+		if (numConnectedPts[firstVertex] == 1)
 		{
-			index = pointCellIds->GetId(0);;
+			index = connectedEdgePts[firstVertex][0];
 			if (pointUsed[index] == 0)
 			{
 				secondVertex = index;
@@ -1605,11 +1734,23 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd, std::vector<int> &p
 				prevVertex = index;
 			}
 		}
-		else
+		else if (numConnectedPts[firstVertex] == 2)
 		{
-			for (i = 0; i < pointCellIds->GetNumberOfIds(); i++)
+      testIndex0 = connectedEdgePts[firstVertex][0];
+      testIndex1 = connectedEdgePts[firstVertex][1];
+
+      if (pointUsed[testIndex0]  && pointUsed[testIndex1])
+      {
+        pointUsed[firstVertex] = 1;
+        thisEdge.push_back(firstVertex);
+        allEdges.push_back(thisEdge);
+        fprintf(stdout,"ALSO REACHED AN END\n");
+        return 1;
+      }
+
+			for (i = 0; i < numConnectedPts[firstVertex]; i++)
 			{
-				index = pointCellIds->GetId(i);
+				index = connectedEdgePts[firstVertex][i];
 				if (pointUsed[index] == 0)
 				{
 					secondVertex = index;
@@ -1620,73 +1761,47 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd, std::vector<int> &p
 				}
 			}
 		}
+    else if (numConnectedPts[firstVertex] > 2)
+    {
+      pointUsed[firstVertex] = 1;
+      thisEdge.push_back(firstVertex);
+      allEdges.push_back(thisEdge);
+			for (i = 0; i < numConnectedPts[firstVertex]; i++)
+			{
+				index = connectedEdgePts[firstVertex][i];
+        if (pointUsed[index] == 0)
+        {
+          fprintf(stdout,"GONNA START NEW ONE WITH START: %d SECOND %d\n", firstVertex, index);
+          std::vector<int> newEdge;
+          newEdge.push_back(firstVertex);
+          this->RecursiveGetPolylines(pd, numConnectedPts, connectedEdgePts, index, pointUsed, allEdges, newEdge);
+        }
+      }
+      return 1;
+    }
+    else
+    {
+      fprintf(stderr,"Somehow point is connected to nothing\n");
+      return SV_ERROR;
+    }
 
 		pointUsed[firstVertex] = 1;
+    thisEdge.push_back(firstVertex);
 
-		if (pointCellIds->GetNumberOfIds() == 1)
+		if (numConnectedPts[firstVertex] == 1)
 		{
 
-			index = pointCellIds->GetId(0);
+			index = connectedEdgePts[firstVertex][0];
 			if (pointUsed[index] == 1)
 			{
 				stopCriteria = 1;
+        allEdges.push_back(thisEdge);
+        return 1;
 			}
 
 		}
 
 		firstVertex = secondVertex;
-	}
-
-	//check all curve-skeleton points
-	int stopCriteriaAll = 1;
-	start_vertex = -1;
-	for (i = 0; i < numPts; i++)
-	{
-		if (pointUsed[i] == 0)
-		{
-
-			stopCriteriaAll = 0;
-			break;
-
-		}
-	}
-
-	if (stopCriteriaAll == 0)
-	{
-		for (i = 0; i < numPts; i++)
-		{
-			if (pointUsed[i] == 0)
-			{
-        pd->GetPointCells(i, pointCellIds);
-				for (j = 0; j < pointCellIds->GetNumberOfIds(); j++)
-				{
-					index = pointCellIds->GetId(j);
-					if (pointUsed[index] == 1)
-					{
-						start_vertex = i;
-						break;
-					}
-				}
-
-				if (start_vertex != -1)
-				{
-					break;
-				}
-			}
-		}
-
-		if (start_vertex == -1)
-		{
-			cout<<"Error in RecursiveLocalCoordinateSystem(start_vertex)!"<<endl;
-		}
-    else
-    {
-		  RecursiveGetPolylines(pd, pointUsed);
-    }
-	}
-	else
-	{
-		return 1;
 	}
 
   return 1;

@@ -127,7 +127,12 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
                           vtkPolyData *outTriPd,
                           vtkPolyData *outEdgePd,
                           std::string medialEdgeArrayName);
-  int RecursiveGetPolylines(vtkPolyData *pd);
+  int RecursiveGetPolylines(vtkPolyData *pd,
+                            std::vector<int> numConnectedPts,
+                            std::vector<std::vector<int> > connectedEdgePts,
+                            int startVertex, std::vector<int> &pointUsed,
+                            std::vector<std::vector<int> > &allEdges,
+                            std::vector<int> &thisEdge);
 
   vtkIdList* SourceSeedIds;
   vtkIdList* TargetSeedIds;
