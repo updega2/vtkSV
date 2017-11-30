@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
   int polycubeDivisions = 10;
   int isVasculature = 1;
   int numberOfCenterlineRemovePts = 3;
-  int modifyCenterlines = 0;
   int writeCenterlineGraph = 0;
   int writeMergedCenterlines = 0;
   int writePolycubePd = 0;
@@ -75,7 +74,6 @@ int main(int argc, char *argv[])
   int boundaryEnforceFactor = 1;
 
   double polycubeUnitLength = 0.0;
-  double centerlineSeparationThreshold = 0.6;
   double normalsWeighting = 0.8;
   double clipValue = 0.0;
   double cutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
@@ -106,8 +104,6 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-normalsweighting")              {normalsWeighting = atof(argv[++iarg]);}
       else if(tmpstr=="-isvasculature")                 {isVasculature = atoi(argv[++iarg]);}
       else if(tmpstr=="-numberofcenterlineremovepts")   {numberOfCenterlineRemovePts = atoi(argv[++iarg]);}
-      else if(tmpstr=="-modifycenterlines")             {modifyCenterlines = atoi(argv[++iarg]);}
-      else if(tmpstr=="-centerlineseparationthreshold") {centerlineSeparationThreshold = atof(argv[++iarg]);}
       else if(tmpstr=="-boundaryenforcefactor")         {boundaryEnforceFactor = atoi(argv[++iarg]);}
       else if(tmpstr=="-writecenterlinegraph")          {writeCenterlineGraph = atoi(argv[++iarg]);}
       else if(tmpstr=="-writemergedcenterlines")        {writeMergedCenterlines = atoi(argv[++iarg]);}
@@ -144,8 +140,6 @@ int main(int argc, char *argv[])
     cout << "  -normalsweighting              : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
     cout << "  -isvasculature                 : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
     cout << "  -numberofcenterlineremovepts   : Number of centerline points to remove from the end of the branches if the model is not vasculature [default 3]" << endl;
-    cout << "  -modifycenterlines             : Flag to indicate whether the centerlines should be modified if there are many close branches. Sometimes, vmtk will merge many close branches into more than a trifurcation, which may be unecessary. Use this flag to separate into multiple bifurcations or trifurcations and set the threshold distance using centerlineseparationthreshold [efault 0]" << endl;
-    cout << "  -centerlineseparationthreshold : The distance at which a new branch is determinedif the modifycenterlines flag is set to 1. Play with this number to find a good centerline separation [default 0.6]" << endl;
     cout << "  -boundaryenforcefactor         : Approximately represents the number of centerline points to enforce per branch. Typically a fairly low integer works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems. [default 1]" << endl;
     cout << "  -writecenterlinegraph          : Write the centerline graph to file [default 0]" << endl;
     cout << "  -writemergedcenterlines        : Write the merged centerlines to file [default 0]" << endl;
@@ -204,8 +198,6 @@ int main(int argc, char *argv[])
   Grouper->SetNormalsWeighting(normalsWeighting);
   Grouper->SetIsVasculature(isVasculature);
   Grouper->SetNumberOfCenterlineRemovePts(numberOfCenterlineRemovePts);
-  Grouper->SetModifyCenterlines(modifyCenterlines);
-  Grouper->SetCenterlineSeparationThreshold(centerlineSeparationThreshold);
   Grouper->SetBoundaryEnforceFactor(boundaryEnforceFactor);
   Grouper->Update();
   std::cout<<"Done"<<endl;

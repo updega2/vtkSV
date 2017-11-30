@@ -222,22 +222,6 @@ public:
   vtkGetMacro(NumberOfCenterlineRemovePts,int);
   //@}
 
-  //@{
-  /// \brief Get/Set whether centerlines should be modified based on a radius
-  //  threshold. Useful if lots of branches close that vmtk clusters all into
-  //  one separation point.
-  vtkSetMacro(ModifyCenterlines,int);
-  vtkGetMacro(ModifyCenterlines,int);
-  vtkBooleanMacro(ModifyCenterlines,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set the radius threshold at which to determine a new branch
-  //  if the ModifyCenterlines flag is set to 1.
-  vtkSetMacro(CenterlineSeparationThreshold,double);
-  vtkGetMacro(CenterlineSeparationThreshold,double);
-  //@}
-
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
   static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
@@ -326,13 +310,6 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int MergeCenterlines();
-  int FixCenterlines();
-  int CheckCenterlineChildren(vtkPolyData *centerlinesPd,
-                              double distPt[3],
-                              double newPt[3],
-                              std::vector<int> &testChildren,
-                              std::vector<int> &newPointIds,
-                              std::vector<int> &newChildren);
   int GetPatches();
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
@@ -469,14 +446,12 @@ protected:
   int EnforceBoundaryDirections;
   int IsVasculature;
   int NumberOfCenterlineRemovePts;
-  int ModifyCenterlines;
   int PolycubeDivisions;
   int BoundaryEnforceFactor;
 
   double CutoffRadiusFactor;
   double ClipValue;
   double PolycubeUnitLength;
-  double CenterlineSeparationThreshold;
   double NormalsWeighting;
 
   vtkSVCenterlineGraph *CenterlineGraph;
