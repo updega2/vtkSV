@@ -114,7 +114,6 @@ int main(int argc, char *argv[])
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
   CenterlineFilter->SetCostFunction("1/R");
-  CenterlineFilter->SetCostFunction(0);
   CenterlineFilter->SetSimplifyVoronoi(0);
   CenterlineFilter->SetAppendEndPointsToCenterlines(appendEndPoints);
   CenterlineFilter->SetCenterlineResampling(1);

@@ -40,6 +40,7 @@
 #include "vtkvmtkVoronoiDiagram3D.h"
 #include "vtkvmtkSimplifyVoronoiDiagram.h"
 #include "vtkArrayCalculator.h"
+#include "vtkAppendPolyData.h"
 #include "vtkvmtkNonManifoldFastMarching.h"
 #include "vtkvmtkSteepestDescentLineTracer.h"
 #include "vtkMath.h"
@@ -688,6 +689,14 @@ int vtkSVCenterlines::RequestData(
   // --------------------------------------------------------------
 
   //=========================GETTING FINAL EDGES============================
+  tmpPtArray->Reset();
+  tmpPtArray->SetNumberOfTuples(nextEdgePd->GetNumberOfPoints());
+  tmpPtArray->SetName("TmpInternalIds");
+  for (int i=0; i<nextEdgePd->GetNumberOfPoints(); i++)
+    tmpPtArray->SetTuple1(i, i);
+
+  nextEdgePd->GetPointData()->AddArray(tmpPtArray);
+
   vtkNew(vtkThreshold, finalThreshold);
   finalThreshold->SetInputData(nextEdgePd);
   finalThreshold->SetInputArrayToProcess(0, 0, 0, 1, "RemovalIteration");
@@ -765,14 +774,232 @@ int vtkSVCenterlines::RequestData(
 
   this->RecursiveGetPolylines(linesPd, numConnectedPts, connectedEdgePts, startVertex, pointUsed, allEdges, thisEdge);
 
+  fprintf(stdout,"SEE END BEGS\n");
+  vtkNew(vtkIdList, allEndIds);
+  std::vector<int> nodeCount;
+  std::vector<int> needToDelete(allEdges.size(), 0);
+  for (int i=0; i<allEdges.size(); i++)
+  {
+    int edgeSize = allEdges[i].size();
+    int edgeId0 = allEdges[i][0];
+    int edgeIdN = allEdges[i][edgeSize-1];
+    fprintf(stdout,"EDGE %d:   %d   %d\n", i, edgeId0, edgeIdN);
+
+    int edge0IsId = allEndIds->IsId(edgeId0);
+    int edgeNIsId = allEndIds->IsId(edgeIdN);
+    if (edge0IsId != -1 && edgeNIsId != -1)
+    {
+      // Both edges of this node already in list, delete it!
+      needToDelete[i] = 1;
+      nodeCount[edge0IsId]++;
+      nodeCount[edgeNIsId]++;
+    }
+    else
+    {
+      if (edge0IsId == -1)
+      {
+        allEndIds->InsertNextId(edgeId0);
+        nodeCount.push_back(1);
+      }
+      else
+        nodeCount[edge0IsId]++;
+      if (edgeNIsId == -1)
+      {
+        allEndIds->InsertNextId(edgeIdN);
+        nodeCount.push_back(1);
+      }
+      else
+        nodeCount[edgeNIsId]++;
+    }
+  }
+
+  for (int i=0; i<nodeCount.size(); i++)
+    fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
+
   vtkNew(vtkIdList, pointsEdgeId);
   vtkNew(vtkIdList, edgePointIds);
+  for (int i=0; i<needToDelete.size(); i++)
+  {
+    fprintf(stdout,"EDGE %d, DEL %d\n", i, needToDelete[i]);
+    if (needToDelete[i] == 1)
+    {
+      int edgeSize = allEdges[i].size();
+      for (int j=0; j<edgeSize-1; j++)
+      {
+        int pointId0 = allEdges[i][j];
+        int pointId1 = allEdges[i][j+1];
+        edgePointIds->Reset();
+        edgePointIds->InsertNextId(pointId0);
+        edgePointIds->InsertNextId(pointId1);
+
+        linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+        if (pointsEdgeId->GetNumberOfIds() == 1)
+        {
+          linesPd->DeleteCell(pointsEdgeId->GetId(0));
+        }
+        else
+          fprintf(stdout,"NO CELL FOUND\n");
+      }
+      int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+      int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+      nodeCount[nodeId0]--;
+      nodeCount[nodeIdN]--;
+    }
+  }
+
+  for (int i=0; i<nodeCount.size(); i++)
+    fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
+
+  for (int i=0; i<needToDelete.size(); i++)
+  {
+    if (needToDelete[i] == 1)
+    {
+      int edgeSize = allEdges[i].size();
+
+      int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+      int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+
+      if (nodeCount[nodeId0] == 1)
+      {
+        for (int j=0; j<allEdges.size(); j++)
+        {
+          int delEdgeSize = allEdges[j].size();
+
+          if (allEdges[j][0] == allEdges[i][0] ||
+              allEdges[j][delEdgeSize-1] == allEdges[i][0])
+          {
+            for (int k=0; k<delEdgeSize-1; k++)
+            {
+              int pointId0 = allEdges[j][k];
+              int pointId1 = allEdges[j][k+1];
+              edgePointIds->Reset();
+              edgePointIds->InsertNextId(pointId0);
+              edgePointIds->InsertNextId(pointId1);
+
+              linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+              if (pointsEdgeId->GetNumberOfIds() == 1)
+              {
+                linesPd->DeleteCell(pointsEdgeId->GetId(0));
+              }
+              else
+                fprintf(stdout,"NO CELL FOUND\n");
+            }
+            int nodeId0 = allEndIds->IsId(allEdges[j][0]);
+            int nodeIdN = allEndIds->IsId(allEdges[j][delEdgeSize-1]);
+            //nodeCount[nodeId0]--;
+            //nodeCount[nodeIdN]--;
+          }
+        }
+      }
+      if (nodeCount[nodeIdN] == 1)
+      {
+        for (int j=0; j<allEdges.size(); j++)
+        {
+          int delEdgeSize = allEdges[j].size();
+
+          if (allEdges[j][0] == allEdges[i][edgeSize-1] ||
+              allEdges[j][delEdgeSize-1] == allEdges[i][edgeSize-1])
+          {
+            for (int k=0; k<delEdgeSize-1; k++)
+            {
+              int pointId0 = allEdges[j][k];
+              int pointId1 = allEdges[j][k+1];
+              edgePointIds->Reset();
+              edgePointIds->InsertNextId(pointId0);
+              edgePointIds->InsertNextId(pointId1);
+
+              linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+              if (pointsEdgeId->GetNumberOfIds() == 1)
+              {
+                linesPd->DeleteCell(pointsEdgeId->GetId(0));
+              }
+              else
+                fprintf(stdout,"NO CELL FOUND\n");
+            }
+            int nodeId0 = allEndIds->IsId(allEdges[j][0]);
+            int nodeIdN = allEndIds->IsId(allEdges[j][delEdgeSize-1]);
+            //nodeCount[nodeId0]--;
+            //nodeCount[nodeIdN]--;
+          }
+        }
+      }
+    }
+  }
+
+  for (int i=0; i<nodeCount.size(); i++)
+    fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
+
+  linesPd->RemoveDeletedCells();
+  cleaner->SetInputData(linesPd);
+  cleaner->Update();
+
+  linesPd->DeepCopy(cleaner->GetOutput());
+
+  // Preprocessing of lines
+  linesPd->BuildLinks();
+
+	firstVertex = -1;
+  numConnectedPts.clear();
+  numConnectedPts.resize(linesPd->GetNumberOfPoints());
+  connectedEdgePts.clear();
+  connectedEdgePts.resize(linesPd->GetNumberOfPoints());
+
+  firsties = 0;
+  for (int i=0; i<linesPd->GetNumberOfPoints(); i++)
+  {
+    linesPd->GetPointCells(i, pointCellIds);
+    if (pointCellIds->GetNumberOfIds() == 1)
+    {
+      firsties++;
+      if (firstVertex == -1)
+        firstVertex = i;
+    }
+
+    numConnectedPts[i] = pointCellIds->GetNumberOfIds();
+
+    std::vector<int> connectedPts;
+    for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
+    {
+      linesPd->GetCellPoints(pointCellIds->GetId(j), npts, pts);
+
+      for (int k=0; k<npts; k++)
+      {
+        if (pts[k] != i)
+          connectedPts.push_back(pts[k]);
+      }
+    }
+    connectedEdgePts[i] = connectedPts;
+  }
+  fprintf(stdout,"NUM FIRSTIES: %d\n", firsties);
+
+  if (firstVertex == -1)
+  {
+    fprintf(stderr,"No first vertex found, lines must form loop\n");
+    return SV_ERROR;
+  }
+
+  pointUsed.clear();
+  pointUsed.resize(linesPd->GetNumberOfPoints(), 0);
+
+  pointUsed[firstVertex] = 1;
+  startVertex = connectedEdgePts[firstVertex][0];
+
+  allEdges.clear();
+  thisEdge.clear();
+  thisEdge.push_back(firstVertex);
+
+  this->RecursiveGetPolylines(linesPd, numConnectedPts, connectedEdgePts, startVertex, pointUsed, allEdges, thisEdge);
+
   vtkNew(vtkIntArray, centerlineIds);
   centerlineIds->SetNumberOfTuples(linesPd->GetNumberOfCells());
   centerlineIds->SetName("CenterlineIds");
-  centerlineIds->FillComponent(0, 0);
+  centerlineIds->FillComponent(0, -1);
   for (int i=0; i<allEdges.size(); i++)
   {
+    int edgeSize = allEdges[i].size();
+    int edgeId0 = allEdges[i][0];
+    int edgeIdN = allEdges[i][edgeSize-1];
+    fprintf(stdout,"EDGE %d:   %d   %d\n", i, edgeId0, edgeIdN);
     for (int j=0; j<allEdges[i].size()-1; j++)
     {
       int pointId0 = allEdges[i][j];
@@ -789,6 +1016,7 @@ int vtkSVCenterlines::RequestData(
     }
   }
   linesPd->GetCellData()->AddArray(centerlineIds);
+
   output->DeepCopy(linesPd);
 
   //==========================CALCULATE GENUS================================
@@ -849,90 +1077,118 @@ int vtkSVCenterlines::RequestData(
 
   //========================================================================
 
-//  vtkNew(vtkArrayCalculator* voronoiCostFunctionCalculator);
-////#if (VTK_MAJOR_VERSION <= 5)
-////  voronoiCostFunctionCalculator->SetInput(voronoiDiagram);
-////#else
-////  voronoiCostFunctionCalculator->SetInputData(voronoiDiagram);
-////#endif
-//  voronoiCostFunctionCalculator->SetInputData(newVoronoiDiagram);
-//  voronoiCostFunctionCalculator->SetAttributeModeToUsePointData();
-//  //voronoiCostFunctionCalculator->AddScalarVariable("R",this->RadiusArrayName,0);
-//  voronoiCostFunctionCalculator->AddScalarVariable("R","NewCostArray",0);
-//  voronoiCostFunctionCalculator->SetFunction(this->CostFunction);
-//  voronoiCostFunctionCalculator->SetResultArrayName(this->CostFunctionArrayName);
-//  voronoiCostFunctionCalculator->Update();
-//
-//  vtkNew(vtkIdList, voronoiSourceSeedIds);
-//  vtkNew(vtkIdList, voronoiTargetSeedIds);
-//
-//  vtkNew(vtkIdList, voronoiSeeds);
-//
-//  int i;
-//  if (this->CapCenterIds)
-//    {
-//    this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiSeeds);
-//    for (i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
-//      {
-//      voronoiSourceSeedIds->InsertNextId(voronoiSeeds->GetId(this->SourceSeedIds->GetId(i)));
-//      }
-//    for (i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
-//      {
-//      voronoiTargetSeedIds->InsertNextId(voronoiSeeds->GetId(this->TargetSeedIds->GetId(i)));
-//      }
-//    }
-//  else
-//    {
-//    for (i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
-//      {
-//      voronoiSourceSeedIds->InsertNextId(this->PoleIds->GetId(this->SourceSeedIds->GetId(i)));
-//      }
-//    for (i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
-//      {
-//      voronoiTargetSeedIds->InsertNextId(this->PoleIds->GetId(this->TargetSeedIds->GetId(i)));
-//      }
-//    }
-//
-//  vtkNew(vtkvmtkNonManifoldFastMarching* voronoiFastMarching);
+  vtkNew(vtkArrayCalculator, voronoiCostFunctionCalculator);
 //#if (VTK_MAJOR_VERSION <= 5)
-//  voronoiFastMarching->SetInput(vtkPolyData::SafeDownCast(voronoiCostFunctionCalculator->GetOutput()));
+//  voronoiCostFunctionCalculator->SetInput(voronoiDiagram);
 //#else
-//  voronoiFastMarching->SetInputConnection(voronoiCostFunctionCalculator->GetOutputPort());
+//  voronoiCostFunctionCalculator->SetInputData(voronoiDiagram);
 //#endif
-//  voronoiFastMarching->SetCostFunctionArrayName(this->CostFunctionArrayName);
-//  voronoiFastMarching->SetSolutionArrayName(this->EikonalSolutionArrayName);
-//  voronoiFastMarching->SeedsBoundaryConditionsOn();
-//  voronoiFastMarching->SetSeeds(voronoiSourceSeedIds);
-//  voronoiFastMarching->Update();
-//
-//  this->VoronoiDiagram->ShallowCopy(voronoiFastMarching->GetOutput());
+  voronoiCostFunctionCalculator->SetInputData(newVoronoiDiagram);
+  voronoiCostFunctionCalculator->SetAttributeModeToUsePointData();
+  voronoiCostFunctionCalculator->AddScalarVariable("R",this->RadiusArrayName,0);
+  //voronoiCostFunctionCalculator->AddScalarVariable("R","NewCostArray",0);
+  voronoiCostFunctionCalculator->SetFunction(this->CostFunction);
+  voronoiCostFunctionCalculator->SetResultArrayName(this->CostFunctionArrayName);
+  voronoiCostFunctionCalculator->Update();
+
+  surfacer->SetInputData(voronoiCostFunctionCalculator->GetOutput());
+  surfacer->Update();
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CHECKCOSTER.vtp", surfacer->GetOutput());
+
+  //========================================================================
+  //
+  // Loop through now
+  vtkNew(vtkAppendPolyData, appender);
+  for (int i=0; i<allEdges.size(); i++)
+  {
+    int edgeSize = allEdges[i].size();
+    int edgeId0 = allEdges[i][0];
+    int edgeIdN = allEdges[i][edgeSize-1];
+    fprintf(stdout,"DOING EDGE: %d %d\n", edgeId0, edgeIdN);
+
+    int voronoiId0 = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(edgeId0);
+    int voronoiIdN = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(edgeIdN);
+
+    vtkNew(vtkIdList, voronoiSourceSeedIds);
+    vtkNew(vtkIdList, voronoiTargetSeedIds);
+
+    vtkNew(vtkIdList, voronoiSeeds);
+
+    voronoiSourceSeedIds->InsertNextId(voronoiId0);
+    voronoiTargetSeedIds->InsertNextId(voronoiIdN);
+
+    //int i;
+    //if (this->CapCenterIds)
+    //  {
+    //  this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiSeeds);
+    //  for (i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
+    //    {
+    //    voronoiSourceSeedIds->InsertNextId(voronoiSeeds->GetId(this->SourceSeedIds->GetId(i)));
+    //    }
+    //  for (i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
+    //    {
+    //    voronoiTargetSeedIds->InsertNextId(voronoiSeeds->GetId(this->TargetSeedIds->GetId(i)));
+    //    }
+    //  }
+    //else
+    //  {
+    //  for (i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
+    //    {
+    //    voronoiSourceSeedIds->InsertNextId(this->PoleIds->GetId(this->SourceSeedIds->GetId(i)));
+    //    }
+    //  for (i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
+    //    {
+    //    voronoiTargetSeedIds->InsertNextId(this->PoleIds->GetId(this->TargetSeedIds->GetId(i)));
+    //    }
+    //  }
+
+    vtkNew(vtkvmtkNonManifoldFastMarching, voronoiFastMarching);
 //#if (VTK_MAJOR_VERSION <= 5)
-//  this->VoronoiDiagram->Update();
-//#endif
-//
-//
-//  vtkNew(vtkvmtkSteepestDescentLineTracer* centerlineBacktracing);
-//#if (VTK_MAJOR_VERSION <= 5)
-//  centerlineBacktracing->SetInput(voronoiFastMarching->GetOutput());
+//    voronoiFastMarching->SetInput(vtkPolyData::SafeDownCast(voronoiCostFunctionCalculator->GetOutput()));
 //#else
-//  centerlineBacktracing->SetInputConnection(voronoiFastMarching->GetOutputPort());
+//    voronoiFastMarching->SetInputConnection(voronoiCostFunctionCalculator->GetOutputPort());
 //#endif
-//  //centerlineBacktracing->SetInputData(reducedVorPd);
-//  centerlineBacktracing->SetDataArrayName(this->RadiusArrayName);
-//  centerlineBacktracing->SetDescentArrayName(this->EikonalSolutionArrayName);
-//  //centerlineBacktracing->SetDescentArrayName("MAbs");
-//  centerlineBacktracing->SetEdgeArrayName(this->EdgeArrayName);
-//  centerlineBacktracing->SetEdgePCoordArrayName(this->EdgePCoordArrayName);
-//  centerlineBacktracing->SetSeeds(voronoiTargetSeedIds);
-//  //centerlineBacktracing->SetSeeds(newTargetSeeds);
-//  centerlineBacktracing->MergePathsOff();
-//  centerlineBacktracing->StopOnTargetsOn();
-//  centerlineBacktracing->SetTargets(voronoiSourceSeedIds);
-//  //centerlineBacktracing->SetTargets(newSourceSeeds);
-//  centerlineBacktracing->Update();
-//
-//  output->ShallowCopy(centerlineBacktracing->GetOutput());
-//
+    voronoiFastMarching->SetInputData(voronoiCostFunctionCalculator->GetOutput());
+    voronoiFastMarching->SetCostFunctionArrayName(this->CostFunctionArrayName);
+    voronoiFastMarching->SetSolutionArrayName(this->EikonalSolutionArrayName);
+    voronoiFastMarching->SeedsBoundaryConditionsOn();
+    voronoiFastMarching->SetSeeds(voronoiSourceSeedIds);
+    voronoiFastMarching->Update();
+
+    this->VoronoiDiagram->ShallowCopy(voronoiFastMarching->GetOutput());
+#if (VTK_MAJOR_VERSION <= 5)
+    this->VoronoiDiagram->Update();
+#endif
+
+
+    vtkNew(vtkvmtkSteepestDescentLineTracer, centerlineBacktracing);
+#if (VTK_MAJOR_VERSION <= 5)
+    centerlineBacktracing->SetInput(voronoiFastMarching->GetOutput());
+#else
+    centerlineBacktracing->SetInputConnection(voronoiFastMarching->GetOutputPort());
+#endif
+    //centerlineBacktracing->SetInputData(reducedVorPd);
+    centerlineBacktracing->SetDataArrayName(this->RadiusArrayName);
+    centerlineBacktracing->SetDescentArrayName(this->EikonalSolutionArrayName);
+    //centerlineBacktracing->SetDescentArrayName("MAbs");
+    centerlineBacktracing->SetEdgeArrayName(this->EdgeArrayName);
+    centerlineBacktracing->SetEdgePCoordArrayName(this->EdgePCoordArrayName);
+    centerlineBacktracing->SetSeeds(voronoiTargetSeedIds);
+    //centerlineBacktracing->SetSeeds(newTargetSeeds);
+    centerlineBacktracing->MergePathsOff();
+    centerlineBacktracing->StopOnTargetsOn();
+    centerlineBacktracing->SetTargets(voronoiSourceSeedIds);
+    //centerlineBacktracing->SetTargets(newSourceSeeds);
+    centerlineBacktracing->Update();
+
+    appender->AddInputData(centerlineBacktracing->GetOutput());
+  }
+
+  appender->Update();
+
+  output->ShallowCopy(appender->GetOutput());
+  //output->ShallowCopy(centerlineBacktracing->GetOutput());
+
 //  vtkIdList* hitTargets = centerlineBacktracing->GetHitTargets();
 //
 //  vtkNew(vtkPoints, endPointPairs);
@@ -1743,8 +1999,27 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
       {
         pointUsed[firstVertex] = 1;
         thisEdge.push_back(firstVertex);
+
+        // Have to add the last point
+        int found0 = 0, found1 = 0;
+        for (int i=0; i<thisEdge.size(); i++)
+        {
+          if (thisEdge[i] == testIndex0)
+            found0 = 1;
+          if (thisEdge[i] == testIndex1)
+            found1 = 1;
+        }
+        if (!found0)
+          thisEdge.push_back(testIndex0);
+        else if(!found1)
+          thisEdge.push_back(testIndex1);
+        else
+        {
+          fprintf(stdout,"BOTH ALREADY IN EDGE!\n");
+          return SV_ERROR;
+        }
         allEdges.push_back(thisEdge);
-        fprintf(stdout,"ALSO REACHED AN END\n");
+        fprintf(stdout,"ALSO REACHED AN END %d\n", firstVertex);
         return 1;
       }
 
