@@ -30,6 +30,7 @@
 
 #include "vtkSVSmoothVolume.h"
 
+#include "vtkCell.h"
 #include "vtkCellData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDijkstraGraphGeodesicPath.h"
