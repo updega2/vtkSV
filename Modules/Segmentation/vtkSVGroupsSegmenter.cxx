@@ -98,6 +98,8 @@
 #include "vtkvmtkPolyDataCenterlineGroupsClipper.h"
 #include "vtkvmtkCenterlineAttributesFilter.h"
 
+#include <algorithm>
+
 // ----------------------
 // GlobalCoords
 // ----------------------
