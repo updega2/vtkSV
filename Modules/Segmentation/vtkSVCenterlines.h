@@ -1,29 +1,35 @@
 /*=========================================================================
+ *
+ * Copyright (c) 2014 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 
-Program:   VMTK
-Module:    $RCSfile: vtkSVCenterlines.h,v $
-Language:  C++
-Date:      $Date: 2006/07/17 09:52:56 $
-Version:   $Revision: 1.6 $
-
-  Copyright (c) Luca Antiga, David Steinman. All rights reserved.
-  See LICENCE file for details.
-
-  Portions of this code are covered under the VTK copyright.
-  See VTKCopyright.txt or http://www.kitware.com/VTKCopyright.htm
-  for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notices for more information.
-
-=========================================================================*/
-  // .NAME vtkSVCenterlines - Compute centerlines from surface.
-  // .SECTION Description
-  // ...
-
-#ifndef __vtkSVCenterlines_h
-#define __vtkSVCenterlines_h
+#ifndef vtkSVCenterlines_h
+#define vtkSVCenterlines_h
 
 #include "vtkPolyDataAlgorithm.h"
 //#include "vtkvmtkComputationalGeometryWin32Header.h"
@@ -116,6 +122,17 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
   void AppendEndPoints(vtkPoints* endPointPairs);
   void ResampleCenterlines();
   void ReverseCenterlines();
+  int PruneVoronoiDiagram(vtkPolyData *inTriPd,
+                          vtkPolyData *inEdgePd,
+                          vtkPolyData *outTriPd,
+                          vtkPolyData *outEdgePd,
+                          std::string medialEdgeArrayName);
+  int RecursiveGetPolylines(vtkPolyData *pd,
+                            std::vector<int> numConnectedPts,
+                            std::vector<std::vector<int> > connectedEdgePts,
+                            int startVertex, std::vector<int> &pointUsed,
+                            std::vector<std::vector<int> > &allEdges,
+                            std::vector<int> &thisEdge);
 
   vtkIdList* SourceSeedIds;
   vtkIdList* TargetSeedIds;
