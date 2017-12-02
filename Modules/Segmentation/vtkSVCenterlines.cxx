@@ -36,6 +36,7 @@
 #include "vtkDelaunay3D.h"
 #include "vtkEdgeTable.h"
 #include "vtkPolyDataNormals.h"
+#include "vtkPolyline.h"
 #include "vtkvmtkInternalTetrahedraExtractor.h"
 #include "vtkvmtkVoronoiDiagram3D.h"
 #include "vtkvmtkSimplifyVoronoiDiagram.h"
@@ -1019,6 +1020,60 @@ int vtkSVCenterlines::RequestData(
 
   output->DeepCopy(linesPd);
 
+  //==========================GET THE PIECES=================================
+
+  std::vector<int> edgeUsed(allEdges.size(), 0);
+  edgeUsed[0]= 1;
+  int edgeCount = 1;
+
+  std::vector<std::vector<int> > fullCenterlineEdges;
+
+  while (edgeCount != allEdges.size())
+  {
+    int nextEdge = 0;
+    int front = allEdges[nextEdge][0];
+    int back  = allEdges[nextEdge][allEdges[0].size()-1];
+    std::vector<int> centerlineEdges;
+    centerlineEdges.push_back(0);
+    while (nextEdge != -1)
+    {
+      nextEdge = -1;
+
+      for (int i=0; i<allEdges.size(); i++)
+      {
+        if (edgeUsed[i])
+          continue;
+
+        int edgeSize = allEdges[i].size();
+        int edgeId0 = allEdges[i][0];
+        int edgeIdN = allEdges[i][edgeSize-1];
+
+        if (edgeId0 == back)
+        {
+          nextEdge = i;
+          centerlineEdges.push_back(i);
+          edgeUsed[i] = 1;
+          front = edgeId0;
+          back  = edgeIdN;
+          edgeCount++;
+          break;
+        }
+
+        if (edgeIdN == back)
+        {
+          nextEdge = i;
+          centerlineEdges.push_back(i);
+          edgeUsed[i] = 1;
+          front = edgeIdN;
+          back  = edgeId0;
+          edgeCount++;
+          break;
+        }
+      }
+    }
+    fullCenterlineEdges.push_back(centerlineEdges);
+  }
+
   //==========================CALCULATE GENUS================================
   // Start edge insertion for edge table
   vtkNew(vtkEdgeTable, surfaceEdgeTable);
@@ -1114,8 +1169,8 @@ int vtkSVCenterlines::RequestData(
 
     vtkNew(vtkIdList, voronoiSeeds);
 
-    voronoiSourceSeedIds->InsertNextId(voronoiId0);
-    voronoiTargetSeedIds->InsertNextId(voronoiIdN);
+    voronoiSourceSeedIds->InsertNextId(voronoiIdN);
+    voronoiTargetSeedIds->InsertNextId(voronoiId0);
 
     //int i;
     //if (this->CapCenterIds)
@@ -1186,7 +1241,44 @@ int vtkSVCenterlines::RequestData(
 
   appender->Update();
 
-  output->ShallowCopy(appender->GetOutput());
+  vtkNew(vtkPolyData, currentLine);
+  vtkNew(vtkCellArray, newCells);
+  vtkNew(vtkPoints, newPoints);
+  vtkNew(vtkPointData, newPointData);
+  newPointData->CopyAllocate(appender->GetOutput()->GetPointData(),
+                             appender->GetOutput()->GetNumberOfPoints());
+  for (int i=0; i<fullCenterlineEdges.size(); i++)
+  {
+
+    vtkNew(vtkPolyLine, newLine);
+
+    for (int j=0; j<fullCenterlineEdges[i].size(); j++)
+    {
+      currentLine = appender->GetInput(fullCenterlineEdges[i][j]);
+
+      int kStart = 1;
+      if (j == 0)
+        kStart = 0;
+      for (int k=kStart; k<currentLine->GetNumberOfPoints(); k++)
+      {
+        double pt[3];
+        currentLine->GetPoint(k, pt);
+
+        int newPointId = newPoints->InsertNextPoint(pt);
+        newLine->GetPointIds()->InsertNextId(newPointId);
+        newPointData->CopyData(currentLine->GetPointData(), k, newPointId);
+      }
+    }
+    newCells->InsertNextCell(newLine);
+  }
+  newPointData->Squeeze();
+
+  vtkNew(vtkPolyData, finalLinesPd);
+  finalLinesPd->SetPoints(newPoints);
+  finalLinesPd->SetLines(newCells);
+  finalLinesPd->GetPointData()->PassData(newPointData);
+
+  output->ShallowCopy(finalLinesPd);
   //output->ShallowCopy(centerlineBacktracing->GetOutput());
 
 //  vtkIdList* hitTargets = centerlineBacktracing->GetHitTargets();
@@ -1230,11 +1322,11 @@ int vtkSVCenterlines::RequestData(
 //  duhWriter->SetFileName(thefn.c_str());
 //  duhWriter->Write();
 //
-//  if (this->CenterlineResampling)
-//    {
-//    this->ResampleCenterlines();
-//    }
-//  this->ReverseCenterlines();
+  if (this->CenterlineResampling)
+    {
+    this->ResampleCenterlines();
+    }
+  //this->ReverseCenterlines();
 //
   return 1;
 }

@@ -44,7 +44,9 @@ set(SRCS
   vtkSVGroupsClipper.cxx
   vtkSVGroupsSegmenter.cxx
   vtkSVCenterlineGraph.cxx
-  vtkSVCenterlineGCell.cxx)
+  vtkSVCenterlineGCell.cxx
+  vtkSVCenterlineBranchSplitter.cxx
+  )
 
 set(HDRS
   vtkSVGeneralizedPolycube.h
@@ -58,7 +60,9 @@ set(HDRS
   vtkSVGroupsClipper.h
   vtkSVGroupsSegmenter.h
   vtkSVCenterlineGraph.h
-  vtkSVCenterlineGCell.h)
+  vtkSVCenterlineGCell.h
+  vtkSVCenterlineBranchSplitter.h
+  )
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

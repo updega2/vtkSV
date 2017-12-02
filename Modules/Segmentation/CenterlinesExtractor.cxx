@@ -39,6 +39,7 @@
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVCenterlines.h"
+#include "vtkSVCenterlineBranchSplitter.h"
 
 int main(int argc, char *argv[])
 {
@@ -110,20 +111,33 @@ int main(int argc, char *argv[])
   vtkNew(vtkSVCenterlines, CenterlineFilter);
 
   //OPERATION
-  std::cout<<"Performing Operation..."<<endl;
+  std::cout<<"Getting Centerlines..."<<endl;
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
   CenterlineFilter->SetCostFunction("1/R");
   CenterlineFilter->SetSimplifyVoronoi(0);
   CenterlineFilter->SetAppendEndPointsToCenterlines(appendEndPoints);
-  CenterlineFilter->SetCenterlineResampling(1);
-  CenterlineFilter->SetResamplingStepLength(1.0);
+  CenterlineFilter->SetCenterlineResampling(0);
+  CenterlineFilter->SetResamplingStepLength(0.0);
   CenterlineFilter->Update();
+  std::cout<<"Done"<<endl;
+
+  std::cout<<"Getting Centerlines..."<<endl;
+  vtkNew(vtkSVCenterlineBranchSplitter, BranchSplitter);
+  BranchSplitter->SetGroupingModeToFirstPoint();
+  BranchSplitter->SetInputData(CenterlineFilter->GetOutput());
+  BranchSplitter->SetBlankingArrayName("Blanking");
+  BranchSplitter->SetRadiusArrayName("MaximumInscribedSphereRadius");
+  BranchSplitter->SetGroupIdsArrayName("GroupIds");
+  BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
+  BranchSplitter->SetTractIdsArrayName("TractIds");
+  BranchSplitter->Update();
   std::cout<<"Done"<<endl;
 
   //Write Files
   std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
+  vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
+  //vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
 
   //Exit the program without errors
   return EXIT_SUCCESS;
