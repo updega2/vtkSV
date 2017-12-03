@@ -36,7 +36,7 @@
 #include "vtkDelaunay3D.h"
 #include "vtkEdgeTable.h"
 #include "vtkPolyDataNormals.h"
-#include "vtkPolyline.h"
+#include "vtkPolyLine.h"
 #include "vtkvmtkInternalTetrahedraExtractor.h"
 #include "vtkvmtkVoronoiDiagram3D.h"
 #include "vtkvmtkSimplifyVoronoiDiagram.h"
@@ -819,114 +819,102 @@ int vtkSVCenterlines::RequestData(
 
   vtkNew(vtkIdList, pointsEdgeId);
   vtkNew(vtkIdList, edgePointIds);
-  for (int i=0; i<needToDelete.size(); i++)
+  std::vector<int> isDeleted(allEdges.size(), 0);
+
+  int done = 0;
+  while (!done)
   {
-    fprintf(stdout,"EDGE %d, DEL %d\n", i, needToDelete[i]);
-    if (needToDelete[i] == 1)
+    for (int i=0; i<needToDelete.size(); i++)
     {
-      int edgeSize = allEdges[i].size();
-      for (int j=0; j<edgeSize-1; j++)
+      fprintf(stdout,"EDGE %d, DEL %d\n", i, needToDelete[i]);
+
+      if (isDeleted[i])
+        continue;
+
+      if (needToDelete[i] == 1)
       {
-        int pointId0 = allEdges[i][j];
-        int pointId1 = allEdges[i][j+1];
-        edgePointIds->Reset();
-        edgePointIds->InsertNextId(pointId0);
-        edgePointIds->InsertNextId(pointId1);
-
-        linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
-        if (pointsEdgeId->GetNumberOfIds() == 1)
+        int edgeSize = allEdges[i].size();
+        for (int j=0; j<edgeSize-1; j++)
         {
-          linesPd->DeleteCell(pointsEdgeId->GetId(0));
-        }
-        else
-          fprintf(stdout,"NO CELL FOUND\n");
-      }
-      int nodeId0 = allEndIds->IsId(allEdges[i][0]);
-      int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
-      nodeCount[nodeId0]--;
-      nodeCount[nodeIdN]--;
-    }
-  }
+          int pointId0 = allEdges[i][j];
+          int pointId1 = allEdges[i][j+1];
+          edgePointIds->Reset();
+          edgePointIds->InsertNextId(pointId0);
+          edgePointIds->InsertNextId(pointId1);
 
-  for (int i=0; i<nodeCount.size(); i++)
-    fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
-
-  for (int i=0; i<needToDelete.size(); i++)
-  {
-    if (needToDelete[i] == 1)
-    {
-      int edgeSize = allEdges[i].size();
-
-      int nodeId0 = allEndIds->IsId(allEdges[i][0]);
-      int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
-
-      if (nodeCount[nodeId0] == 1)
-      {
-        for (int j=0; j<allEdges.size(); j++)
-        {
-          int delEdgeSize = allEdges[j].size();
-
-          if (allEdges[j][0] == allEdges[i][0] ||
-              allEdges[j][delEdgeSize-1] == allEdges[i][0])
+          linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+          if (pointsEdgeId->GetNumberOfIds() == 1)
           {
-            for (int k=0; k<delEdgeSize-1; k++)
-            {
-              int pointId0 = allEdges[j][k];
-              int pointId1 = allEdges[j][k+1];
-              edgePointIds->Reset();
-              edgePointIds->InsertNextId(pointId0);
-              edgePointIds->InsertNextId(pointId1);
+            linesPd->DeleteCell(pointsEdgeId->GetId(0));
+          }
+          else
+            fprintf(stdout,"NO CELL FOUND\n");
+        }
+        int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+        int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+        nodeCount[nodeId0]--;
+        nodeCount[nodeIdN]--;
+        isDeleted[i] = 1;
+      }
+    }
 
-              linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
-              if (pointsEdgeId->GetNumberOfIds() == 1)
-              {
-                linesPd->DeleteCell(pointsEdgeId->GetId(0));
-              }
-              else
-                fprintf(stdout,"NO CELL FOUND\n");
+    for (int i=0; i<nodeCount.size(); i++)
+      fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
+
+    std::vector<int> newNeedToDelete(allEdges.size(), 0);
+    for (int i=0; i<needToDelete.size(); i++)
+    {
+      if (needToDelete[i] == 1)
+      {
+        int edgeSize = allEdges[i].size();
+
+        int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+        int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+
+        if (nodeCount[nodeId0] == 1)
+        {
+          for (int j=0; j<allEdges.size(); j++)
+          {
+            if (isDeleted[j])
+              continue;
+
+            int delEdgeSize = allEdges[j].size();
+
+            if (allEdges[j][0] == allEdges[i][0] ||
+                allEdges[j][delEdgeSize-1] == allEdges[i][0])
+            {
+              newNeedToDelete[j] = 1;
             }
-            int nodeId0 = allEndIds->IsId(allEdges[j][0]);
-            int nodeIdN = allEndIds->IsId(allEdges[j][delEdgeSize-1]);
-            //nodeCount[nodeId0]--;
-            //nodeCount[nodeIdN]--;
           }
         }
-      }
-      if (nodeCount[nodeIdN] == 1)
-      {
-        for (int j=0; j<allEdges.size(); j++)
+        if (nodeCount[nodeIdN] == 1)
         {
-          int delEdgeSize = allEdges[j].size();
-
-          if (allEdges[j][0] == allEdges[i][edgeSize-1] ||
-              allEdges[j][delEdgeSize-1] == allEdges[i][edgeSize-1])
+          for (int j=0; j<allEdges.size(); j++)
           {
-            for (int k=0; k<delEdgeSize-1; k++)
-            {
-              int pointId0 = allEdges[j][k];
-              int pointId1 = allEdges[j][k+1];
-              edgePointIds->Reset();
-              edgePointIds->InsertNextId(pointId0);
-              edgePointIds->InsertNextId(pointId1);
+            if (isDeleted[j])
+              continue;
 
-              linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
-              if (pointsEdgeId->GetNumberOfIds() == 1)
-              {
-                linesPd->DeleteCell(pointsEdgeId->GetId(0));
-              }
-              else
-                fprintf(stdout,"NO CELL FOUND\n");
+            int delEdgeSize = allEdges[j].size();
+
+            if (allEdges[j][0] == allEdges[i][edgeSize-1] ||
+                allEdges[j][delEdgeSize-1] == allEdges[i][edgeSize-1])
+            {
+              newNeedToDelete[j] = 1;
             }
-            int nodeId0 = allEndIds->IsId(allEdges[j][0]);
-            int nodeIdN = allEndIds->IsId(allEdges[j][delEdgeSize-1]);
-            //nodeCount[nodeId0]--;
-            //nodeCount[nodeIdN]--;
           }
         }
       }
     }
-  }
 
+    done = 1;
+    for (int i=0; i<needToDelete.size(); i++)
+    {
+      if (newNeedToDelete[i])
+        done = 0;
+      needToDelete[i] = newNeedToDelete[i];
+    }
+
+  }
   for (int i=0; i<nodeCount.size(); i++)
     fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
 
