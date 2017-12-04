@@ -41,6 +41,8 @@
 #include "vtkSVCenterlines.h"
 #include "vtkSVCenterlineBranchSplitter.h"
 
+#include "vtkvmtkMergeCenterlines.h"
+
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
@@ -134,9 +136,23 @@ int main(int argc, char *argv[])
   BranchSplitter->Update();
   std::cout<<"Done"<<endl;
 
+  std::cout<<"Merging Centerlines..."<<endl;
+  vtkNew(vtkvmtkMergeCenterlines, Merger);
+  Merger->SetInputData(BranchSplitter->GetOutput());
+  Merger->SetRadiusArrayName("MaximumInscribedSphereRadius");
+  Merger->SetGroupIdsArrayName("GroupIds");
+  Merger->SetCenterlineIdsArrayName("CenterlineIds");
+  Merger->SetTractIdsArrayName("TractIds");
+  Merger->SetBlankingArrayName("Blanking");
+  Merger->SetResamplingStepLength(0.0);
+  Merger->SetMergeBlanked(1);
+  Merger->Update();
+  std::cout<<"Done"<<endl;
+
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
+  vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0), "_Merged_Centerlines");
   //vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
 
   //Exit the program without errors

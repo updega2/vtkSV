@@ -182,7 +182,7 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
     if (ptCellIds->GetNumberOfIds() > 2)
     {
-      mergeDist = 0.9*(cleanInput->GetPointData()->GetArray(this->RadiusArrayName)->GetTuple1(cleanPtId));
+      mergeDist = 0.35*(cleanInput->GetPointData()->GetArray(this->RadiusArrayName)->GetTuple1(cleanPtId));
 
       int done=0;
       int iter = 0;

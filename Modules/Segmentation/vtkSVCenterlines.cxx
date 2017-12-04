@@ -1010,57 +1010,13 @@ int vtkSVCenterlines::RequestData(
 
   //==========================GET THE PIECES=================================
 
-  std::vector<int> edgeUsed(allEdges.size(), 0);
-  edgeUsed[0]= 1;
-  int edgeCount = 1;
-
   std::vector<std::vector<int> > fullCenterlineEdges;
 
-  while (edgeCount != allEdges.size())
-  {
-    int nextEdge = 0;
-    int front = allEdges[nextEdge][0];
-    int back  = allEdges[nextEdge][allEdges[0].size()-1];
-    std::vector<int> centerlineEdges;
-    centerlineEdges.push_back(0);
-    while (nextEdge != -1)
-    {
-      nextEdge = -1;
+  int startEdge = 0;
+  int front = allEdges[startEdge][0];
+  int back  = allEdges[startEdge][allEdges[0].size()-1];
 
-      for (int i=0; i<allEdges.size(); i++)
-      {
-        if (edgeUsed[i])
-          continue;
-
-        int edgeSize = allEdges[i].size();
-        int edgeId0 = allEdges[i][0];
-        int edgeIdN = allEdges[i][edgeSize-1];
-
-        if (edgeId0 == back)
-        {
-          nextEdge = i;
-          centerlineEdges.push_back(i);
-          edgeUsed[i] = 1;
-          front = edgeId0;
-          back  = edgeIdN;
-          edgeCount++;
-          break;
-        }
-
-        if (edgeIdN == back)
-        {
-          nextEdge = i;
-          centerlineEdges.push_back(i);
-          edgeUsed[i] = 1;
-          front = edgeIdN;
-          back  = edgeId0;
-          edgeCount++;
-          break;
-        }
-      }
-    }
-    fullCenterlineEdges.push_back(centerlineEdges);
-  }
+  this->RecursiveGetFullCenterlines(allEdges, fullCenterlineEdges, startEdge, front, back);
 
   //==========================CALCULATE GENUS================================
   // Start edge insertion for edge table
@@ -2158,6 +2114,66 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
 
 		firstVertex = secondVertex;
 	}
+
+  return 1;
+}
+
+int vtkSVCenterlines::RecursiveGetFullCenterlines(std::vector<std::vector<int> > allEdges,
+                                                  std::vector<std::vector<int> > &fullCenterlineEdges,
+                                                  int thisEdge, int front, int back)
+{
+  fprintf(stdout,"LOOKING AT %d FRONT %d AND BACK %d\n", thisEdge, front, back);
+  int stillRecursing = 0;
+  for (int i=0; i<allEdges.size(); i++)
+  {
+    if (i == thisEdge)
+      continue;
+
+    int edgeSize = allEdges[i].size();
+    int edgeId0 = allEdges[i][0];
+    int edgeIdN = allEdges[i][edgeSize-1];
+
+    std::vector<std::vector<int> > newCenterlineEdges;
+    if (edgeId0 == back)
+    {
+      fprintf(stdout,"1 FOUND %d of %d\n", back, thisEdge);
+      int newFront = edgeId0;
+      int newBack  = edgeIdN;
+
+      this->RecursiveGetFullCenterlines(allEdges, newCenterlineEdges, i, newFront, newBack);
+
+    }
+
+    if (edgeIdN == back)
+    {
+      fprintf(stdout,"2 FOUND %d of %d\n", back, thisEdge);
+      int newFront = edgeIdN;
+      int newBack  = edgeId0;
+
+      this->RecursiveGetFullCenterlines(allEdges, newCenterlineEdges, i, newFront, newBack);
+    }
+
+    if (newCenterlineEdges.size() > 0)
+    {
+      for (int j=0; j<newCenterlineEdges.size(); j++)
+      {
+        std::vector<int> newEdge;
+        newEdge.push_back(thisEdge);
+        for (int k=0; k<newCenterlineEdges[j].size(); k++)
+          newEdge.push_back(newCenterlineEdges[j][k]);
+
+        fullCenterlineEdges.push_back(newEdge);
+      }
+      stillRecursing = 1;
+    }
+  }
+
+  if (!stillRecursing)
+  {
+    std::vector<int> newEdge;
+    newEdge.push_back(thisEdge);
+    fullCenterlineEdges.push_back(newEdge);
+  }
 
   return 1;
 }

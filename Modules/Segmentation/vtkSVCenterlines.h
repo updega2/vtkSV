@@ -133,6 +133,9 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
                             int startVertex, std::vector<int> &pointUsed,
                             std::vector<std::vector<int> > &allEdges,
                             std::vector<int> &thisEdge);
+  int RecursiveGetFullCenterlines(std::vector<std::vector<int> > allEdges,
+                                  std::vector<std::vector<int> > &fullCenterlineEdges,
+                                  int thisEdge, int front, int back);
 
   vtkIdList* SourceSeedIds;
   vtkIdList* TargetSeedIds;
