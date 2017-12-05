@@ -47,6 +47,7 @@
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
 
+#include "vtkSVIOUtils.h"
 
 vtkStandardNewMacro(vtkSVCenterlineBranchSplitter);
 
@@ -167,7 +168,6 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
   vtkDoubleArray* splittingPCoords = vtkDoubleArray::New();
   vtkIdList* blankingFlags = vtkIdList::New();
 
-  int numMerge = 10;
   double mergeDist = 0.3;
   int numPts = centerline->GetNumberOfPoints();
   for (int i=0; i<numPts; i++)
@@ -182,6 +182,7 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
     if (ptCellIds->GetNumberOfIds() > 2)
     {
+      fprintf(stdout,"TELEL ME HOW MNAY FOR CENTERLINE %d, POINT %d: %d\n", cellId, i,ptCellIds->GetNumberOfIds());
       mergeDist = 0.35*(cleanInput->GetPointData()->GetArray(this->RadiusArrayName)->GetTuple1(cleanPtId));
 
       int done=0;
@@ -208,11 +209,21 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
       intersectionPCoords->InsertNextValue(0.0);
 
-      //i = i + numMerge - 1;
     }
     ptCellIds->Delete();
 
   }
+
+  fprintf(stdout,"TOUCHING SUB IDS FOR CENTERLINE %d: ", cellId);
+  for (int i=0; i<touchingSubIds->GetNumberOfIds(); i++)
+    fprintf(stdout,"%d ", touchingSubIds->GetId(i));
+  fprintf(stdout,"\n");
+  fprintf(stdout,"\n");
+  fprintf(stdout,"INTERSECTION SUB IDS FOR CENTERLINE %d: ", cellId);
+  for (int i=0; i<intersectionSubIds->GetNumberOfIds(); i++)
+    fprintf(stdout,"%d ", intersectionSubIds->GetId(i));
+  fprintf(stdout,"\n");
+  fprintf(stdout,"\n");
 
   blankingFlags->InsertNextId(0);
   //for every touching, put one intersection, and blank in between. If a subsequent touching falls between a previous touching and the corresponding intersection, take the farthest intersection
@@ -276,8 +287,6 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
   fprintf(stdout,"\n");
   fprintf(stdout,"\n");
 
-
-
   this->NumberOfSplittingPoints = splittingSubIds->GetNumberOfIds();
 
   this->SubIds = new vtkIdType[this->NumberOfSplittingPoints];
@@ -311,6 +320,187 @@ void vtkSVCenterlineBranchSplitter::GroupTracts(vtkPolyData* input, vtkPolyData*
 
   //New ideas:
   // loop over group ids, if blanked group, if same centerlineId as another tract in same group, make it another group. And what about the rest? No, better: assume net is a tree. For every group, look at which tracts of each centerline are downstream (via TractIdsArray) and group them in a bifurcation. In order to relax the assumption on the tree, for every group, for every direction, look for all the groups to which the next next tracts belong (tractId + 2 or -2).
+}
+
+void vtkSVCenterlineBranchSplitter::SplitCenterline(vtkPolyData* input, vtkIdType cellId, int numberOfSplittingPoints, const vtkIdType* subIds, const double* pcoords, const int* tractBlanking, vtkPolyData* splitCenterline)
+{
+  vtkPointData* inputPD = input->GetPointData();
+  vtkCell* centerline = input->GetCell(cellId);
+
+  if (centerline->GetCellType() != VTK_POLY_LINE && centerline->GetCellType() != VTK_LINE)
+    {
+    return;
+    }
+
+  vtkIdType numberOfCenterlinePoints = centerline->GetNumberOfPoints();
+
+  int numberOfTractPoints;
+
+  splitCenterline->Initialize();
+  vtkPoints* splitCenterlinePoints = vtkPoints::New();
+  vtkCellArray* splitCenterlineCellArray = vtkCellArray::New();
+  vtkIdList* splitCenterlineCellPointIds = vtkIdList::New();
+  vtkPointData* splitCenterlinePD = splitCenterline->GetPointData();
+
+  vtkIntArray* centerlineIdsArray = vtkIntArray::New();
+  centerlineIdsArray->SetNumberOfComponents(1);
+  centerlineIdsArray->SetName(this->CenterlineIdsArrayName);
+
+  vtkIntArray* tractIdsArray = vtkIntArray::New();
+  tractIdsArray->SetNumberOfComponents(1);
+  tractIdsArray->SetName(this->TractIdsArrayName);
+
+  vtkIntArray* blankingArray = vtkIntArray::New();
+  blankingArray->SetNumberOfComponents(1);
+  blankingArray->SetName(this->BlankingArrayName);
+
+  int i;
+  if (numberOfSplittingPoints == 0)
+    {
+    splitCenterlinePoints->DeepCopy(centerline->GetPoints());
+    splitCenterlineCellArray->InsertNextCell(numberOfCenterlinePoints);
+    splitCenterlinePD->CopyAllocate(inputPD,numberOfCenterlinePoints);
+    for (i=0; i<numberOfCenterlinePoints; i++)
+      {
+      splitCenterlinePD->CopyData(inputPD,centerline->GetPointId(i),i);
+      splitCenterlineCellArray->InsertCellPoint(i);
+      }
+    centerlineIdsArray->InsertNextValue(cellId);
+    tractIdsArray->InsertNextValue(0);
+    blankingArray->InsertNextValue(0);
+
+    splitCenterline->SetPoints(splitCenterlinePoints);
+    splitCenterline->SetLines(splitCenterlineCellArray);
+    splitCenterline->GetCellData()->CopyAllocate(input->GetCellData(),1);
+    splitCenterline->GetCellData()->CopyData(input->GetCellData(),cellId,0);
+    splitCenterline->GetCellData()->AddArray(centerlineIdsArray);
+    splitCenterline->GetCellData()->AddArray(tractIdsArray);
+    splitCenterline->GetCellData()->AddArray(blankingArray);
+
+    splitCenterlinePoints->Delete();
+    splitCenterlineCellArray->Delete();
+    splitCenterlineCellPointIds->Delete();
+    centerlineIdsArray->Delete();
+    blankingArray->Delete();
+    return;
+    }
+
+  int numberOfSplitCenterlinePoints = 0;
+  for (i=0; i<=numberOfSplittingPoints; i++)
+    {
+    if (tractBlanking[i] == 1)
+      {
+      continue;
+      }
+    vtkIdType lowerId, higherId;
+
+    numberOfTractPoints = 0;
+
+    if (i==0)
+      {
+      lowerId = 0;
+      }
+    else
+      {
+      lowerId = subIds[i-1]+1;
+      numberOfTractPoints += 1;
+      }
+    if (i==numberOfSplittingPoints)
+      {
+      higherId = numberOfCenterlinePoints-1;
+      }
+    else
+      {
+      higherId = subIds[i];
+      numberOfTractPoints += 1;
+      }
+    if (higherId - lowerId > 0)
+      {
+      numberOfTractPoints += higherId - lowerId;
+      }
+    numberOfSplitCenterlinePoints += numberOfTractPoints;
+    }
+
+  splitCenterlinePD->InterpolateAllocate(inputPD,numberOfSplitCenterlinePoints);
+  splitCenterline->GetCellData()->CopyAllocate(input->GetCellData(),numberOfSplittingPoints+1);
+
+  for (i=0; i<=numberOfSplittingPoints; i++)
+    {
+//     if (tractBlanking[i] == 1)
+//       {
+//       // don't skip here! [Kept as a caveat!]
+//       continue;
+//       }
+
+    splitCenterlineCellPointIds->Initialize();
+
+    vtkIdType lowerId, higherId;
+
+    lowerId = (i == 0) ? 0 : subIds[i-1]+1;
+    higherId = (i == numberOfSplittingPoints) ? numberOfCenterlinePoints-1 : subIds[i];
+    fprintf(stdout,"CENTERLINE %d: GOING FROM %d TO %d\n", cellId, lowerId, higherId);
+
+    double point[3], point0[3], point1[3];
+    vtkIdType pointId;
+
+    // insert first interpolated point if necessary
+    int j, k;
+    if (i>0)
+      {
+      centerline->GetPoints()->GetPoint(subIds[i-1],point0);
+      centerline->GetPoints()->GetPoint(subIds[i-1]+1,point1);
+      for (k=0; k<3; k++)
+        {
+        point[k] = point0[k] + pcoords[i-1]*(point1[k] - point0[k]);
+        }
+      fprintf(stdout,"INSERTING HERE THOUGH: %d\n", subIds[i-1]);
+      pointId = splitCenterlinePoints->InsertNextPoint(point);
+      splitCenterlineCellPointIds->InsertNextId(pointId);
+      splitCenterlinePD->InterpolateEdge(inputPD,pointId,centerline->GetPointId(subIds[i-1]),centerline->GetPointId(subIds[i-1]+1),pcoords[i-1]);
+      }
+
+    for (j=lowerId; j<=higherId; j++)
+      {
+      pointId = splitCenterlinePoints->InsertNextPoint(centerline->GetPoints()->GetPoint(j));
+      splitCenterlineCellPointIds->InsertNextId(pointId);
+      splitCenterlinePD->CopyData(inputPD,centerline->GetPointId(j),pointId);
+      }
+
+    // insert last interpolated point if necessary
+    if (i<numberOfSplittingPoints)
+      {
+      centerline->GetPoints()->GetPoint(subIds[i],point0);
+      centerline->GetPoints()->GetPoint(subIds[i]+1,point1);
+      for (k=0; k<3; k++)
+        {
+        point[k] = point0[k] + pcoords[i]*(point1[k] - point0[k]);
+        }
+      if (vtkMath::Distance2BetweenPoints(point,centerline->GetPoints()->GetPoint(higherId))>1.0e-6)
+        {
+        pointId = splitCenterlinePoints->InsertNextPoint(point);
+        splitCenterlineCellPointIds->InsertNextId(pointId);
+        splitCenterlinePD->InterpolateEdge(inputPD,pointId,centerline->GetPointId(subIds[i]),centerline->GetPointId(subIds[i]+1),pcoords[i]);
+        }
+      }
+
+    splitCenterlineCellArray->InsertNextCell(splitCenterlineCellPointIds);
+    centerlineIdsArray->InsertNextValue(cellId);
+    tractIdsArray->InsertNextValue(i);
+    blankingArray->InsertNextValue(tractBlanking[i]);
+    splitCenterline->GetCellData()->CopyData(input->GetCellData(),cellId,i);
+    }
+
+  splitCenterline->SetPoints(splitCenterlinePoints);
+  splitCenterline->SetLines(splitCenterlineCellArray);
+  splitCenterline->GetCellData()->AddArray(centerlineIdsArray);
+  splitCenterline->GetCellData()->AddArray(tractIdsArray);
+  splitCenterline->GetCellData()->AddArray(blankingArray);
+
+  splitCenterlinePoints->Delete();
+  splitCenterlineCellArray->Delete();
+  splitCenterlineCellPointIds->Delete();
+  centerlineIdsArray->Delete();
+  blankingArray->Delete();
 }
 
 void vtkSVCenterlineBranchSplitter::PrintSelf(ostream& os, vtkIndent indent)

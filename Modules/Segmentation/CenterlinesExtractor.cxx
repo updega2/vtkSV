@@ -36,6 +36,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSplineFilter.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVCenterlines.h"
@@ -136,6 +137,22 @@ int main(int argc, char *argv[])
   BranchSplitter->Update();
   std::cout<<"Done"<<endl;
 
+  //std::cout<<"Cleaning Centerlines..."<<endl;
+  //vtkNew(vtkCleanPolyData, Cleaner);
+  //Cleaner->SetInputData(BranchSplitter->GetOutput());
+  //Cleaner->Update();
+  //std::cout<<"Done"<<endl;
+
+  //double resamplingLength = 0.01 * Cleaner->GetOutput()->GetLength();
+
+  //std::cout<<"Resampling Centerlines..."<<endl;
+  //vtkNew(vtkSplineFilter, Resampler);
+  //Resampler->SetInputData(Cleaner->GetOutput());
+  //Resampler->SetSubdivideToLength();
+  //Resampler->SetLength(resamplingLength);
+  //Resampler->Update();
+  //std::cout<<"Done"<<endl;
+
   std::cout<<"Merging Centerlines..."<<endl;
   vtkNew(vtkvmtkMergeCenterlines, Merger);
   Merger->SetInputData(BranchSplitter->GetOutput());
@@ -152,7 +169,10 @@ int main(int argc, char *argv[])
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
+  //vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0), "_Split_Centerlines");
   vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0), "_Merged_Centerlines");
+  //vtkSVIOUtils::WriteVTPFile(outputFilename, Cleaner->GetOutput(0), "_Cleaned_Centerlines");
+  //vtkSVIOUtils::WriteVTPFile(outputFilename, Resampler->GetOutput(0), "_Resampled_Centerlines");
   //vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
 
   //Exit the program without errors

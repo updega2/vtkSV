@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
   int useRadiusInfo = 1;
   int useVmtkClipping = 0;
   int enforceBoundaryDirections = 1;
-  int polycubeDivisions = 10;
+  int polycubeDivisions = 5;
   int isVasculature = 1;
   int numberOfCenterlineRemovePts = 3;
   int writeCenterlineGraph = 0;

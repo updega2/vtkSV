@@ -142,7 +142,7 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->ClipValue = 0.0;
   this->UseRadiusInformation = 1;
 
-  this->PolycubeDivisions = 10;
+  this->PolycubeDivisions = 5;
   this->PolycubeUnitLength = 0.0;
 
   this->NormalsWeighting = 0.8;
@@ -453,10 +453,10 @@ int vtkSVGroupsSegmenter::RunFilter()
     CVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
     CVT->SetBlankingArrayName(this->BlankingArrayName);
     CVT->SetUseRadiusInformation(this->UseRadiusInformation);
-    CVT->SetUseBifurcationInformation(1);
+    //CVT->SetUseBifurcationInformation(1);
     CVT->SetUsePointNormal(1);
     //CVT->SetUseRadiusInformation(0);
-    //CVT->SetUseBifurcationInformation(0);
+    CVT->SetUseBifurcationInformation(0);
     //CVT->SetUsePointNormal(0);
     CVT->Update();
 

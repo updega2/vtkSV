@@ -28,9 +28,11 @@ set(DOCUMENTATION "Globals and common functions.")
 
 #------------------------------------------------------------------------------
 # Extra depends
+set(EXTRA_DEPENDS "")
 set(EXTRA_TEST_DEPENDS "")
 if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
   set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
 endif()
 #------------------------------------------------------------------------------
 
@@ -45,9 +47,13 @@ vtk_module(vtkSVCommon
   vtkFiltersExtraction
   vtkFiltersGeometry
   vtkFiltersSources
+  vtkInteractionStyle
   vtkIOCore
   vtkIOGeometry
   vtkIOXML
+  vtkRendering${VTK_RENDERING_BACKEND}
+  vtkRenderingFreeType
+  ${EXTRA_DEPENDS}
   TEST_DEPENDS
   vtkInteractionStyle
   vtkRendering${VTK_RENDERING_BACKEND}

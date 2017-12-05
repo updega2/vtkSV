@@ -44,6 +44,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineBranchSplitter : public vtkvmtkCen
 
   virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId);
   virtual void GroupTracts(vtkPolyData* input, vtkPolyData* centerlineTracts);
+  virtual void SplitCenterline(vtkPolyData* input, vtkIdType cellId, int numberOfSplittingPoints, const vtkIdType* subIds, const double* pcoords, const int* tractBlanking, vtkPolyData* splitCenterline);
 
   private:
   vtkSVCenterlineBranchSplitter(const vtkSVCenterlineBranchSplitter&);  // Not implemented.
