@@ -39,7 +39,7 @@
 #include "vtkTextActor.h"
 //#include "vtkvmtkComputationalGeometryWin32Header.h"
 #include "vtkvmtkWin32Header.h"
-#include "vtkSVSegmentationModule.h" // For exports
+#include "vtkSVCommonModule.h" // For exports
 
 #include <vector>
 
@@ -51,7 +51,7 @@ struct Binding
   std::string group;
 };
 
-class VTKSVSEGMENTATION_EXPORT vtkSVRenderer : public vtkDataObject
+class VTKSVCOMMON_EXPORT vtkSVRenderer : public vtkDataObject
 {
 public:
   static vtkSVRenderer* New();

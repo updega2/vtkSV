@@ -40,6 +40,7 @@
 #ifndef vtkSVGlobals_h
 #define vtkSVGlobals_h
 
+#include "vtkSmartPointer.h"
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
 
