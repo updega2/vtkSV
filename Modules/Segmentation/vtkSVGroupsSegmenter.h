@@ -421,7 +421,8 @@ protected:
   int GetPointConnectivity(vtkUnstructuredGrid *hexMesh,
                            std::vector<std::vector<int> > &ptEdgeNeighbors);
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
-  int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters);
+  int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters,
+                             std::string fixedPointsArrayName);
   int RemoveInteriorCells(vtkPolyData *quadMesh);
   int PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh,
                               const double midPt0[3],

@@ -4783,7 +4783,7 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   this->GetVolumePointMaps(mappedVolume, smoothVolume, volumePtMap, invVolumePtMap);
 
   int smoothIters = 1500;
-  if (this->SmoothUnstructuredGrid(smoothVolume, smoothIters) != SV_OK)
+  if (this->SmoothUnstructuredGrid(smoothVolume, smoothIters, "empty") != SV_OK)
   {
     fprintf(stderr,"Couldn't smooth volume\n");
     return SV_ERROR;
@@ -4950,8 +4950,10 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     hexMeshControlGrid->SetUDegree(p);
     hexMeshControlGrid->SetVDegree(q);
     hexMeshControlGrid->SetWDegree(r);
+    hexMeshControlGrid->GenerateVolumeRepresentation(1./w_divs[i], 1./h_divs[i], 1./l_divs[i]);
 
     nurbs->AddItem(hexMeshControlGrid);
+    loftAppender->AddInputData(hexMeshControlGrid->GetVolumeRepresentation());
   }
 
   //if (this->MergedCenterlines->GetNumberOfCells() == 1)
@@ -4977,8 +4979,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   ////writer->SetFileName(pername.c_str());
   ////writer->Update();
 
-  //loftAppender->Update();
-  //loftedVolume->DeepCopy(loftAppender->GetOutput());
+  loftAppender->Update();
+  loftedVolume->DeepCopy(loftAppender->GetOutput());
 
   return SV_OK;
 }
@@ -6922,7 +6924,7 @@ int vtkSVGroupsSegmenter::SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVo
       boundaryGroupMatchings.push_back(groupIds);
   }
 
-  fprintf(stdout,"LET ME SEE THE MATCHINGS:\n");
+  //fprintf(stdout,"LET ME SEE THE MATCHINGS:\n");
   std::vector<std::vector<int> > pointsInMatching;
   std::vector<std::vector<int> > cleanPointsInMatching;
   for (int i=0; i<boundaryGroupMatchings.size(); i++)
@@ -6931,11 +6933,11 @@ int vtkSVGroupsSegmenter::SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVo
     std::vector<int> cleanPointIds;
     if (boundaryGroupMatchings[i].size() > 1)
     {
-      fprintf(stdout,"POINTS WITH CONNECT: ");
-      for (int j=0; j<boundaryGroupMatchings[i].size(); j++)
-        fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
-      fprintf(stdout,"\n");
-      fprintf(stdout,"       -> ");
+      //fprintf(stdout,"POINTS WITH CONNECT: ");
+      //for (int j=0; j<boundaryGroupMatchings[i].size(); j++)
+      //  fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
+      //fprintf(stdout,"\n");
+      //fprintf(stdout,"       -> ");
       for (int j=0; j<invPtMap.size(); j++)
       {
         if (invPtMap[j].size() > 1)
@@ -6944,14 +6946,14 @@ int vtkSVGroupsSegmenter::SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVo
           {
             for (int k=0; k<invPtMap[j].size(); k++)
             {
-              fprintf(stdout,"%d ",invPtMap[j][k]);
+              //fprintf(stdout,"%d ",invPtMap[j][k]);
               pointIds.push_back(invPtMap[j][k]);
             }
             cleanPointIds.push_back(j);
           }
         }
       }
-      fprintf(stdout,"\n");
+      //fprintf(stdout,"\n");
     }
     pointsInMatching.push_back(pointIds);
     cleanPointsInMatching.push_back(cleanPointIds);
@@ -6966,20 +6968,20 @@ int vtkSVGroupsSegmenter::SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVo
     if (numGroups == 3)
     {
       // Set the interior ridge line first
-      fprintf(stdout,"POINTS WITH CONNECT: ");
-      for (int j=0; j<numGroups; j++)
-        fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
-      fprintf(stdout,"\n");
+      //fprintf(stdout,"POINTS WITH CONNECT: ");
+      //for (int j=0; j<numGroups; j++)
+      //  fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
+      //fprintf(stdout,"\n");
       std::vector<int> outsideIndices;
       for (int j=0; j<cleanPointsInMatching[i].size(); j++)
       {
         int cleanPointId = cleanPointsInMatching[i][j];
         int isInterior = cleanVolume->GetPointData()->GetArray("IsInteriorPoint")->GetTuple1(cleanPointId);
-        fprintf(stdout,"       -> %d IS INTERIOR: %d\n", cleanPointId, isInterior);
+        //fprintf(stdout,"       -> %d IS INTERIOR: %d\n", cleanPointId, isInterior);
         if (!isInterior)
           outsideIndices.push_back(j);
       }
-      fprintf(stdout,"\n");
+      //fprintf(stdout,"\n");
       if (outsideIndices.size() != 2)
       {
         fprintf(stdout,"There should be two points along interior boundary ridge, but there are %d\n", outsideIndices.size());
@@ -7422,7 +7424,9 @@ int vtkSVGroupsSegmenter::RemoveInteriorCells(vtkPolyData *quadMesh)
 // ----------------------
 // SmoothUnstructuredGrid
 // ----------------------
-int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters)
+int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh,
+                                                 const int iters,
+                                                 std::string fixedPointsArrayName)
 {
   hexMesh->BuildLinks();
   int numCells = hexMesh->GetNumberOfCells();
@@ -7431,6 +7435,15 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
   vtkNew(vtkIntArray, isInteriorPoint);
   isInteriorPoint->SetNumberOfTuples(numPoints);
   isInteriorPoint->SetName("IsInteriorPoint");
+
+  vtkNew(vtkIntArray, isFixedPoint);
+  if (vtkSVGeneralUtils::CheckArrayExists(hexMesh, 0, fixedPointsArrayName) == SV_OK)
+    isFixedPoint = vtkIntArray::SafeDownCast(hexMesh->GetPointData()->GetArray(fixedPointsArrayName.c_str()));
+  else
+  {
+    isFixedPoint->SetNumberOfTuples(numPoints);
+    isFixedPoint->FillComponent(0, -1);
+  }
 
   for (int i=0; i<numCells; i++)
   {
@@ -7502,7 +7515,8 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
     }
 
     isInteriorPoint->SetTuple1(i, interiorPoint);
-    if (interiorPoint)
+    int fixedPoint = isFixedPoint->GetTuple1(i);
+    if (interiorPoint && fixedPoint != 1)
     {
       if (ptNeighbors->GetNumberOfIds() > 0)
       {
@@ -7542,6 +7556,9 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
       }
     }
   }
+
+  if (vtkSVGeneralUtils::CheckArrayExists(hexMesh, 0, "IsInteriorPoint"))
+    hexMesh->GetPointData()->RemoveArray("IsInteriorPoint");
 
   hexMesh->GetPointData()->AddArray(isInteriorPoint);
 
