@@ -396,9 +396,10 @@ protected:
                            vtkPolyData *pdWithoutInterior,
                            std::vector<int> &ptMap,
                            std::vector<std::vector<int> > &invPtMap);
-  int GetVolumePointMap(vtkUnstructuredGrid *ugAll,
-                        vtkUnstructuredGrid *ugClean,
-                        std::vector<int> &ptMap);
+  int GetVolumePointMaps(vtkUnstructuredGrid *ugAll,
+                         vtkUnstructuredGrid *ugClean,
+                         std::vector<int> &ptMap,
+                         std::vector<std::vector<int> > &invPtMap);
   int MapInteriorBoundary(vtkStructuredGrid *paraHexVolume,
                           vtkPolyData *mappedSurface,
                           const std::vector<int> ptMap);
@@ -407,12 +408,18 @@ protected:
   int FixVolume(vtkUnstructuredGrid *mappedVolume,
                 vtkUnstructuredGrid *cleanVolume,
                 const std::vector<int> ptMap);
+  int SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVolume,
+                               vtkUnstructuredGrid *cleanVolume,
+                               const std::vector<int> ptMap,
+                               const std::vector<std::vector<int> > invPtMap);
   int MapVolume(vtkStructuredGrid *paraHexVolume,
                 vtkPolyData *mappedSurface,
                 vtkStructuredGrid *mappedVolume);
   int ConvertUGToSG(vtkUnstructuredGrid *ug,
                     vtkStructuredGrid *sg,
                     const int w_div, const int l_div, const int h_div);
+  int GetPointConnectivity(vtkUnstructuredGrid *hexMesh,
+                           std::vector<std::vector<int> > &ptEdgeNeighbors);
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
   int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters);
   int RemoveInteriorCells(vtkPolyData *quadMesh);
