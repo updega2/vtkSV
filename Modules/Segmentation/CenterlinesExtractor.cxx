@@ -41,6 +41,7 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVCenterlines.h"
 #include "vtkSVCenterlineBranchSplitter.h"
+#include "vtkSVPickPointSeedSelector.h"
 
 #include "vtkvmtkMergeCenterlines.h"
 
@@ -62,6 +63,7 @@ int main(int argc, char *argv[])
 
   // Default values for options
   int appendEndPoints = 0;
+  int pickSeedPoints = 0;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
 
   // argc is the number of strings on the command-line
@@ -75,6 +77,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-output")        {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
       else if(tmpstr=="-appendendpoints")        {appendEndPoints = atoi(argv[++iarg]);}
+      else if(tmpstr=="-pickseedpoints")        {pickSeedPoints = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -92,6 +95,7 @@ int main(int argc, char *argv[])
     cout << "  -output             : Output file name"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
+    cout << "  -pickseedpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -109,6 +113,13 @@ int main(int argc, char *argv[])
   vtkNew(vtkPolyData, inputPd);
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
     return EXIT_FAILURE;
+
+  if (pickSeedPoints)
+  {
+    vtkNew(vtkSVPickPointSeedSelector, seedPointPicker);
+    seedPointPicker->SetInputData(inputPd);
+    seedPointPicker->Update();
+  }
 
   // Filter
   vtkNew(vtkSVCenterlines, CenterlineFilter);

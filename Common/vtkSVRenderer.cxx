@@ -79,17 +79,20 @@ vtkSVRenderer::vtkSVRenderer()
   this->RenderWindowInteractor->GetInteractorStyle()->KeyPressActivationOff();
   vtkNew(vtkCallbackCommand, charCallback);
   charCallback->SetCallback(vtkSVRenderer::CharCallback);
-  this->RenderWindowInteractor->AddObserver("CharEvent", charCallback);
+  this->RenderWindowInteractor->GetInteractorStyle()->AddObserver("CharEvent", charCallback);
   vtkNew(vtkCallbackCommand, keyPressCallback);
   keyPressCallback->SetCallback(vtkSVRenderer::KeyPressCallback);
-  this->RenderWindowInteractor->AddObserver("KeyPressEvent",keyPressCallback);
+  keyPressCallback->SetClientData(this);
+  this->RenderWindowInteractor->GetInteractorStyle()->AddObserver("KeyPressEvent",keyPressCallback);
 
-  vtkNew(vtkCallbackCommand, resetCameraCallback);
-  resetCameraCallback->SetCallback(vtkSVRenderer::ResetCameraCallback);
-  this->AddKeyBinding("r","Reset camera.",resetCameraCallback,"0");
-  vtkNew(vtkCallbackCommand, quitRendererCallback);
-  quitRendererCallback->SetCallback(vtkSVRenderer::QuitRendererCallback);
-  this->AddKeyBinding("q","Quit renderer/proceed.",quitRendererCallback,"0");
+  this->ResetCameraCallbackCommand = vtkCallbackCommand::New();
+  this->ResetCameraCallbackCommand->SetCallback(vtkSVRenderer::ResetCameraCallback);
+  this->ResetCameraCallbackCommand->SetClientData(this);
+  this->AddKeyBinding("r","Reset camera.",this->ResetCameraCallbackCommand,"0");
+  this->QuitRendererCallbackCommand = vtkCallbackCommand::New();
+  this->QuitRendererCallbackCommand->SetCallback(vtkSVRenderer::QuitRendererCallback);
+  this->QuitRendererCallbackCommand->SetClientData(this);
+  this->AddKeyBinding("q","Quit renderer/proceed.",this->QuitRendererCallbackCommand,"0");
 
   this->TextActor = vtkTextActor::New();
   this->TextActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
@@ -101,7 +104,6 @@ vtkSVRenderer::vtkSVRenderer()
   this->TextInputActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
   this->TextInputActor->GetPosition2Coordinate()->SetCoordinateSystemToNormalizedViewport();
   this->TextInputActor->SetPosition(this->InputPosition);
-
 }
 
 vtkSVRenderer::~vtkSVRenderer()
@@ -135,6 +137,16 @@ vtkSVRenderer::~vtkSVRenderer()
   {
     this->TrackballCamera->Delete();
     this->TrackballCamera = NULL;
+  }
+  if (this->ResetCameraCallbackCommand != NULL)
+  {
+    this->ResetCameraCallbackCommand->Delete();
+    this->ResetCameraCallbackCommand = NULL;
+  }
+  if (this->QuitRendererCallbackCommand != NULL)
+  {
+    this->QuitRendererCallbackCommand->Delete();
+    this->QuitRendererCallbackCommand = NULL;
   }
 }
 
@@ -237,95 +249,107 @@ int vtkSVRenderer::Close()
   //this->RenderWindowInteractor->Close();
 }
 
-void vtkSVRenderer::ResetCameraCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) )
+void vtkSVRenderer::ResetCameraCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
 {
-  //this->Renderer->ResetCamera();
-  //this->RenderWindow->Render();
+   vtkSVRenderer* parent =
+     static_cast<vtkSVRenderer*>(clientData);
+
+  parent->Renderer->ResetCamera();
+  parent->RenderWindow->Render();
 }
 
-void vtkSVRenderer::QuitRendererCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) )
+void vtkSVRenderer::QuitRendererCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
 {
-  //this->PrintLog('Quit renderer')
-  //this->Renderer->RemoveActor(this->TextActor)
-  //this->RenderWindowInteractor->ExitCallback()
+   vtkSVRenderer* parent =
+     static_cast<vtkSVRenderer*>(clientData);
+
+  //parent->SetPrintLog("Quit renderer")
+  parent->Renderer->RemoveActor(parent->TextActor);
+  parent->RenderWindowInteractor->ExitCallback();
 }
 
-void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) )
+void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int eventId, void* clientData, void* callData )
 {
-  //std::cout << "Keypress callback" << std::endl;
+  std::cout << "Keypress callback" << std::endl;
 
-  //vtkRenderWindowInteractor *iren =
-  //  static_cast<vtkRenderWindowInteractor*>(caller);
+   vtkSVRenderer* parent =
+     static_cast<vtkSVRenderer*>(clientData);
 
-  //std::cout << "Pressed: " << iren->GetKeySym() << std::endl;
-  //std::string key = iren->GetKeySym();
+  std::cout << "Pressed: " << parent->GetRenderWindowInteractor()->GetKeySym() << std::endl;
+  std::string key = parent->GetRenderWindowInteractor()->GetKeySym();
 
-  //if (key == "Escape")
-  //{
-  //  if (this->TextInputMode)
-  //    this->TextInputMode = 0;
-  //  else
-  //    this->TextInputMode = 1;
-  //}
-  //if (this->TextInputMode)
-  //{
-  //  if (key == "Return" || key == "Enter")
-  //  {
-  //    this->ExitTextInputMode();
-  //    return;
-  //  }
+  if (key == "Escape")
+  {
+    if (parent->TextInputMode)
+      parent->TextInputMode = 0;
+    else
+      parent->TextInputMode = 1;
+  }
+  if (parent->TextInputMode)
+  {
+    if (key == "Return" || key == "Enter")
+    {
+      std::cout << "Exit text input mode" << std::endl;
+      parent->ExitTextInputMode();
+      return;
+    }
 
-  //  if (!strncmp(key, "KP_", 3))
-  //    key = key.substr(3);
+    if (!strncmp(key.c_str(), "KP_", 3))
+      key = key.substr(3);
 
-  //  if (key == "space")
-  //    key = " ";
-  //  else if (key == "minus" || key == "Subtract")
-  //    key = "-";
-  //  else if (key == "period" || key == "Decimal")
-  //    key = ".";
-  //  else if (key.length() > 1 && (key != "Backspace" || key != "BackSpace"))
-  //    key = "";
+    if (key == "space")
+      key = " ";
+    else if (key == "minus" || key == "Subtract")
+      key = "-";
+    else if (key == "period" || key == "Decimal")
+      key = ".";
+    else if (key.length() > 1 && (key != "Backspace" || key != "BackSpace"))
+      key = "";
 
-  //  if (key != "Backspace" || key != "BackSpace")
-  //  {
-  //    std::string textInput = this->CurrentTextInput;
-  //    if (textInput.length() > 0)
-  //      this->CurrentTextInput = textInput;
-  //  }
-  //  else if (key != "")
-  //    this->CurrentTextInput.append(key);
+    if (key != "Backspace" || key != "BackSpace")
+    {
+      std::string textInput = parent->CurrentTextInput;
+      if (textInput.length() > 0)
+        parent->CurrentTextInput = textInput;
+    }
+    else if (key != "")
+      parent->CurrentTextInput.append(key);
 
-  //  this->UpdateTextInput();
-  //  return;
-  //}
+    parent->UpdateTextInput();
+    return;
+  }
 
-  //int isKey = -1;
-  //for (int i=0; i<this->KeyBindings.size(); i++)
-  //{
-  //  if (this->KeyBindings[i].key == key)
-  //    isKey = i;
-  //}
+  int isKey = -1;
+  for (int i=0; i<parent->KeyBindings.size(); i++)
+  {
+    if (parent->KeyBindings[i].key == key)
+      isKey = i;
+  }
 
-  //if (isKey != -1 && this->KeyBindings[isKey].callback != NULL)
-  //{
-  //  //this->KeyBindings[key]['callback'](obj);
-  //  // SEt to something
-  //}
-  //else
-  //{
-  //  if (key == "plus")
-  //    key = "+";
-  //  if (key == "minus")
-  //    key = "-";
-  //  if (key == "equal")
-  //    key = "=";
-  //  if (isKey != -1 && this->KeyBindings[isKey].callback != NULL)
-  //  {
-  //    //this->KeyBindings[key]['callback'](obj);
-  //    // SEt to something
-  //  }
-  //}
+  if (isKey != -1 && parent->KeyBindings[isKey].callback != NULL)
+  {
+    parent->KeyBindings[isKey].callback->Execute(caller, eventId, callData);
+  }
+  else
+  {
+    std::cout << key << "is not a bound key" << std::endl;
+    if (key == "plus")
+      key = "+";
+    if (key == "minus")
+      key = "-";
+    if (key == "equal")
+      key = "=";
+    isKey = -1;
+    for (int i=0; i<parent->KeyBindings.size(); i++)
+    {
+      if (parent->KeyBindings[i].key == key)
+        isKey = i;
+    }
+    if (isKey != -1 && parent->KeyBindings[isKey].callback != NULL)
+    {
+      parent->KeyBindings[isKey].callback->Execute(caller, eventId, callData);
+    }
+  }
 }
 
 void vtkSVRenderer::UpdateTextInput()

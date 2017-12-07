@@ -34,6 +34,7 @@
 #include "vtkDataObject.h"
 #include "vtkRenderer.h"
 #include "vtkCallbackCommand.h"
+#include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkInteractorStyleTrackballCamera.h"
 #include "vtkTextActor.h"
@@ -58,8 +59,16 @@ public:
 
   vtkTypeMacro(vtkSVRenderer,vtkDataObject);
 
+  vtkSetObjectMacro(Renderer, vtkRenderer);
+  vtkGetObjectMacro(Renderer, vtkRenderer);
 
-  int Render(int interactive);
+  vtkSetObjectMacro(RenderWindow, vtkRenderWindow);
+  vtkGetObjectMacro(RenderWindow, vtkRenderWindow);
+
+  vtkSetObjectMacro(RenderWindowInteractor, vtkRenderWindowInteractor);
+  vtkGetObjectMacro(RenderWindowInteractor, vtkRenderWindowInteractor);
+
+  int Render(int interactive=1);
 
   int AddKeyBinding(std::string key, std::string text,
                     vtkCallbackCommand *callback, std::string group);
@@ -68,7 +77,7 @@ public:
 
   int PromptAsync(std::string queryText, std::string callback);
 
-  int EnterTextInputMode(int interactive);
+  int EnterTextInputMode(int interactive=1);
 
   int ExitTextInputMode();
 
@@ -76,11 +85,11 @@ public:
 
   void UpdateTextInput();
 
-  static void ResetCameraCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) );
+  static void ResetCameraCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) );
 
-  static void QuitRendererCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) );
+  static void QuitRendererCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) );
 
-  static void KeyPressCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) );
+  static void KeyPressCallback( vtkObject* caller, long unsigned int eventId, void* clientData, void* callData );
 
   static void CharCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) );
 
@@ -97,6 +106,9 @@ protected:
 
   vtkTextActor *TextActor;
   vtkTextActor *TextInputActor;
+
+  vtkCallbackCommand *ResetCameraCallbackCommand;
+  vtkCallbackCommand *QuitRendererCallbackCommand;
 
   vtkCamera *Camera;
 

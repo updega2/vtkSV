@@ -42,6 +42,8 @@ set(SRCS
   vtkSVRawWriter.cxx
   vtkSVCleanUnstructuredGrid.cxx
   vtkSVRenderer.cxx
+  vtkSVSeedSelector.cxx
+  vtkSVPickPointSeedSelector.cxx
   )
 set(HDRS
   vtkSVIOUtils.h
@@ -54,6 +56,8 @@ set(HDRS
   vtkSVRawWriter.h
   vtkSVCleanUnstructuredGrid.h
   vtkSVRenderer.h
+  vtkSVSeedSelector.cxx
+  vtkSVPickPointSeedSelector.h
   )
 #------------------------------------------------------------------------------
 
