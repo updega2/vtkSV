@@ -934,6 +934,8 @@ int vtkSVCenterlines::RequestData(
   connectedEdgePts.resize(linesPd->GetNumberOfPoints());
 
   firsties = 0;
+  vtkNew(vtkIdList, linesEndPointIds);
+  vtkNew(vtkPoints, linesEndPoints);
   for (int i=0; i<linesPd->GetNumberOfPoints(); i++)
   {
     linesPd->GetPointCells(i, pointCellIds);
@@ -942,6 +944,8 @@ int vtkSVCenterlines::RequestData(
       firsties++;
       if (firstVertex == -1)
         firstVertex = i;
+      linesEndPointIds->InsertNextId(i);
+      linesEndPoints->InsertNextPoint(linesPd->GetPoint(i));
     }
 
     numConnectedPts[i] = pointCellIds->GetNumberOfIds();
@@ -959,6 +963,23 @@ int vtkSVCenterlines::RequestData(
     }
     connectedEdgePts[i] = connectedPts;
   }
+
+  vtkNew(vtkPointLocator, linesEndPointLocator);
+  vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
+  if (this->SourceSeedIds)
+  {
+    linesEndPointLocator->SetDataSet(linesEndPointsPd);
+    linesEndPointLocator->BuildLocator();
+
+    double firstPt[3];
+    input->GetPoint(this->SourceSeedIds->GetId(0), firstPt);
+
+    int endPointId = linesEndPointLocator->FindClosestPoint(firstPt);
+    int linesPtId = linesEndPointIds->GetId(endPointId);
+
+    firstVertex = linesPtId;
+  }
+
   fprintf(stdout,"NUM FIRSTIES: %d\n", firsties);
 
   if (firstVertex == -1)
@@ -1097,16 +1118,85 @@ int vtkSVCenterlines::RequestData(
   //========================================================================
   //
   // Loop through now
-  vtkNew(vtkAppendPolyData, appender);
+  std::vector<std::vector<int> > voronoiSeeds(allEdges.size());
   for (int i=0; i<allEdges.size(); i++)
   {
     int edgeSize = allEdges[i].size();
-    int edgeId0 = allEdges[i][0];
-    int edgeIdN = allEdges[i][edgeSize-1];
-    fprintf(stdout,"DOING EDGE: %d %d\n", edgeId0, edgeIdN);
+    int voronoiId0 = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(allEdges[i][0]);
+    int voronoiId1 = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(allEdges[i][edgeSize-1]);
+    voronoiSeeds[i].push_back(voronoiId0);
+    voronoiSeeds[i].push_back(voronoiId1);
+  }
 
-    int voronoiId0 = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(edgeId0);
-    int voronoiIdN = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(edgeIdN);
+  vtkNew(vtkIdList, voronoiCapIds);
+  if (this->CapCenterIds)
+    this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiCapIds);
+
+  if (this->CapCenterIds || (this->SourceSeedIds && this->TargetSeedIds))
+  {
+    for (int j=0; j<this->SourceSeedIds->GetNumberOfIds(); j++)
+    {
+      double sourcePt[3];
+      input->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
+
+      int endPointId = linesEndPointLocator->FindClosestPoint(sourcePt);
+      int linesPtId = linesEndPointIds->GetId(endPointId);
+      int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+
+      for (int k=0; k<voronoiSeeds.size(); k++)
+      {
+        for (int l=0; l<voronoiSeeds[k].size(); l++)
+        {
+          if (voronoiSeeds[k][l] == voronoiId)
+          {
+            if (this->CapCenterIds)
+              voronoiSeeds[k][l] = voronoiCapIds->GetId(this->SourceSeedIds->GetId(j));
+            else
+              voronoiSeeds[k][l] = this->PoleIds->GetId(this->SourceSeedIds->GetId(j));
+          }
+        }
+      }
+    }
+    for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
+    {
+      double targetPt[3];
+      input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+
+      int endPointId = linesEndPointLocator->FindClosestPoint(targetPt);
+      int linesPtId = linesEndPointIds->GetId(endPointId);
+      int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+
+      for (int k=0; k<voronoiSeeds.size(); k++)
+      {
+        for (int l=0; l<voronoiSeeds[k].size(); l++)
+        {
+          if (voronoiSeeds[k][l] == voronoiId)
+          {
+            if (this->CapCenterIds)
+              voronoiSeeds[k][l] = voronoiCapIds->GetId(this->TargetSeedIds->GetId(j));
+            else
+              voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(j));
+          }
+        }
+      }
+    }
+  }
+
+  vtkNew(vtkAppendPolyData, appender);
+
+    vtkNew(vtkvmtkNonManifoldFastMarching, voronoiFastMarching);
+  voronoiFastMarching->SetInputData(voronoiCostFunctionCalculator->GetOutput());
+  voronoiFastMarching->SetCostFunctionArrayName(this->CostFunctionArrayName);
+  voronoiFastMarching->SetSolutionArrayName(this->EikonalSolutionArrayName);
+  voronoiFastMarching->SeedsBoundaryConditionsOn();
+  for (int i=0; i<voronoiSeeds.size(); i++)
+  {
+    int voronoiId0 = voronoiSeeds[i][0];
+    int voronoiIdN = voronoiSeeds[i][1];
+
+    fprintf(stdout,"DOING EDGE: %d %d\n", voronoiId0, voronoiIdN);
 
     vtkNew(vtkIdList, voronoiSourceSeedIds);
     vtkNew(vtkIdList, voronoiTargetSeedIds);
@@ -1116,41 +1206,6 @@ int vtkSVCenterlines::RequestData(
     voronoiSourceSeedIds->InsertNextId(voronoiIdN);
     voronoiTargetSeedIds->InsertNextId(voronoiId0);
 
-    //int i;
-    //if (this->CapCenterIds)
-    //  {
-    //  this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiSeeds);
-    //  for (i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
-    //    {
-    //    voronoiSourceSeedIds->InsertNextId(voronoiSeeds->GetId(this->SourceSeedIds->GetId(i)));
-    //    }
-    //  for (i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
-    //    {
-    //    voronoiTargetSeedIds->InsertNextId(voronoiSeeds->GetId(this->TargetSeedIds->GetId(i)));
-    //    }
-    //  }
-    //else
-    //  {
-    //  for (i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
-    //    {
-    //    voronoiSourceSeedIds->InsertNextId(this->PoleIds->GetId(this->SourceSeedIds->GetId(i)));
-    //    }
-    //  for (i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
-    //    {
-    //    voronoiTargetSeedIds->InsertNextId(this->PoleIds->GetId(this->TargetSeedIds->GetId(i)));
-    //    }
-    //  }
-
-    vtkNew(vtkvmtkNonManifoldFastMarching, voronoiFastMarching);
-//#if (VTK_MAJOR_VERSION <= 5)
-//    voronoiFastMarching->SetInput(vtkPolyData::SafeDownCast(voronoiCostFunctionCalculator->GetOutput()));
-//#else
-//    voronoiFastMarching->SetInputConnection(voronoiCostFunctionCalculator->GetOutputPort());
-//#endif
-    voronoiFastMarching->SetInputData(voronoiCostFunctionCalculator->GetOutput());
-    voronoiFastMarching->SetCostFunctionArrayName(this->CostFunctionArrayName);
-    voronoiFastMarching->SetSolutionArrayName(this->EikonalSolutionArrayName);
-    voronoiFastMarching->SeedsBoundaryConditionsOn();
     voronoiFastMarching->SetSeeds(voronoiSourceSeedIds);
     voronoiFastMarching->Update();
 

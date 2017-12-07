@@ -114,11 +114,26 @@ int main(int argc, char *argv[])
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
     return EXIT_FAILURE;
 
+  vtkNew(vtkSVPickPointSeedSelector, seedPointPicker);
   if (pickSeedPoints)
   {
-    vtkNew(vtkSVPickPointSeedSelector, seedPointPicker);
     seedPointPicker->SetInputData(inputPd);
     seedPointPicker->Update();
+
+    int numSourceSeeds = seedPointPicker->GetSourceSeedIds()->GetNumberOfIds();
+    int numTargetSeeds = seedPointPicker->GetTargetSeedIds()->GetNumberOfIds();
+
+    fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
+    fprintf(stdout,"  Source Seeds Ids: ");
+    for (int i=0; i<numSourceSeeds; i++)
+      fprintf(stdout,"%d ", seedPointPicker->GetSourceSeedIds()->GetId(i));
+    fprintf(stdout,"\n");
+
+    fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
+    fprintf(stdout,"  Target Seeds Ids: ");
+    for (int i=0; i<numTargetSeeds; i++)
+      fprintf(stdout,"%d ", seedPointPicker->GetTargetSeedIds()->GetId(i));
+    fprintf(stdout,"\n");
   }
 
   // Filter
@@ -126,6 +141,11 @@ int main(int argc, char *argv[])
 
   //OPERATION
   std::cout<<"Getting Centerlines..."<<endl;
+  if (pickSeedPoints)
+  {
+    CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
+    CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
+  }
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
   CenterlineFilter->SetCostFunction("1/R");

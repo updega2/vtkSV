@@ -46,8 +46,8 @@ vtkStandardNewMacro(vtkSVRenderer);
 
 vtkSVRenderer::vtkSVRenderer()
 {
-  this->WindowSize[0] = 800; this->WindowSize[1] = 600;
-  this->WindowPosition[0] = 50; this->WindowPosition[1] = 50;
+  this->WindowSize[0] = 1600; this->WindowSize[1] = 1600;
+  this->WindowPosition[0] = 100; this->WindowPosition[1] = 100;
   this->Background[0] = 0.1; this->Background[1] = 0.1; this->Background[2] = 0.2;
   this->Annotations = 1;
   this->PointSmoothing = 1;
@@ -55,7 +55,6 @@ vtkSVRenderer::vtkSVRenderer()
   this->PolygonSmoothing = 0;
   this->TextInputMode = 0;
   this->ExitAfterTextInputMode = 1;
-  this->ExitTextInputCallback = 0;
   this->InputPosition[0] = 0.25; this->InputPosition[1] = 0.1;
   this->Position[0] = 0.001; this->Position[1] = 0.05;
 
@@ -104,6 +103,10 @@ vtkSVRenderer::vtkSVRenderer()
   this->TextInputActor->GetPositionCoordinate()->SetCoordinateSystemToNormalizedViewport();
   this->TextInputActor->GetPosition2Coordinate()->SetCoordinateSystemToNormalizedViewport();
   this->TextInputActor->SetPosition(this->InputPosition);
+
+  this->ExitTextInputCallbackCommand = NULL;
+  this->TextInputQuery = NULL;
+  this->CurrentTextInput = NULL;
 }
 
 vtkSVRenderer::~vtkSVRenderer()
@@ -148,6 +151,11 @@ vtkSVRenderer::~vtkSVRenderer()
     this->QuitRendererCallbackCommand->Delete();
     this->QuitRendererCallbackCommand = NULL;
   }
+  if (this->ExitTextInputCallbackCommand != NULL)
+  {
+    this->ExitTextInputCallbackCommand->Delete();
+    this->ExitTextInputCallbackCommand = NULL;
+  }
 }
 
 int vtkSVRenderer::Render(int interactive)
@@ -158,8 +166,12 @@ int vtkSVRenderer::Render(int interactive)
   }
   this->RenderWindow->SetWindowName("vtkSV");
 
-  // Somehow add all bindings
-  //this->TextActor->SetInput('\n\n'.join(textActorInputsList));
+  std::string textActorInput;
+
+  for (int i=0; i<this->KeyBindings.size(); i++)
+    textActorInput = textActorInput + "\n" + this->KeyBindings[i].key + ": " + this->KeyBindings[i].text;
+
+  this->TextActor->SetInput(textActorInput.c_str());
   this->Renderer->AddActor(this->TextActor);
 
   this->RenderWindow->Render();
@@ -206,10 +218,10 @@ int vtkSVRenderer::RemoveKeyBinding(std::string key)
   return SV_OK;
 }
 
-int vtkSVRenderer::PromptAsync(std::string queryText, std::string callback)
+int vtkSVRenderer::PromptAsync(std::string queryText, vtkCallbackCommand *callback)
 {
-  this->TextInputQuery = queryText;
-  //this->ExitTextInputCallback = callback;
+  this->SetTextInputQuery(queryText.c_str());
+  this->ExitTextInputCallbackCommand = callback;
   this->UpdateTextInput();
   this->EnterTextInputMode(0);
 
@@ -235,8 +247,8 @@ int vtkSVRenderer::ExitTextInputMode()
   this->RenderWindow->Render();
   this->TextInputMode = 0;
 
-  //if (this->ExitTextInputCallback)
-  //  this->ExitTextInputCallback(this->CurrentTextInput);
+  //if (this->ExitTextInputCallbackCommand != NULL)
+  //  this->ExitTextInputCallbackCommand(this->CurrentTextInput);
 
   if (this->ExitAfterTextInputMode)
     this->RenderWindowInteractor->ExitCallback();
@@ -246,7 +258,7 @@ int vtkSVRenderer::ExitTextInputMode()
 
 int vtkSVRenderer::Close()
 {
-  //this->RenderWindowInteractor->Close();
+  this->RenderWindowInteractor->TerminateApp();
 }
 
 void vtkSVRenderer::ResetCameraCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
@@ -310,10 +322,13 @@ void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int event
     {
       std::string textInput = parent->CurrentTextInput;
       if (textInput.length() > 0)
-        parent->CurrentTextInput = textInput;
+        parent->SetCurrentTextInput(textInput.c_str());
     }
     else if (key != "")
-      parent->CurrentTextInput.append(key);
+    {
+      std::string textInput = parent->CurrentTextInput + key;
+      parent->SetCurrentTextInput(textInput.c_str());
+    }
 
     parent->UpdateTextInput();
     return;
@@ -354,11 +369,20 @@ void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int event
 
 void vtkSVRenderer::UpdateTextInput()
 {
-  if (this->TextInputQuery != "")
+  if (this->TextInputQuery != NULL)
   {
-    std::string inputText = this->CurrentTextInput+"_";
+    std::string inputText;
+
+    if (this->CurrentTextInput != NULL)
+    {
+      std::string queryText   = this->TextInputQuery;
+      std::string currentText = this->CurrentTextInput;
+      inputText = queryText + currentText + "_";
+    }
+    else
+      inputText = this->TextInputQuery;
+
     this->TextInputActor->SetInput(inputText.c_str());
-    //this->TextInputActor->SetInput(this->TextInputQuery);
     this->Renderer->AddActor(this->TextInputActor);
   }
   else

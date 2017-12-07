@@ -162,7 +162,8 @@ int vtkSVPickPointSeedSelector::RequestData(
 
   this->SVRenderer->GetRenderer()->AddActor(surfaceActor);
 
-  //this->InputInfo("Please position the mouse and press space to add source points, \'u\' to undo\n");
+  this->SVRenderer->SetTextInputQuery("Please position the mouse and press space to add source points, \'u\' to undo\n");
+  this->SVRenderer->UpdateTextInput();
 
   int any = 0;
   while (!any)
@@ -173,7 +174,8 @@ int vtkSVPickPointSeedSelector::RequestData(
   }
   this->SourceSeedIds->DeepCopy(this->PickedSeedIds);
 
-  //this->InputInfo("Please position the mouse and press space to add target points, \'u\' to undo\n");
+  this->SVRenderer->SetTextInputQuery("Please position the mouse and press space to add target points, \'u\' to undo\n");
+  this->SVRenderer->UpdateTextInput();
 
   any = 0;
   while (!any)

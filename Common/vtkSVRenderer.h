@@ -68,6 +68,11 @@ public:
   vtkSetObjectMacro(RenderWindowInteractor, vtkRenderWindowInteractor);
   vtkGetObjectMacro(RenderWindowInteractor, vtkRenderWindowInteractor);
 
+  vtkSetStringMacro(TextInputQuery);
+  vtkGetStringMacro(TextInputQuery);
+  vtkSetStringMacro(CurrentTextInput);
+  vtkGetStringMacro(CurrentTextInput);
+
   int Render(int interactive=1);
 
   int AddKeyBinding(std::string key, std::string text,
@@ -75,7 +80,7 @@ public:
 
   int RemoveKeyBinding(std::string key);
 
-  int PromptAsync(std::string queryText, std::string callback);
+  int PromptAsync(std::string queryText, vtkCallbackCommand *callback);
 
   int EnterTextInputMode(int interactive=1);
 
@@ -109,6 +114,7 @@ protected:
 
   vtkCallbackCommand *ResetCameraCallbackCommand;
   vtkCallbackCommand *QuitRendererCallbackCommand;
+  vtkCallbackCommand *ExitTextInputCallbackCommand;
 
   vtkCamera *Camera;
 
@@ -120,15 +126,14 @@ protected:
   int PolygonSmoothing;
   int TextInputMode;
   int ExitAfterTextInputMode;
-  int ExitTextInputCallback;
   int Interactive;
 
   double Background[3];
   double InputPosition[2];
   double Position[2];
 
-  std::string TextInputQuery;
-  std::string CurrentTextInput;
+  char* TextInputQuery;
+  char* CurrentTextInput;
 
   std::vector<Binding> KeyBindings;
 
