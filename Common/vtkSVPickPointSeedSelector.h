@@ -32,6 +32,7 @@
 #define vtkSVPickPointSeedSelector_h
 
 #include "vtkSVSeedSelector.h"
+#include "vtkIdList.h"
 #include "vtkSVRenderer.h"
 
 //#include "vtkvmtkComputationalGeometryWin32Header.h"

@@ -33,6 +33,7 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSVRenderer.h"
+#include "vtkIdList.h"
 
 //#include "vtkvmtkComputationalGeometryWin32Header.h"
 #include "vtkvmtkWin32Header.h"
