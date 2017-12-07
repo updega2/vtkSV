@@ -156,6 +156,7 @@ class VTKSVVMTK_EXPORT vtkvmtkNonManifoldFastMarching : public vtkPolyDataAlgori
   vtkDoubleArray* TScalars;
   vtkCharArray* StatusScalars;
   vtkvmtkMinHeap* ConsideredMinHeap;
+  vtkDataArray *CostFunctionArray;
 
   vtkIdList* Seeds;
   vtkPolyData* BoundaryPolyData;

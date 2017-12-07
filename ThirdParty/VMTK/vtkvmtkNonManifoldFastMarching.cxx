@@ -10,11 +10,11 @@ Version:   $Revision: 1.5 $
   See LICENCE file for details.
 
   Portions of this code are covered under the VTK copyright.
-  See VTKCopyright.txt or http://www.kitware.com/VTKCopyright.htm 
+  See VTKCopyright.txt or http://www.kitware.com/VTKCopyright.htm
   for details.
 
-     This software is distributed WITHOUT ANY WARRANTY; without even 
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
+     This software is distributed WITHOUT ANY WARRANTY; without even
+     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
      PURPOSE.  See the above copyright notices for more information.
 
 =========================================================================*/
@@ -129,7 +129,7 @@ void vtkvmtkNonManifoldFastMarching::InitPropagation(vtkPolyData* input)
 
   if (!this->UnitSpeed)
     {
-    costFunctionArray = input->GetPointData()->GetArray(this->CostFunctionArrayName);
+    costFunctionArray = this->CostFunctionArray;
     }
 
   input->BuildCells();
@@ -162,7 +162,7 @@ void vtkvmtkNonManifoldFastMarching::InitPropagation(vtkPolyData* input)
         }
       }
     }
-  
+
   if (this->PolyDataBoundaryConditions)
     {
     this->BoundaryPolyData->BuildCells();
@@ -343,7 +343,7 @@ double vtkvmtkNonManifoldFastMarching::ComputeUpdateFromCellNeighbor(vtkPolyData
   tCompEq = 0.0;
   if (!this->UnitSpeed)
     {
-    costFunctionArray = input->GetPointData()->GetArray(this->CostFunctionArrayName);
+    costFunctionArray = this->CostFunctionArray;
     }
 
   if (this->UnitSpeed)
@@ -354,9 +354,9 @@ double vtkvmtkNonManifoldFastMarching::ComputeUpdateFromCellNeighbor(vtkPolyData
     {
     fScalar = costFunctionArray->GetTuple1(neighborId);
     }
-        
+
   neighborT = this->TScalars->GetValue(neighborId);
-        
+
   canUpdateFromTriangle = true;
   canUpdateFromLine = false;
   for (i=1; i<3; i++)
@@ -500,7 +500,7 @@ double vtkvmtkNonManifoldFastMarching::ComputeUpdateFromCellNeighbor(vtkPolyData
     {
     t0CompEq = VTK_VMTK_LARGE_DOUBLE;
     }
-    
+
   tCompEqLower = edgesLength[aEdgeId]*cosTheta;
 
   if (fabs(cosTheta) > VTK_VMTK_DOUBLE_TOL)
@@ -521,7 +521,7 @@ double vtkvmtkNonManifoldFastMarching::ComputeUpdateFromCellNeighbor(vtkPolyData
     neighborT = this->Min(edgesLength[aEdgeId]*FEq + edgesTScalar[aEdgeId] , edgesLength[bEdgeId]*FEq + edgesTScalar[bEdgeId]);
     }
 
-  return neighborT;     
+  return neighborT;
 }
 
 void vtkvmtkNonManifoldFastMarching::UpdateNeighbor(vtkPolyData* input, vtkIdType neighborId)
@@ -563,7 +563,7 @@ void vtkvmtkNonManifoldFastMarching::UpdateNeighbor(vtkPolyData* input, vtkIdTyp
             }
           }
         }
-      }         
+      }
     }
 
   this->TScalars->SetValue(neighborId,tMin);
@@ -622,7 +622,7 @@ void vtkvmtkNonManifoldFastMarching::Propagate(vtkPolyData* input)
         break;
         }
       }
-    }   
+    }
 }
 
 int vtkvmtkNonManifoldFastMarching::RequestData(
@@ -667,6 +667,10 @@ int vtkvmtkNonManifoldFastMarching::RequestData(
       vtkErrorMacro(<< "Cost function array with name specified does not exist!");
       return 1;
       }
+    else
+      {
+        this->CostFunctionArray = input->GetPointData()->GetArray(this->CostFunctionArrayName);
+      }
     }
 
   if (!this->SeedsBoundaryConditions && !this->PolyDataBoundaryConditions)
@@ -691,7 +695,7 @@ int vtkvmtkNonManifoldFastMarching::RequestData(
         }
       }
     }
-  
+
   if (this->PolyDataBoundaryConditions)
     {
     if (!this->BoundaryPolyData)
