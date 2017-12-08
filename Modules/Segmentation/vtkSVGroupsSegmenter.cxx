@@ -914,9 +914,9 @@ int vtkSVGroupsSegmenter::RunFilter()
       if (linePtId <= 1)
       {
         if (!this->IsVasculature && this->MergedCenterlines->GetNumberOfCells() == 1)
-          alpha = 1.0;
-        else
           alpha = 0.0;
+        else
+          alpha = 1.0;
       }
       else if (linePtId >= nlinepts-4 && !isTerminating)
         alpha = 0.0;
