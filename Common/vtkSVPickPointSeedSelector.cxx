@@ -123,9 +123,6 @@ int vtkSVPickPointSeedSelector::RequestData(
     return SV_ERROR;
   }
 
-  //self._SourceSeedIds.Initialize()
-  //self._TargetSeedIds.Initialize()
-
   vtkNew(vtkGlyph3D, glyphs);
   vtkNew(vtkSphereSource, glyphSource);
 
@@ -186,6 +183,7 @@ int vtkSVPickPointSeedSelector::RequestData(
   }
   this->TargetSeedIds->DeepCopy(this->PickedSeedIds);
 
+  return SV_OK;
 }
 
 void vtkSVPickPointSeedSelector::InitializeSeeds()

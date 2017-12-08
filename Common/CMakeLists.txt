@@ -44,6 +44,7 @@ set(SRCS
   vtkSVRenderer.cxx
   vtkSVSeedSelector.cxx
   vtkSVPickPointSeedSelector.cxx
+  vtkSVIdListSeedSelector.cxx
   )
 set(HDRS
   vtkSVIOUtils.h
@@ -58,6 +59,8 @@ set(HDRS
   vtkSVRenderer.h
   vtkSVSeedSelector.cxx
   vtkSVPickPointSeedSelector.h
+  vtkSVOpenProfilesSeedSelector.h
+  vtkSVIdListSeedSelector.h
   )
 #------------------------------------------------------------------------------
 

@@ -1,0 +1,144 @@
+/*=========================================================================
+ *
+ * Copyright (c) 2014 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
+
+#include "vtkSVOpenProfilesSeedSelector.h"
+#include "vtkvmtkCenterlineSphereDistance.h"
+#include "vtkvmtkPolyBallLine.h"
+#include "vtkCellPicker.h"
+#include "vtkDataSetSurfaceFilter.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
+#include "vtkGlyph3D.h"
+#include "vtkIntArray.h"
+#include "vtkPoints.h"
+#include "vtkPolyData.h"
+#include "vtkPolyLine.h"
+#include "vtkPointData.h"
+#include "vtkPointLocator.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkProperty.h"
+#include "vtkIdList.h"
+#include "vtkCellData.h"
+#include "vtkCleanPolyData.h"
+#include "vtkDoubleArray.h"
+#include "vtkLabeledDataMapper.h"
+#include "vtkMath.h"
+#include "vtkObjectFactory.h"
+#include "vtkSphereSource.h"
+#include "vtkThreshold.h"
+#include "vtkTriangleFilter.h"
+#include "vtkUnstructuredGrid.h"
+
+#include "vtkSVIOUtils.h"
+#include "vtkSVGlobals.h"
+
+vtkStandardNewMacro(vtkSVOpenProfilesSeedSelector);
+
+vtkSVOpenProfilesSeedSelector::vtkSVOpenProfilesSeedSelector()
+{
+  this->SeedIds = vtkIdList::New();
+
+  this->SVRenderer = vtkSVRenderer::New();
+}
+
+vtkSVOpenProfilesSeedSelector::~vtkSVOpenProfilesSeedSelector()
+{
+  if (this->SeedIds != NULL)
+  {
+    this->SeedIds->Delete();
+    this->SeedIds = NULL;
+  }
+  if (this->SVRenderer != NULL)
+  {
+    this->SVRenderer->Delete();
+    this->SVRenderer = NULL;
+  }
+}
+
+int vtkSVOpenProfilesSeedSelector::RequestData(
+  vtkInformation *vtkNotUsed(request),
+  vtkInformationVector **inputVector,
+  vtkInformationVector *outputVector)
+{
+  vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
+  vtkInformation *outInfo = outputVector->GetInformationObject(0);
+
+  vtkPolyData *input = vtkPolyData::SafeDownCast(
+    inInfo->Get(vtkDataObject::DATA_OBJECT()));
+  vtkPolyData *output = vtkPolyData::SafeDownCast(
+    outInfo->Get(vtkDataObject::DATA_OBJECT()));
+
+  this->SurfacePd->DeepCopy(input);
+
+  if (this->SurfacePd->GetNumberOfPoints() == 0 ||
+      this->SurfacePd->GetNumberOfCells() == 0)
+  {
+    vtkErrorMacro("Not a valid input surface, need cells and points");
+    return SV_ERROR;
+  }
+
+  vtkNew(vtkPoints, seedPoints);
+  for (int i=0; i<this->SeedIds->GetNumberOfIds(); i++)
+  {
+    seedPoints->InsertNextPoint(this->SurfacePd->GetPoint(this->SeedIds->GetId(i)));
+  }
+
+  vtkNew(vtkPolyData, seedPolyData);
+  seedPolyData->SetPoints(seedPoints);
+  vtkNew(vtkLabeledDataMapper, labelsMapper);
+  labelsMapper->SetInputData(seedPolyData);
+  labelsMapper->SetLabelModeToLabelIds();
+  vtkNew(vtkActor2D, labelsActor);
+  labelsActor->SetMapper(labelsMapper);
+
+  this->SVRenderer->GetRenderer()->AddActor(labelsActor);
+
+  vtkNew(vtkPolyDataMapper, surfaceMapper);
+  surfaceMapper->SetInputData(this->SurfacePd);
+  surfaceMapper->ScalarVisibilityOff();
+
+  vtkNew(vtkActor, surfaceActor);
+  surfaceActor->SetMapper(surfaceMapper);
+  surfaceActor->GetProperty()->SetOpacity(0.25);
+
+  this->SVRenderer->GetRenderer()->AddActor(surfaceActor);
+
+  this->SVRenderer->Render();
+
+  this->SVRenderer->SetTextInputQuery("Please input list of inlet profile ids: \n");
+  this->SVRenderer->UpdateTextInput();
+
+  return SV_OK;
+}
+
+void vtkSVOpenProfilesSeedSelector::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os,indent);
+}

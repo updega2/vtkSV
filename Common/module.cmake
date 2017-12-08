@@ -51,6 +51,7 @@ vtk_module(vtkSVCommon
   vtkIOCore
   vtkIOGeometry
   vtkIOXML
+  vtkRenderingLabel
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingFreeType
   ${EXTRA_DEPENDS}

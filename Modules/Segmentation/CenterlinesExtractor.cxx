@@ -66,50 +66,48 @@ int main(int argc, char *argv[])
   int pickSeedPoints = 0;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
 
-  //// argc is the number of strings on the command-line
-  ////  starting with the program name
-  //for(iarg=1; iarg<argc; iarg++){
-  //    arglength = strlen(argv[iarg]);
-  //    // replace 0..arglength-1 with argv[iarg]
-  //    tmpstr.replace(0,arglength,argv[iarg],0,arglength);
-  //    if(tmpstr=="-h")                  {RequestedHelp = true;}
-  //    else if(tmpstr=="-input")         {InputProvided = true; inputFilename = argv[++iarg];}
-  //    else if(tmpstr=="-output")        {OutputProvided = true; outputFilename = argv[++iarg];}
-  //    else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
-  //    else if(tmpstr=="-appendendpoints")        {appendEndPoints = atoi(argv[++iarg]);}
-  //    else if(tmpstr=="-pickseedpoints")        {pickSeedPoints = atoi(argv[++iarg]);}
-  //    else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
-  //    // reset tmpstr for next argument
-  //    tmpstr.erase(0,arglength);
-  //}
+  // argc is the number of strings on the command-line
+  //  starting with the program name
+  for(iarg=1; iarg<argc; iarg++){
+      arglength = strlen(argv[iarg]);
+      // replace 0..arglength-1 with argv[iarg]
+      tmpstr.replace(0,arglength,argv[iarg],0,arglength);
+      if(tmpstr=="-h")                  {RequestedHelp = true;}
+      else if(tmpstr=="-input")         {InputProvided = true; inputFilename = argv[++iarg];}
+      else if(tmpstr=="-output")        {OutputProvided = true; outputFilename = argv[++iarg];}
+      else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
+      else if(tmpstr=="-appendendpoints")        {appendEndPoints = atoi(argv[++iarg]);}
+      else if(tmpstr=="-pickseedpoints")        {pickSeedPoints = atoi(argv[++iarg]);}
+      else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
+      // reset tmpstr for next argument
+      tmpstr.erase(0,arglength);
+  }
 
-  //if (RequestedHelp || !InputProvided)
-  //{
-  //  cout << endl;
-  //  cout << "usage:" <<endl;
-  //  cout << "  CenterlinesExtractor -input [Input Filename] -output [Output Filename] ..." << endl;
-  //  cout << endl;
-  //  cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
-  //  cout << "  -h                  : Display usage and command-line argument summary"<< endl;
-  //  cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
-  //  cout << "  -output             : Output file name"<< endl;
-  //  cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-  //  cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
-  //  cout << "  -pickseedpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
-  //  cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
-  //  return EXIT_FAILURE;
-  //}
-  //if (!OutputProvided)
-  //{
-  //  cout << "WARNING: Output Filename not provided, setting output name based on the input filename" <<endl;
-  //  std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
-  //  // Only mac and linux!!!
-  //  system(("mkdir -p "+newDirName).c_str());
-  //  outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Centerlines.vtp";
-  //}
+  if (RequestedHelp || !InputProvided)
+  {
+    cout << endl;
+    cout << "usage:" <<endl;
+    cout << "  CenterlinesExtractor -input [Input Filename] -output [Output Filename] ..." << endl;
+    cout << endl;
+    cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
+    cout << "  -h                  : Display usage and command-line argument summary"<< endl;
+    cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
+    cout << "  -output             : Output file name"<< endl;
+    cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
+    cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
+    cout << "  -pickseedpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
+    cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
+    return EXIT_FAILURE;
+  }
+  if (!OutputProvided)
+  {
+    cout << "WARNING: Output Filename not provided, setting output name based on the input filename" <<endl;
+    std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
+    // Only mac and linux!!!
+    system(("mkdir -p "+newDirName).c_str());
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Centerlines.vtp";
+  }
 
-  inputFilename = "/Users/adamupdegrove/Documents/Software/SimVascular/SimVascularProjects/0077_1001/Models/0077_1001.vtp";
-  outputFilename = "/Users/adamupdegrove/Documents/Software/SimVascular/SimVascularProjects/0077_1001/Models/0077_1001_Full_Centerlines_METHOD_2.vtp";
   // Call Function to Read File
   std::cout<<"Reading Files..."<<endl;
   vtkNew(vtkPolyData, inputPd);
