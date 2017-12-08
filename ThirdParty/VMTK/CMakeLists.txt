@@ -42,6 +42,9 @@ set(SRCS vtkvmtkCenterlineBifurcationReferenceSystems.cxx
   vtkvmtkMergeCenterlines.cxx
   vtkvmtkMath.cxx
   vtkvmtkMinHeap.cxx
+  vtkvmtkCapPolyData.cxx
+  vtkvmtkBoundaryReferenceSystems.cxx
+  vtkvmtkPolyDataBoundaryExtractor.cxx
   vtkvmtkPolyDataCenterlineGroupsClipper.cxx
   vtkvmtkPolyBallLine.cxx
   vtkvmtkSteepestDescentLineTracer.cxx
@@ -69,6 +72,9 @@ set(HDRS vtkvmtkCenterlineBifurcationReferenceSystems.h
   vtkvmtkConfigure.h
   vtkvmtkMath.h
   vtkvmtkMinHeap.h
+  vtkvmtkCapPolyData.h
+  vtkvmtkBoundaryReferenceSystems.h
+  vtkvmtkPolyDataBoundaryExtractor.h
   vtkvmtkPolyDataCenterlineGroupsClipper.h
   vtkvmtkPolyBallLine.h
   vtkvmtkSteepestDescentLineTracer.h

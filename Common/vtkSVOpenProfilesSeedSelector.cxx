@@ -133,7 +133,67 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
   this->SVRenderer->Render();
 
   this->SVRenderer->SetTextInputQuery("Please input list of inlet profile ids: \n");
+  this->SVRenderer->SetCurrentTextInput(NULL);
   this->SVRenderer->UpdateTextInput();
+  this->SVRenderer->EnterTextInputMode();
+
+  std::string currentText = this->SVRenderer->GetCurrentTextInput();
+  if (currentText == "")
+  {
+    vtkErrorMacro("Must provide a source seed");
+    return SV_ERROR;
+  }
+  else
+  {
+    std::string separator = " ";
+    if (currentText.find(separator) == std::string::npos)
+      separator = ",";
+
+    size_t pos = 0;
+    std::string textId;
+    while ((pos = currentText.find(separator)) != std::string::npos)
+    {
+      textId = currentText.substr(0, pos);
+      fprintf(stdout,"WHAT FIND %s\n", textId.c_str());
+      this->SourceSeedIds->InsertNextId(std::stoi(textId));
+      currentText.erase(0, pos + separator.length());
+    }
+    this->SourceSeedIds->InsertNextId(std::stoi(currentText));
+  }
+  // Process info
+
+  this->SVRenderer->SetTextInputQuery("Please input list of outlet profile ids (leave empty for all available profiles): ");
+  this->SVRenderer->SetCurrentTextInput(NULL);
+  this->SVRenderer->UpdateTextInput();
+  this->SVRenderer->EnterTextInputMode();
+
+  // Process info
+
+  currentText = this->SVRenderer->GetCurrentTextInput();
+  if (currentText == "")
+  {
+    for (int i=0; i<seedPoints->GetNumberOfPoints(); i++)
+    {
+      if (this->SourceSeedIds->IsId(i) == -1)
+        this->TargetSeedIds->InsertNextId(i);
+    }
+  }
+  else
+  {
+    std::string separator = " ";
+    if (currentText.find(separator) == std::string::npos)
+      separator = ",";
+
+    size_t pos = 0;
+    std::string textId;
+    while ((pos = currentText.find(separator)) != std::string::npos)
+    {
+      textId = currentText.substr(0, pos);
+      this->TargetSeedIds->InsertNextId(std::stoi(textId));
+      currentText.erase(0, pos + separator.length());
+    }
+    this->TargetSeedIds->InsertNextId(std::stoi(currentText));
+  }
 
   return SV_OK;
 }

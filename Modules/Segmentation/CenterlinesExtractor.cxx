@@ -41,9 +41,12 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVCenterlines.h"
 #include "vtkSVCenterlineBranchSplitter.h"
+#include "vtkSVSeedSelector.h"
 #include "vtkSVPickPointSeedSelector.h"
+#include "vtkSVOpenProfilesSeedSelector.h"
 
 #include "vtkvmtkMergeCenterlines.h"
+#include "vtkvmtkCapPolyData.h"
 
 int main(int argc, char *argv[])
 {
@@ -65,6 +68,7 @@ int main(int argc, char *argv[])
   int appendEndPoints = 0;
   int pickSeedPoints = 0;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
+  std::string seedSelector = "none";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -72,12 +76,12 @@ int main(int argc, char *argv[])
       arglength = strlen(argv[iarg]);
       // replace 0..arglength-1 with argv[iarg]
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
-      if(tmpstr=="-h")                  {RequestedHelp = true;}
-      else if(tmpstr=="-input")         {InputProvided = true; inputFilename = argv[++iarg];}
-      else if(tmpstr=="-output")        {OutputProvided = true; outputFilename = argv[++iarg];}
-      else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
-      else if(tmpstr=="-appendendpoints")        {appendEndPoints = atoi(argv[++iarg]);}
-      else if(tmpstr=="-pickseedpoints")        {pickSeedPoints = atoi(argv[++iarg]);}
+      if(tmpstr=="-h")                    {RequestedHelp = true;}
+      else if(tmpstr=="-input")           {InputProvided = true; inputFilename = argv[++iarg];}
+      else if(tmpstr=="-output")          {OutputProvided = true; outputFilename = argv[++iarg];}
+      else if(tmpstr=="-radius")          {radiusArrayName = argv[++iarg];}
+      else if(tmpstr=="-appendendpoints") {appendEndPoints = atoi(argv[++iarg]);}
+      else if(tmpstr=="-seedselector")     {seedSelector = argv[++iarg];}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -95,7 +99,7 @@ int main(int argc, char *argv[])
     cout << "  -output             : Output file name"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
-    cout << "  -pickseedpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
+    cout << "  -seedselector       : How to choose source and target seeds if desired, options are none, pickpoints, and openprofiles [default none]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -114,37 +118,90 @@ int main(int argc, char *argv[])
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
     return EXIT_FAILURE;
 
-  vtkNew(vtkSVPickPointSeedSelector, seedPointPicker);
-  if (pickSeedPoints)
-  {
-    seedPointPicker->SetInputData(inputPd);
-    seedPointPicker->Update();
 
-    int numSourceSeeds = seedPointPicker->GetSourceSeedIds()->GetNumberOfIds();
-    int numTargetSeeds = seedPointPicker->GetTargetSeedIds()->GetNumberOfIds();
+  vtkSVSeedSelector *seedPointPicker;
+  vtkNew(vtkIdList, capCenterIds);
+  if (seedSelector == "pickpoints")
+  {
+    vtkSVPickPointSeedSelector *pointPicker =
+      vtkSVPickPointSeedSelector::New();
+    pointPicker->SetInputData(inputPd);
+    pointPicker->Update();
+
+    int numSourceSeeds = pointPicker->GetSourceSeedIds()->GetNumberOfIds();
+    int numTargetSeeds = pointPicker->GetTargetSeedIds()->GetNumberOfIds();
 
     fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
     fprintf(stdout,"  Source Seeds Ids: ");
     for (int i=0; i<numSourceSeeds; i++)
-      fprintf(stdout,"%d ", seedPointPicker->GetSourceSeedIds()->GetId(i));
+      fprintf(stdout,"%d ", pointPicker->GetSourceSeedIds()->GetId(i));
     fprintf(stdout,"\n");
 
     fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
     fprintf(stdout,"  Target Seeds Ids: ");
     for (int i=0; i<numTargetSeeds; i++)
-      fprintf(stdout,"%d ", seedPointPicker->GetTargetSeedIds()->GetId(i));
+      fprintf(stdout,"%d ", pointPicker->GetTargetSeedIds()->GetId(i));
     fprintf(stdout,"\n");
+
+    seedPointPicker = pointPicker;
   }
+  else if (seedSelector == "openprofiles")
+  {
+    std::cout << "Capping Surface..." << endl;
+    vtkNew(vtkvmtkCapPolyData, surfaceCapper);
+    surfaceCapper->SetInputData(inputPd);
+    surfaceCapper->SetDisplacement(0.0);
+    surfaceCapper->SetInPlaneDisplacement(0.0);
+    surfaceCapper->Update();
+
+    capCenterIds->DeepCopy(surfaceCapper->GetCapCenterIds());
+
+    inputPd->DeepCopy(surfaceCapper->GetOutput());
+
+    vtkSVOpenProfilesSeedSelector *openProfilesPicker =
+      vtkSVOpenProfilesSeedSelector::New();
+    openProfilesPicker->SetInputData(inputPd);
+    openProfilesPicker->SetSeedIds(surfaceCapper->GetCapCenterIds());
+    openProfilesPicker->Update();
+
+    int numSourceSeeds = openProfilesPicker->GetSourceSeedIds()->GetNumberOfIds();
+    int numTargetSeeds = openProfilesPicker->GetTargetSeedIds()->GetNumberOfIds();
+
+    fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
+    fprintf(stdout,"  Source Seeds Ids: ");
+    for (int i=0; i<numSourceSeeds; i++)
+      fprintf(stdout,"%d ", openProfilesPicker->GetSourceSeedIds()->GetId(i));
+    fprintf(stdout,"\n");
+
+    fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
+    fprintf(stdout,"  Target Seeds Ids: ");
+    for (int i=0; i<numTargetSeeds; i++)
+      fprintf(stdout,"%d ", openProfilesPicker->GetTargetSeedIds()->GetId(i));
+    fprintf(stdout,"\n");
+
+    seedPointPicker = openProfilesPicker;
+  }
+  else if (seedSelector == "none")
+  {
+    std::cout << "No seed points given" << endl;
+  }
+  else
+  {
+    std::cerr << "Incorrect seedselector given, must be none, pickpoints or openprofiles" << endl;
+  }
+
 
   // Filter
   vtkNew(vtkSVCenterlines, CenterlineFilter);
 
   //OPERATION
   std::cout<<"Getting Centerlines..."<<endl;
-  if (pickSeedPoints)
+  if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
   {
     CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
     CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
+    if (seedSelector == "openprofiles")
+      CenterlineFilter->SetCapCenterIds(capCenterIds);
   }
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
@@ -155,6 +212,9 @@ int main(int argc, char *argv[])
   CenterlineFilter->SetResamplingStepLength(0.0);
   CenterlineFilter->Update();
   std::cout<<"Done"<<endl;
+
+  if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
+    seedPointPicker->Delete();
 
   std::cout<<"Getting Centerlines..."<<endl;
   vtkNew(vtkSVCenterlineBranchSplitter, BranchSplitter);

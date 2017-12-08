@@ -230,7 +230,7 @@ int vtkSVRenderer::PromptAsync(std::string queryText, vtkCallbackCommand *callba
 
 int vtkSVRenderer::EnterTextInputMode(int interactive)
 {
-  this->CurrentTextInput = "";
+  this->SetCurrentTextInput("");
   this->Renderer->AddActor(this->TextInputActor);
   this->Renderer->RemoveActor(this->TextActor);
   this->UpdateTextInput();
@@ -318,7 +318,7 @@ void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int event
     else if (key.length() > 1 && (key != "Backspace" || key != "BackSpace"))
       key = "";
 
-    if (key != "Backspace" || key != "BackSpace")
+    if (key == "Backspace" || key == "BackSpace")
     {
       std::string textInput = parent->CurrentTextInput;
       if (textInput.length() > 0)
