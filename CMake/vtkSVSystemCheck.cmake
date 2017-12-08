@@ -85,3 +85,11 @@ if (NOT CMAKE_CXX_COMPILER_VERSION)
   message(FATAL_ERROR "Compiler version does not exist; must specify the compiler
                        version with -DCMAKE_CXX_COMPILER_VERSION='major_version'.'minor_version'")
 endif()
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# C++ 11 on uniz
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
+#-----------------------------------------------------------------------------
