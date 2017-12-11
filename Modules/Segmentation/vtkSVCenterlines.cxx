@@ -754,6 +754,7 @@ int vtkSVCenterlines::RequestData(
     if (edge0IsId != -1 && edgeNIsId != -1)
     {
       // Both edges of this node already in list, delete it!
+      fprintf(stdout,"BOTH EXIST, NEED TO DELETE %d %d\n", edgeId0, edgeIdN);
       needToDelete[i] = 1;
       nodeCount[edge0IsId]++;
       nodeCount[edgeNIsId]++;
@@ -809,6 +810,9 @@ int vtkSVCenterlines::RequestData(
           if (pointsEdgeId->GetNumberOfIds() == 1)
           {
             linesPd->DeleteCell(pointsEdgeId->GetId(0));
+            fprintf(stdout,"DELETING CELL: %d\n", pointsEdgeId->GetId(0));
+            if (pointsEdgeId->GetId(0) == 5255)
+              fprintf(stdout,"TELL ME\n");
           }
           else
             fprintf(stdout,"NO CELL FOUND\n");
@@ -878,8 +882,77 @@ int vtkSVCenterlines::RequestData(
     }
 
   }
+
   for (int i=0; i<nodeCount.size(); i++)
     fprintf(stdout,"NODE %d, COUNT %d\n", allEndIds->GetId(i), nodeCount[i]);
+
+  // Delete very small entrance lines
+  for (int i=0; i<allEdges.size(); i++)
+  {
+    int edgeSize = allEdges[i].size();
+    int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+    int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+    fprintf(stdout,"CHECKING IT OUT: %d %d\n", allEdges[i][0], allEdges[i][edgeSize-1]);
+
+    if (nodeCount[nodeId0] <= 1 || nodeCount[nodeIdN] <= 1)
+    {
+      fprintf(stdout,"ITS AN END ONE AND SIZE IS: %d\n", edgeSize);
+    }
+
+    if (edgeSize < 5)
+    {
+      fprintf(stdout,"LESS THAN 5 AND NDOES: %d %d\n", allEdges[i][0], allEdges[i][edgeSize-1]);
+      fprintf(stdout,"SIZE: %d\n", edgeSize);
+      if (nodeCount[nodeId0] <= 1 || nodeCount[nodeIdN] <= 1)
+      {
+        fprintf(stdout,"DEL\n");
+        needToDelete[i] = 1;
+      }
+    }
+  }
+
+  for (int i=0; i<needToDelete.size(); i++)
+  {
+    fprintf(stdout,"EDGE %d, DEL %d\n", i, needToDelete[i]);
+    fprintf(stdout,"EDGE %d,  IS DEL %d\n", i, needToDelete[i]);
+
+    if (isDeleted[i])
+    {
+      continue;
+      fprintf(stdout,"ALREADY DEL\n");
+    }
+
+    if (needToDelete[i] == 1)
+    {
+      fprintf(stdout,"ELE LE NEW\n");
+      int edgeSize = allEdges[i].size();
+      for (int j=0; j<edgeSize-1; j++)
+      {
+        int pointId0 = allEdges[i][j];
+        int pointId1 = allEdges[i][j+1];
+        edgePointIds->Reset();
+        edgePointIds->InsertNextId(pointId0);
+        edgePointIds->InsertNextId(pointId1);
+
+        linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+        if (pointsEdgeId->GetNumberOfIds() == 1)
+        {
+          linesPd->DeleteCell(pointsEdgeId->GetId(0));
+          fprintf(stdout,"DELETING CELL: %d\n", pointsEdgeId->GetId(0));
+          if (pointsEdgeId->GetId(0) == 5255)
+            fprintf(stdout,"TELL ME\n");
+        }
+        else
+          fprintf(stdout,"NO CELL FOUND\n");
+      }
+      int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+      int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+      nodeCount[nodeId0]--;
+      nodeCount[nodeIdN]--;
+      isDeleted[i] = 1;
+    }
+  }
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/WRITERS.vtp", linesPd);
 
   linesPd->RemoveDeletedCells();
   cleaner->SetInputData(linesPd);
@@ -889,6 +962,7 @@ int vtkSVCenterlines::RequestData(
 
   // Preprocessing of lines
   linesPd->BuildLinks();
+
 
 	firstVertex = -1;
   numConnectedPts.clear();
@@ -904,6 +978,7 @@ int vtkSVCenterlines::RequestData(
     linesPd->GetPointCells(i, pointCellIds);
     if (pointCellIds->GetNumberOfIds() == 1)
     {
+      fprintf(stdout,"FIRST ONE SON!!!!: %d\n", i);
       firsties++;
       if (firstVertex == -1)
         firstVertex = i;
@@ -942,8 +1017,6 @@ int vtkSVCenterlines::RequestData(
 
     firstVertex = linesPtId;
   }
-
-  fprintf(stdout,"NUM FIRSTIES: %d\n", firsties);
 
   if (firstVertex == -1)
   {
@@ -2094,12 +2167,20 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
 			for (i = 0; i < numConnectedPts[firstVertex]; i++)
 			{
 				index = connectedEdgePts[firstVertex][i];
-        if (pointUsed[index] == 0)
+        if (pointUsed[index] == 0 && numConnectedPts[index] <= 2)
         {
           fprintf(stdout,"GONNA START NEW ONE WITH START: %d SECOND %d\n", firstVertex, index);
           std::vector<int> newEdge;
           newEdge.push_back(firstVertex);
           this->RecursiveGetPolylines(pd, numConnectedPts, connectedEdgePts, index, pointUsed, allEdges, newEdge);
+        }
+        else if (numConnectedPts[index] > 2)
+        {
+          std::vector<int> newEdge;
+          newEdge.push_back(firstVertex);
+          newEdge.push_back(index);
+          allEdges.push_back(newEdge);
+          fprintf(stdout,"I KNEWWWW IT!!!! %d has %d is used %d\n", index, numConnectedPts[index], pointUsed[index]);
         }
       }
       return 1;

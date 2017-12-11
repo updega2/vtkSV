@@ -200,8 +200,8 @@ int main(int argc, char *argv[])
   {
     CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
     CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
-    if (seedSelector == "openprofiles")
-      CenterlineFilter->SetCapCenterIds(capCenterIds);
+    //if (seedSelector == "openprofiles")
+    //  CenterlineFilter->SetCapCenterIds(capCenterIds);
   }
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());

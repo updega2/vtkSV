@@ -155,10 +155,10 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
     {
       textId = currentText.substr(0, pos);
       fprintf(stdout,"WHAT FIND %s\n", textId.c_str());
-      this->SourceSeedIds->InsertNextId(std::stoi(textId));
+      this->SourceSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(textId)));
       currentText.erase(0, pos + separator.length());
     }
-    this->SourceSeedIds->InsertNextId(std::stoi(currentText));
+    this->SourceSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(currentText)));
   }
   // Process info
 
@@ -174,8 +174,8 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
   {
     for (int i=0; i<seedPoints->GetNumberOfPoints(); i++)
     {
-      if (this->SourceSeedIds->IsId(i) == -1)
-        this->TargetSeedIds->InsertNextId(i);
+      if (this->SourceSeedIds->IsId(this->SeedIds->GetId(i)) == -1)
+        this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(i));
     }
   }
   else
@@ -189,10 +189,10 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
     while ((pos = currentText.find(separator)) != std::string::npos)
     {
       textId = currentText.substr(0, pos);
-      this->TargetSeedIds->InsertNextId(std::stoi(textId));
+      this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(textId)));
       currentText.erase(0, pos + separator.length());
     }
-    this->TargetSeedIds->InsertNextId(std::stoi(currentText));
+    this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(currentText)));
   }
 
   return SV_OK;
