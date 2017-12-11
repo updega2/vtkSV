@@ -226,20 +226,20 @@ int vtkSVCenterlineGraph::BuildGraph()
 
 
   // Get connecting groups
-  vtkNew(vtkIdList, connectingGroups);
+  std::vector<int> connectingGroups;
   this->GetConnectingLineGroups(this->Root->GroupId, connectingGroups);
 
-  if (connectingGroups->GetNumberOfIds() == 0)
+  if (connectingGroups.size() == 0)
   {
     // Just only this guy
     fprintf(stdout,"Only one centerline\n");
     //return SV_OK;
   }
 
-  for (int i=0; i<connectingGroups->GetNumberOfIds(); i++)
+  for (int i=0; i<connectingGroups.size(); i++)
   {
     vtkSVCenterlineGCell *newCell = new vtkSVCenterlineGCell(this->NumberOfCells++,
-                                                             connectingGroups->GetId(i),
+                                                             connectingGroups[i],
                                                              this->Root);
     this->Root->Children.push_back(newCell);
   }
@@ -331,13 +331,13 @@ int vtkSVCenterlineGraph::GetSurfacePolycube(const double height, const double w
  */
 int vtkSVCenterlineGraph::GrowGraph(vtkSVCenterlineGCell *parent)
 {
-  vtkNew(vtkIdList, connectingGroups);
+  std::vector<int> connectingGroups;
   this->GetConnectingLineGroups(parent->GroupId, connectingGroups);
 
   int count = 0;
-  for (int i=0; i<connectingGroups->GetNumberOfIds(); i++)
+  for (int i=0; i<connectingGroups.size(); i++)
   {
-    int groupId = connectingGroups->GetId(i);
+    int groupId = connectingGroups[i];
     int isChild=1;
     for (int j=0; j<parent->Parent->Children.size(); j++)
     {
@@ -377,7 +377,7 @@ int vtkSVCenterlineGraph::GrowGraph(vtkSVCenterlineGCell *parent)
 // ----------------------
 // GetConnectingLineGroups
 // ----------------------
-int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups)
+int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, std::vector<int> &connectingGroups)
 {
   // Get first cell points
   vtkIdType npts, *pts;
@@ -394,7 +394,7 @@ int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *
   {
     if (pointCells0->GetId(i) != cellId)
     {
-      connectingGroups->InsertNextId(this->Lines->GetCellData()->GetArray(
+      connectingGroups.push_back(this->Lines->GetCellData()->GetArray(
         this->GroupIdsArrayName.c_str())->GetTuple1(pointCells0->GetId(i)));
     }
   }
@@ -402,7 +402,7 @@ int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, vtkIdList *
   {
     if (pointCellsN->GetId(i) != cellId)
     {
-      connectingGroups->InsertNextId(this->Lines->GetCellData()->GetArray(
+      connectingGroups.push_back(this->Lines->GetCellData()->GetArray(
         this->GroupIdsArrayName.c_str())->GetTuple1(pointCellsN->GetId(i)));
     }
   }

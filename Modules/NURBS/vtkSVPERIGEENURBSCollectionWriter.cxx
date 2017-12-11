@@ -58,6 +58,7 @@ static char header[]="Visualization Toolkit generated SLA File                  
 vtkSVPERIGEENURBSCollectionWriter::vtkSVPERIGEENURBSCollectionWriter()
 {
   this->FileName = NULL;
+  this->InternalCollection = NULL;
 }
 
 void vtkSVPERIGEENURBSCollectionWriter::SetInputData(vtkSVNURBSCollection *input)
@@ -69,6 +70,8 @@ void vtkSVPERIGEENURBSCollectionWriter::SetInputData(vtkSVNURBSCollection *input
   {
     this->AddInputDataInternal(i, input->GetItem(i));
   }
+
+  this->InternalCollection = input;
 }
 
 void vtkSVPERIGEENURBSCollectionWriter::SetInputData(int index, vtkDataObject *input)
@@ -136,7 +139,7 @@ int vtkSVPERIGEENURBSCollectionWriter::RequestData(
                                  vtkInformationVector **inputVector,
                                  vtkInformationVector *outputVector)
 {
-  int numInputs = this->GetNumberOfInputPorts();
+ int numInputs = this->GetNumberOfInputPorts();
 
   if (this->FileName == NULL)
   {
@@ -167,6 +170,42 @@ int vtkSVPERIGEENURBSCollectionWriter::RequestData(
       objWriter->SetFileName(fn.c_str());
       objWriter->Write();
     }
+  }
+
+  if (this->InternalCollection->GetNumberOfPatchConnections() > 0)
+  {
+    std::string pathName = vtkSVIOUtils::GetPath(this->FileName);
+    std::string rawName  = vtkSVIOUtils::GetRawName(this->FileName);
+    std::string extName  = vtkSVIOUtils::GetExt(this->FileName);
+
+    std::string fn = pathName + "/" + rawName + "_patch_connections." + extName;
+
+    FILE *fp;
+
+    if ((fp = fopen(fn.c_str(), "w")) == NULL)
+    {
+      vtkErrorMacro(<< "Couldn't open file: " << this->FileName);
+      this->SetErrorCode(vtkErrorCode::CannotOpenFileError);
+      return SV_ERROR;
+    }
+
+    int numConnections = this->InternalCollection->GetNumberOfPatchConnections();
+    std::vector<std::vector<int> > patchConnections = this->InternalCollection->GetPatchConnections();
+    std::vector<std::vector<int> > patchFaceConnections = this->InternalCollection->GetPatchFaceConnections();
+    fprintf(fp, "%d\n", numConnections );
+
+    for (int i=0; i<numConnections; i++)
+      fprintf(fp, "%d %d %d %d %d %d\n", patchConnections[i][0], patchConnections[i][1],
+                                         patchFaceConnections[i][0], patchFaceConnections[i][1], 1, 1);
+
+    if (fflush(fp))
+    {
+      fclose(fp);
+      this->SetErrorCode(vtkErrorCode::OutOfDiskSpaceError);
+      return SV_ERROR;
+    }
+    fclose(fp);
+
   }
 
   return SV_OK;

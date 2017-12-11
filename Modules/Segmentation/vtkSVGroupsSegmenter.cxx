@@ -4793,7 +4793,7 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   //vtkSVIOUtils::WriteVTUFile(filename, smoothVolume);
 
   this->FixVolume(mappedVolume, smoothVolume, volumePtMap);
-  this->SetControlMeshBoundaries(mappedVolume, smoothVolume, volumePtMap, invVolumePtMap);
+  //this->SetControlMeshBoundaries(mappedVolume, smoothVolume, volumePtMap, invVolumePtMap);
 
   //std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
   //vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
@@ -4874,11 +4874,11 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     // Set the temporary control points
     vtkNew(vtkPoints, tmpUPoints);
     tmpUPoints->SetNumberOfPoints(nUCon);
-    for (int i=0; i<nUCon; i++)
+    for (int j=0; j<nUCon; j++)
     {
-      int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
+      int pos[3]; pos[0] = j; pos[1] = 0; pos[2] = 0;
       int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      tmpUPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+      tmpUPoints->SetPoint(j, realHexMesh->GetPoint(ptId));
     }
 
     // Get the input point set u representation
@@ -4898,11 +4898,11 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     //
     vtkNew(vtkPoints, tmpVPoints);
     tmpVPoints->SetNumberOfPoints(nVCon);
-    for (int i=0; i<nVCon; i++)
+    for (int j=0; j<nVCon; j++)
     {
-      int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
+      int pos[3]; pos[0] = 0; pos[1] = j; pos[2] = 0;
       int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      tmpVPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+      tmpVPoints->SetPoint(j, realHexMesh->GetPoint(ptId));
     }
     // Get the input point set v representation
     vtkNew(vtkDoubleArray, V);
@@ -4921,11 +4921,11 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
 
     vtkNew(vtkPoints, tmpWPoints);
     tmpWPoints->SetNumberOfPoints(nWCon);
-    for (int i=0; i<nWCon; i++)
+    for (int j=0; j<nWCon; j++)
     {
-      int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
+      int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = j;
       int ptId = vtkStructuredData::ComputePointId(dim, pos);
-      tmpWPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+      tmpWPoints->SetPoint(j, realHexMesh->GetPoint(ptId));
     }
     // Get the input point set v representation
     vtkNew(vtkDoubleArray, W);
@@ -4956,6 +4956,33 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     loftAppender->AddInputData(hexMeshControlGrid->GetVolumeRepresentation());
   }
 
+  vtkNew(vtkIdList, groupMap);
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = groupIds->GetId(i);
+    groupMap->InsertNextId(groupId);
+  }
+
+  // Add patch connections for file writing
+  for (int i=0; i<this->CenterlineGraph->NumberOfCells; i++)
+  {
+    vtkSVCenterlineGCell *gCell = this->CenterlineGraph->GetCell(i);
+
+    int numChildren = gCell->Children.size();
+    for (int j=0; j<numChildren; j++)
+      nurbs->AddPatchConnection(i+1, groupMap->IsId(gCell->Children[j]->GroupId)+1, 1, 6);
+
+    if (gCell->Parent != NULL)
+    {
+      int numBrothers = gCell->Parent->Children.size();
+      for (int j=0; j<numBrothers; j++)
+      {
+        if (gCell->GroupId != gCell->Parent->Children[j]->GroupId)
+          nurbs->AddPatchConnection(i+1, groupMap->IsId(gCell->Parent->Children[j]->GroupId)+1, 6, 6);
+      }
+    }
+  }
+
   //if (this->MergedCenterlines->GetNumberOfCells() == 1)
   //{
   //  std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
@@ -4971,13 +4998,6 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   writer->SetInputData(nurbs);
   writer->SetFileName(pername.c_str());
   writer->Update();
-
-  ////fprintf(stdout,"Writing NURBS...\n");
-  ////std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
-  ////vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
-  ////writer->SetInputData(nurbs);
-  ////writer->SetFileName(pername.c_str());
-  ////writer->Update();
 
   loftAppender->Update();
   loftedVolume->DeepCopy(loftAppender->GetOutput());

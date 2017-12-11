@@ -86,7 +86,7 @@ public:
   int GetInitialBranchDirections(vtkSVCenterlineGCell *parent);
   int UpdateBranchDirs(vtkSVCenterlineGCell *parent, const int updateDir);
   int GetGraphPolyData(vtkPolyData *pd);
-  int GetConnectingLineGroups(const int groupId, vtkIdList *connectingGroups);
+  int GetConnectingLineGroups(const int groupId, std::vector<int> &connectingGroups);
 
   //Static Member functions
   static int Recurse(vtkSVCenterlineGCell *rootvtkSVCenterlineGCell,

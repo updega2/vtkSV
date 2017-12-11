@@ -103,6 +103,8 @@ protected:
 
   int FillInputPortInformation(int port, vtkInformation *info);
 
+  vtkSVNURBSCollection *InternalCollection;
+
 private:
   vtkSVPERIGEENURBSCollectionWriter(const vtkSVPERIGEENURBSCollectionWriter&);
   void operator=(const vtkSVPERIGEENURBSCollectionWriter&);
