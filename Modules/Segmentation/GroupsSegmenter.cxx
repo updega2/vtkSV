@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
   int writePolycubeUg = 0;
   int writeFinalHexMesh = 0;
   int writeAll = 0;
-  int boundaryEnforceFactor = 1;
+  int boundaryEnforceFactor = 0;
 
   double polycubeUnitLength = 0.0;
   double normalsWeighting = 0.8;

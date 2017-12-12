@@ -1188,9 +1188,10 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       //  }
       //}
 
-      double checkVec[3];
+      double checkRefs[3][3];
       for (int k=0; k<3; k++)
-        checkVec[k] = refVecs[0][k];
+        for (int l=0; l<3; l++)
+          checkRefs[k][l] = refVecs[k][l];
 
       if (gCell->Parent == NULL)
         vtkMath::Subtract(pt1, pt0, refVecs[0]);
@@ -1203,12 +1204,16 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
 
-      if (vtkMath::Dot(checkVec, refVecs[0]) < 0)
+      if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
       {
-        for (int k=0; k<3; k++)
+        // Check to see if its in dir of local x
+        if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
         {
-          refVecs[1][k] = -1.0*refVecs[1][k];
-          refVecs[2][k] = -1.0*refVecs[2][k];
+          for (int k=0; k<3; k++)
+          {
+            refVecs[1][k] = -1.0*refVecs[1][k];
+            refVecs[2][k] = -1.0*refVecs[2][k];
+          }
         }
       }
 
@@ -1314,6 +1319,12 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       {
         this->Lines->GetPoint(pts[j-1], pt0);
         this->Lines->GetPoint(pts[j], pt1);
+
+        double checkRefs[3][3];
+        for (int k=0; k<3; k++)
+          for (int l=0; l<3; l++)
+            checkRefs[k][l] = updateRefVecs[k][l];
+
         if (gCell->Parent == NULL)
           vtkMath::Subtract(pt1, pt0, updateRefVecs[0]);
         else
@@ -1325,6 +1336,19 @@ int vtkSVCenterlineGraph::GetGraphDirections()
         this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateVec, tmpX, updateRefVecs[2]);
         for (int k=0; k<3; k++)
           updateRefVecs[1][k] = tmpX[k];
+
+        if (vtkMath::Dot(checkRefs[0], updateRefVecs[0]) < 0)
+        {
+          // Check to see if its in dir of local x
+          if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
+          {
+            for (int k=0; k<3; k++)
+            {
+              updateRefVecs[1][k] = -1.0*updateRefVecs[1][k];
+              updateRefVecs[2][k] = -1.0*updateRefVecs[2][k];
+            }
+          }
+        }
 
         localArrayX->SetTuple(pts[j], updateRefVecs[1]);
         localArrayY->SetTuple(pts[j], updateRefVecs[2]);
