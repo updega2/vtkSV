@@ -338,6 +338,7 @@ int vtkvmtkMergeCenterlines::RequestData(vtkInformation *vtkNotUsed(request), vt
     referenceSystems->GetPoint(referenceSystemPointId,bifurcationPoint);
 
     vtkIdType bifurcationPointId = outputPoints->InsertNextPoint(bifurcationPoint);
+    fprintf(stdout,"OKAYTT\n");
 
     vtkIdType sourcePointId = -1;
     int j;
