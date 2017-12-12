@@ -1199,7 +1199,6 @@ int vtkSVCenterlineGraph::GetGraphDirections()
         vtkMath::Subtract(pt0, pt1, refVecs[0]);
       vtkMath::Normalize(refVecs[0]);
 
-
       this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
