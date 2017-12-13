@@ -913,9 +913,9 @@ int vtkSVGroupsSegmenter::RunFilter()
         for (int k=0; k<splitOpenEdges.size(); k++)
         {
           int edgeSize = splitOpenEdges[k].size();
-          if (edgeSize < 4)
+          if (edgeSize < 3)
           {
-            fprintf(stderr,"EDGE SIZE IS LESS THAN 4!!!\n");
+            fprintf(stderr,"EDGE SIZE IS LESS THAN 3, IT IS %d!!!\n", edgeSize);
             return SV_ERROR;
           }
 
@@ -1127,16 +1127,16 @@ int vtkSVGroupsSegmenter::RunFilter()
           newPatchValues[k] = allPatchValues[j][listIndex];
         }
 
-        for (int k=0; k<newAngleBounds.size(); k++)
-        {
-          int thisSize = newAngleBounds.size();
-          double lastVal  = newAngleBounds[k][1];
-          double firstVal = newAngleBounds[(k+1)%thisSize][0];
-          double avgVal = (lastVal + firstVal)/2.0;
+        //for (int k=0; k<newAngleBounds.size(); k++)
+        //{
+        //  int thisSize = newAngleBounds.size();
+        //  double lastVal  = newAngleBounds[k][1];
+        //  double firstVal = newAngleBounds[(k+1)%thisSize][0];
+        //  double avgVal = (lastVal + firstVal)/2.0;
 
-          newAngleBounds[k][1] = avgVal;
-          newAngleBounds[(k+1)%thisSize][0] = avgVal;
-        }
+        //  newAngleBounds[k][1] = avgVal;
+        //  newAngleBounds[(k+1)%thisSize][0] = avgVal;
+        //}
 
         for (int k=0; k<newAngleBounds.size(); k++)
         {
@@ -1174,11 +1174,11 @@ int vtkSVGroupsSegmenter::RunFilter()
 
               int linePtId = centerlineSubPtIds->GetTuple1(realCellId);
 
-              int neighPatchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
+              int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
               // THIS IS WHERE WE TRY TO USE CELL ANGULAR LOCATION FOR PATCH VAL
               double angularVal = angularPCoords->GetTuple1(realCellId);
 
-              int patchVal = -1;
+              //int patchVal = -1;
               for (int k=0; k<allAngleBounds[listIter].size(); k++)
               {
                 int thisSize = allAngleBounds[listIter].size();

@@ -195,6 +195,14 @@ int vtkSVCenterlines::RequestData(
   {
     vtkDebugMacro(<< "No SourceSeedIds set.");
   }
+  if (this->SourceSeedIds)
+  {
+    if (this->SourceSeedIds->GetNumberOfIds() != 1)
+    {
+      fprintf(stdout,"Only one source seed can be provided with this method\n");
+      return SV_ERROR;
+    }
+  }
 
   if (!this->TargetSeedIds)
   {
@@ -726,7 +734,6 @@ int vtkSVCenterlines::RequestData(
     return SV_ERROR;
   }
 
-
   std::vector<int> pointUsed(linesPd->GetNumberOfPoints(), 0);
 
   pointUsed[firstVertex] = 1;
@@ -1006,6 +1013,12 @@ int vtkSVCenterlines::RequestData(
   vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
   if (this->SourceSeedIds)
   {
+    if (this->SourceSeedIds->GetNumberOfIds() != 1)
+    {
+      fprintf(stdout,"Only one source seed can be provided with this method\n");
+      return SV_ERROR;
+    }
+
     linesEndPointLocator->SetDataSet(linesEndPointsPd);
     linesEndPointLocator->BuildLocator();
 
@@ -1020,7 +1033,7 @@ int vtkSVCenterlines::RequestData(
 
   if (firstVertex == -1)
   {
-    fprintf(stderr,"No first vertex found, lines must form loop\n");
+    fprintf(stderr,"No first vertex found, lines cannot form loop\n");
     return SV_ERROR;
   }
 
@@ -1150,6 +1163,7 @@ int vtkSVCenterlines::RequestData(
   surfacer->Update();
   vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CHECKCOSTER.vtp", surfacer->GetOutput());
 
+
   //========================================================================
   //
   // Loop through now
@@ -1167,8 +1181,15 @@ int vtkSVCenterlines::RequestData(
   if (this->CapCenterIds)
     this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiCapIds);
 
-  if (this->CapCenterIds || (this->SourceSeedIds && this->TargetSeedIds))
+  if (this->SourceSeedIds)
   {
+    if (this->SourceSeedIds->GetNumberOfIds() != 1)
+    {
+      fprintf(stdout,"Only one source seed can be provided with this method\n");
+      return SV_ERROR;
+    }
+
+    std::vector<int> endPointUsed(linesEndPointIds->GetNumberOfIds(), 0);
     for (int j=0; j<this->SourceSeedIds->GetNumberOfIds(); j++)
     {
       double sourcePt[3];
@@ -1178,6 +1199,15 @@ int vtkSVCenterlines::RequestData(
       int linesPtId = linesEndPointIds->GetId(endPointId);
       int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
 
+      if (endPointUsed[endPointId] == 1)
+      {
+        fprintf(stderr,"Two end lines found for different target seeds, target seeds too close\n");
+        return SV_ERROR;
+      }
+      else
+      {
+        endPointUsed[endPointId] = 1;
+      }
 
       for (int k=0; k<voronoiSeeds.size(); k++)
       {
@@ -1185,37 +1215,173 @@ int vtkSVCenterlines::RequestData(
         {
           if (voronoiSeeds[k][l] == voronoiId)
           {
-            if (this->CapCenterIds)
-              voronoiSeeds[k][l] = voronoiCapIds->GetId(this->SourceSeedIds->GetId(j));
-            else
-              voronoiSeeds[k][l] = this->PoleIds->GetId(this->SourceSeedIds->GetId(j));
+            voronoiSeeds[k][l] = this->PoleIds->GetId(this->SourceSeedIds->GetId(j));
           }
         }
       }
     }
-    for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
+
+    if (this->TargetSeedIds)
     {
-      double targetPt[3];
-      input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+      int numSeeds = this->SourceSeedIds->GetNumberOfIds() + this->TargetSeedIds->GetNumberOfIds();
 
-      int endPointId = linesEndPointLocator->FindClosestPoint(targetPt);
-      int linesPtId = linesEndPointIds->GetId(endPointId);
-      int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
-
-
-      for (int k=0; k<voronoiSeeds.size(); k++)
+      if (numSeeds > linesEndPointIds->GetNumberOfIds() && this->TargetSeedIds)
       {
-        for (int l=0; l<voronoiSeeds[k].size(); l++)
+        fprintf(stdout,"More seeds given than found ends\n");
+        vtkNew(vtkPointLocator, seedPointLocator);
+        vtkNew(vtkPoints, seedPoints);
+        vtkNew(vtkPolyData, seedPointsPd);  seedPointsPd->SetPoints(seedPoints);
+        vtkNew(vtkIdList, seedPointIds);
+        for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
         {
-          if (voronoiSeeds[k][l] == voronoiId)
+          double targetPt[3];
+          input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+
+          seedPointsPd->GetPoints()->InsertNextPoint(targetPt);
+          seedPointIds->InsertNextId(j);
+        }
+        seedPointLocator->SetDataSet(seedPointsPd);
+        seedPointLocator->BuildLocator();
+
+        for (int j=0; j<linesEndPointIds->GetNumberOfIds(); j++)
+        {
+          if (endPointUsed[j] == 1)
           {
-            if (this->CapCenterIds)
-              voronoiSeeds[k][l] = voronoiCapIds->GetId(this->TargetSeedIds->GetId(j));
+            continue;
+          }
+          endPointUsed[j] = 1;
+
+          int linesPtId = linesEndPointIds->GetId(j);
+
+          double endPt[3];
+          linesPd->GetPoint(linesPtId, endPt);
+          int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+          int closestSeed = seedPointLocator->FindClosestPoint(endPt);
+          int targetSeedId = seedPointIds->GetId(closestSeed);
+
+          for (int k=0; k<voronoiSeeds.size(); k++)
+          {
+            for (int l=0; l<voronoiSeeds[k].size(); l++)
+            {
+              if (voronoiSeeds[k][l] == voronoiId)
+              {
+                voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(targetSeedId));
+              }
+            }
+          }
+
+        }
+      }
+      else
+      {
+        fprintf(stdout,"Equal or less seeds given as compared to found ends\n");
+
+        for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
+        {
+          double targetPt[3];
+          input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+
+          int endPointId = linesEndPointLocator->FindClosestPoint(targetPt);
+          int linesPtId = linesEndPointIds->GetId(endPointId);
+          int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+          if (endPointUsed[endPointId] == 1)
+          {
+            fprintf(stderr,"Two end lines found for different target seeds, target seeds too close\n");
+            return SV_ERROR;
+          }
+          else
+          {
+            endPointUsed[endPointId] = 1;
+          }
+
+          for (int k=0; k<voronoiSeeds.size(); k++)
+          {
+            for (int l=0; l<voronoiSeeds[k].size(); l++)
+            {
+              if (voronoiSeeds[k][l] == voronoiId)
+              {
+                voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(j));
+              }
+            }
+          }
+        }
+
+      }
+
+      fprintf(stdout,"WHATS THE SIZE: %d %d %d\n", allEdges.size(), voronoiSeeds.size(), fullCenterlineEdges.size());
+      for (int i=0; i<endPointUsed.size(); i++)
+      {
+        if (endPointUsed[i] == 0)
+        {
+          fprintf(stderr,"End point %d was not used, going to remove from search list\n");
+          int linesPtId = linesEndPointIds->GetId(i);
+          int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+          std::vector<int> removeSeeds(voronoiSeeds.size(), 0);
+          for (int j=0; j<voronoiSeeds.size(); j++)
+          {
+            if (voronoiSeeds[j][0] == voronoiId || voronoiSeeds[j][1] == voronoiId)
+            {
+              removeSeeds[j] = 1;
+            }
+          }
+
+          std::vector<int> removeCenterlinePath(fullCenterlineEdges.size(), 0);
+          std::vector<int> removePathIds;
+          std::vector<std::vector<int> > tmpSeeds = voronoiSeeds;
+          std::vector<std::vector<int> > tmpEdges = allEdges;
+          voronoiSeeds.clear();
+          allEdges.clear();
+          for (int j=0; j<tmpSeeds.size(); j++)
+          {
+            if (!removeSeeds[j])
+            {
+              voronoiSeeds.push_back(tmpSeeds[j]);
+              allEdges.push_back(tmpEdges[j]);
+            }
             else
-              voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(j));
+            {
+              for (int k=0; k<fullCenterlineEdges.size(); k++)
+              {
+                int centerlineSize = fullCenterlineEdges[k].size();
+                if (fullCenterlineEdges[k][0] == j || fullCenterlineEdges[k][centerlineSize - 1] == j)
+                {
+                  removeCenterlinePath[k] = 1;
+                  removePathIds.push_back(j);
+                }
+              }
+            }
+          }
+
+          std::vector<std::vector<int> > tmpCenterlineEdges = fullCenterlineEdges;
+          fullCenterlineEdges.clear();
+
+          for (int j=0; j<tmpCenterlineEdges.size(); j++)
+          {
+            for (int k=0; k<tmpCenterlineEdges[j].size(); k++)
+            {
+              for (int l=0; l<removePathIds.size(); l++)
+              {
+                if (tmpCenterlineEdges[j][k] > removePathIds[l])
+                {
+                  tmpCenterlineEdges[j][k]--;
+                }
+              }
+            }
+          }
+
+          for (int j=0; j<tmpCenterlineEdges.size(); j++)
+          {
+            if (!removeCenterlinePath[j])
+            {
+              fullCenterlineEdges.push_back(tmpCenterlineEdges[j]);
+            }
           }
         }
       }
+      fprintf(stdout,"WHATS THE SIZE: %d %d %d\n", allEdges.size(), voronoiSeeds.size(), fullCenterlineEdges.size());
     }
   }
 
@@ -1275,6 +1441,7 @@ int vtkSVCenterlines::RequestData(
 
   appender->Update();
 
+  fprintf(stdout,"HERE?\n");
   vtkNew(vtkPolyData, currentLine);
   vtkNew(vtkCellArray, newCells);
   vtkNew(vtkPoints, newPoints);
@@ -1283,11 +1450,26 @@ int vtkSVCenterlines::RequestData(
                              appender->GetOutput()->GetNumberOfPoints());
   for (int i=0; i<fullCenterlineEdges.size(); i++)
   {
-
     vtkNew(vtkPolyLine, newLine);
+
+    // First point if wanted
+    if (this->AppendEndPointsToCenterlines)
+    {
+      if (this->SourceSeedIds)
+      {
+        // Enter source seed here
+        double startPt[3];
+        input->GetPoint(this->SourceSeedIds->GetId(0), startPt);
+
+        int newPointId = newPoints->InsertNextPoint(startPt);
+        newLine->GetPointIds()->InsertNextId(newPointId);
+        newPointData->CopyData(appender->GetInput(fullCenterlineEdges[i][0])->GetPointData(), 0, newPointId);
+      }
+    }
 
     for (int j=0; j<fullCenterlineEdges[i].size(); j++)
     {
+      fprintf(stdout,"GETTING LINE: %d\n", fullCenterlineEdges[i][j]);
       currentLine = appender->GetInput(fullCenterlineEdges[i][j]);
 
       int kStart = 1;
@@ -1303,8 +1485,33 @@ int vtkSVCenterlines::RequestData(
         newPointData->CopyData(currentLine->GetPointData(), k, newPointId);
       }
     }
+
+    // End point if wanted
+    if (this->AppendEndPointsToCenterlines)
+    {
+      if (this->TargetSeedIds)
+      {
+        // Enter target seed here
+        int edgeSize = fullCenterlineEdges[i].size();
+        int polePointId = voronoiSeeds[fullCenterlineEdges[i][edgeSize-1]][1];
+        int targetPointId = this->PoleIds->IsId(polePointId);
+        if (targetPointId != -1)
+        {
+          double endPt[3];
+          input->GetPoint(targetPointId, endPt);
+
+          int numPtsInLine = appender->GetInput(fullCenterlineEdges[i][edgeSize-1])->GetNumberOfPoints();
+
+          int newPointId = newPoints->InsertNextPoint(endPt);
+          newLine->GetPointIds()->InsertNextId(newPointId);
+          newPointData->CopyData(appender->GetInput(fullCenterlineEdges[i][edgeSize-1])->GetPointData(), numPtsInLine-1, newPointId);
+        }
+      }
+    }
+
     newCells->InsertNextCell(newLine);
   }
+  fprintf(stdout,"OUT\n");
   newPointData->Squeeze();
 
   vtkNew(vtkPolyData, finalLinesPd);
@@ -1313,6 +1520,7 @@ int vtkSVCenterlines::RequestData(
   finalLinesPd->GetPointData()->PassData(newPointData);
 
   output->ShallowCopy(finalLinesPd);
+  fprintf(stdout,"EA\n");
   //output->ShallowCopy(centerlineBacktracing->GetOutput());
 
 //  vtkIdList* hitTargets = centerlineBacktracing->GetHitTargets();
