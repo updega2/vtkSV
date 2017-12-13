@@ -1174,28 +1174,45 @@ int vtkSVGroupsSegmenter::RunFilter()
 
               int linePtId = centerlineSubPtIds->GetTuple1(realCellId);
 
-              //int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
+              int neighPatchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
               // THIS IS WHERE WE TRY TO USE CELL ANGULAR LOCATION FOR PATCH VAL
               double angularVal = angularPCoords->GetTuple1(realCellId);
 
               int patchVal = -1;
               for (int k=0; k<allAngleBounds[listIter].size(); k++)
               {
+                int thisSize = allAngleBounds[listIter].size();
                 if (k == 0)
                 {
                   if (angularVal >= allAngleBounds[listIter][k][0] ||
-                      angularVal <  allAngleBounds[listIter][k][1])
+                      angularVal <=  allAngleBounds[listIter][k][1])
                   {
                     patchVal = allPatchValues[listIter][k];
+                    break;
                   }
+                  //else if (angularVal > allAngleBounds[listIter][k][1] &&
+                  //         angularVal < allAngleBounds[listIter][(k+1)%thisSize][0])
+                  //{
+                  //  fprintf(stdout,"NEED TO PICK ONE!!\n");
+                  //  patchVal = allPatchValues[listIter][k];
+                  //  break;
+                  //}
                 }
                 else
                 {
                   if (angularVal >= allAngleBounds[listIter][k][0] &&
-                      angularVal <  allAngleBounds[listIter][k][1])
+                      angularVal <=  allAngleBounds[listIter][k][1])
                   {
                     patchVal = allPatchValues[listIter][k];
+                    break;
                   }
+                  //else if (angularVal > allAngleBounds[listIter][k][1] &&
+                  //         angularVal < allAngleBounds[listIter][(k+1)%thisSize][0])
+                  //{
+                  //  fprintf(stdout,"NEED TO PICK ONE!!\n");
+                  //  patchVal = allPatchValues[listIter][k];
+                  //  break;
+                  //}
                 }
               }
 
@@ -1376,14 +1393,14 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
-    //{
-    //  if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
-    //  {
-    //    vtkErrorMacro("Error matching end patches");
-    //    return SV_ERROR;
-    //  }
-    //}
+    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    {
+      if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
+      {
+        vtkErrorMacro("Error matching end patches");
+        return SV_ERROR;
+      }
+    }
 
     // Set vals on work pd
     for (int j=0; j<branchPd->GetNumberOfCells(); j++)
@@ -1437,12 +1454,12 @@ int vtkSVGroupsSegmenter::RunFilter()
   //  return SV_ERROR;
   //}
 
-  //// For checking purposes
-  //if (this->FixPatchesWithPolycube() != SV_OK)
-  //{
-  //  fprintf(stderr,"Couldn't fix patches\n");
-  //  return SV_ERROR;
-  //}
+  // For checking purposes
+  if (this->FixPatchesWithPolycube() != SV_OK)
+  {
+    fprintf(stderr,"Couldn't fix patches\n");
+    return SV_ERROR;
+  }
 
   if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
   {
@@ -2801,7 +2818,6 @@ int vtkSVGroupsSegmenter::GetSpecificRegions(vtkPolyData *pd, std::string arrayN
                                              std::vector<Region> &allRegions,
                                              vtkIdList *targetRegions)
 {
-
   int numCells = pd->GetNumberOfCells();
   int numPoints = pd->GetNumberOfPoints();
 
@@ -2926,12 +2942,17 @@ int vtkSVGroupsSegmenter::GetSpecificRegions(vtkPolyData *pd, std::string arrayN
 
     if (pointCellsValues->GetNumberOfIds() == 2)
     {
-      isNonTargetBoundaryPoint[i] = 1;
       if (targetRegions->IsId(pointCellsValues->GetId(0)) != -1 &&
           targetRegions->IsId(pointCellsValues->GetId(1)) != -1)
+      {
         isBoundaryPoint[i] = 1;
+        isNonTargetBoundaryPoint[i] = 0;
+      }
       else
+      {
         isBoundaryPoint[i] = 0;
+        isNonTargetBoundaryPoint[i] = 1;
+      }
     }
     else
     {
@@ -2973,6 +2994,7 @@ int vtkSVGroupsSegmenter::GetSpecificRegions(vtkPolyData *pd, std::string arrayN
         }
       }
     }
+
 
     allRegions[i].NumberOfCorners = tempCornerPoints.size();
     //fprintf(stdout,"NUM CORNS: %d\n", allRegions[i].NumberOfCorners);
@@ -3733,7 +3755,6 @@ int vtkSVGroupsSegmenter::FixSidePatches(vtkPolyData *pd)
   targetRegions->SetId(2, 2);
   targetRegions->SetId(3, 3);
 
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CHEEE.vtp", pd);
   std::vector<Region> sideRegions;
   if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, targetRegions) != SV_OK)
   {
@@ -3808,9 +3829,45 @@ int vtkSVGroupsSegmenter::FixSidePatches(vtkPolyData *pd)
             }
           }
         }
+        if (sideRegions[minPatch].NumberOfElements == 1 ||
+            sideRegions[minPatch].BoundaryEdges.size() == 0)
+        {
+          for (int j=0; j<sideRegions[minPatch].Elements.size(); j++)
+          {
+            int cellId = sideRegions[minPatch].Elements[j];
+            vtkIdType npts, *pts;
+            pd->GetCellPoints(cellId, npts, pts);
+            for (int k=0; k<npts; k++)
+            {
+              int ptId0 = pts[k];
+              int ptId1 = pts[(k+1)%npts];
+
+              vtkNew(vtkIdList, cellEdgeNeighbors);
+              pd->GetCellEdgeNeighbors(cellId, ptId0, ptId1, cellEdgeNeighbors);
+
+              for (int l=0; l<cellEdgeNeighbors->GetNumberOfIds(); l++)
+              {
+                int edgeCellId  = cellEdgeNeighbors->GetId(l);
+                int cellVal = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(edgeCellId);
+
+                if (cellVal != wholePatchFix[i])
+                {
+                  int isId = patchIds->IsId(cellVal);
+                  if (isId == -1)
+                  {
+                    patchIds->InsertNextId(cellVal);
+                    patchCount->InsertNextId(1);
+                  }
+                  else
+                    patchCount->SetId(isId, patchCount->GetId(isId)+1);
+                }
+              }
+            }
+          }
+        }
 
         int maxVal = -1;
-        int maxPatchId;
+        int maxPatchId = -1;
         for (int j=0; j<patchIds->GetNumberOfIds(); j++)
         {
           if (patchCount->GetId(j) > maxVal)
@@ -3818,6 +3875,11 @@ int vtkSVGroupsSegmenter::FixSidePatches(vtkPolyData *pd)
             maxPatchId = patchIds->GetId(j);
             maxVal = patchCount->GetId(j);
           }
+        }
+        if (maxPatchId == -1)
+        {
+          fprintf(stderr,"A patch value to change bad patch to was not found\n");
+          return SV_ERROR;
         }
 
         for (int k=0; k<sideRegions[minPatch].Elements.size(); k++)
@@ -3854,7 +3916,7 @@ int vtkSVGroupsSegmenter::FixSidePatches(vtkPolyData *pd)
   {
     if (connectedOpenCornerPts[i].size() != 4)
     {
-      fprintf(stderr,"TELLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\n");
+      fprintf(stderr,"THERE ARE NOT FOUR CORNER POINTS ON THIS PATCH, THIS IS QUITE BAD\n");
     }
   }
 
