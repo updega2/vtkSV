@@ -93,10 +93,10 @@
 #include "vtkVersion.h"
 #include "vtkXMLPolyDataWriter.h"
 
-#include "vtkvmtkPolyDataCenterlineAbscissaMetricFilter.h"
+#include "vtkvmtkCenterlineAttributesFilter.h"
+#include "vtkvmtkMath.h"
 #include "vtkvmtkMergeCenterlines.h"
 #include "vtkvmtkPolyDataCenterlineGroupsClipper.h"
-#include "vtkvmtkCenterlineAttributesFilter.h"
 
 #include <algorithm>
 
@@ -382,15 +382,6 @@ int vtkSVGroupsSegmenter::PrepFilter()
 // ----------------------
 int vtkSVGroupsSegmenter::RunFilter()
 {
-  // Generate abscissa on merged centerlines
-  vtkNew(vtkvmtkCenterlineAttributesFilter, attributer);
-  attributer->SetInputData(this->MergedCenterlines);
-  attributer->SetAbscissasArrayName("Abscissas");
-  attributer->SetParallelTransportNormalsArrayName("ParallelTransportNormals");
-  attributer->Update();
-
-  this->MergedCenterlines->DeepCopy(attributer->GetOutput());
-
   // Generate normals just in case they don't exist
   vtkNew(vtkPolyDataNormals, normaler);
   normaler->SetInputData(this->WorkPd);
@@ -540,6 +531,11 @@ int vtkSVGroupsSegmenter::RunFilter()
   int numberOfCells = this->WorkPd->GetNumberOfCells();
 
   // Add array for new cell normals on surface
+  vtkNew(vtkDoubleArray, preRotationNormals);
+  preRotationNormals->SetName("PreRotationNormals");
+  preRotationNormals->SetNumberOfComponents(3);
+  preRotationNormals->SetNumberOfTuples(numberOfCells);
+
   vtkNew(vtkDoubleArray, centerlineBasedNormals);
   centerlineBasedNormals->SetName("CenterlinesBasedCellNormals");
   centerlineBasedNormals->SetNumberOfComponents(3);
@@ -566,14 +562,14 @@ int vtkSVGroupsSegmenter::RunFilter()
   centerlineSubPtIds->SetNumberOfTuples(numberOfCells);
 
   vtkNew(vtkDoubleArray, centerlinePCoords);
-  centerlinePCoords->SetName("ClostestCenterlinePCoord");
+  centerlinePCoords->SetName("CenterlinePCoord");
   centerlinePCoords->SetNumberOfComponents(1);
   centerlinePCoords->SetNumberOfTuples(numberOfCells);
 
-  vtkNew(vtkDoubleArray, locationArray);
-  locationArray->SetName("CircumferentialPosition");
-  locationArray->SetNumberOfComponents(3);
-  locationArray->SetNumberOfTuples(numberOfCells);
+  vtkNew(vtkDoubleArray, angularPCoords);
+  angularPCoords->SetName("AngularPCoord");
+  angularPCoords->SetNumberOfComponents(1);
+  angularPCoords->SetNumberOfTuples(numberOfCells);
 
   // Get all group ids
   vtkNew(vtkIdList, groupIds);
@@ -629,21 +625,11 @@ int vtkSVGroupsSegmenter::RunFilter()
     noRadiusTubes->SetInput(centerlineBranchPd);
     noRadiusTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     noRadiusTubes->SetUseRadiusInformation(0);
+    noRadiusTubes->UseLocalCoordinatesOn();
+    noRadiusTubes->SetLocalCoordinatesArrayName("Local");
 
     int branchNumberOfCells = branchPd->GetNumberOfCells();
     // Loop through points to evaluate function at each point
-    fprintf(stdout,"Computing boundary vectors of group %d...\n", groupId);
-
-    //vtkNew(vtkPolyData, boundaryRowsPd);
-    //if (this->GetNBoundaryRows(branchPd, 7, boundaryRowsPd) != SV_OK)
-    //{
-    //  fprintf(stderr, "Error getting n boundary rows\n");
-    //  return SV_ERROR;
-    //}
-
-    //std::string oneName = "/Users/adamupdegrove/Desktop/tmp/ROWS_"+std::to_string(i)+".vtp";
-    //vtkSVIOUtils::WriteVTPFile(oneName, boundaryRowsPd);
-
     fprintf(stdout,"Computing closest centerline points per cell of group %d...\n", groupId);
 
     vtkIdType nlinepts, *linepts;
@@ -655,8 +641,6 @@ int vtkSVGroupsSegmenter::RunFilter()
     if (testNeighbors->GetNumberOfIds() == 1)
       isTerminating = 1;
 
-    double maxPCoord = -1.0;
-    double minPCoord = VTK_SV_LARGE_DOUBLE;
     for (int j=0; j<branchNumberOfCells; j++)
     {
       // Get cell point coords
@@ -700,10 +684,6 @@ int vtkSVGroupsSegmenter::RunFilter()
         return SV_ERROR;
       }
 
-      //centerlineSubPtIds->SetTuple1(realCellId, linePtId);
-      //double pCoord = groupTubes->GetLastPolyBallCellPCoord();
-      //double centerlinePCoord = linePtId + pCoord;
-
       noRadiusTubes->EvaluateFunction(center);
       int absLinePtId = noRadiusTubes->GetLastPolyBallCellSubId();
       double absPCoord = noRadiusTubes->GetLastPolyBallCellPCoord();
@@ -712,19 +692,62 @@ int vtkSVGroupsSegmenter::RunFilter()
       centerlineSubPtIds->SetTuple1(realCellId, absLinePtId);
       centerlinePCoords->SetTuple1(realCellId, absCenterlinePCoord);
 
-      if (absCenterlinePCoord > maxPCoord)
-        maxPCoord = absCenterlinePCoord;
-      if (absCenterlinePCoord < minPCoord)
-        minPCoord = absCenterlinePCoord;
+      double absRadius = noRadiusTubes->GetLastPolyBallCenterRadius();
+      double absClosestPt[3];
+      noRadiusTubes->GetLastPolyBallCenter(absClosestPt);
 
-      // TRYING ANOTHER METRIC
+      double absLocalX[3];
+      noRadiusTubes->GetLastLocalCoordX(absLocalX);
+      vtkMath::Normalize(absLocalX);
 
-      //this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(realCellId, linePtId);
+      if (absLinePtId >= nlinepts - 1)
+      {
+        fprintf(stderr,"Last point of line selected, didn't think that was possible\n");
+        return SV_ERROR;
+      }
+
+      double centerlinePt0[3], centerlinePt1[3];
+      centerlineBranchPd->GetPoint(absLinePtId, centerlinePt0);
+      centerlineBranchPd->GetPoint(absLinePtId+1, centerlinePt1);
+
+      double absTangent[3];
+      vtkMath::Subtract(centerlinePt1, centerlinePt0, absTangent);
+      vtkMath::Normalize(absTangent);
+
+      double projectedPoint[3];
+      vtkPlane::ProjectPoint(center, absClosestPt, absTangent, projectedPoint);
+
+      double positionVector[3];
+      vtkMath::Subtract(projectedPoint, absClosestPt, positionVector);
+      vtkMath::Normalize(positionVector);
+
+      double normalPoint[3];
+      vtkMath::Add(absClosestPt, absLocalX, normalPoint);
+
+      double projectedNormalPoint[3];
+      vtkPlane::ProjectPoint(normalPoint, absClosestPt, absTangent, projectedNormalPoint);
+
+      double projectedNormal[3];
+      vtkMath::Subtract(projectedNormalPoint, absClosestPt, projectedNormal);
+      vtkMath::Normalize(projectedNormal);
+
+      double absCross[3];
+      vtkMath::Cross(positionVector, projectedNormal, absCross);
+
+      double tangentDot = vtkMath::Dot(absTangent, absCross);
+
+      double absAngle = vtkvmtkMath::AngleBetweenNormals(positionVector, projectedNormal);
+
+      if (tangentDot < 0.0)
+        {
+        absAngle *= -1.0;
+        }
+
+      angularPCoords->SetTuple1(realCellId, absAngle);
 
       double cellLocVec[3];
       vtkMath::Subtract(center, closestPt, cellLocVec);
       vtkMath::Normalize(cellLocVec);
-      locationArray->SetTuple(realCellId, cellLocVec);
 
       double orig_alpha = this->NormalsWeighting;
       double alpha = this->NormalsWeighting;
@@ -746,23 +769,112 @@ int vtkSVGroupsSegmenter::RunFilter()
         cellClusterVec[k] = alpha*cellNormal[k] + (1-alpha)*cellLocVec[k];
       vtkMath::Normalize(cellClusterVec);
 
-      centerlineBasedNormals->SetTuple(realCellId, cellClusterVec);
+      preRotationNormals->SetTuple(realCellId, cellClusterVec);
     }
 
+    // Now go through and transform to local coordinate system and set
+    // the new vector to use for clustering
     for (int j=0; j<branchNumberOfCells; j++)
     {
       //Get real cell id
       int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
 
-      double currPCoord = centerlinePCoords->GetTuple1(realCellId);
-      double newPCoord = (currPCoord - minPCoord)/(maxPCoord - minPCoord);
+      double locals[6][3];
+      centerlineLocalX->GetTuple(realCellId, locals[0]);
+      centerlineLocalY->GetTuple(realCellId, locals[1]);
+      centerlineLocalZ->GetTuple(realCellId, locals[4]);
+      for (int k=0; k<3; k++)
+      {
+        locals[2][k] = -1.0*locals[0][k];
+        locals[3][k] = -1.0*locals[1][k];
+        locals[5][k] = -1.0*locals[4][k];
+      }
 
-      centerlinePCoords->SetTuple1(realCellId, newPCoord);
+      // Compute the rotation from global coordinate system to centerlines
+      // local coordinate system
+      double rotMat[9];
+      this->ComputeRotationMatrix(locals[0], locals[1], locals[4], rotMat);
+
+      double cellClusterVec[3];
+      preRotationNormals->GetTuple(realCellId, cellClusterVec);
+
+      // Apply rotation matrix to the normal to get the new normal
+      double newNormal[3];
+      for (int k=0; k<3; k++)
+      {
+        newNormal[k] = rotMat[k*3]*cellClusterVec[0] +
+                       rotMat[(k*3)+1]*cellClusterVec[1] +
+                       rotMat[(k*3)+2]*cellClusterVec[2];
+      }
+
+      centerlineBasedNormals->SetTuple(realCellId, newNormal);
     }
+  }
 
-    if (this->EnforceBoundaryDirections && this->MergedCenterlines->GetNumberOfCells() > 1)
+
+  if (this->EnforceBoundaryDirections && this->MergedCenterlines->GetNumberOfCells() > 1)
+  {
+    // Now enforce boundaries if we need to!!!!
+    for (int i=0; i<numGroups; i++)
     {
+      int groupId = groupIds->GetId(i);
       fprintf(stdout,"ENFORCING BOUNDARY OF GROUP: %d\n", groupId);
+
+      vtkNew(vtkPolyData, branchPd);
+      vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1,
+        this->GroupIdsArrayName, branchPd);
+      branchPd->BuildLinks();
+
+      vtkNew(vtkPolyData, centerlineBranchPd);
+      vtkSVGeneralUtils::ThresholdPd(this->MergedCenterlines, groupId, groupId, 1,
+        this->GroupIdsArrayName, centerlineBranchPd);
+      centerlineBranchPd->BuildLinks();
+
+      vtkNew(vtkPolyData, polyBranchPd);
+      vtkSVGeneralUtils::ThresholdPd(this->PolycubePd, groupId, groupId, 1,
+        this->GroupIdsArrayName, polyBranchPd);
+      polyBranchPd->BuildLinks();
+
+      int branchNumberOfCells = branchPd->GetNumberOfCells();
+
+      // Loop through points to evaluate function at each point
+      fprintf(stdout,"Computing boundary vectors of group %d...\n", groupId);
+
+      vtkIdType nlinepts, *linepts;
+      int centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
+      this->MergedCenterlines->GetCellPoints(centerlineId, nlinepts, linepts);
+      int isTerminating = 0;
+      vtkNew(vtkIdList, testNeighbors);
+      this->MergedCenterlines->GetPointCells(linepts[nlinepts-1], testNeighbors);
+      if (testNeighbors->GetNumberOfIds() == 1)
+        isTerminating = 1;
+
+      double maxPCoord = -1.0;
+      double minPCoord = VTK_SV_LARGE_DOUBLE;
+      for (int j=0; j<branchNumberOfCells; j++)
+      {
+        //Get real cell id
+        int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
+
+        double absCenterlinePCoord = centerlinePCoords->GetTuple1(realCellId);
+
+        if (absCenterlinePCoord > maxPCoord)
+          maxPCoord = absCenterlinePCoord;
+        if (absCenterlinePCoord < minPCoord)
+          minPCoord = absCenterlinePCoord;
+      }
+
+      for (int j=0; j<branchNumberOfCells; j++)
+      {
+        //Get real cell id
+        int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
+
+        double currPCoord = centerlinePCoords->GetTuple1(realCellId);
+        double newPCoord = (currPCoord - minPCoord)/(maxPCoord - minPCoord);
+
+        centerlinePCoords->SetTuple1(realCellId, newPCoord);
+      }
+
       fprintf(stdout,"MAX: %.6f MIN: %.6f\n", maxPCoord, minPCoord);
       // Do boundary cell stuffs
       // Get open boundary edges
@@ -774,15 +886,6 @@ int vtkSVGroupsSegmenter::RunFilter()
         return SV_ERROR;
       }
 
-      //fprintf(stdout,"OPEN EDGES\n");
-      //for (int j=0; j<openEdges.size(); j++)
-      //{
-      //  fprintf(stdout," EDGE: %d: ", j);
-      //  for (int k=0; k<openEdges[j].size(); k++)
-      //    fprintf(stdout,"%d ", openEdges[j][k]);
-      //  fprintf(stdout,"\n");
-      //}
-
       std::vector<std::vector<int> > shiftedOpenEdges;
       if (this->ShiftEdgeList(branchPd, openEdges, shiftedOpenEdges) != SV_OK)
       {
@@ -791,8 +894,11 @@ int vtkSVGroupsSegmenter::RunFilter()
       }
 
       // TODO NEEDS TO BE CHANGED FOR SPECIAL TRI CASE
+      std::vector<std::vector<std::vector<double> > > allAngleBounds;
+      std::vector<std::vector<int> > allPatchValues;
       std::vector<std::vector<int> > growCellLists;
       std::vector<int> cellBool(branchNumberOfCells);
+
       for (int j=0; j<branchNumberOfCells; j++)
         cellBool[j] = 0;
 
@@ -801,20 +907,60 @@ int vtkSVGroupsSegmenter::RunFilter()
         std::vector<std::vector<int> > splitOpenEdges;
         this->SplitEdgeList(branchPd, shiftedOpenEdges[j], splitOpenEdges);
 
-        std::vector<int> allCellList;
+        std::vector<std::vector<double> > edgeAngleBounds;
+        std::vector<int> edgePatchValues;
+        std::vector<int> edgeCellList;
         for (int k=0; k<splitOpenEdges.size(); k++)
         {
           int edgeSize = splitOpenEdges[k].size();
+          if (edgeSize < 4)
+          {
+            fprintf(stderr,"EDGE SIZE IS LESS THAN 4!!!\n");
+            return SV_ERROR;
+          }
+
           int edgePtId0 = branchPd->GetPointData()->GetArray("TmpInternalIds")->
             GetTuple1(splitOpenEdges[k][0]);
           int edgePtIdN = branchPd->GetPointData()->GetArray("TmpInternalIds")->
             GetTuple1(splitOpenEdges[k][edgeSize-1]);
+
+          int branchPtId0   = splitOpenEdges[k][0];
+          int branchPtId1   = splitOpenEdges[k][1];
+          int branchPtIdN   = splitOpenEdges[k][edgeSize-1];
+          int branchPtIdNm1 = splitOpenEdges[k][edgeSize-2];
+
+          vtkNew(vtkIdList, firstCellId);
+          branchPd->GetCellEdgeNeighbors(-1, branchPtId0, branchPtId1, firstCellId);
+          if (firstCellId->GetNumberOfIds() != 1)
+          {
+            fprintf(stderr,"Something went wrong here\n");
+            return SV_OK;
+          }
+          int realCellId0 = branchPd->GetCellData()->GetArray("TmpInternalIds")->
+            GetTuple1(firstCellId->GetId(0));
+          double firstAngularVal = angularPCoords->GetTuple1(realCellId0);
+
+          vtkNew(vtkIdList, lastCellId);
+          branchPd->GetCellEdgeNeighbors(-1, branchPtIdN, branchPtIdNm1, lastCellId);
+          if (lastCellId->GetNumberOfIds() != 1)
+          {
+            fprintf(stderr,"Something went wrong here\n");
+            return SV_OK;
+          }
+          int realCellIdN = branchPd->GetCellData()->GetArray("TmpInternalIds")->
+            GetTuple1(lastCellId->GetId(0));
+          double lastAngularVal = angularPCoords->GetTuple1(realCellIdN);
 
           if (edgePtId0 == -1 || edgePtIdN == -1)
           {
             fprintf(stdout,"Could not recover true ids\n");
             return SV_ERROR;
           }
+          std::vector<double> angleBounds;
+          angleBounds.push_back(firstAngularVal);
+          angleBounds.push_back(lastAngularVal);
+          std::sort(angleBounds.begin(), angleBounds.end());
+          edgeAngleBounds.push_back(angleBounds);
 
           int polyPtId0 = polyBranchPd->GetPointData()->GetArray("SlicePoints")->
             LookupValue(edgePtId0);
@@ -844,6 +990,8 @@ int vtkSVGroupsSegmenter::RunFilter()
             GetTuple1(polyCellId->GetId(0));
           patchVal = patchVal%6;
 
+          edgePatchValues.push_back(patchVal);
+
           for (int l=0; l<splitOpenEdges[k].size()-1; l++)
           {
             int splitPtId0 = splitOpenEdges[k][l];
@@ -859,7 +1007,7 @@ int vtkSVGroupsSegmenter::RunFilter()
             }
 
             int branchCellId = splitCellId->GetId(0);
-            allCellList.push_back(branchCellId);
+            edgeCellList.push_back(branchCellId);
             cellBool[branchCellId];
 
             int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
@@ -883,10 +1031,12 @@ int vtkSVGroupsSegmenter::RunFilter()
 
             vtkMath::Normalize(boundarySetVec);
 
-            centerlineBasedNormals->SetTuple(realCellId, boundarySetVec);
+            preRotationNormals->SetTuple(realCellId, boundarySetVec);
           }
         }
-        growCellLists.push_back(allCellList);
+        growCellLists.push_back(edgeCellList);
+        allPatchValues.push_back(edgePatchValues);
+        allAngleBounds.push_back(edgeAngleBounds);
       }
 
       if (growCellLists.size() == 2)
@@ -911,15 +1061,26 @@ int vtkSVGroupsSegmenter::RunFilter()
         if (!(allVals[0] < allVals[1]))
         {
           // Gotta switch
-          std::vector<int> tmpList0, tmpList1;
-          for (int j=0; j<growCellLists[0].size(); j++)
-            tmpList1.push_back(growCellLists[0][j]);
-          for (int j=0; j<growCellLists[1].size(); j++)
-            tmpList0.push_back(growCellLists[1][j]);
+          std::vector<int> tmpList1 = growCellLists[0];
+          std::vector<int> tmpList0 = growCellLists[1];
 
           growCellLists.clear();
           growCellLists.push_back(tmpList0);
           growCellLists.push_back(tmpList1);
+
+          std::vector<std::vector<double> > tmpAngleList1 = allAngleBounds[0];
+          std::vector<std::vector<double> > tmpAngleList0 = allAngleBounds[1];
+
+          allAngleBounds.clear();
+          allAngleBounds.push_back(tmpAngleList0);
+          allAngleBounds.push_back(tmpAngleList1);
+
+          std::vector<int> tmpPatchList1 = allPatchValues[0];
+          std::vector<int> tmpPatchList0 = allPatchValues[1];
+
+          allPatchValues.clear();
+          allPatchValues.push_back(tmpPatchList0);
+          allPatchValues.push_back(tmpPatchList1);
         }
       }
 
@@ -927,6 +1088,64 @@ int vtkSVGroupsSegmenter::RunFilter()
       {
         fprintf(stderr,"WE GOT OURSELVES A PROBLEMO\n");
         return SV_ERROR;
+      }
+
+      // Find minimum patch val and swap order
+      for (int j=0; j<allAngleBounds.size(); j++)
+      {
+        vtkNew(vtkDoubleArray, tmpSortAngles);
+        vtkNew(vtkIdList, angleIndices);
+        for (int k=0; k<allAngleBounds[j].size(); k++)
+        {
+          tmpSortAngles->InsertNextTuple1(allAngleBounds[j][k][0]);
+          angleIndices->InsertNextId(k);
+        }
+
+        vtkSortDataArray::Sort(tmpSortAngles, angleIndices);
+        std::vector<std::vector<double> > newAngleBounds = allAngleBounds[j];
+        std::vector<int> newPatchValues = allPatchValues[j];
+        for (int k=0; k<angleIndices->GetNumberOfIds(); k++)
+        {
+          int listIndex = angleIndices->GetId(k);
+          if (k == 0)
+          {
+            if (allAngleBounds[j][listIndex][1] < 0.0)
+            {
+              allAngleBounds[j][listIndex][0] = SV_PI;
+            }
+            else
+            {
+              double tmp = allAngleBounds[j][listIndex][0];
+              allAngleBounds[j][listIndex][0] = allAngleBounds[j][listIndex][1];
+              allAngleBounds[j][listIndex][1] = tmp;
+            }
+          }
+
+          newAngleBounds[k].clear();
+          newAngleBounds[k] = allAngleBounds[j][listIndex];
+
+          newPatchValues[k] = allPatchValues[j][listIndex];
+        }
+
+        for (int k=0; k<newAngleBounds.size(); k++)
+        {
+          int thisSize = newAngleBounds.size();
+          double lastVal  = newAngleBounds[k][1];
+          double firstVal = newAngleBounds[(k+1)%thisSize][0];
+          double avgVal = (lastVal + firstVal)/2.0;
+
+          newAngleBounds[k][1] = avgVal;
+          newAngleBounds[(k+1)%thisSize][0] = avgVal;
+        }
+
+        for (int k=0; k<newAngleBounds.size(); k++)
+        {
+          allAngleBounds[j].clear();
+          allAngleBounds[j] = newAngleBounds;
+
+          allPatchValues[j] = newPatchValues;
+
+        }
       }
 
       std::vector<std::vector<int> > cellNeighbors;
@@ -954,7 +1173,37 @@ int vtkSVGroupsSegmenter::RunFilter()
                 GetTuple1(growCellLists[listIter][j]);
 
               int linePtId = centerlineSubPtIds->GetTuple1(realCellId);
-              int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
+
+              //int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
+              // THIS IS WHERE WE TRY TO USE CELL ANGULAR LOCATION FOR PATCH VAL
+              double angularVal = angularPCoords->GetTuple1(realCellId);
+
+              int patchVal = -1;
+              for (int k=0; k<allAngleBounds[listIter].size(); k++)
+              {
+                if (k == 0)
+                {
+                  if (angularVal >= allAngleBounds[listIter][k][0] ||
+                      angularVal <  allAngleBounds[listIter][k][1])
+                  {
+                    patchVal = allPatchValues[listIter][k];
+                  }
+                }
+                else
+                {
+                  if (angularVal >= allAngleBounds[listIter][k][0] &&
+                      angularVal <  allAngleBounds[listIter][k][1])
+                  {
+                    patchVal = allPatchValues[listIter][k];
+                  }
+                }
+              }
+
+              if (patchVal == -1)
+              {
+                fprintf(stderr,"A PATCH VAL NOT FOUND BY ANGULAR METHOD\n");
+                return SV_ERROR;
+              }
 
               for (int k=0; k<numCellNeighbors[growCellLists[listIter][j]]; k++)
               {
@@ -975,7 +1224,7 @@ int vtkSVGroupsSegmenter::RunFilter()
                     cellBool[neighborCellId] = 1;
 
                     double currentVec[3];
-                    centerlineBasedNormals->GetTuple(neighborRealCellId, currentVec);
+                    preRotationNormals->GetTuple(neighborRealCellId, currentVec);
 
                     double locals[6][3];
                     centerlineLocalX->GetTuple(neighborRealCellId, locals[0]);
@@ -995,7 +1244,7 @@ int vtkSVGroupsSegmenter::RunFilter()
                     for (int l=0; l<3; l++)
                       boundarySetVec[l] = beta * currentVec[l] +  (1 - beta) * locals[patchVal][l];
 
-                    centerlineBasedNormals->SetTuple(neighborRealCellId, boundarySetVec);
+                    preRotationNormals->SetTuple(neighborRealCellId, boundarySetVec);
                     this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neighborRealCellId, patchVal);
                   }
                 }
@@ -1007,227 +1256,186 @@ int vtkSVGroupsSegmenter::RunFilter()
         begVessel += pCoordThr;
         endVessel -= pCoordThr;
       }
-    }
 
-    // Now go through and transform to local coordinate system and set
-    // the new vector to use for clustering
-    for (int j=0; j<branchNumberOfCells; j++)
-    {
-      //Get real cell id
-      int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
-
-      double locals[6][3];
-      centerlineLocalX->GetTuple(realCellId, locals[0]);
-      centerlineLocalY->GetTuple(realCellId, locals[1]);
-      centerlineLocalZ->GetTuple(realCellId, locals[4]);
-      for (int k=0; k<3; k++)
+      // Now go through and transform to local coordinate system and set
+      // the new vector to use for clustering
+      for (int j=0; j<branchNumberOfCells; j++)
       {
-        locals[2][k] = -1.0*locals[0][k];
-        locals[3][k] = -1.0*locals[1][k];
-        locals[5][k] = -1.0*locals[4][k];
+        //Get real cell id
+        int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
+
+        double locals[6][3];
+        centerlineLocalX->GetTuple(realCellId, locals[0]);
+        centerlineLocalY->GetTuple(realCellId, locals[1]);
+        centerlineLocalZ->GetTuple(realCellId, locals[4]);
+        for (int k=0; k<3; k++)
+        {
+          locals[2][k] = -1.0*locals[0][k];
+          locals[3][k] = -1.0*locals[1][k];
+          locals[5][k] = -1.0*locals[4][k];
+        }
+
+        // Compute the rotation from global coordinate system to centerlines
+        // local coordinate system
+        double rotMat[9];
+        this->ComputeRotationMatrix(locals[0], locals[1], locals[4], rotMat);
+
+        double cellClusterVec[3];
+        preRotationNormals->GetTuple(realCellId, cellClusterVec);
+
+        // Apply rotation matrix to the normal to get the new normal
+        double newNormal[3];
+        for (int k=0; k<3; k++)
+        {
+          newNormal[k] = rotMat[k*3]*cellClusterVec[0] +
+                         rotMat[(k*3)+1]*cellClusterVec[1] +
+                         rotMat[(k*3)+2]*cellClusterVec[2];
+        }
+
+        centerlineBasedNormals->SetTuple(realCellId, newNormal);
       }
-
-      // Compute the rotation from global coordinate system to centerlines
-      // local coordinate system
-      double rotMat[9];
-      this->ComputeRotationMatrix(locals[0], locals[1], locals[4], rotMat);
-
-      double cellClusterVec[3];
-      centerlineBasedNormals->GetTuple(realCellId, cellClusterVec);
-
-      // Apply rotation matrix to the normal to get the new normal
-      double newNormal[3];
-      for (int k=0; k<3; k++)
-      {
-        newNormal[k] = rotMat[k*3]*cellClusterVec[0] +
-                       rotMat[(k*3)+1]*cellClusterVec[1] +
-                       rotMat[(k*3)+2]*cellClusterVec[2];
-      }
-
-      centerlineBasedNormals->SetTuple(realCellId, newNormal);
-
-      double currLocVec[3];
-      locationArray->GetTuple(realCellId, currLocVec);
-
-      double newLocVec[3];
-      for (int k=0; k<3; k++)
-      {
-        newLocVec[k] = rotMat[k*3]*currLocVec[0] +
-                       rotMat[(k*3)+1]*currLocVec[1] +
-                       rotMat[(k*3)+2]*currLocVec[2];
-      }
-      locationArray->SetTuple(realCellId, newLocVec);
     }
   }
 
   this->WorkPd->GetCellData()->AddArray(centerlineBasedNormals);
   this->WorkPd->GetCellData()->AddArray(centerlineSubPtIds);
   this->WorkPd->GetCellData()->AddArray(centerlinePCoords);
-  this->WorkPd->GetCellData()->AddArray(locationArray);
+  this->WorkPd->GetCellData()->AddArray(angularPCoords);
 
+  // CLUSTERING
   // Set up generators
-  vtkNew(vtkPolyData, testerOutPd);
-  testerOutPd->DeepCopy(this->WorkPd);
-  vtkNew(vtkPoints, testerPts);
-  testerPts->SetNumberOfPoints(4);
-  testerPts->SetPoint(0, 1.0, 0.0, 0.0);
-  testerPts->SetPoint(1, 0.0, 1.0, 0.0);
-  testerPts->SetPoint(2, -1.0, 0.0, 0.0);
-  testerPts->SetPoint(3, 0.0, -1.0, 0.0);
+  vtkNew(vtkPoints, generatorsPts);
+  generatorsPts->SetNumberOfPoints(6);
+  generatorsPts->SetPoint(0, 1.0, 0.0, 0.0);
+  generatorsPts->SetPoint(1, 0.0, 1.0, 0.0);
+  generatorsPts->SetPoint(2, -1.0, 0.0, 0.0);
+  generatorsPts->SetPoint(3, 0.0, -1.0, 0.0);
+  generatorsPts->SetPoint(4, 0.0, 0.0, 1.0);
+  generatorsPts->SetPoint(5, 0.0, 0.0, -1.0);
 
-  vtkNew(vtkPolyData, testerPd);
-  testerPd->SetPoints(testerPts);
+  vtkNew(vtkPolyData, generatorsPd);
+  generatorsPd->SetPoints(generatorsPts);
 
-  if (this->RunEdgeWeightedCVT(testerOutPd, testerPd) != SV_OK)
+  vtkIntArray *tmpPatchArray = vtkIntArray::New();
+  tmpPatchArray->SetNumberOfTuples(this->WorkPd->GetNumberOfCells());
+  tmpPatchArray->SetName("PatchIds");
+  tmpPatchArray->FillComponent(0, -1);
+  this->WorkPd->GetCellData()->AddArray(tmpPatchArray);
+  tmpPatchArray->Delete();
+
+  vtkSVGeneralUtils::GiveIds(this->PolycubePd, "TmpInternalIds");
+
+  for (int i=0; i<numGroups; i++)
   {
-    vtkErrorMacro("Error in cvt");
-    return SV_ERROR;
+    int groupId = groupIds->GetId(i);
+
+    fprintf(stdout,"CLUSTERING AND MATCHING ENDS OF %d\n", groupId);
+
+    vtkNew(vtkPolyData, branchPd);
+    vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1,
+        this->GroupIdsArrayName, branchPd);
+    branchPd->BuildLinks();
+
+    vtkNew(vtkPolyData, polyBranchPd);
+    vtkSVGeneralUtils::ThresholdPd(this->PolycubePd, groupId, groupId, 1,
+      this->GroupIdsArrayName, polyBranchPd);
+    polyBranchPd->BuildLinks();
+
+    if (this->RunEdgeWeightedCVT(branchPd, generatorsPd) != SV_OK)
+    {
+      vtkErrorMacro("Error in cvt");
+      return SV_ERROR;
+    }
+
+    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    {
+      if (this->FixEndPatches(branchPd) != SV_OK)
+      {
+        vtkErrorMacro("Error fixing end patches");
+        return SV_ERROR;
+      }
+    }
+
+    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    {
+      if (this->FixSidePatches(branchPd) != SV_OK)
+      {
+        vtkErrorMacro("Error fixing side patches");
+        return SV_ERROR;
+      }
+    }
+
+    vtkNew(vtkIdList, noEndPatches);
+    noEndPatches->SetNumberOfIds(4);
+    for (int j=0; j<4; j++)
+      noEndPatches->SetId(j, j);
+
+    if (this->CorrectSpecificCellBoundaries(branchPd, "PatchIds", noEndPatches) != SV_OK)
+    {
+      vtkErrorMacro("Could not correcto boundaries of surface");
+      return SV_ERROR;
+    }
+
+    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    //{
+    //  if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
+    //  {
+    //    vtkErrorMacro("Error matching end patches");
+    //    return SV_ERROR;
+    //  }
+    //}
+
+    // Set vals on work pd
+    for (int j=0; j<branchPd->GetNumberOfCells(); j++)
+    {
+      //Get real cell id
+      int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
+
+      // Get val
+      int cellVal = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(j);
+
+      // Set val
+      this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(realCellId, cellVal);
+    }
   }
 
-  for (int i=0; i<testerOutPd->GetNumberOfCells(); i++)
+  this->WorkPd->GetCellData()->RemoveArray("TmpInternalIds");
+  this->WorkPd->GetPointData()->RemoveArray("TmpInternalIds");
+
+  this->PolycubePd->GetCellData()->RemoveArray("TmpInternalIds");
+  this->PolycubePd->GetPointData()->RemoveArray("TmpInternalIds");
+
+  vtkNew(vtkIdList, addVals);
+  addVals->SetNumberOfIds(numGroups);
+  for (int i=0; i<numGroups; i++)
+    addVals->SetId(i, 6*i);
+
+  vtkNew(vtkIdList, patchVals);
+  for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
   {
-    int cellVal = testerOutPd->GetCellData()->GetArray("PatchIds")->GetTuple1(i);
-    if (cellVal == 2)
-      testerOutPd->GetCellData()->GetArray("PatchIds")->SetTuple1(i, 0);
-    if (cellVal == 3)
-      testerOutPd->GetCellData()->GetArray("PatchIds")->SetTuple1(i, 1);
+    int patchVal = this->WorkPd->GetCellData()->GetArray("PatchIds")->GetTuple1(i);
+    int groupVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(i);
+    int newVal = patchVal + (addVals->GetId(groupIds->IsId(groupVal)));
+    this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(i, newVal);
+    patchVals->InsertUniqueId(newVal);
   }
 
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/HEREWEGO.vtp", testerOutPd);
+  std::vector<Region> finalRegions;
+  vtkNew(vtkIdList, targetPatches);
+  targetPatches->SetNumberOfIds(numGroups*4);
+  for (int i=0; i<numGroups; i++)
+  {
+    for (int j=0; j<4; j++)
+      targetPatches->SetId(4*i+j, 6*i+j);
+  }
 
-  //// Set up generators
-  //vtkNew(vtkPoints, generatorsPts);
-  //generatorsPts->SetNumberOfPoints(6);
-  //generatorsPts->SetPoint(0, 1.0, 0.0, 0.0);
-  //generatorsPts->SetPoint(1, 0.0, 1.0, 0.0);
-  //generatorsPts->SetPoint(2, -1.0, 0.0, 0.0);
-  //generatorsPts->SetPoint(3, 0.0, -1.0, 0.0);
-  //generatorsPts->SetPoint(4, 0.0, 0.0, 1.0);
-  //generatorsPts->SetPoint(5, 0.0, 0.0, -1.0);
-
-  //vtkNew(vtkPolyData, generatorsPd);
-  //generatorsPd->SetPoints(generatorsPts);
-
-  //vtkIntArray *tmpPatchArray = vtkIntArray::New();
-  //tmpPatchArray->SetNumberOfTuples(this->WorkPd->GetNumberOfCells());
-  //tmpPatchArray->SetName("PatchIds");
-  //tmpPatchArray->FillComponent(0, -1);
-  //this->WorkPd->GetCellData()->AddArray(tmpPatchArray);
-  //tmpPatchArray->Delete();
-
-  //vtkSVGeneralUtils::GiveIds(this->PolycubePd, "TmpInternalIds");
-
-  //for (int i=0; i<numGroups; i++)
+  //// TODO: IF SOMETHIGN WRONG, LOOK HERE FIRST!!! MAY BE MOVING PATCH OFF
+  //// OF SLICE POINT
+  //if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
   //{
-  //  int groupId = groupIds->GetId(i);
-
-  //  fprintf(stdout,"CLUSTERING AND MATCHING ENDS OF %d\n", groupId);
-
-  //  vtkNew(vtkPolyData, branchPd);
-  //  vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1,
-  //      this->GroupIdsArrayName, branchPd);
-  //  branchPd->BuildLinks();
-
-  //  vtkNew(vtkPolyData, polyBranchPd);
-  //  vtkSVGeneralUtils::ThresholdPd(this->PolycubePd, groupId, groupId, 1,
-  //    this->GroupIdsArrayName, polyBranchPd);
-  //  polyBranchPd->BuildLinks();
-
-  //  if (this->RunEdgeWeightedCVT(branchPd, generatorsPd) != SV_OK)
-  //  {
-  //    vtkErrorMacro("Error in cvt");
-  //    return SV_ERROR;
-  //  }
-
-  //  if (this->MergedCenterlines->GetNumberOfCells() > 1)
-  //  {
-  //    if (this->FixEndPatches(branchPd) != SV_OK)
-  //    {
-  //      vtkErrorMacro("Error fixing end patches");
-  //      return SV_ERROR;
-  //    }
-  //  }
-
-  //  if (this->MergedCenterlines->GetNumberOfCells() > 1)
-  //  {
-  //    if (this->FixSidePatches(branchPd) != SV_OK)
-  //    {
-  //      vtkErrorMacro("Error fixing side patches");
-  //      return SV_ERROR;
-  //    }
-  //  }
-
-  //  vtkNew(vtkIdList, noEndPatches);
-  //  noEndPatches->SetNumberOfIds(4);
-  //  for (int j=0; j<4; j++)
-  //    noEndPatches->SetId(j, j);
-
-  //  if (this->CorrectSpecificCellBoundaries(branchPd, "PatchIds", noEndPatches) != SV_OK)
-  //  {
-  //    vtkErrorMacro("Could not correcto boundaries of surface");
-  //    return SV_ERROR;
-  //  }
-
-  //  if (this->MergedCenterlines->GetNumberOfCells() > 1)
-  //  {
-  //    if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
-  //    {
-  //      vtkErrorMacro("Error matching end patches");
-  //      return SV_ERROR;
-  //    }
-  //  }
-
-  //  // Set vals on work pd
-  //  for (int j=0; j<branchPd->GetNumberOfCells(); j++)
-  //  {
-  //    //Get real cell id
-  //    int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
-
-  //    // Get val
-  //    int cellVal = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(j);
-
-  //    // Set val
-  //    this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(realCellId, cellVal);
-  //  }
+  //  vtkErrorMacro("Could not correcto boundaries of surface");
+  //  return SV_ERROR;
   //}
-
-  //this->WorkPd->GetCellData()->RemoveArray("TmpInternalIds");
-  //this->WorkPd->GetPointData()->RemoveArray("TmpInternalIds");
-
-  //this->PolycubePd->GetCellData()->RemoveArray("TmpInternalIds");
-  //this->PolycubePd->GetPointData()->RemoveArray("TmpInternalIds");
-
-  //vtkNew(vtkIdList, addVals);
-  //addVals->SetNumberOfIds(numGroups);
-  //for (int i=0; i<numGroups; i++)
-  //  addVals->SetId(i, 6*i);
-
-  //vtkNew(vtkIdList, patchVals);
-  //for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
-  //{
-  //  int patchVal = this->WorkPd->GetCellData()->GetArray("PatchIds")->GetTuple1(i);
-  //  int groupVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(i);
-  //  int newVal = patchVal + (addVals->GetId(groupIds->IsId(groupVal)));
-  //  this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(i, newVal);
-  //  patchVals->InsertUniqueId(newVal);
-  //}
-
-  //std::vector<Region> finalRegions;
-  //vtkNew(vtkIdList, targetPatches);
-  //targetPatches->SetNumberOfIds(numGroups*4);
-  //for (int i=0; i<numGroups; i++)
-  //{
-  //  for (int j=0; j<4; j++)
-  //    targetPatches->SetId(4*i+j, 6*i+j);
-  //}
-
-  ////// TODO: IF SOMETHIGN WRONG, LOOK HERE FIRST!!! MAY BE MOVING PATCH OFF
-  ////// OF SLICE POINT
-  ////if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  ////{
-  ////  vtkErrorMacro("Could not correcto boundaries of surface");
-  ////  return SV_ERROR;
-  ////}
 
   //// For checking purposes
   //if (this->FixPatchesWithPolycube() != SV_OK)
@@ -1236,27 +1444,27 @@ int vtkSVGroupsSegmenter::RunFilter()
   //  return SV_ERROR;
   //}
 
-  //if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not correcto boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Could not correcto boundaries of surface");
+    return SV_ERROR;
+  }
 
-  //if (this->SmoothSpecificBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not smootho boundaries of surface");
-  //  return SV_ERROR;
-  //}
-  //if (this->GetSpecificRegions(this->WorkPd, "PatchIds", finalRegions, targetPatches) != SV_OK)
-  //{
-  //  vtkErrorMacro("Couldn't get patches");
-  //  return SV_ERROR;
-  //}
-  //if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", finalRegions) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not curve fit boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  if (this->SmoothSpecificBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Could not smootho boundaries of surface");
+    return SV_ERROR;
+  }
+  if (this->GetSpecificRegions(this->WorkPd, "PatchIds", finalRegions, targetPatches) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get patches");
+    return SV_ERROR;
+  }
+  if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", finalRegions) != SV_OK)
+  {
+    vtkErrorMacro("Could not curve fit boundaries of surface");
+    return SV_ERROR;
+  }
 
   ////////////////// For checking purposes
   ////////////////if (this->FixPatchesWithPolycubeOld() != SV_OK)
@@ -2585,6 +2793,7 @@ int vtkSVGroupsSegmenter::GetRegions(vtkPolyData *pd, std::string arrayName,
   return SV_OK;
 }
 
+// TODO: Need to fix for if single cell is region!!!
 // ----------------------
 // GetSpecificRegions
 // ----------------------
@@ -3524,6 +3733,7 @@ int vtkSVGroupsSegmenter::FixSidePatches(vtkPolyData *pd)
   targetRegions->SetId(2, 2);
   targetRegions->SetId(3, 3);
 
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CHEEE.vtp", pd);
   std::vector<Region> sideRegions;
   if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, targetRegions) != SV_OK)
   {
