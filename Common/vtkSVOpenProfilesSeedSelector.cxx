@@ -154,11 +154,12 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
     while ((pos = currentText.find(separator)) != std::string::npos)
     {
       textId = currentText.substr(0, pos);
-      fprintf(stdout,"WHAT FIND %s\n", textId.c_str());
-      this->SourceSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(textId)));
+      //this->SourceSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(textId)));
+      this->SourceSeedIds->InsertNextId(std::stoi(textId));
       currentText.erase(0, pos + separator.length());
     }
-    this->SourceSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(currentText)));
+    //this->SourceSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(currentText)));
+    this->SourceSeedIds->InsertNextId(std::stoi(currentText));
   }
   // Process info
 
@@ -175,7 +176,10 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
     for (int i=0; i<seedPoints->GetNumberOfPoints(); i++)
     {
       if (this->SourceSeedIds->IsId(this->SeedIds->GetId(i)) == -1)
-        this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(i));
+      {
+        //this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(i));
+        this->TargetSeedIds->InsertNextId(i);
+      }
     }
   }
   else
@@ -189,10 +193,12 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
     while ((pos = currentText.find(separator)) != std::string::npos)
     {
       textId = currentText.substr(0, pos);
-      this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(textId)));
+      //this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(textId)));
+      this->TargetSeedIds->InsertNextId(std::stoi(textId));
       currentText.erase(0, pos + separator.length());
     }
-    this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(currentText)));
+    //this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(std::stoi(currentText)));
+    this->TargetSeedIds->InsertNextId(std::stoi(currentText));
   }
 
   return SV_OK;

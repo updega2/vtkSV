@@ -38,6 +38,25 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineBranchSplitter : public vtkvmtkCen
 
   static vtkSVCenterlineBranchSplitter *New();
 
+  //@{
+  /// \brief Get/Set to use absolute distance
+  vtkSetMacro(UseAbsoluteMergeDistance, int);
+  vtkGetMacro(UseAbsoluteMergeDistance, int);
+  vtkBooleanMacro(UseAbsoluteMergeDistance, int);
+  //@}
+
+  //@{
+  /// \brief Get/Set to use absolute distance
+  vtkSetMacro(RadiusMergeRatio, double);
+  vtkGetMacro(RadiusMergeRatio, double);
+  //@}
+
+  //@{
+  /// \brief Get/Set to use absolute distance
+  vtkSetMacro(MergeDistance, double);
+  vtkGetMacro(MergeDistance, double);
+  //@}
+
   protected:
   vtkSVCenterlineBranchSplitter();
   ~vtkSVCenterlineBranchSplitter();
@@ -45,6 +64,10 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineBranchSplitter : public vtkvmtkCen
   virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId);
   virtual void GroupTracts(vtkPolyData* input, vtkPolyData* centerlineTracts);
   virtual void SplitCenterline(vtkPolyData* input, vtkIdType cellId, int numberOfSplittingPoints, const vtkIdType* subIds, const double* pcoords, const int* tractBlanking, vtkPolyData* splitCenterline);
+
+  int UseAbsoluteMergeDistance;
+  double RadiusMergeRatio;
+  double MergeDistance;
 
   private:
   vtkSVCenterlineBranchSplitter(const vtkSVCenterlineBranchSplitter&);  // Not implemented.

@@ -54,6 +54,9 @@ vtkStandardNewMacro(vtkSVCenterlineBranchSplitter);
 
 vtkSVCenterlineBranchSplitter::vtkSVCenterlineBranchSplitter()
 {
+  this->UseAbsoluteMergeDistance = 0;
+  this->RadiusMergeRatio = 0.35;
+  this->MergeDistance = 0.1;
 }
 
 vtkSVCenterlineBranchSplitter::~vtkSVCenterlineBranchSplitter()
@@ -169,7 +172,6 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
   vtkDoubleArray* splittingPCoords = vtkDoubleArray::New();
   vtkIdList* blankingFlags = vtkIdList::New();
 
-  double mergeDist = 0.3;
   int numPts = centerline->GetNumberOfPoints();
   for (int i=0; i<numPts; i++)
   {
@@ -184,7 +186,15 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
     if (ptCellIds->GetNumberOfIds() > 2)
     {
       fprintf(stdout,"TELEL ME HOW MNAY FOR CENTERLINE %d, POINT %d: %d\n", cellId, i,ptCellIds->GetNumberOfIds());
-      mergeDist = 0.35*(cleanInput->GetPointData()->GetArray(this->RadiusArrayName)->GetTuple1(cleanPtId));
+      double mergeDist;
+      if (this->UseAbsoluteMergeDistance)
+      {
+        mergeDist = this->MergeDistance;
+      }
+      else
+      {
+        mergeDist = this->RadiusMergeRatio * (cleanInput->GetPointData()->GetArray(this->RadiusArrayName)->GetTuple1(cleanPtId));
+      }
 
       int done=0;
       int iter = 0;

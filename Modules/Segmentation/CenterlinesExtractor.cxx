@@ -37,6 +37,8 @@
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSplineFilter.h"
+#include "vtkTriangleFilter.h"
+
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVCenterlines.h"
@@ -47,6 +49,8 @@
 
 #include "vtkvmtkMergeCenterlines.h"
 #include "vtkvmtkCapPolyData.h"
+#include "vtkvmtkPolyDataCenterlines.h"
+#include "vtkvmtkCenterlineBranchExtractor.h"
 
 int main(int argc, char *argv[])
 {
@@ -67,6 +71,9 @@ int main(int argc, char *argv[])
   // Default values for options
   int appendEndPoints = 0;
   int pickSeedPoints = 0;
+  int useAbsoluteMergeDistance = 0;
+  double mergeDistance = 0.1;
+  double radiusMergeRatio = 0.35;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string seedSelector = "none";
 
@@ -76,12 +83,15 @@ int main(int argc, char *argv[])
       arglength = strlen(argv[iarg]);
       // replace 0..arglength-1 with argv[iarg]
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
-      if(tmpstr=="-h")                    {RequestedHelp = true;}
-      else if(tmpstr=="-input")           {InputProvided = true; inputFilename = argv[++iarg];}
-      else if(tmpstr=="-output")          {OutputProvided = true; outputFilename = argv[++iarg];}
-      else if(tmpstr=="-radius")          {radiusArrayName = argv[++iarg];}
-      else if(tmpstr=="-appendendpoints") {appendEndPoints = atoi(argv[++iarg]);}
+      if(tmpstr=="-h")                     {RequestedHelp = true;}
+      else if(tmpstr=="-input")            {InputProvided = true; inputFilename = argv[++iarg];}
+      else if(tmpstr=="-output")           {OutputProvided = true; outputFilename = argv[++iarg];}
+      else if(tmpstr=="-radius")           {radiusArrayName = argv[++iarg];}
+      else if(tmpstr=="-appendendpoints")  {appendEndPoints = atoi(argv[++iarg]);}
       else if(tmpstr=="-seedselector")     {seedSelector = argv[++iarg];}
+      else if(tmpstr=="-radiusmergeratio") {radiusMergeRatio = atof(argv[++iarg]);}
+      else if(tmpstr=="-usemergedistance") {useAbsoluteMergeDistance = atoi(argv[++iarg]);}
+      else if(tmpstr=="-mergedistance")    {mergeDistance = atof(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -100,6 +110,9 @@ int main(int argc, char *argv[])
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
     cout << "  -seedselector       : How to choose source and target seeds if desired, options are none, pickpoints, and openprofiles [default none]"<< endl;
+    cout << "  -radiusmergeratio   : When extracting centerline branches, the portion of the radius to use (radius at bifurcation location) to use as the merging distance [default 0.35]"<< endl;
+    cout << "  -usemergedistance   : Instead of using a ratio to the radius, use an absolute distance for the merge distance [default 0]" << endl;
+    cout << "  -mergedistance      : The merge distance; only used is usemergedistance is on [default 0.1]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -118,6 +131,19 @@ int main(int argc, char *argv[])
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
     return EXIT_FAILURE;
 
+  std::cout << "Cleaning Surface..." << endl;
+  vtkNew(vtkCleanPolyData, cleaner);
+  cleaner->SetInputData(inputPd);
+  cleaner->Update();
+
+  std::cout << "Triangulating Surface..." << endl;
+  vtkNew(vtkTriangleFilter, triangulator);
+  triangulator->SetInputData(cleaner->GetOutput());
+  triangulator->PassLinesOff();
+  triangulator->PassVertsOff();
+  triangulator->Update();
+
+  inputPd->DeepCopy(triangulator->GetOutput());
 
   vtkSVSeedSelector *seedPointPicker;
   vtkNew(vtkIdList, capCenterIds);
@@ -148,6 +174,7 @@ int main(int argc, char *argv[])
   else if (seedSelector == "openprofiles")
   {
     std::cout << "Capping Surface..." << endl;
+
     vtkNew(vtkvmtkCapPolyData, surfaceCapper);
     surfaceCapper->SetInputData(inputPd);
     surfaceCapper->SetDisplacement(0.0);
@@ -193,6 +220,7 @@ int main(int argc, char *argv[])
 
   // Filter
   vtkNew(vtkSVCenterlines, CenterlineFilter);
+  //vtkNew(vtkvmtkPolyDataCenterlines, CenterlineFilter);
 
   //OPERATION
   std::cout<<"Getting Centerlines..."<<endl;
@@ -200,8 +228,8 @@ int main(int argc, char *argv[])
   {
     CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
     CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
-    //if (seedSelector == "openprofiles")
-    //  CenterlineFilter->SetCapCenterIds(capCenterIds);
+    if (seedSelector == "openprofiles")
+      CenterlineFilter->SetCapCenterIds(capCenterIds);
   }
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
@@ -218,6 +246,7 @@ int main(int argc, char *argv[])
 
   std::cout<<"Getting Centerlines..."<<endl;
   vtkNew(vtkSVCenterlineBranchSplitter, BranchSplitter);
+  //vtkNew(vtkvmtkCenterlineBranchExtractor, BranchSplitter);
   BranchSplitter->SetGroupingModeToFirstPoint();
   BranchSplitter->SetInputData(CenterlineFilter->GetOutput());
   BranchSplitter->SetBlankingArrayName("Blanking");
@@ -225,6 +254,9 @@ int main(int argc, char *argv[])
   BranchSplitter->SetGroupIdsArrayName("GroupIds");
   BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
   BranchSplitter->SetTractIdsArrayName("TractIds");
+  //BranchSplitter->SetRadiusMergeRatio(radiusMergeRatio);
+  //BranchSplitter->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
+  //BranchSplitter->SetMergeDistance(mergeDistance);
   BranchSplitter->Update();
   std::cout<<"Done"<<endl;
 
@@ -261,7 +293,7 @@ int main(int argc, char *argv[])
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
   //vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0), "_Split_Centerlines");
-  vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0), "_Merged_Centerlines");
+  //vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0), "_Merged_Centerlines");
   //vtkSVIOUtils::WriteVTPFile(outputFilename, Cleaner->GetOutput(0), "_Cleaned_Centerlines");
   //vtkSVIOUtils::WriteVTPFile(outputFilename, Resampler->GetOutput(0), "_Resampled_Centerlines");
   //vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));

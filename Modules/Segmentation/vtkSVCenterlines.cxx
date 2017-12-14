@@ -959,8 +959,6 @@ int vtkSVCenterlines::RequestData(
       isDeleted[i] = 1;
     }
   }
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/WRITERS.vtp", linesPd);
-
   linesPd->RemoveDeletedCells();
   cleaner->SetInputData(linesPd);
   cleaner->Update();
@@ -969,7 +967,6 @@ int vtkSVCenterlines::RequestData(
 
   // Preprocessing of lines
   linesPd->BuildLinks();
-
 
 	firstVertex = -1;
   numConnectedPts.clear();
@@ -1023,7 +1020,10 @@ int vtkSVCenterlines::RequestData(
     linesEndPointLocator->BuildLocator();
 
     double firstPt[3];
-    input->GetPoint(this->SourceSeedIds->GetId(0), firstPt);
+    if (this->CapCenterIds)
+      this->DelaunayTessellation->GetPoint(this->SourceSeedIds->GetId(0), firstPt);
+    else
+      input->GetPoint(this->SourceSeedIds->GetId(0), firstPt);
 
     int endPointId = linesEndPointLocator->FindClosestPoint(firstPt);
     int linesPtId = linesEndPointIds->GetId(endPointId);
@@ -1075,6 +1075,7 @@ int vtkSVCenterlines::RequestData(
     }
   }
   linesPd->GetCellData()->AddArray(centerlineIds);
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/WRITERS.vtp", linesPd);
 
   output->DeepCopy(linesPd);
 
@@ -1146,12 +1147,12 @@ int vtkSVCenterlines::RequestData(
   //========================================================================
 
   vtkNew(vtkArrayCalculator, voronoiCostFunctionCalculator);
-//#if (VTK_MAJOR_VERSION <= 5)
-//  voronoiCostFunctionCalculator->SetInput(voronoiDiagram);
-//#else
-//  voronoiCostFunctionCalculator->SetInputData(voronoiDiagram);
-//#endif
-  voronoiCostFunctionCalculator->SetInputData(newVoronoiDiagram);
+#if (VTK_MAJOR_VERSION <= 5)
+  voronoiCostFunctionCalculator->SetInput(voronoiDiagram);
+#else
+  voronoiCostFunctionCalculator->SetInputData(voronoiDiagram);
+#endif
+  //voronoiCostFunctionCalculator->SetInputData(newVoronoiDiagram);
   voronoiCostFunctionCalculator->SetAttributeModeToUsePointData();
   voronoiCostFunctionCalculator->AddScalarVariable("R",this->RadiusArrayName,0);
   //voronoiCostFunctionCalculator->AddScalarVariable("R","NewCostArray",0);
@@ -1161,8 +1162,6 @@ int vtkSVCenterlines::RequestData(
 
   surfacer->SetInputData(voronoiCostFunctionCalculator->GetOutput());
   surfacer->Update();
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CHECKCOSTER.vtp", surfacer->GetOutput());
-
 
   //========================================================================
   //
@@ -1193,7 +1192,10 @@ int vtkSVCenterlines::RequestData(
     for (int j=0; j<this->SourceSeedIds->GetNumberOfIds(); j++)
     {
       double sourcePt[3];
-      input->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
+      if (this->CapCenterIds)
+        this->DelaunayTessellation->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
+      else
+        input->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
 
       int endPointId = linesEndPointLocator->FindClosestPoint(sourcePt);
       int linesPtId = linesEndPointIds->GetId(endPointId);
@@ -1202,7 +1204,7 @@ int vtkSVCenterlines::RequestData(
       if (endPointUsed[endPointId] == 1)
       {
         fprintf(stderr,"Two end lines found for different target seeds, target seeds too close\n");
-        return SV_ERROR;
+        //return SV_ERROR;
       }
       else
       {
@@ -1215,7 +1217,10 @@ int vtkSVCenterlines::RequestData(
         {
           if (voronoiSeeds[k][l] == voronoiId)
           {
-            voronoiSeeds[k][l] = this->PoleIds->GetId(this->SourceSeedIds->GetId(j));
+            if (this->CapCenterIds)
+              voronoiSeeds[k][l] = voronoiCapIds->GetId(this->SourceSeedIds->GetId(j));
+            else
+              voronoiSeeds[k][l] = this->PoleIds->GetId(this->SourceSeedIds->GetId(j));
           }
         }
       }
@@ -1235,7 +1240,10 @@ int vtkSVCenterlines::RequestData(
         for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
         {
           double targetPt[3];
-          input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+          if (this->CapCenterIds)
+            this->DelaunayTessellation->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+          else
+            input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
 
           seedPointsPd->GetPoints()->InsertNextPoint(targetPt);
           seedPointIds->InsertNextId(j);
@@ -1266,7 +1274,10 @@ int vtkSVCenterlines::RequestData(
             {
               if (voronoiSeeds[k][l] == voronoiId)
               {
-                voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(targetSeedId));
+                if (this->CapCenterIds)
+                  voronoiSeeds[k][l] = voronoiCapIds->GetId(this->TargetSeedIds->GetId(targetSeedId));
+                else
+                  voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(targetSeedId));
               }
             }
           }
@@ -1280,7 +1291,10 @@ int vtkSVCenterlines::RequestData(
         for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
         {
           double targetPt[3];
-          input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+          if (this->CapCenterIds)
+            this->DelaunayTessellation->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+          else
+            input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
 
           int endPointId = linesEndPointLocator->FindClosestPoint(targetPt);
           int linesPtId = linesEndPointIds->GetId(endPointId);
@@ -1289,7 +1303,7 @@ int vtkSVCenterlines::RequestData(
           if (endPointUsed[endPointId] == 1)
           {
             fprintf(stderr,"Two end lines found for different target seeds, target seeds too close\n");
-            return SV_ERROR;
+            //return SV_ERROR;
           }
           else
           {
@@ -1302,7 +1316,10 @@ int vtkSVCenterlines::RequestData(
             {
               if (voronoiSeeds[k][l] == voronoiId)
               {
-                voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(j));
+                if (this->CapCenterIds)
+                  voronoiSeeds[k][l] = voronoiCapIds->GetId(this->TargetSeedIds->GetId(j));
+                else
+                  voronoiSeeds[k][l] = this->PoleIds->GetId(this->TargetSeedIds->GetId(j));
               }
             }
           }
@@ -1440,6 +1457,7 @@ int vtkSVCenterlines::RequestData(
   }
 
   appender->Update();
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/ALLAPPENDED.vtp", appender->GetOutput());
 
   fprintf(stdout,"HERE?\n");
   vtkNew(vtkPolyData, currentLine);
@@ -1459,7 +1477,10 @@ int vtkSVCenterlines::RequestData(
       {
         // Enter source seed here
         double startPt[3];
-        input->GetPoint(this->SourceSeedIds->GetId(0), startPt);
+        if (this->CapCenterIds)
+          this->DelaunayTessellation->GetPoint(this->SourceSeedIds->GetId(0), startPt);
+        else
+          input->GetPoint(this->SourceSeedIds->GetId(0), startPt);
 
         int newPointId = newPoints->InsertNextPoint(startPt);
         newLine->GetPointIds()->InsertNextId(newPointId);
@@ -1494,11 +1515,18 @@ int vtkSVCenterlines::RequestData(
         // Enter target seed here
         int edgeSize = fullCenterlineEdges[i].size();
         int polePointId = voronoiSeeds[fullCenterlineEdges[i][edgeSize-1]][1];
-        int targetPointId = this->PoleIds->IsId(polePointId);
+        int targetPointId;
+        if (this->CapCenterIds)
+          targetPointId = voronoiCapIds->IsId(polePointId);
+        else
+          targetPointId = this->PoleIds->IsId(polePointId);
         if (targetPointId != -1)
         {
           double endPt[3];
-          input->GetPoint(targetPointId, endPt);
+          if (this->CapCenterIds)
+            this->DelaunayTessellation->GetPoint(targetPointId, endPt);
+          else
+            input->GetPoint(targetPointId, endPt);
 
           int numPtsInLine = appender->GetInput(fullCenterlineEdges[i][edgeSize-1])->GetNumberOfPoints();
 
@@ -1511,7 +1539,6 @@ int vtkSVCenterlines::RequestData(
 
     newCells->InsertNextCell(newLine);
   }
-  fprintf(stdout,"OUT\n");
   newPointData->Squeeze();
 
   vtkNew(vtkPolyData, finalLinesPd);
@@ -1520,50 +1547,7 @@ int vtkSVCenterlines::RequestData(
   finalLinesPd->GetPointData()->PassData(newPointData);
 
   output->ShallowCopy(finalLinesPd);
-  fprintf(stdout,"EA\n");
-  //output->ShallowCopy(centerlineBacktracing->GetOutput());
 
-//  vtkIdList* hitTargets = centerlineBacktracing->GetHitTargets();
-//
-//  vtkNew(vtkPoints, endPointPairs);
-//
-//  const vtkIdType numTargetSeedIds = this->TargetSeedIds->GetNumberOfIds();
-//  const vtkIdType numHitTargets = hitTargets->GetNumberOfIds();
-//  if(numHitTargets == numTargetSeedIds) {
-//  if (this->AppendEndPointsToCenterlines)
-//    {
-//    for (i=0; i<numTargetSeedIds; i++)
-//      {
-//      if (this->CapCenterIds)
-//        {
-//        vtkIdType endPointId1 = this->CapCenterIds->GetId(this->TargetSeedIds->GetId(i));
-//        vtkIdType hitTargetPointId = hitTargets->GetId(i);
-//        vtkIdType targetId = voronoiSourceSeedIds->IsId(hitTargetPointId);
-//        vtkIdType endPointId2 = this->CapCenterIds->GetId(this->SourceSeedIds->GetId(targetId));
-//        endPointPairs->InsertNextPoint(input->GetPoint(endPointId1));
-//        endPointPairs->InsertNextPoint(input->GetPoint(endPointId2));
-//        }
-//      else
-//        {
-//        vtkIdType endPointId1 = this->TargetSeedIds->GetId(i);
-//        vtkIdType hitTargetPointId = hitTargets->GetId(i);
-//        vtkIdType targetId = voronoiSourceSeedIds->IsId(hitTargetPointId);
-//        vtkIdType endPointId2 = this->SourceSeedIds->GetId(targetId);
-//        endPointPairs->InsertNextPoint(input->GetPoint(endPointId1));
-//        endPointPairs->InsertNextPoint(input->GetPoint(endPointId2));
-//        }
-//      }
-//
-//    this->AppendEndPoints(endPointPairs);
-//    }
-//  }
-//
-//  std::string thefn = "/Users/adamupdegrove/Desktop/tmp/REG_CENTERLINES.vtp";
-//  vtkNew(vtkXMLPolyDataWriter, duhWriter);
-//  duhWriter->SetInputData(output);
-//  duhWriter->SetFileName(thefn.c_str());
-//  duhWriter->Write();
-//
   if (this->CenterlineResampling)
     {
     this->ResampleCenterlines();
