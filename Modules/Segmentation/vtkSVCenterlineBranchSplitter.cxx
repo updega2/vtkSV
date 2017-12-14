@@ -205,7 +205,7 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
         double dist = std::sqrt(vtkMath::Distance2BetweenPoints(testPt, cPt));
 
-        if (dist > mergeDist || i + iter + 1 >= numPts)
+        if (dist > mergeDist || i + iter + 1 >= numPts - 1)
         {
           intersectionSubIds->InsertNextId(i+iter);
           done=1;

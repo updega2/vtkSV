@@ -175,7 +175,8 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
   {
     for (int i=0; i<seedPoints->GetNumberOfPoints(); i++)
     {
-      if (this->SourceSeedIds->IsId(this->SeedIds->GetId(i)) == -1)
+      //if (this->SourceSeedIds->IsId(this->SeedIds->GetId(i)) == -1)
+      if (this->SourceSeedIds->IsId(i) == -1)
       {
         //this->TargetSeedIds->InsertNextId(this->SeedIds->GetId(i));
         this->TargetSeedIds->InsertNextId(i);

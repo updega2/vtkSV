@@ -254,9 +254,9 @@ int main(int argc, char *argv[])
   BranchSplitter->SetGroupIdsArrayName("GroupIds");
   BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
   BranchSplitter->SetTractIdsArrayName("TractIds");
-  //BranchSplitter->SetRadiusMergeRatio(radiusMergeRatio);
-  //BranchSplitter->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
-  //BranchSplitter->SetMergeDistance(mergeDistance);
+  BranchSplitter->SetRadiusMergeRatio(radiusMergeRatio);
+  BranchSplitter->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
+  BranchSplitter->SetMergeDistance(mergeDistance);
   BranchSplitter->Update();
   std::cout<<"Done"<<endl;
 

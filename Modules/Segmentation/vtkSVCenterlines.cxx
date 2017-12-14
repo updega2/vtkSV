@@ -1021,7 +1021,7 @@ int vtkSVCenterlines::RequestData(
 
     double firstPt[3];
     if (this->CapCenterIds)
-      this->DelaunayTessellation->GetPoint(this->SourceSeedIds->GetId(0), firstPt);
+      input->GetPoint(this->CapCenterIds->GetId(this->SourceSeedIds->GetId(0)), firstPt);
     else
       input->GetPoint(this->SourceSeedIds->GetId(0), firstPt);
 
@@ -1193,7 +1193,7 @@ int vtkSVCenterlines::RequestData(
     {
       double sourcePt[3];
       if (this->CapCenterIds)
-        this->DelaunayTessellation->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
+        input->GetPoint(this->CapCenterIds->GetId(this->SourceSeedIds->GetId(j)), sourcePt);
       else
         input->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
 
@@ -1241,7 +1241,7 @@ int vtkSVCenterlines::RequestData(
         {
           double targetPt[3];
           if (this->CapCenterIds)
-            this->DelaunayTessellation->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+            input->GetPoint(this->CapCenterIds->GetId(this->TargetSeedIds->GetId(j)), targetPt);
           else
             input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
 
@@ -1292,7 +1292,7 @@ int vtkSVCenterlines::RequestData(
         {
           double targetPt[3];
           if (this->CapCenterIds)
-            this->DelaunayTessellation->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+            input->GetPoint(this->CapCenterIds->GetId(this->TargetSeedIds->GetId(j)), targetPt);
           else
             input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
 
@@ -1478,7 +1478,7 @@ int vtkSVCenterlines::RequestData(
         // Enter source seed here
         double startPt[3];
         if (this->CapCenterIds)
-          this->DelaunayTessellation->GetPoint(this->SourceSeedIds->GetId(0), startPt);
+          input->GetPoint(this->CapCenterIds->GetId(this->SourceSeedIds->GetId(0)), startPt);
         else
           input->GetPoint(this->SourceSeedIds->GetId(0), startPt);
 
@@ -1496,6 +1496,7 @@ int vtkSVCenterlines::RequestData(
       int kStart = 1;
       if (j == 0)
         kStart = 0;
+      fprintf(stdout,"NUM POINTS HERER %d\n", currentLine->GetNumberOfPoints());
       for (int k=kStart; k<currentLine->GetNumberOfPoints(); k++)
       {
         double pt[3];
@@ -1524,7 +1525,7 @@ int vtkSVCenterlines::RequestData(
         {
           double endPt[3];
           if (this->CapCenterIds)
-            this->DelaunayTessellation->GetPoint(targetPointId, endPt);
+            input->GetPoint(this->CapCenterIds->GetId(targetPointId), endPt);
           else
             input->GetPoint(targetPointId, endPt);
 
@@ -1545,6 +1546,11 @@ int vtkSVCenterlines::RequestData(
   finalLinesPd->SetPoints(newPoints);
   finalLinesPd->SetLines(newCells);
   finalLinesPd->GetPointData()->PassData(newPointData);
+
+  for (int i=0; i<finalLinesPd->GetNumberOfCells(); i++)
+  {
+    fprintf(stdout,"CELL %d has %d points\n", i, finalLinesPd->GetCell(i)->GetNumberOfPoints());
+  }
 
   output->ShallowCopy(finalLinesPd);
 
