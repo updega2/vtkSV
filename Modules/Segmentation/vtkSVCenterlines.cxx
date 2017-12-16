@@ -269,6 +269,8 @@ int vtkSVCenterlines::RequestData(
 
     }
 
+  vtkSVIOUtils::WriteVTUFile("/Users/adamupdegrove/Desktop/tmp/DelaunayTessellation.vtu", this->DelaunayTessellation);
+
   fprintf(stdout,"GENERATING VORONOI DIAGRAM...\n");
   vtkNew(vtkvmtkVoronoiDiagram3D, voronoiDiagramFilter);
 #if (VTK_MAJOR_VERSION <= 5)
@@ -296,6 +298,7 @@ int vtkSVCenterlines::RequestData(
     voronoiDiagram = voronoiDiagramSimplifier->GetOutput();
     voronoiDiagram->Register(this);
     }
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/VoronoiDiagram.vtp", voronoiDiagram);
 
   fprintf(stdout,"PRUNING VORONOI DIAGRAM...\n");
   vtkNew(vtkTriangleFilter, triangulator);
@@ -405,6 +408,41 @@ int vtkSVCenterlines::RequestData(
 
   this->PruneVoronoiDiagram(triPd, edgePd, newTriPd, newEdgePd, "");
   fprintf(stdout,"DONE COMPUTING REMOVAL ITERATIONS\n");
+
+  //double iterRange[2];
+  //newEdgePd->GetCellData()->GetArray("RemovalIteration")->GetRange(iterRange);
+
+  //vtkNew(vtkThreshold, tmpTriThreshold);
+  //tmpTriThreshold->SetInputData(newTriPd);
+  //tmpTriThreshold->SetInputArrayToProcess(0, 0, 0, 1, "RemovalIteration");
+
+  //vtkNew(vtkDataSetSurfaceFilter, tmpSurfacer);
+  //for (int i=0; i<iterRange[1]; i++)
+  //{
+  //  tmpTriThreshold->ThresholdBetween(i, iterRange[1]);
+  //  tmpTriThreshold->Update();
+  //  tmpSurfacer->SetInputData(tmpTriThreshold->GetOutput());
+  //  tmpSurfacer->Update();
+
+  //  std::string tmpTriFn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_TRI_TIME_REMOVAL_" + std::to_string(i) +".vtp";
+  //  vtkSVIOUtils::WriteVTPFile(tmpTriFn, tmpSurfacer->GetOutput());
+
+  //}
+
+  //tmpTriThreshold->SetInputData(newEdgePd);
+  //tmpTriThreshold->SetInputArrayToProcess(0, 0, 0, 1, "RemovalIteration");
+
+  //for (int i=0; i<iterRange[1]; i++)
+  //{
+  //  tmpTriThreshold->ThresholdBetween(i, iterRange[1]);
+  //  tmpTriThreshold->Update();
+  //  tmpSurfacer->SetInputData(tmpTriThreshold->GetOutput());
+  //  tmpSurfacer->Update();
+
+  //  std::string tmpTriFn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_EDGE_TIME_REMOVAL_" + std::to_string(i) +".vtp";
+  //  vtkSVIOUtils::WriteVTPFile(tmpTriFn, tmpSurfacer->GetOutput());
+
+  //}
 
   std::string fullfn = "/Users/adamupdegrove/Desktop/tmp/VORONOI_TRI_REMOVAL.vtp";
   vtkNew(vtkXMLPolyDataWriter, newWriter);
@@ -959,6 +997,7 @@ int vtkSVCenterlines::RequestData(
       isDeleted[i] = 1;
     }
   }
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/WRITERS.vtp", linesPd);
   linesPd->RemoveDeletedCells();
   cleaner->SetInputData(linesPd);
   cleaner->Update();
@@ -1008,6 +1047,8 @@ int vtkSVCenterlines::RequestData(
 
   vtkNew(vtkPointLocator, linesEndPointLocator);
   vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DUMBBBBBB.vtp", linesEndPointsPd);
+
   if (this->SourceSeedIds)
   {
     if (this->SourceSeedIds->GetNumberOfIds() != 1)
@@ -1075,7 +1116,6 @@ int vtkSVCenterlines::RequestData(
     }
   }
   linesPd->GetCellData()->AddArray(centerlineIds);
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/WRITERS.vtp", linesPd);
 
   output->DeepCopy(linesPd);
 
@@ -1208,6 +1248,7 @@ int vtkSVCenterlines::RequestData(
       }
       else
       {
+        fprintf(stdout,"SETTING %d to 1\n", endPointId);
         endPointUsed[endPointId] = 1;
       }
 
@@ -1307,6 +1348,7 @@ int vtkSVCenterlines::RequestData(
           }
           else
           {
+            fprintf(stdout,"SETTING %d to 1\n", endPointId);
             endPointUsed[endPointId] = 1;
           }
 
@@ -1327,78 +1369,78 @@ int vtkSVCenterlines::RequestData(
 
       }
 
-      fprintf(stdout,"WHATS THE SIZE: %d %d %d\n", allEdges.size(), voronoiSeeds.size(), fullCenterlineEdges.size());
-      for (int i=0; i<endPointUsed.size(); i++)
-      {
-        if (endPointUsed[i] == 0)
-        {
-          fprintf(stderr,"End point %d was not used, going to remove from search list\n");
-          int linesPtId = linesEndPointIds->GetId(i);
-          int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+      //fprintf(stdout,"WHATS THE SIZE: %d %d %d\n", allEdges.size(), voronoiSeeds.size(), fullCenterlineEdges.size());
+      //for (int i=0; i<endPointUsed.size(); i++)
+      //{
+      //  if (endPointUsed[i] == 0)
+      //  {
+      //    fprintf(stderr,"End point %d was not used, going to remove from search list\n", i);
+      //    int linesPtId = linesEndPointIds->GetId(i);
+      //    int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
 
-          std::vector<int> removeSeeds(voronoiSeeds.size(), 0);
-          for (int j=0; j<voronoiSeeds.size(); j++)
-          {
-            if (voronoiSeeds[j][0] == voronoiId || voronoiSeeds[j][1] == voronoiId)
-            {
-              removeSeeds[j] = 1;
-            }
-          }
+      //    std::vector<int> removeSeeds(voronoiSeeds.size(), 0);
+      //    for (int j=0; j<voronoiSeeds.size(); j++)
+      //    {
+      //      if (voronoiSeeds[j][0] == voronoiId || voronoiSeeds[j][1] == voronoiId)
+      //      {
+      //        removeSeeds[j] = 1;
+      //      }
+      //    }
 
-          std::vector<int> removeCenterlinePath(fullCenterlineEdges.size(), 0);
-          std::vector<int> removePathIds;
-          std::vector<std::vector<int> > tmpSeeds = voronoiSeeds;
-          std::vector<std::vector<int> > tmpEdges = allEdges;
-          voronoiSeeds.clear();
-          allEdges.clear();
-          for (int j=0; j<tmpSeeds.size(); j++)
-          {
-            if (!removeSeeds[j])
-            {
-              voronoiSeeds.push_back(tmpSeeds[j]);
-              allEdges.push_back(tmpEdges[j]);
-            }
-            else
-            {
-              for (int k=0; k<fullCenterlineEdges.size(); k++)
-              {
-                int centerlineSize = fullCenterlineEdges[k].size();
-                if (fullCenterlineEdges[k][0] == j || fullCenterlineEdges[k][centerlineSize - 1] == j)
-                {
-                  removeCenterlinePath[k] = 1;
-                  removePathIds.push_back(j);
-                }
-              }
-            }
-          }
+      //    std::vector<int> removeCenterlinePath(fullCenterlineEdges.size(), 0);
+      //    std::vector<int> removePathIds;
+      //    std::vector<std::vector<int> > tmpSeeds = voronoiSeeds;
+      //    std::vector<std::vector<int> > tmpEdges = allEdges;
+      //    voronoiSeeds.clear();
+      //    allEdges.clear();
+      //    for (int j=0; j<tmpSeeds.size(); j++)
+      //    {
+      //      if (!removeSeeds[j])
+      //      {
+      //        voronoiSeeds.push_back(tmpSeeds[j]);
+      //        allEdges.push_back(tmpEdges[j]);
+      //      }
+      //      else
+      //      {
+      //        for (int k=0; k<fullCenterlineEdges.size(); k++)
+      //        {
+      //          int centerlineSize = fullCenterlineEdges[k].size();
+      //          if (fullCenterlineEdges[k][0] == j || fullCenterlineEdges[k][centerlineSize - 1] == j)
+      //          {
+      //            removeCenterlinePath[k] = 1;
+      //            removePathIds.push_back(j);
+      //          }
+      //        }
+      //      }
+      //    }
 
-          std::vector<std::vector<int> > tmpCenterlineEdges = fullCenterlineEdges;
-          fullCenterlineEdges.clear();
+      //    std::vector<std::vector<int> > tmpCenterlineEdges = fullCenterlineEdges;
+      //    fullCenterlineEdges.clear();
 
-          for (int j=0; j<tmpCenterlineEdges.size(); j++)
-          {
-            for (int k=0; k<tmpCenterlineEdges[j].size(); k++)
-            {
-              for (int l=0; l<removePathIds.size(); l++)
-              {
-                if (tmpCenterlineEdges[j][k] > removePathIds[l])
-                {
-                  tmpCenterlineEdges[j][k]--;
-                }
-              }
-            }
-          }
+      //    for (int j=0; j<tmpCenterlineEdges.size(); j++)
+      //    {
+      //      for (int k=0; k<tmpCenterlineEdges[j].size(); k++)
+      //      {
+      //        for (int l=0; l<removePathIds.size(); l++)
+      //        {
+      //          if (tmpCenterlineEdges[j][k] > removePathIds[l])
+      //          {
+      //            tmpCenterlineEdges[j][k]--;
+      //          }
+      //        }
+      //      }
+      //    }
 
-          for (int j=0; j<tmpCenterlineEdges.size(); j++)
-          {
-            if (!removeCenterlinePath[j])
-            {
-              fullCenterlineEdges.push_back(tmpCenterlineEdges[j]);
-            }
-          }
-        }
-      }
-      fprintf(stdout,"WHATS THE SIZE: %d %d %d\n", allEdges.size(), voronoiSeeds.size(), fullCenterlineEdges.size());
+      //    for (int j=0; j<tmpCenterlineEdges.size(); j++)
+      //    {
+      //      if (!removeCenterlinePath[j])
+      //      {
+      //        fullCenterlineEdges.push_back(tmpCenterlineEdges[j]);
+      //      }
+      //    }
+      //  }
+      //}
+      //fprintf(stdout,"WHATS THE SIZE: %d %d %d\n", allEdges.size(), voronoiSeeds.size(), fullCenterlineEdges.size());
     }
   }
 
@@ -1842,10 +1884,10 @@ void vtkSVCenterlines::PrintSelf(ostream& os, vtkIndent indent)
 }
 
 int vtkSVCenterlines::PruneVoronoiDiagram(vtkPolyData *inTriPd,
-                                                    vtkPolyData *inEdgePd,
-                                                    vtkPolyData *outTriPd,
-                                                    vtkPolyData *outEdgePd,
-                                                    std::string medialEdgeArrayName)
+                                          vtkPolyData *inEdgePd,
+                                          vtkPolyData *outTriPd,
+                                          vtkPolyData *outEdgePd,
+                                          std::string medialEdgeArrayName)
 {
   int dontTouch = 0;
   if (medialEdgeArrayName != "")
