@@ -32,6 +32,7 @@
 #include "vtkObjectFactory.h"
 
 #include "vtkSVNURBSObject.h"
+#include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVNURBSCollection);
 
@@ -66,4 +67,38 @@ vtkSVNURBSObject *vtkSVNURBSCollection::GetItem(int i)
 vtkSVNURBSObject *vtkSVNURBSCollection::GetNextDataObject(vtkCollectionSimpleIterator &cookie)
 {
   return static_cast<vtkSVNURBSObject *>(this->GetNextItemAsObject(cookie));
+}
+
+int vtkSVNURBSCollection::AddPatchConnection(const int patch_0, const int patch_1, const int patch_0_face, const int patch_1_face)
+{
+  std::vector<int> potConnection;
+  potConnection.push_back(patch_0);
+  potConnection.push_back(patch_1);
+  std::sort(potConnection.begin(), potConnection.end());
+
+  int addConnection = 1;
+  for (int i=0; i<this->PatchConnections.size(); i++)
+  {
+    if (this->PatchConnections[i] == potConnection)
+      addConnection = 0;
+  }
+
+  if (addConnection)
+  {
+    this->PatchConnections.push_back(potConnection);
+    std::vector<int> newFaceConnection;
+    if (potConnection[0] == patch_0)
+    {
+      newFaceConnection.push_back(patch_0_face);
+      newFaceConnection.push_back(patch_1_face);
+    }
+    else
+    {
+      newFaceConnection.push_back(patch_1_face);
+      newFaceConnection.push_back(patch_0_face);
+    }
+    this->PatchFaceConnections.push_back(newFaceConnection);
+  }
+
+  return SV_OK;
 }

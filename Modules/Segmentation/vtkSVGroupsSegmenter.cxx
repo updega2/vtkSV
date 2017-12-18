@@ -4822,8 +4822,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   this->RemoveInteriorCells(cleanSurface);
 
   std::vector<int> surfacePtMap;
-  std::vector<std::vector<int> > invPtMap;
-  this->GetInteriorPointMaps(paraHexSurface, paraHexCleanSurface, cleanSurface, surfacePtMap, invPtMap);
+  std::vector<std::vector<int> > invSurfacePtMap;
+  this->GetInteriorPointMaps(paraHexSurface, paraHexCleanSurface, cleanSurface, surfacePtMap, invSurfacePtMap);
 
   fn = "/Users/adamupdegrove/Desktop/tmp/Mapping_All2.vtp";
   vtkSVIOUtils::WriteVTPFile(fn, fullMapPd);
@@ -4864,7 +4864,7 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   surfacer3->Update();
   mappedSurface->DeepCopy(surfacer3->GetOutput());
 
-  this->FixInteriorBoundary(mappedSurface, invPtMap);
+  this->FixInteriorBoundary(mappedSurface, invSurfacePtMap);
 
   vtkNew(vtkAppendFilter, volumeAppender);
   for (int i=0; i<numGroups; i++)
@@ -4909,10 +4909,11 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   smoothVolume->DeepCopy(cleaner3->GetOutput());
 
   std::vector<int> volumePtMap;
-  this->GetVolumePointMap(mappedVolume, smoothVolume, volumePtMap);
+  std::vector<std::vector<int> > invVolumePtMap;
+  this->GetVolumePointMaps(mappedVolume, smoothVolume, volumePtMap, invVolumePtMap);
 
   int smoothIters = 1500;
-  if (this->SmoothUnstructuredGrid(smoothVolume, smoothIters) != SV_OK)
+  if (this->SmoothUnstructuredGrid(smoothVolume, smoothIters, "empty") != SV_OK)
   {
     fprintf(stderr,"Couldn't smooth volume\n");
     return SV_ERROR;
@@ -4922,164 +4923,174 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   //vtkSVIOUtils::WriteVTUFile(filename, smoothVolume);
 
   this->FixVolume(mappedVolume, smoothVolume, volumePtMap);
+  //this->SetControlMeshBoundaries(mappedVolume, smoothVolume, volumePtMap, invVolumePtMap);
 
-  std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
-  vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
+  //std::string filename = "/Users/adamupdegrove/Desktop/tmp/TEST_FINAL.vtu";
+  //vtkSVIOUtils::WriteVTUFile(filename, mappedVolume);
   this->FinalHexMesh->DeepCopy(mappedVolume);
 
-  //vtkNew(vtkAppendFilter, loftAppender);
-  //vtkNew(vtkSVNURBSCollection, nurbs);
-  //for (int i=0; i<numGroups; i++)
+  vtkNew(vtkAppendFilter, loftAppender);
+  vtkNew(vtkSVNURBSCollection, nurbs);
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = groupIds->GetId(i);
+
+    vtkNew(vtkUnstructuredGrid, mappedBranch);
+    vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
+
+    vtkNew(vtkStructuredGrid, realHexMesh);
+    if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_divs[i], l_divs[i], h_divs[i]) != SV_OK)
+    {
+      fprintf(stderr,"Couldn't do the dirt\n");
+      return SV_ERROR;
+    }
+
+    // FOR LOFTING OF VOLUME
+    // Set up the volume
+    vtkNew(vtkUnstructuredGrid, emptyGrid);
+    vtkNew(vtkSVLoftNURBSVolume, lofter);
+    lofter->SetInputData(emptyGrid);
+    lofter->SetInputGrid(realHexMesh);
+    lofter->SetUDegree(2);
+    lofter->SetVDegree(2);
+    lofter->SetWDegree(2);
+    //lofter->SetUnstructuredGridUSpacing(1./(10*w_divs[i]));
+    //lofter->SetUnstructuredGridVSpacing(1./(10*h_divs[i]));
+    //lofter->SetUnstructuredGridWSpacing(1./(10*l_divs[i]));
+    lofter->SetUnstructuredGridUSpacing(1./w_divs[i]);
+    lofter->SetUnstructuredGridVSpacing(1./h_divs[i]);
+    lofter->SetUnstructuredGridWSpacing(1./l_divs[i]);
+    lofter->SetUKnotSpanType("average");
+    //lofter->SetUKnotSpanType("derivative");
+    lofter->SetUParametricSpanType("chord");
+    lofter->SetVKnotSpanType("average");
+    //lofter->SetVKnotSpanType("derivative");
+    lofter->SetVParametricSpanType("chord");
+    lofter->SetWKnotSpanType("average");
+    //lofter->SetWKnotSpanType("derivative");
+    lofter->SetWParametricSpanType("chord");
+    lofter->Update();
+
+//  loftAppender->AddInputData(lofter->GetOutput());
+
+    nurbs->AddItem(lofter->GetVolume());
+
+    vtkNew(vtkStructuredGridGeometryFilter, converter);
+    converter->SetInputData(lofter->GetVolume()->GetControlPointGrid());
+    converter->Update();
+
+    std::string cpst = "/Users/adamupdegrove/Desktop/tmp/CONTROL_POINTS_STRUCT.vts";
+    vtkSVIOUtils::WriteVTSFile(cpst, lofter->GetVolume()->GetControlPointGrid());
+
+    std::string cps = "/Users/adamupdegrove/Desktop/tmp/CONTROL_POINTS.vtp";
+    vtkSVIOUtils::WriteVTPFile(cps, converter->GetOutput());
+
+    //// FOR USING HEX MESH AS CONTROL GRID
+    //int dim[3];
+    //realHexMesh->GetDimensions(dim);
+    //int nUCon = dim[0];
+    //int nVCon = dim[1];
+    //int nWCon = dim[2];
+    //int p = 2;
+    //int q = 2;
+    //int r = 2;
+    //std::string putype = "chord";
+    //std::string pvtype = "chord";
+    //std::string pwtype = "chord";
+    //std::string kutype = "average";
+    //std::string kvtype = "average";
+    //std::string kwtype = "average";
+
+    //// Set the temporary control points
+    //vtkNew(vtkPoints, tmpUPoints);
+    //tmpUPoints->SetNumberOfPoints(nUCon);
+    //for (int i=0; i<nUCon; i++)
+    //{
+    //  int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
+    //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    //  tmpUPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+    //}
+
+    //// Get the input point set u representation
+    //vtkNew(vtkDoubleArray, U);
+    //if (vtkSVNURBSUtils::GetUs(tmpUPoints, putype, U) != SV_OK)
+    //{
+    //  return SV_ERROR;
+    //}
+
+    //// Get the knots in the u direction
+    //vtkNew(vtkDoubleArray, uKnots);
+    //if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
+    //{
+    //  fprintf(stderr,"Error getting knots\n");
+    //  return SV_ERROR;
+    //}
+    ////
+    //vtkNew(vtkPoints, tmpVPoints);
+    //tmpVPoints->SetNumberOfPoints(nVCon);
+    //for (int i=0; i<nVCon; i++)
+    //{
+    //  int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
+    //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    //  tmpVPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+    //}
+    //// Get the input point set v representation
+    //vtkNew(vtkDoubleArray, V);
+    //if (vtkSVNURBSUtils::GetUs(tmpVPoints, pvtype, V) != SV_OK)
+    //{
+    //  return SV_ERROR;
+    //}
+
+    //// Get the knots in the v direction
+    //vtkNew(vtkDoubleArray, vKnots);
+    //if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
+    //{
+    //  fprintf(stderr,"Error getting knots\n");
+    //  return SV_ERROR;
+    //}
+
+    //vtkNew(vtkPoints, tmpWPoints);
+    //tmpWPoints->SetNumberOfPoints(nWCon);
+    //for (int i=0; i<nWCon; i++)
+    //{
+    //  int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
+    //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
+    //  tmpWPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
+    //}
+    //// Get the input point set v representation
+    //vtkNew(vtkDoubleArray, W);
+    //if (vtkSVNURBSUtils::GetUs(tmpWPoints, pwtype, W) != SV_OK)
+    //{
+    //  return SV_ERROR;
+    //}
+
+    //// Get the knots in the w direction
+    //vtkNew(vtkDoubleArray, wKnots);
+    //if (vtkSVNURBSUtils::GetKnots(W, r, kwtype, wKnots) != SV_OK)
+    //{
+    //  fprintf(stderr,"Error getting knots\n");
+    //  return SV_ERROR;
+    //}
+
+    //vtkNew(vtkSVNURBSVolume, hexMeshControlGrid);
+    //hexMeshControlGrid->SetKnotVector(uKnots, 0);
+    //hexMeshControlGrid->SetKnotVector(vKnots, 1);
+    //hexMeshControlGrid->SetKnotVector(wKnots, 2);
+    //hexMeshControlGrid->SetControlPoints(realHexMesh);
+    //hexMeshControlGrid->SetUDegree(p);
+    //hexMeshControlGrid->SetVDegree(q);
+    //hexMeshControlGrid->SetWDegree(r);
+
+    //nurbs->AddItem(hexMeshControlGrid);
+  }
+
+  //if (this->MergedCenterlines->GetNumberOfCells() == 1)
   //{
-  //  int groupId = groupIds->GetId(i);
-
-  //  vtkNew(vtkUnstructuredGrid, mappedBranch);
-  //  vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
-
-  //  vtkNew(vtkStructuredGrid, realHexMesh);
-  //  if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_divs[i], l_divs[i], h_divs[i]) != SV_OK)
-  //  {
-  //    fprintf(stderr,"Couldn't do the dirt\n");
-  //    return SV_ERROR;
-  //  }
-
-  //  // FOR LOFTING OF VOLUME
-  //  // Set up the volume
-  //  vtkNew(vtkUnstructuredGrid, emptyGrid);
-  //  vtkNew(vtkSVLoftNURBSVolume, lofter);
-  //  lofter->SetInputData(emptyGrid);
-  //  lofter->SetInputGrid(realHexMesh);
-  //  lofter->SetUDegree(2);
-  //  lofter->SetVDegree(2);
-  //  lofter->SetWDegree(2);
-  //  //lofter->SetUnstructuredGridUSpacing(1./(10*w_divs[i]));
-  //  //lofter->SetUnstructuredGridVSpacing(1./(10*h_divs[i]));
-  //  //lofter->SetUnstructuredGridWSpacing(1./(10*l_divs[i]));
-  //  lofter->SetUnstructuredGridUSpacing(1./w_divs[i]);
-  //  lofter->SetUnstructuredGridVSpacing(1./h_divs[i]);
-  //  lofter->SetUnstructuredGridWSpacing(1./l_divs[i]);
-  //  lofter->SetUKnotSpanType("average");
-  //  //lofter->SetUKnotSpanType("derivative");
-  //  lofter->SetUParametricSpanType("chord");
-  //  lofter->SetVKnotSpanType("average");
-  //  //lofter->SetVKnotSpanType("derivative");
-  //  lofter->SetVParametricSpanType("chord");
-  //  lofter->SetWKnotSpanType("average");
-  //  //lofter->SetWKnotSpanType("derivative");
-  //  lofter->SetWParametricSpanType("chord");
-  //  lofter->Update();
-
-  ////  loftAppender->AddInputData(lofter->GetOutput());
-
-  //  nurbs->AddItem(lofter->GetVolume());
-
-  //  vtkNew(vtkStructuredGridGeometryFilter, converter);
-  //  converter->SetInputData(lofter->GetVolume()->GetControlPointGrid());
-  //  converter->Update();
-
-  //  std::string cpst = "/Users/adamupdegrove/Desktop/tmp/CONTROL_POINTS_STRUCT.vts";
-  //  vtkSVIOUtils::WriteVTSFile(cpst, lofter->GetVolume()->GetControlPointGrid());
-
-  //  std::string cps = "/Users/adamupdegrove/Desktop/tmp/CONTROL_POINTS.vtp";
-  //  vtkSVIOUtils::WriteVTPFile(cps, converter->GetOutput());
-
-  //  //// FOR USING HEX MESH AS CONTROL GRID
-  //  //int dim[3];
-  //  //realHexMesh->GetDimensions(dim);
-  //  //int nUCon = dim[0];
-  //  //int nVCon = dim[1];
-  //  //int nWCon = dim[2];
-  //  //int p = 2;
-  //  //int q = 2;
-  //  //int r = 2;
-  //  //std::string putype = "chord";
-  //  //std::string pvtype = "chord";
-  //  //std::string pwtype = "chord";
-  //  //std::string kutype = "average";
-  //  //std::string kvtype = "average";
-  //  //std::string kwtype = "average";
-
-  //  //// Set the temporary control points
-  //  //vtkNew(vtkPoints, tmpUPoints);
-  //  //tmpUPoints->SetNumberOfPoints(nUCon);
-  //  //for (int i=0; i<nUCon; i++)
-  //  //{
-  //  //  int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
-  //  //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
-  //  //  tmpUPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
-  //  //}
-
-  //  //// Get the input point set u representation
-  //  //vtkNew(vtkDoubleArray, U);
-  //  //if (vtkSVNURBSUtils::GetUs(tmpUPoints, putype, U) != SV_OK)
-  //  //{
-  //  //  return SV_ERROR;
-  //  //}
-
-  //  //// Get the knots in the u direction
-  //  //vtkNew(vtkDoubleArray, uKnots);
-  //  //if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
-  //  //{
-  //  //  fprintf(stderr,"Error getting knots\n");
-  //  //  return SV_ERROR;
-  //  //}
-  //  ////
-  //  //vtkNew(vtkPoints, tmpVPoints);
-  //  //tmpVPoints->SetNumberOfPoints(nVCon);
-  //  //for (int i=0; i<nVCon; i++)
-  //  //{
-  //  //  int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
-  //  //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
-  //  //  tmpVPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
-  //  //}
-  //  //// Get the input point set v representation
-  //  //vtkNew(vtkDoubleArray, V);
-  //  //if (vtkSVNURBSUtils::GetUs(tmpVPoints, pvtype, V) != SV_OK)
-  //  //{
-  //  //  return SV_ERROR;
-  //  //}
-
-  //  //// Get the knots in the v direction
-  //  //vtkNew(vtkDoubleArray, vKnots);
-  //  //if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
-  //  //{
-  //  //  fprintf(stderr,"Error getting knots\n");
-  //  //  return SV_ERROR;
-  //  //}
-
-  //  //vtkNew(vtkPoints, tmpWPoints);
-  //  //tmpWPoints->SetNumberOfPoints(nWCon);
-  //  //for (int i=0; i<nWCon; i++)
-  //  //{
-  //  //  int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
-  //  //  int ptId = vtkStructuredData::ComputePointId(dim, pos);
-  //  //  tmpWPoints->SetPoint(i, realHexMesh->GetPoint(ptId));
-  //  //}
-  //  //// Get the input point set v representation
-  //  //vtkNew(vtkDoubleArray, W);
-  //  //if (vtkSVNURBSUtils::GetUs(tmpWPoints, pwtype, W) != SV_OK)
-  //  //{
-  //  //  return SV_ERROR;
-  //  //}
-
-  //  //// Get the knots in the w direction
-  //  //vtkNew(vtkDoubleArray, wKnots);
-  //  //if (vtkSVNURBSUtils::GetKnots(W, r, kwtype, wKnots) != SV_OK)
-  //  //{
-  //  //  fprintf(stderr,"Error getting knots\n");
-  //  //  return SV_ERROR;
-  //  //}
-
-  //  //vtkNew(vtkSVNURBSVolume, hexMeshControlGrid);
-  //  //hexMeshControlGrid->SetKnotVector(uKnots, 0);
-  //  //hexMeshControlGrid->SetKnotVector(vKnots, 1);
-  //  //hexMeshControlGrid->SetKnotVector(wKnots, 2);
-  //  //hexMeshControlGrid->SetControlPoints(realHexMesh);
-  //  //hexMeshControlGrid->SetUDegree(p);
-  //  //hexMeshControlGrid->SetVDegree(q);
-  //  //hexMeshControlGrid->SetWDegree(r);
-
-  //  //nurbs->AddItem(hexMeshControlGrid);
+  //  std::string mfsname = "/Users/adamupdegrove/Desktop/tmp/Pipe.msh";
+  //  vtkNew(vtkSVMUPFESNURBSWriter, writer);
+  //  writer->SetInputData(lofter->GetVolume());
+  //  writer->SetFileName(mfsname.c_str());
+  //  writer->Write();
   //}
 
   ////if (this->MergedCenterlines->GetNumberOfCells() == 1)
@@ -5091,22 +5102,15 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   ////  writer->Write();
   ////}
 
-  //fprintf(stdout,"Writing NURBS...\n");
-  //std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
-  //vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
-  //writer->SetInputData(nurbs);
-  //writer->SetFileName(pername.c_str());
-  //writer->Update();
+  ////fprintf(stdout,"Writing NURBS...\n");
+  ////std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
+  ////vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
+  ////writer->SetInputData(nurbs);
+  ////writer->SetFileName(pername.c_str());
+  ////writer->Update();
 
-  //////fprintf(stdout,"Writing NURBS...\n");
-  //////std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
-  //////vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
-  //////writer->SetInputData(nurbs);
-  //////writer->SetFileName(pername.c_str());
-  //////writer->Update();
-
-  ////loftAppender->Update();
-  ////loftedVolume->DeepCopy(loftAppender->GetOutput());
+  //loftAppender->Update();
+  //loftedVolume->DeepCopy(loftAppender->GetOutput());
 
   return SV_OK;
 }
@@ -6633,10 +6637,12 @@ int vtkSVGroupsSegmenter::GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
   locator2->BuildLocator();
 
   int numPoints = pdWithAllInterior->GetNumberOfPoints();
+  ptMap.clear();
   ptMap.resize(numPoints);
   std::fill(ptMap.begin(), ptMap.end(), -1);
 
   int numCleanPoints = pdWithCleanInterior->GetNumberOfPoints();
+  invPtMap.clear();
   invPtMap.resize(numCleanPoints);
 
   for (int i=0; i<numPoints; i++)
@@ -6663,18 +6669,24 @@ int vtkSVGroupsSegmenter::GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
 }
 
 // ----------------------
-// GetVolumePointMap
+// GetVolumePointMaps
 // ----------------------
-int vtkSVGroupsSegmenter::GetVolumePointMap(vtkUnstructuredGrid *ugAll,
-                                            vtkUnstructuredGrid *ugClean,
-                                            std::vector<int> &ptMap)
+int vtkSVGroupsSegmenter::GetVolumePointMaps(vtkUnstructuredGrid *ugAll,
+                                             vtkUnstructuredGrid *ugClean,
+                                             std::vector<int> &ptMap,
+                                             std::vector<std::vector<int> > &invPtMap)
 {
   vtkNew(vtkPointLocator, locator);
   locator->SetDataSet(ugClean);
   locator->BuildLocator();
 
   int numAllPoints = ugAll->GetNumberOfPoints();
+  ptMap.clear();
   ptMap.resize(numAllPoints);
+
+  int numCleanPoints = ugClean->GetNumberOfPoints();
+  invPtMap.clear();
+  invPtMap.resize(numCleanPoints);
 
   for (int i=0; i<numAllPoints; i++)
   {
@@ -6684,6 +6696,7 @@ int vtkSVGroupsSegmenter::GetVolumePointMap(vtkUnstructuredGrid *ugAll,
     int ptId = locator->FindClosestPoint(pt);
 
     ptMap[i] = ptId;
+    invPtMap[ptId].push_back(i);
   }
 
   return SV_OK;
@@ -6981,6 +6994,306 @@ int vtkSVGroupsSegmenter::FixVolume(vtkUnstructuredGrid *mappedVolume,
 }
 
 // ----------------------
+// SetControlMeshBoundaries
+// ----------------------
+int vtkSVGroupsSegmenter::SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVolume,
+                                                   vtkUnstructuredGrid *cleanVolume,
+                                                   const std::vector<int> ptMap,
+                                                   const std::vector<std::vector<int> > invPtMap)
+{
+  int numPoints = mappedVolume->GetNumberOfPoints();
+
+  vtkNew(vtkIntArray, isBoundaryPoint);
+  isBoundaryPoint->SetNumberOfTuples(numPoints);
+  isBoundaryPoint->FillComponent(0, -1);
+  isBoundaryPoint->SetName("IsBoundaryPoint");
+
+  std::vector<std::vector<int> > boundaryGroupMatchings;
+  std::vector<std::vector<int> > groupSets;
+  std::vector<int> pointGroupIds(numPoints, -1);
+  for (int i=0; i<invPtMap.size(); i++)
+  {
+    if (invPtMap[i].size() > 1)
+    {
+      for (int j=0; j<invPtMap[i].size(); j++)
+        isBoundaryPoint->SetTuple1(invPtMap[i][j], 1);
+    }
+
+    std::vector<int> groupIds;
+    for (int j=0; j<invPtMap[i].size(); j++)
+    {
+
+      vtkNew(vtkIdList, pointCellIds);
+      mappedVolume->GetPointCells(invPtMap[i][j], pointCellIds);
+
+      if (pointCellIds->GetNumberOfIds() > 0)
+      {
+        int cellId = pointCellIds->GetId(0);
+        int groupId = mappedVolume->GetCellData()->GetArray("GroupIds")->GetTuple1(cellId);
+        groupIds.push_back(groupId);
+        pointGroupIds[invPtMap[i][j]] = groupId;
+      }
+      else
+      {
+        fprintf(stderr,"All of these boundary points should be attached to at least one cell\n");
+        return SV_ERROR;
+      }
+    }
+
+    std::sort(groupIds.begin(), groupIds.end());
+    groupSets.push_back(groupIds);
+
+    int addBoundary = 1;
+    for (int k=0; k<boundaryGroupMatchings.size(); k++)
+    {
+      if (boundaryGroupMatchings[k] == groupIds)
+        addBoundary = 0;
+    }
+
+    if (addBoundary)
+      boundaryGroupMatchings.push_back(groupIds);
+  }
+
+  //fprintf(stdout,"LET ME SEE THE MATCHINGS:\n");
+  std::vector<std::vector<int> > pointsInMatching;
+  std::vector<std::vector<int> > cleanPointsInMatching;
+  for (int i=0; i<boundaryGroupMatchings.size(); i++)
+  {
+    std::vector<int> pointIds;
+    std::vector<int> cleanPointIds;
+    if (boundaryGroupMatchings[i].size() > 1)
+    {
+      //fprintf(stdout,"POINTS WITH CONNECT: ");
+      //for (int j=0; j<boundaryGroupMatchings[i].size(); j++)
+      //  fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
+      //fprintf(stdout,"\n");
+      //fprintf(stdout,"       -> ");
+      for (int j=0; j<invPtMap.size(); j++)
+      {
+        if (invPtMap[j].size() > 1)
+        {
+          if (groupSets[j] == boundaryGroupMatchings[i])
+          {
+            for (int k=0; k<invPtMap[j].size(); k++)
+            {
+              //fprintf(stdout,"%d ",invPtMap[j][k]);
+              pointIds.push_back(invPtMap[j][k]);
+            }
+            cleanPointIds.push_back(j);
+          }
+        }
+      }
+      //fprintf(stdout,"\n");
+    }
+    pointsInMatching.push_back(pointIds);
+    cleanPointsInMatching.push_back(cleanPointIds);
+  }
+
+  std::vector<std::vector<int> > ptEdgeNeighbors;
+  this->GetPointConnectivity(cleanVolume, ptEdgeNeighbors);
+
+  for (int i=0; i<boundaryGroupMatchings.size(); i++)
+  {
+    int numGroups = boundaryGroupMatchings[i].size();
+    if (numGroups == 3)
+    {
+      // Set the interior ridge line first
+      //fprintf(stdout,"POINTS WITH CONNECT: ");
+      //for (int j=0; j<numGroups; j++)
+      //  fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
+      //fprintf(stdout,"\n");
+      std::vector<int> outsideIndices;
+      for (int j=0; j<cleanPointsInMatching[i].size(); j++)
+      {
+        int cleanPointId = cleanPointsInMatching[i][j];
+        int isInterior = cleanVolume->GetPointData()->GetArray("IsInteriorPoint")->GetTuple1(cleanPointId);
+        //fprintf(stdout,"       -> %d IS INTERIOR: %d\n", cleanPointId, isInterior);
+        if (!isInterior)
+          outsideIndices.push_back(j);
+      }
+      //fprintf(stdout,"\n");
+      if (outsideIndices.size() != 2)
+      {
+        fprintf(stdout,"There should be two points along interior boundary ridge, but there are %d\n", outsideIndices.size());
+        return SV_ERROR;
+      }
+
+      int linePtId0 = cleanPointsInMatching[i][outsideIndices[0]];
+      int linePtId1 = cleanPointsInMatching[i][outsideIndices[1]];
+      double pt0[3], pt1[3];
+      cleanVolume->GetPoint(linePtId0, pt0);
+      cleanVolume->GetPoint(linePtId1, pt1);
+
+      for (int j=0; j<cleanPointsInMatching[i].size(); j++)
+      {
+        if (j != outsideIndices[0] && j != outsideIndices[1])
+        {
+          double currPt[3];
+          int cleanPointId = cleanPointsInMatching[i][j];
+          cleanVolume->GetPoint(cleanPointId, currPt);
+
+          double t;
+          double closestPt[3];
+          double dist = vtkLine::DistanceToLine(currPt, pt0, pt1, t, closestPt);
+
+          cleanVolume->GetPoints()->SetPoint(cleanPointId, closestPt);
+          for (int k=0; k<invPtMap[cleanPointId].size(); k++)
+          {
+            int pointId = invPtMap[cleanPointId][k];
+            mappedVolume->GetPoints()->SetPoint(pointId, closestPt);
+          }
+        }
+      }
+
+      // Now set the plane points mister son guy
+      double ridgeVec[3];
+      vtkMath::Subtract(pt1, pt0, ridgeVec);
+      vtkMath::Normalize(ridgeVec);
+
+      for (int j=0; j<numGroups; j++)
+      {
+        std::vector<int> twoGroups(2);
+        twoGroups[0] = boundaryGroupMatchings[i][j];
+        twoGroups[1] = boundaryGroupMatchings[i][(j+1)%numGroups];
+        std::sort(twoGroups.begin(), twoGroups.end());
+
+        // Loop through again and find just these beeznees
+        double avgPlaneNormal[3];
+        avgPlaneNormal[0] = 0.0;
+        avgPlaneNormal[1] = 0.0;
+        avgPlaneNormal[2] = 0.0;
+        int numPtsInPlane = 0;
+        for (int k=0; k<boundaryGroupMatchings.size(); k++)
+        {
+          if (boundaryGroupMatchings[k] == twoGroups)
+          {
+            for (int l=0; l<cleanPointsInMatching[k].size(); l++)
+            {
+              double currPt[3];
+              int cleanPointId = cleanPointsInMatching[k][l];
+              cleanVolume->GetPoint(cleanPointId, currPt);
+
+              double t;
+              double closestPt[3];
+              double dist = vtkLine::DistanceToLine(currPt, pt0, pt1, t, closestPt);
+
+              double vec[3];
+              vtkMath::Subtract(currPt, closestPt, vec);
+              vtkMath::Normalize(vec);
+
+              double planeNormal[3];
+              vtkMath::Cross(ridgeVec, vec, planeNormal);
+              vtkMath::Normalize(planeNormal);
+
+              for (int m=0; m<3; m++)
+                avgPlaneNormal[m] += planeNormal[m];
+              numPtsInPlane++;
+            }
+          }
+        }
+        for (int k=0; k<3; k++)
+          avgPlaneNormal[k] = avgPlaneNormal[k]/numPtsInPlane;
+
+        for (int k=0; k<boundaryGroupMatchings.size(); k++)
+        {
+          if (boundaryGroupMatchings[k] == twoGroups)
+          {
+            for (int l=0; l<cleanPointsInMatching[k].size(); l++)
+            {
+              int cleanPointId = cleanPointsInMatching[k][l];
+
+              std::vector<int> neighborIds;
+              for (int m=0; m<ptEdgeNeighbors[cleanPointId].size(); m++)
+              {
+                int neighborPointId = ptEdgeNeighbors[cleanPointId][m];
+                if (isBoundaryPoint->GetValue(neighborPointId) == -1)
+                  neighborIds.push_back(neighborPointId);
+              }
+
+              if (neighborIds.size() != 2)
+              {
+                fprintf(stderr,"Should be two neighbors to this interace point, but there is %d\n", neighborIds.size());
+                return SV_ERROR;
+              }
+
+              double neighborPt0[3], neighborPt1[3];
+              cleanVolume->GetPoint(neighborIds[0], neighborPt0);
+              cleanVolume->GetPoint(neighborIds[1], neighborPt1);
+
+              double planeT;
+              double planeClosestPt[3];
+              vtkPlane::IntersectWithLine(neighborPt0, neighborPt1, avgPlaneNormal, pt0, planeT, planeClosestPt);
+
+              cleanVolume->GetPoints()->SetPoint(cleanPointId, planeClosestPt);
+              for (int k=0; k<invPtMap[cleanPointId].size(); k++)
+              {
+                int pointId = invPtMap[cleanPointId][k];
+                mappedVolume->GetPoints()->SetPoint(pointId, planeClosestPt);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  mappedVolume->GetPointData()->AddArray(isBoundaryPoint);
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetPointConnectivity
+// ----------------------
+int vtkSVGroupsSegmenter::GetPointConnectivity(vtkUnstructuredGrid *hexMesh,
+                                               std::vector<std::vector<int> > &ptEdgeNeighbors)
+{
+  hexMesh->BuildLinks();
+  int numCells = hexMesh->GetNumberOfCells();
+  int numPoints = hexMesh->GetNumberOfPoints();
+
+  for (int i=0; i<numCells; i++)
+  {
+    if (hexMesh->GetCellType(i) != VTK_HEXAHEDRON)
+    {
+      vtkErrorMacro("All cells must be hexes");
+      return SV_ERROR;
+    }
+  }
+
+  ptEdgeNeighbors.clear();
+  ptEdgeNeighbors.resize(numPoints);
+
+  for (int i=0; i<numPoints; i++)
+  {
+    vtkNew(vtkIdList, ptCellIds);
+    hexMesh->GetPointCells(i, ptCellIds);
+
+    vtkNew(vtkIdList, ptNeighbors);
+    for (int j=0; j<ptCellIds->GetNumberOfIds(); j++)
+    {
+      vtkCell *cell = hexMesh->GetCell(ptCellIds->GetId(j));
+
+      for (int k=0; k<cell->GetNumberOfEdges(); k++)
+      {
+        vtkIdList *edge = cell->GetEdge(k)->GetPointIds();
+        int isPtId = edge->IsId(i);
+        if (isPtId != -1)
+        {
+          if (ptNeighbors->IsId(edge->GetId((isPtId+1)%2)) == -1)
+           ptNeighbors->InsertNextId(edge->GetId((isPtId+1)%2));
+        }
+      }
+    }
+
+    for (int j=0; j<ptNeighbors->GetNumberOfIds(); j++)
+      ptEdgeNeighbors[i].push_back(ptNeighbors->GetId(j));
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
 // MapVolume
 // ----------------------
 int vtkSVGroupsSegmenter::MapVolume(vtkStructuredGrid *paraHexVolume,
@@ -7094,17 +7407,17 @@ int vtkSVGroupsSegmenter::MapVolume(vtkStructuredGrid *paraHexVolume,
         if (i == 0 || i == dim[0] - 1)
         {
           for (int r=0; r<3; r++)
-              real_pt[r] = real_xpt[r];
+            real_pt[r] = real_xpt[r];
         }
         else if (j == 0 || j == dim[1]-1)
         {
           for (int r=0; r<3; r++)
-              real_pt[r] = real_ypt[r];
+            real_pt[r] = real_ypt[r];
         }
         else if (k == 0 || k == dim[2]-1)
         {
           for (int r=0; r<3; r++)
-              real_pt[r] = real_zpt[r];
+            real_pt[r] = real_zpt[r];
         }
         else
         {
@@ -7238,11 +7551,12 @@ int vtkSVGroupsSegmenter::RemoveInteriorCells(vtkPolyData *quadMesh)
   return SV_OK;
 }
 
-
 // ----------------------
 // SmoothUnstructuredGrid
 // ----------------------
-int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters)
+int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh,
+                                                 const int iters,
+                                                 std::string fixedPointsArrayName)
 {
   hexMesh->BuildLinks();
   int numCells = hexMesh->GetNumberOfCells();
@@ -7251,6 +7565,15 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
   vtkNew(vtkIntArray, isInteriorPoint);
   isInteriorPoint->SetNumberOfTuples(numPoints);
   isInteriorPoint->SetName("IsInteriorPoint");
+
+  vtkNew(vtkIntArray, isFixedPoint);
+  if (vtkSVGeneralUtils::CheckArrayExists(hexMesh, 0, fixedPointsArrayName) == SV_OK)
+    isFixedPoint = vtkIntArray::SafeDownCast(hexMesh->GetPointData()->GetArray(fixedPointsArrayName.c_str()));
+  else
+  {
+    isFixedPoint->SetNumberOfTuples(numPoints);
+    isFixedPoint->FillComponent(0, -1);
+  }
 
   for (int i=0; i<numCells; i++)
   {
@@ -7322,7 +7645,8 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
     }
 
     isInteriorPoint->SetTuple1(i, interiorPoint);
-    if (interiorPoint)
+    int fixedPoint = isFixedPoint->GetTuple1(i);
+    if (interiorPoint && fixedPoint != 1)
     {
       if (ptNeighbors->GetNumberOfIds() > 0)
       {
@@ -7362,6 +7686,9 @@ int vtkSVGroupsSegmenter::SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, c
       }
     }
   }
+
+  if (vtkSVGeneralUtils::CheckArrayExists(hexMesh, 0, "IsInteriorPoint"))
+    hexMesh->GetPointData()->RemoveArray("IsInteriorPoint");
 
   hexMesh->GetPointData()->AddArray(isInteriorPoint);
 

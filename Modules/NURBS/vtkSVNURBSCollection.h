@@ -44,11 +44,14 @@
 #include "vtkCollection.h"
 #include "vtkSVNURBSModule.h"
 
+#include <vector>
+
 class vtkSVNURBSObject;
 
 class VTKSVNURBS_EXPORT vtkSVNURBSCollection : public vtkCollection
 {
 public:
+  static vtkSVNURBSCollection *New();
   vtkTypeMacro(vtkSVNURBSCollection,vtkCollection);
 
   /**
@@ -72,11 +75,20 @@ public:
    */
   vtkSVNURBSObject *GetNextDataObject(vtkCollectionSimpleIterator &cookie);
 
-  static vtkSVNURBSCollection *New();
+  int AddPatchConnection(const int patch_0, const int patch_1, const int patch_0_face, const int patch_1_face);
+
+  std::vector<std::vector<int> > GetPatchConnections() {return this->PatchConnections;}
+  std::vector<std::vector<int> > GetPatchFaceConnections() {return this->PatchFaceConnections;}
+
+  int GetNumberOfPatchConnections() {return this->PatchConnections.size();}
+
 
 protected:
   vtkSVNURBSCollection() {}
   ~vtkSVNURBSCollection() {}
+
+  std::vector<std::vector<int> > PatchConnections;
+  std::vector<std::vector<int> > PatchFaceConnections;
 
 
 private:
