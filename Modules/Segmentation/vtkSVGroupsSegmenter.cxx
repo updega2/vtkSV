@@ -416,7 +416,8 @@ int vtkSVGroupsSegmenter::RunFilter()
     branchClipper->SetBlankingArrayName(this->BlankingArrayName);
     branchClipper->SetCutoffRadiusFactor(this->CutoffRadiusFactor);
     branchClipper->SetClipValue(this->ClipValue);
-    branchClipper->SetUseRadiusInformation(this->UseRadiusInformation);
+    //branchClipper->SetUseRadiusInformation(this->UseRadiusInformation);
+    branchClipper->SetUseRadiusInformation(0);
     branchClipper->SetClipAllCenterlineGroupIds(this->ClipAllCenterlineGroupIds);
     branchClipper->Update();
 
@@ -427,6 +428,8 @@ int vtkSVGroupsSegmenter::RunFilter()
     dataPasser->SetPassDataIsCellData(0);
     dataPasser->SetPassDataToCellData(1);
     dataPasser->Update();
+
+    this->WorkPd->DeepCopy(dataPasser->GetOutput());
 
     smoother->SetInputData(dataPasser->GetOutput());
     vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/AFTERCLIPPER.vtp", dataPasser->GetOutput());
@@ -455,16 +458,16 @@ int vtkSVGroupsSegmenter::RunFilter()
     smoother->SetInputData(CVT->GetOutput());
   }
 
-  smoother->SetGenerators(this->MergedCenterlines);
-  smoother->SetNumberOfRings(2);
-  smoother->SetThreshold(stopCellNumber);
-  smoother->SetUseCurvatureWeight(0);
-  smoother->SetNoInitialization(1);
-  smoother->SetPatchIdsArrayName(this->GroupIdsArrayName);
-  smoother->SetCVTDataArrayName("Normals");
-  smoother->Update();
+  //smoother->SetGenerators(this->MergedCenterlines);
+  //smoother->SetNumberOfRings(2);
+  //smoother->SetThreshold(stopCellNumber);
+  //smoother->SetUseCurvatureWeight(0);
+  //smoother->SetNoInitialization(1);
+  //smoother->SetPatchIdsArrayName(this->GroupIdsArrayName);
+  //smoother->SetCVTDataArrayName("Normals");
+  //smoother->Update();
 
-  this->WorkPd->DeepCopy(smoother->GetOutput());
+  //this->WorkPd->DeepCopy(smoother->GetOutput());
   vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/AFTERCLUSTERSMOOTHER.vtp", this->WorkPd);
 
   if (this->CheckGroups() != SV_OK)
@@ -4951,8 +4954,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     vtkNew(vtkSVLoftNURBSVolume, lofter);
     lofter->SetInputData(emptyGrid);
     lofter->SetInputGrid(realHexMesh);
-    lofter->SetUDegree(2);
-    lofter->SetVDegree(2);
+    lofter->SetUDegree(1);
+    lofter->SetVDegree(1);
     lofter->SetWDegree(2);
     //lofter->SetUnstructuredGridUSpacing(1./(10*w_divs[i]));
     //lofter->SetUnstructuredGridVSpacing(1./(10*h_divs[i]));
@@ -4991,8 +4994,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
     //int nUCon = dim[0];
     //int nVCon = dim[1];
     //int nWCon = dim[2];
-    //int p = 2;
-    //int q = 2;
+    //int p = 1;
+    //int q = 1;
     //int r = 2;
     //std::string putype = "chord";
     //std::string pvtype = "chord";
