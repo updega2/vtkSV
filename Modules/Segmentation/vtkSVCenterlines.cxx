@@ -732,6 +732,16 @@ int vtkSVCenterlines::RequestData(
   // Preprocessing of lines
   linesPd->BuildLinks();
 
+  for (int i=0; i<linesPd->GetNumberOfCells(); i++)
+  {
+    if (linesPd->GetCellType(i) != VTK_LINE)
+    {
+      linesPd->DeleteCell(i);
+    }
+  }
+  linesPd->RemoveDeletedCells();
+  linesPd->BuildLinks();
+
   vtkIdType npts, *pts;
 
 	int firstVertex = -1;
@@ -749,7 +759,6 @@ int vtkSVCenterlines::RequestData(
         firstVertex = i;
     }
 
-    numConnectedPts[i] = pointCellIds->GetNumberOfIds();
 
     std::vector<int> connectedPts;
     for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
@@ -763,6 +772,7 @@ int vtkSVCenterlines::RequestData(
       }
     }
     connectedEdgePts[i] = connectedPts;
+    numConnectedPts[i] = connectedPts.size();
   }
   fprintf(stdout,"NUM FIRSTIES: %d\n", firsties);
 
@@ -781,6 +791,7 @@ int vtkSVCenterlines::RequestData(
   std::vector<int> thisEdge;
   thisEdge.push_back(firstVertex);
 
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/PRUNEDVORCENTERLINES.vtp", linesPd);
   this->RecursiveGetPolylines(linesPd, numConnectedPts, connectedEdgePts, startVertex, pointUsed, allEdges, thisEdge);
 
   fprintf(stdout,"SEE END BEGS\n");
@@ -796,6 +807,15 @@ int vtkSVCenterlines::RequestData(
 
     int edge0IsId = allEndIds->IsId(edgeId0);
     int edgeNIsId = allEndIds->IsId(edgeIdN);
+    if (edgeId0 == 11589 || edgeIdN == 11589)
+    {
+      fprintf(stdout,"EDGE POINTERSSSS: ");
+      for (int j=0; j<edgeSize; j++)
+      {
+        fprintf(stdout,"%d ", allEdges[i][j]);
+      }
+      fprintf(stdout,"\n");
+    }
     if (edge0IsId != -1 && edgeNIsId != -1)
     {
       // Both edges of this node already in list, delete it!
@@ -856,8 +876,6 @@ int vtkSVCenterlines::RequestData(
           {
             linesPd->DeleteCell(pointsEdgeId->GetId(0));
             fprintf(stdout,"DELETING CELL: %d\n", pointsEdgeId->GetId(0));
-            if (pointsEdgeId->GetId(0) == 5255)
-              fprintf(stdout,"TELL ME\n");
           }
           else
             fprintf(stdout,"NO CELL FOUND\n");
@@ -984,8 +1002,6 @@ int vtkSVCenterlines::RequestData(
         {
           linesPd->DeleteCell(pointsEdgeId->GetId(0));
           fprintf(stdout,"DELETING CELL: %d\n", pointsEdgeId->GetId(0));
-          if (pointsEdgeId->GetId(0) == 5255)
-            fprintf(stdout,"TELL ME\n");
         }
         else
           fprintf(stdout,"NO CELL FOUND\n");
@@ -997,15 +1013,6 @@ int vtkSVCenterlines::RequestData(
       isDeleted[i] = 1;
     }
   }
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/WRITERS.vtp", linesPd);
-  linesPd->RemoveDeletedCells();
-  cleaner->SetInputData(linesPd);
-  cleaner->Update();
-
-  linesPd->DeepCopy(cleaner->GetOutput());
-
-  // Preprocessing of lines
-  linesPd->BuildLinks();
 
 	firstVertex = -1;
   numConnectedPts.clear();
@@ -1016,6 +1023,241 @@ int vtkSVCenterlines::RequestData(
   firsties = 0;
   vtkNew(vtkIdList, linesEndPointIds);
   vtkNew(vtkPoints, linesEndPoints);
+  //for (int i=0; i<linesPd->GetNumberOfPoints(); i++)
+  //{
+  //  linesPd->GetPointCells(i, pointCellIds);
+  //  if (pointCellIds->GetNumberOfIds() == 1)
+  //  {
+  //    fprintf(stdout,"FIRST ONE SON!!!!: %d\n", i);
+  //    firsties++;
+  //    if (firstVertex == -1)
+  //      firstVertex = i;
+  //    linesEndPointIds->InsertNextId(i);
+  //    linesEndPoints->InsertNextPoint(linesPd->GetPoint(i));
+  //  }
+
+  //  std::vector<int> connectedPts;
+  //  for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
+  //  {
+  //    linesPd->GetCellPoints(pointCellIds->GetId(j), npts, pts);
+
+  //    for (int k=0; k<npts; k++)
+  //    {
+  //      if (pts[k] != i)
+  //        connectedPts.push_back(pts[k]);
+  //    }
+  //  }
+  //  connectedEdgePts[i] = connectedPts;
+  //  numConnectedPts[i] = connectedPts.size();
+
+  //}
+
+  vtkNew(vtkPointLocator, linesEndPointLocator);
+  vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DUMBBBBBB.vtp", linesEndPointsPd);
+
+  //if (this->SourceSeedIds)
+  //{
+  //  if (this->SourceSeedIds->GetNumberOfIds() != 1)
+  //  {
+  //    fprintf(stdout,"Only one source seed can be provided with this method\n");
+  //    return SV_ERROR;
+  //  }
+
+  //  linesEndPointLocator->SetDataSet(linesEndPointsPd);
+  //  linesEndPointLocator->BuildLocator();
+
+  //  std::vector<int> endPointUsed(linesEndPointIds->GetNumberOfIds(), 0);
+  //  std::vector<int> deleteSeeds;
+  //  for (int j=0; j<this->SourceSeedIds->GetNumberOfIds(); j++)
+  //  {
+  //    double sourcePt[3];
+  //    if (this->CapCenterIds)
+  //      input->GetPoint(this->CapCenterIds->GetId(this->SourceSeedIds->GetId(j)), sourcePt);
+  //    else
+  //      input->GetPoint(this->SourceSeedIds->GetId(j), sourcePt);
+
+  //    int endPointId = linesEndPointLocator->FindClosestPoint(sourcePt);
+  //    int linesPtId = linesEndPointIds->GetId(endPointId);
+  //    int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+  //    if (endPointUsed[endPointId] == 1)
+  //    {
+  //      fprintf(stderr,"Two end lines found for different target seeds, target seeds too close\n");
+  //      //return SV_ERROR;
+  //    }
+  //    else
+  //    {
+  //      fprintf(stdout,"SETTING %d to 1\n", endPointId);
+  //      endPointUsed[endPointId] = 1;
+  //    }
+  //  }
+
+  //  if (this->TargetSeedIds)
+  //  {
+  //    int numSeeds = this->SourceSeedIds->GetNumberOfIds() + this->TargetSeedIds->GetNumberOfIds();
+
+  //    if (numSeeds > linesEndPointIds->GetNumberOfIds() && this->TargetSeedIds)
+  //    {
+  //      fprintf(stdout,"More seeds given than found ends\n");
+  //      vtkNew(vtkPointLocator, seedPointLocator);
+  //      vtkNew(vtkPoints, seedPoints);
+  //      vtkNew(vtkPolyData, seedPointsPd);  seedPointsPd->SetPoints(seedPoints);
+  //      vtkNew(vtkIdList, seedPointIds);
+  //      for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
+  //      {
+  //        double targetPt[3];
+  //        if (this->CapCenterIds)
+  //          input->GetPoint(this->CapCenterIds->GetId(this->TargetSeedIds->GetId(j)), targetPt);
+  //        else
+  //          input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+
+  //        seedPointsPd->GetPoints()->InsertNextPoint(targetPt);
+  //        seedPointIds->InsertNextId(j);
+  //      }
+  //      seedPointLocator->SetDataSet(seedPointsPd);
+  //      seedPointLocator->BuildLocator();
+
+  //      for (int j=0; j<linesEndPointIds->GetNumberOfIds(); j++)
+  //      {
+  //        if (endPointUsed[j] == 1)
+  //        {
+  //          continue;
+  //        }
+  //        endPointUsed[j] = 1;
+
+  //        int linesPtId = linesEndPointIds->GetId(j);
+
+  //        double endPt[3];
+  //        linesPd->GetPoint(linesPtId, endPt);
+  //        int voronoiId = linesPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(linesPtId);
+
+  //        int closestSeed = seedPointLocator->FindClosestPoint(endPt);
+  //        int targetSeedId = seedPointIds->GetId(closestSeed);
+  //      }
+  //    }
+  //    else
+  //    {
+  //      fprintf(stdout,"Equal or less seeds given as compared to found ends\n");
+
+  //      for (int j=0; j<this->TargetSeedIds->GetNumberOfIds(); j++)
+  //      {
+  //        double targetPt[3];
+  //        if (this->CapCenterIds)
+  //          input->GetPoint(this->CapCenterIds->GetId(this->TargetSeedIds->GetId(j)), targetPt);
+  //        else
+  //          input->GetPoint(this->TargetSeedIds->GetId(j), targetPt);
+
+  //        int endPointId = linesEndPointLocator->FindClosestPoint(targetPt);
+  //        int linesPtId = linesEndPointIds->GetId(endPointId);
+
+  //        if (endPointUsed[endPointId] == 1)
+  //        {
+  //          fprintf(stderr,"Two end lines found for different target seeds, target seeds too close\n");
+  //          //return SV_ERROR;
+  //        }
+  //        else
+  //        {
+  //          fprintf(stdout,"SETTING %d to 1\n", endPointId);
+  //          endPointUsed[endPointId] = 1;
+  //        }
+  //      }
+  //    }
+
+  //    for (int i=0; i<endPointUsed.size(); i++)
+  //    {
+  //      if (endPointUsed[i] == 0)
+  //      {
+  //        fprintf(stderr,"End point %d was not used, going to remove from search list\n", i);
+  //        int linesPtId = linesEndPointIds->GetId(i);
+  //        deleteSeeds.push_back(linesPtId);
+  //      }
+  //    }
+  //  }
+
+  //  for (int i=0; i<deleteSeeds.size(); i++)
+  //  {
+  //    for (int j=0; j<allEdges.size(); j++)
+  //    {
+  //      if (isDeleted[j])
+  //      {
+  //        continue;
+  //      }
+
+  //      int edgeSize = allEdges[j].size();
+  //      int nodeId0 = allEndIds->IsId(allEdges[j][0]);
+  //      int nodeIdN = allEndIds->IsId(allEdges[j][edgeSize-1]);
+
+  //      if (nodeId0 == deleteSeeds[i] || nodeIdN == deleteSeeds[i])
+  //      {
+  //        needToDelete[j] = 1;
+  //      }
+  //    }
+  //  }
+
+  //  for (int i=0; i<needToDelete.size(); i++)
+  //  {
+  //    fprintf(stdout,"EDGE %d, DEL %d\n", i, needToDelete[i]);
+  //    fprintf(stdout,"EDGE %d,  IS DEL %d\n", i, needToDelete[i]);
+
+  //    if (isDeleted[i])
+  //    {
+  //      continue;
+  //      fprintf(stdout,"ALREADY DEL\n");
+  //    }
+
+  //    if (needToDelete[i] == 1)
+  //    {
+  //      fprintf(stdout,"ELE LE NEW\n");
+  //      int edgeSize = allEdges[i].size();
+  //      for (int j=0; j<edgeSize-1; j++)
+  //      {
+  //        int pointId0 = allEdges[i][j];
+  //        int pointId1 = allEdges[i][j+1];
+  //        edgePointIds->Reset();
+  //        edgePointIds->InsertNextId(pointId0);
+  //        edgePointIds->InsertNextId(pointId1);
+
+  //        linesPd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
+  //        if (pointsEdgeId->GetNumberOfIds() == 1)
+  //        {
+  //          linesPd->DeleteCell(pointsEdgeId->GetId(0));
+  //          fprintf(stdout,"DELETING CELL: %d\n", pointsEdgeId->GetId(0));
+  //          if (pointsEdgeId->GetId(0) == 5255)
+  //            fprintf(stdout,"TELL ME\n");
+  //        }
+  //        else
+  //          fprintf(stdout,"NO CELL FOUND\n");
+  //      }
+  //      int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+  //      int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+  //      nodeCount[nodeId0]--;
+  //      nodeCount[nodeIdN]--;
+  //      isDeleted[i] = 1;
+  //    }
+  //  }
+  //}
+
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CENTERLINES_BEF_DEL.vtp", linesPd);
+  linesPd->RemoveDeletedCells();
+  cleaner->SetInputData(linesPd);
+  cleaner->Update();
+
+  linesPd->DeepCopy(cleaner->GetOutput());
+
+  // Preprocessing of lines
+  linesPd->BuildLinks();
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CENTERLINES_AFT_DEL.vtp", linesPd);
+
+	firstVertex = -1;
+  numConnectedPts.clear();
+  numConnectedPts.resize(linesPd->GetNumberOfPoints());
+  connectedEdgePts.clear();
+  connectedEdgePts.resize(linesPd->GetNumberOfPoints());
+
+  firsties = 0;
+  linesEndPointIds->Reset();
+  linesEndPoints->Reset();
   for (int i=0; i<linesPd->GetNumberOfPoints(); i++)
   {
     linesPd->GetPointCells(i, pointCellIds);
@@ -1029,8 +1271,6 @@ int vtkSVCenterlines::RequestData(
       linesEndPoints->InsertNextPoint(linesPd->GetPoint(i));
     }
 
-    numConnectedPts[i] = pointCellIds->GetNumberOfIds();
-
     std::vector<int> connectedPts;
     for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
     {
@@ -1043,11 +1283,8 @@ int vtkSVCenterlines::RequestData(
       }
     }
     connectedEdgePts[i] = connectedPts;
+    numConnectedPts[i] = connectedPts.size();
   }
-
-  vtkNew(vtkPointLocator, linesEndPointLocator);
-  vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DUMBBBBBB.vtp", linesEndPointsPd);
 
   if (this->SourceSeedIds)
   {
@@ -2407,7 +2644,7 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
 			for (i = 0; i < numConnectedPts[firstVertex]; i++)
 			{
 				index = connectedEdgePts[firstVertex][i];
-        if (pointUsed[index] == 0 && numConnectedPts[index] <= 2)
+        if (pointUsed[index] == 0)
         {
           fprintf(stdout,"GONNA START NEW ONE WITH START: %d SECOND %d\n", firstVertex, index);
           std::vector<int> newEdge;
@@ -2416,13 +2653,23 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
         }
         else if (numConnectedPts[index] > 2)
         {
-          std::vector<int> newEdge;
-          newEdge.push_back(firstVertex);
-          newEdge.push_back(index);
-          allEdges.push_back(newEdge);
-          fprintf(stdout,"I KNEWWWW IT!!!! %d has %d is used %d\n", index, numConnectedPts[index], pointUsed[index]);
+          std::vector<int> potEdge;
+          potEdge.push_back(firstVertex);
+          potEdge.push_back(index);
+          int alreadyEdge = 0;
+          for (int j=0; j<allEdges.size(); j++)
+          {
+            if ((allEdges[j][0] == potEdge[0] && allEdges[j][allEdges[j].size()-1] == potEdge[1]) ||
+                (allEdges[j][0] == potEdge[1] && allEdges[j][allEdges[j].size()-1] == potEdge[0]))
+            {
+              alreadyEdge = 1;
+            }
+          }
+          if (!alreadyEdge)
+            allEdges.push_back(potEdge);
         }
       }
+
       return 1;
     }
     else
