@@ -214,11 +214,90 @@ int vtkSVGeneralUtils::CheckArrayExists(vtkDataSet *ds,
 }
 
 // ----------------------
+// GetEdgePolyData
+// ----------------------
+int vtkSVGeneralUtils::GetEdgePolyData(vtkPolyData *pd, vtkPolyData *edgePd)
+{
+  // ------------------------------------------------------------------------
+  // Start edge insertion for edge table
+  int numCells = pd->GetNumberOfCells();
+  int numPts   = pd->GetNumberOfPoints();
+
+  vtkNew(vtkEdgeTable, edgeTable);
+  edgeTable->InitEdgeInsertion(numPts, 1);
+  // ------------------------------------------------------------------------
+
+  // ------------------------------------------------------------------------
+  // Loop through cells
+  vtkNew(vtkIdList, neighborCellIds);
+  int totEdges = 0;
+  for (int i=0; i<numCells; i++)
+  {
+    // Get cellpoints
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(i, npts, pts);
+    for (int j=0; j<npts; j++)
+    {
+      // Get each edge of cell
+      vtkIdType p0 = pts[j];
+      vtkIdType p1 = pts[(j+1)%npts];
+
+      pd->GetCellEdgeNeighbors(i, p0, p1, neighborCellIds);
+      vtkIdType neighborCellId = 0;
+
+      // Check to see if it is a boundary edge
+      if (neighborCellIds->GetNumberOfIds() > 0)
+        neighborCellId = neighborCellIds->GetId(0);
+      else
+      {
+        neighborCellId = -1;
+      }
+
+      // Check to see if edge has already been inserted
+      vtkIdType checkEdge = edgeTable->IsEdge(p0, p1);
+      if (checkEdge == -1)
+      {
+        totEdges++;
+        // Get new edge id and insert into table
+        vtkIdType edgeId = edgeTable->InsertEdge(p0, p1);
+      }
+    }
+  }
+  // ------------------------------------------------------------------------
+
+  // ------------------------------------------------------------------------
+  // Now make polydata from edge table
+  vtkNew(vtkCellArray, edgeCells);
+  vtkNew(vtkIdList, newEdgeCell);
+  edgeTable->InitTraversal();
+  int edgeId = 0;
+  for (edgeId = 0; edgeId < totEdges;  edgeId++)
+  {
+    vtkIdType edgePtId0, edgePtId1;
+    edgeTable->GetNextEdge(edgePtId0, edgePtId1);
+
+    newEdgeCell->Reset();
+    newEdgeCell->SetNumberOfIds(2);
+    newEdgeCell->SetId(0, edgePtId0);
+    newEdgeCell->SetId(1, edgePtId1);
+
+    edgeCells->InsertNextCell(newEdgeCell);
+  }
+  // ------------------------------------------------------------------------
+
+  // ------------------------------------------------------------------------
+  // Set cells and points
+  edgePd->SetLines(edgeCells);
+  edgePd->SetPoints(pd->GetPoints());
+  edgePd->BuildLinks();
+  // ------------------------------------------------------------------------
+
+  return SV_OK;
+}
+
+// ----------------------
 // CheckSurface
 // ----------------------
-/*
- * \details TODO: Want to make more checks
- */
 int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
 {
   pd->BuildLinks();
@@ -251,6 +330,72 @@ int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd)
       }
     }
   }
+  return SV_OK;
+}
+
+// ----------------------
+// CheckSurface
+// ----------------------
+int vtkSVGeneralUtils::CheckSurface(vtkPolyData *pd,
+                                    int &numNonTriangleCells,
+                                    int &numNonManifoldEdges,
+                                    int &numOpenEdges,
+                                    int &surfaceGenus)
+{
+  pd->BuildLinks();
+
+  int numPts = pd->GetNumberOfPoints();
+  int numPolys = pd->GetNumberOfCells();
+
+  // Start edge insertion for edge table
+  vtkNew(vtkEdgeTable, surfaceEdgeTable);
+  surfaceEdgeTable->InitEdgeInsertion(numPts, 1);
+
+  numOpenEdges        = 0;
+  numNonTriangleCells = 0;
+  numNonManifoldEdges = 0;
+  for (int i=0; i<numPolys; i++)
+  {
+    vtkIdType npts, *pts;
+    pd->GetCellPoints(i, npts, pts);
+    if (npts != 3)
+    {
+      numNonTriangleCells++;
+    }
+    for (int j=0; j<npts; j++)
+    {
+      vtkIdType p0, p1;
+      p0 = pts[j];
+      p1 = pts[(j+1)%npts];
+
+      vtkNew(vtkIdList, edgeNeighbor);
+      pd->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
+
+      if (edgeNeighbor->GetNumberOfIds() == 0)
+      {
+        numOpenEdges++;
+      }
+      if (edgeNeighbor->GetNumberOfIds() > 1)
+      {
+        numNonManifoldEdges++;
+      }
+
+      // Check to see if edge has already been inserted
+      vtkIdType checkEdge = surfaceEdgeTable->IsEdge(p0, p1);
+      if (checkEdge == -1)
+      {
+        // Get new edge id and insert into table
+        vtkIdType edgeId = surfaceEdgeTable->InsertEdge(p0, p1);
+      }
+    }
+  }
+
+  int ne = surfaceEdgeTable->GetNumberOfEdges();
+  int nv = numPts;
+  int nf = numPolys;
+
+  surfaceGenus = ((ne - nv - nf)/2) + 1;
+
   return SV_OK;
 }
 

@@ -106,6 +106,12 @@ public:
   vtkGetVectorMacro(LastPolyBallCenter,double,3);
   vtkGetMacro(LastPolyBallCenterRadius,double);
   //@}
+  //
+  /// \brief Use proj
+  vtkSetMacro(UseProjectionVector,int);
+  vtkGetMacro(UseProjectionVector,int);
+  vtkBooleanMacro(UseProjectionVector,int);
+  //@}
 
   //@{
   /// \brief Use radius information
@@ -181,6 +187,7 @@ protected:
   int UseRadiusWeighting;
   int UseLocalCoordinates;
   int UseBifurcationInformation;
+  int UseProjectionVector;
   int RemoveEndPoints;
 
   double LastPolyBallCellPCoord;

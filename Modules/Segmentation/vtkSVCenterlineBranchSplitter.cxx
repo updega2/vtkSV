@@ -185,7 +185,6 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
     if (ptCellIds->GetNumberOfIds() > 2)
     {
-      fprintf(stdout,"TELEL ME HOW MNAY FOR CENTERLINE %d, POINT %d: %d\n", cellId, i,ptCellIds->GetNumberOfIds());
       double mergeDist;
       if (this->UseAbsoluteMergeDistance)
       {
@@ -197,18 +196,21 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
       }
 
       int done=0;
-      int iter = 0;
+      int iter = 1;
+      double dist = 0.0;
       while(!done)
       {
-        double cPt[3];
+        double prevPt[3], cPt[3];
+        centerline->GetPoints()->GetPoint(i+iter-1, prevPt);
         centerline->GetPoints()->GetPoint(i+iter, cPt);
 
-        double dist = std::sqrt(vtkMath::Distance2BetweenPoints(testPt, cPt));
+        dist += std::sqrt(vtkMath::Distance2BetweenPoints(prevPt, cPt));
 
         if (dist > mergeDist || i + iter + 1 >= numPts - 1)
         {
           intersectionSubIds->InsertNextId(i+iter);
           done=1;
+
         }
 
         iter ++;
@@ -225,16 +227,16 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
   }
 
-  fprintf(stdout,"TOUCHING SUB IDS FOR CENTERLINE %d: ", cellId);
-  for (int i=0; i<touchingSubIds->GetNumberOfIds(); i++)
-    fprintf(stdout,"%d ", touchingSubIds->GetId(i));
-  fprintf(stdout,"\n");
-  fprintf(stdout,"\n");
-  fprintf(stdout,"INTERSECTION SUB IDS FOR CENTERLINE %d: ", cellId);
-  for (int i=0; i<intersectionSubIds->GetNumberOfIds(); i++)
-    fprintf(stdout,"%d ", intersectionSubIds->GetId(i));
-  fprintf(stdout,"\n");
-  fprintf(stdout,"\n");
+  //fprintf(stdout,"TOUCHING SUB IDS FOR CENTERLINE %d: ", cellId);
+  //for (int i=0; i<touchingSubIds->GetNumberOfIds(); i++)
+  //  fprintf(stdout,"%d ", touchingSubIds->GetId(i));
+  //fprintf(stdout,"\n");
+  //fprintf(stdout,"\n");
+  //fprintf(stdout,"INTERSECTION SUB IDS FOR CENTERLINE %d: ", cellId);
+  //for (int i=0; i<intersectionSubIds->GetNumberOfIds(); i++)
+  //  fprintf(stdout,"%d ", intersectionSubIds->GetId(i));
+  //fprintf(stdout,"\n");
+  //fprintf(stdout,"\n");
 
   blankingFlags->InsertNextId(0);
   //for every touching, put one intersection, and blank in between. If a subsequent touching falls between a previous touching and the corresponding intersection, take the farthest intersection
@@ -292,11 +294,11 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
   //    splittingSubIds->DeleteId(id1);
   //}
 
-  fprintf(stdout,"SPLITTING SUB IDS FOR CENTERLINE %d: ", cellId);
-  for (int i=0; i<splittingSubIds->GetNumberOfIds(); i++)
-    fprintf(stdout,"%d ", splittingSubIds->GetId(i));
-  fprintf(stdout,"\n");
-  fprintf(stdout,"\n");
+  //fprintf(stdout,"SPLITTING SUB IDS FOR CENTERLINE %d: ", cellId);
+  //for (int i=0; i<splittingSubIds->GetNumberOfIds(); i++)
+  //  fprintf(stdout,"%d ", splittingSubIds->GetId(i));
+  //fprintf(stdout,"\n");
+  //fprintf(stdout,"\n");
 
   this->NumberOfSplittingPoints = splittingSubIds->GetNumberOfIds();
 
@@ -313,7 +315,7 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
 
   for (int i=0; i<this->NumberOfSplittingPoints+1; i++)
     {
-      fprintf(stdout," WHAT IS BLANKER: %d\n", blankingFlags->GetId(i));
+      //fprintf(stdout," WHAT IS BLANKER: %d\n", blankingFlags->GetId(i));
     this->TractBlanking[i] = blankingFlags->GetId(i);
     }
 
@@ -449,7 +451,7 @@ void vtkSVCenterlineBranchSplitter::SplitCenterline(vtkPolyData* input, vtkIdTyp
 
     lowerId = (i == 0) ? 0 : subIds[i-1]+1;
     higherId = (i == numberOfSplittingPoints) ? numberOfCenterlinePoints-1 : subIds[i];
-    fprintf(stdout,"CENTERLINE %d: GOING FROM %d TO %d\n", cellId, lowerId, higherId);
+    //fprintf(stdout,"CENTERLINE %d: GOING FROM %d TO %d\n", cellId, lowerId, higherId);
 
     double point[3], point0[3], point1[3];
     vtkIdType pointId;
@@ -464,7 +466,7 @@ void vtkSVCenterlineBranchSplitter::SplitCenterline(vtkPolyData* input, vtkIdTyp
         {
         point[k] = point0[k] + pcoords[i-1]*(point1[k] - point0[k]);
         }
-      fprintf(stdout,"INSERTING HERE THOUGH: %d\n", subIds[i-1]);
+      //fprintf(stdout,"INSERTING HERE THOUGH: %d\n", subIds[i-1]);
       pointId = splitCenterlinePoints->InsertNextPoint(point);
       splitCenterlineCellPointIds->InsertNextId(pointId);
       splitCenterlinePD->InterpolateEdge(inputPD,pointId,centerline->GetPointId(subIds[i-1]),centerline->GetPointId(subIds[i-1]+1),pcoords[i-1]);

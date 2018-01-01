@@ -72,11 +72,14 @@ int main(int argc, char *argv[])
   int writeFinalHexMesh = 0;
   int writeAll = 0;
   int boundaryEnforceFactor = 0;
+  int useAbsoluteMergeDistance = 0;
 
   double polycubeUnitLength = 0.0;
   double normalsWeighting = 0.8;
   double clipValue = 0.0;
   double cutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
+  double mergeDistance = 0.1;
+  double radiusMergeRatio = 0.35;
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string blankingArrayName = "Blanking";
@@ -105,6 +108,9 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-isvasculature")                 {isVasculature = atoi(argv[++iarg]);}
       else if(tmpstr=="-numberofcenterlineremovepts")   {numberOfCenterlineRemovePts = atoi(argv[++iarg]);}
       else if(tmpstr=="-boundaryenforcefactor")         {boundaryEnforceFactor = atoi(argv[++iarg]);}
+      else if(tmpstr=="-radiusmergeratio")              {radiusMergeRatio = atof(argv[++iarg]);}
+      else if(tmpstr=="-usemergedistance")              {useAbsoluteMergeDistance = atoi(argv[++iarg]);}
+      else if(tmpstr=="-mergedistance")                 {mergeDistance = atof(argv[++iarg]);}
       else if(tmpstr=="-writecenterlinegraph")          {writeCenterlineGraph = atoi(argv[++iarg]);}
       else if(tmpstr=="-writemergedcenterlines")        {writeMergedCenterlines = atoi(argv[++iarg]);}
       else if(tmpstr=="-writesurfacepolycube")          {writePolycubePd = atoi(argv[++iarg]);}
@@ -141,6 +147,9 @@ int main(int argc, char *argv[])
     cout << "  -isvasculature                 : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
     cout << "  -numberofcenterlineremovepts   : Number of centerline points to remove from the end of the branches if the model is not vasculature [default 3]" << endl;
     cout << "  -boundaryenforcefactor         : Approximately represents the number of centerline points to enforce per branch. Typically a fairly low integer works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems. [default 1]" << endl;
+    cout << "  -radiusmergeratio              : When extracting centerline branches, the portion of the radius to use (radius at bifurcation location) to use as the merging distance [default 0.35]"<< endl;
+    cout << "  -usemergedistance              : Instead of using a ratio to the radius, use an absolute distance for the merge distance [default 0]" << endl;
+    cout << "  -mergedistance                 : The merge distance; only used is usemergedistance is on [default 0.1]" << endl;
     cout << "  -writecenterlinegraph          : Write the centerline graph to file [default 0]" << endl;
     cout << "  -writemergedcenterlines        : Write the merged centerlines to file [default 0]" << endl;
     cout << "  -writesurfacepolycube          : Write the surface polycube to file [default 0]" << endl;
@@ -199,6 +208,9 @@ int main(int argc, char *argv[])
   Grouper->SetIsVasculature(isVasculature);
   Grouper->SetNumberOfCenterlineRemovePts(numberOfCenterlineRemovePts);
   Grouper->SetBoundaryEnforceFactor(boundaryEnforceFactor);
+  Grouper->SetRadiusMergeRatio(radiusMergeRatio);
+  Grouper->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
+  Grouper->SetMergeDistance(mergeDistance);
   Grouper->Update();
   std::cout<<"Done"<<endl;
 

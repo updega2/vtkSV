@@ -54,6 +54,7 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->UsePointNormal = 0;
   this->UseRadiusWeighting = 0;
   this->UseLocalCoordinates = 0;
+  this->UseProjectionVector = 0;
   this->RemoveEndPoints = 0;
   this->PointLocator = vtkPointLocator::New();
 
@@ -368,6 +369,55 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
           polyballFunctionValue = VTK_SV_LARGE_DOUBLE/2.0;
           }
         }
+
+      if (this->UseProjectionVector)
+      {
+        double tangent[3];
+        vtkMath::Subtract(point1, point0, tangent);
+        vtkMath::Normalize(tangent);
+
+        double projectedPoint[3];
+        vtkPlane::ProjectPoint(x, closestPoint, tangent, projectedPoint);
+
+        double positionVector[3];
+        vtkMath::Subtract(projectedPoint, closestPoint, positionVector);
+        vtkMath::Normalize(positionVector);
+
+        double dir0[3];
+        vtkMath::Subtract(x, closestPoint, dir0);
+        vtkMath::Normalize(dir0);
+
+        double alignDot = vtkMath::Dot(positionVector, dir0);
+
+        if (alignDot < 0.0)
+          alignDot = 0.0;
+
+        polyballFunctionValue += polyballFunctionValue * (1.0 - alignDot);
+
+
+        //double normalPoint[3];
+        //vtkMath::Add(closestPoint, absLocalX, normalPoint);
+
+        //double projectedNormalPoint[3];
+        //vtkPlane::ProjectPoint(normalPoint, closestPoint, tangent, projectedNormalPoint);
+
+        //double projectedNormal[3];
+        //vtkMath::Subtract(projectedNormalPoint, closestPoint, projectedNormal);
+        //vtkMath::Normalize(projectedNormal);
+
+        //double cross[3];
+        //vtkMath::Cross(positionVector, projectedNormal, cross);
+
+        //double tangentDot = vtkMath::Dot(tangent, cross);
+
+        //double circAngle = vtkvmtkMath::AngleBetweenNormals(positionVector, projectedNormal);
+
+        //if (tangentDot < 0.0)
+        //  {
+        //  circAngle *= -1.0;
+        //  }
+
+      }
 
       if (this->UseRadiusWeighting && this->UseRadiusInformation)
         {

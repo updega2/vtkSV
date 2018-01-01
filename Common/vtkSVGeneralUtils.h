@@ -113,6 +113,15 @@ public:
    *  \param polydata to check. */
   static int CheckSurface(vtkPolyData *pd);
 
+  /** \brief
+   *  \param polydata to check.
+   *  \param numNonTriangleElements returns the number of non-triangle elements.
+   *  \param numNonManifoldEdges returns the number of non-manifold elements.
+   *  \param numOpenEdges returns the number of open edges.
+   *  \param surfaceGenus returns the surface genus. */
+
+  static int CheckSurface(vtkPolyData *pd, int &numNonTriangleCells, int &numNonManifoldEdges, int &numOpenEdges, int &surfaceGenus);
+
   //General operations
   /** \brief Gets region closest to given point.
    *  \param pd Input pd which is copied in place with result.
@@ -193,6 +202,11 @@ public:
    *  \return SV_OK */
   static int ThresholdUg(vtkUnstructuredGrid *ug, int minVal, int maxVal, int dataType,
                          std::string arrayName, vtkUnstructuredGrid *returnUg);
+
+  /** \brief Get a polydata of the edges of the input polydata. Each edge is
+   *  a VTK_LINE cell..
+   *  \return SV_OK.  */
+  static int GetEdgePolyData(vtkPolyData *pd, vtkPolyData *edgePd);
 
   /** \brief Get centroid of points */
   static int GetCentroidOfPoints(vtkPoints *points, double centroid[3]);

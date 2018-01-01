@@ -69,13 +69,10 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
-  int appendEndPoints = 0;
-  int pickSeedPoints = 0;
   int useAbsoluteMergeDistance = 0;
   double mergeDistance = 0.1;
   double radiusMergeRatio = 0.35;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
-  std::string seedSelector = "none";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -87,8 +84,6 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-input")            {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-output")           {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-radius")           {radiusArrayName = argv[++iarg];}
-      else if(tmpstr=="-appendendpoints")  {appendEndPoints = atoi(argv[++iarg]);}
-      else if(tmpstr=="-seedselector")     {seedSelector = argv[++iarg];}
       else if(tmpstr=="-radiusmergeratio") {radiusMergeRatio = atof(argv[++iarg]);}
       else if(tmpstr=="-usemergedistance") {useAbsoluteMergeDistance = atoi(argv[++iarg]);}
       else if(tmpstr=="-mergedistance")    {mergeDistance = atof(argv[++iarg]);}
@@ -101,15 +96,13 @@ int main(int argc, char *argv[])
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  CenterlinesExtractor -input [Input Filename] -output [Output Filename] ..." << endl;
+    cout << "  CenterlinesSplitter -input [Input Filename] -output [Output Filename] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -output             : Output file name"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-    cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
-    cout << "  -seedselector       : How to choose source and target seeds if desired, options are none, pickpoints, and openprofiles [default none]"<< endl;
     cout << "  -radiusmergeratio   : When extracting centerline branches, the portion of the radius to use (radius at bifurcation location) to use as the merging distance [default 0.35]"<< endl;
     cout << "  -usemergedistance   : Instead of using a ratio to the radius, use an absolute distance for the merge distance [default 0]" << endl;
     cout << "  -mergedistance      : The merge distance; only used is usemergedistance is on [default 0.1]" << endl;
@@ -122,7 +115,7 @@ int main(int argc, char *argv[])
     std::string newDirName = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename);
     // Only mac and linux!!!
     system(("mkdir -p "+newDirName).c_str());
-    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Centerlines.vtp";
+    outputFilename = vtkSVIOUtils::GetPath(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"/"+vtkSVIOUtils::GetRawName(inputFilename)+"_Split.vtp";
   }
 
   // Call Function to Read File
@@ -131,122 +124,25 @@ int main(int argc, char *argv[])
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
     return EXIT_FAILURE;
 
-  std::cout << "Cleaning Surface..." << endl;
-  vtkNew(vtkCleanPolyData, cleaner);
-  cleaner->SetInputData(inputPd);
-  cleaner->Update();
-
-  std::cout << "Triangulating Surface..." << endl;
-  vtkNew(vtkTriangleFilter, triangulator);
-  triangulator->SetInputData(cleaner->GetOutput());
-  triangulator->PassLinesOff();
-  triangulator->PassVertsOff();
-  triangulator->Update();
-
-  inputPd->DeepCopy(triangulator->GetOutput());
-
-  vtkSVSeedSelector *seedPointPicker;
-  vtkNew(vtkIdList, capCenterIds);
-  if (seedSelector == "pickpoints")
-  {
-    vtkSVPickPointSeedSelector *pointPicker =
-      vtkSVPickPointSeedSelector::New();
-    pointPicker->SetInputData(inputPd);
-    pointPicker->Update();
-
-    int numSourceSeeds = pointPicker->GetSourceSeedIds()->GetNumberOfIds();
-    int numTargetSeeds = pointPicker->GetTargetSeedIds()->GetNumberOfIds();
-
-    fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
-    fprintf(stdout,"  Source Seeds Ids: ");
-    for (int i=0; i<numSourceSeeds; i++)
-      fprintf(stdout,"%d ", pointPicker->GetSourceSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
-
-    fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
-    fprintf(stdout,"  Target Seeds Ids: ");
-    for (int i=0; i<numTargetSeeds; i++)
-      fprintf(stdout,"%d ", pointPicker->GetTargetSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
-
-    seedPointPicker = pointPicker;
-  }
-  else if (seedSelector == "openprofiles")
-  {
-    std::cout << "Capping Surface..." << endl;
-
-    vtkNew(vtkvmtkCapPolyData, surfaceCapper);
-    surfaceCapper->SetInputData(inputPd);
-    surfaceCapper->SetDisplacement(0.0);
-    surfaceCapper->SetInPlaneDisplacement(0.0);
-    surfaceCapper->Update();
-
-    capCenterIds->DeepCopy(surfaceCapper->GetCapCenterIds());
-
-    inputPd->DeepCopy(surfaceCapper->GetOutput());
-
-    vtkSVOpenProfilesSeedSelector *openProfilesPicker =
-      vtkSVOpenProfilesSeedSelector::New();
-    openProfilesPicker->SetInputData(inputPd);
-    openProfilesPicker->SetSeedIds(surfaceCapper->GetCapCenterIds());
-    openProfilesPicker->Update();
-
-    int numSourceSeeds = openProfilesPicker->GetSourceSeedIds()->GetNumberOfIds();
-    int numTargetSeeds = openProfilesPicker->GetTargetSeedIds()->GetNumberOfIds();
-
-    fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
-    fprintf(stdout,"  Source Seeds Ids: ");
-    for (int i=0; i<numSourceSeeds; i++)
-      fprintf(stdout,"%d ", openProfilesPicker->GetSourceSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
-
-    fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
-    fprintf(stdout,"  Target Seeds Ids: ");
-    for (int i=0; i<numTargetSeeds; i++)
-      fprintf(stdout,"%d ", openProfilesPicker->GetTargetSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
-
-    seedPointPicker = openProfilesPicker;
-  }
-  else if (seedSelector == "none")
-  {
-    std::cout << "No seed points given" << endl;
-  }
-  else
-  {
-    std::cerr << "Incorrect seedselector given, must be none, pickpoints or openprofiles" << endl;
-  }
-
-
-  // Filter
-  vtkNew(vtkSVCenterlines, CenterlineFilter);
-  //vtkNew(vtkvmtkPolyDataCenterlines, CenterlineFilter);
-
-  //OPERATION
-  std::cout<<"Getting Centerlines..."<<endl;
-  if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
-  {
-    CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
-    CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
-    if (seedSelector == "openprofiles")
-      CenterlineFilter->SetCapCenterIds(capCenterIds);
-  }
-  CenterlineFilter->SetInputData(inputPd);
-  CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
-  CenterlineFilter->SetCostFunction("1/R");
-  CenterlineFilter->SetSimplifyVoronoi(0);
-  CenterlineFilter->SetAppendEndPointsToCenterlines(appendEndPoints);
-  CenterlineFilter->SetCenterlineResampling(0);
-  CenterlineFilter->SetResamplingStepLength(0.0);
-  CenterlineFilter->Update();
+  std::cout<<"Splitting Centerlines..."<<endl;
+  vtkNew(vtkSVCenterlineBranchSplitter, BranchSplitter);
+  //vtkNew(vtkvmtkCenterlineBranchExtractor, BranchSplitter);
+  BranchSplitter->SetInputData(inputPd);
+  BranchSplitter->SetGroupingModeToFirstPoint();
+  BranchSplitter->SetBlankingArrayName("Blanking");
+  BranchSplitter->SetRadiusArrayName(radiusArrayName.c_str());
+  BranchSplitter->SetGroupIdsArrayName("GroupIds");
+  BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
+  BranchSplitter->SetTractIdsArrayName("TractIds");
+  BranchSplitter->SetRadiusMergeRatio(radiusMergeRatio);
+  BranchSplitter->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
+  BranchSplitter->SetMergeDistance(mergeDistance);
+  BranchSplitter->Update();
   std::cout<<"Done"<<endl;
-
-  if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
-    seedPointPicker->Delete();
 
   //Write Files
   std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
+  vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
 
   //Exit the program without errors
   return EXIT_SUCCESS;

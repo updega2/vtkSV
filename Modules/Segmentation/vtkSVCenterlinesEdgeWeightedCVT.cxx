@@ -146,6 +146,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
     this->DistanceFunction->SetUseRadiusInformation(this->UseRadiusInformation);
     this->DistanceFunction->SetUsePointNormal(this->UsePointNormal);
     this->DistanceFunction->SetUseBifurcationInformation(this->UseBifurcationInformation);
+    //this->DistanceFunction->SetUseProjectionVector(1);
     //this->DistanceFunction->BuildLocator();
 
     // Get all the different ids
@@ -335,7 +336,6 @@ double vtkSVCenterlinesEdgeWeightedCVT::GetEdgeWeightedDistance(const int genera
   edgeWeightedDist = sqrt(edgeWeightedDist);
 
   return edgeWeightedDist;
-  return SV_OK;
 }
 
 // ----------------------

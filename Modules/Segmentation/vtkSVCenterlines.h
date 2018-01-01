@@ -128,7 +128,6 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
                           vtkPolyData *outEdgePd,
                           std::string medialEdgeArrayName);
   int RecursiveGetPolylines(vtkPolyData *pd,
-                            std::vector<int> numConnectedPts,
                             std::vector<std::vector<int> > connectedEdgePts,
                             int startVertex, std::vector<int> &pointUsed,
                             std::vector<std::vector<int> > &allEdges,
@@ -136,6 +135,17 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
   int RecursiveGetFullCenterlines(std::vector<std::vector<int> > allEdges,
                                   std::vector<std::vector<int> > &fullCenterlineEdges,
                                   int thisEdge, int front, int back);
+  int RemoveMarkedCells(vtkPolyData *pd,
+                        std::vector<std::vector<int> > allEdges,
+                        std::vector<int> needToDelete,
+                        std::vector<int> &isDeleted,
+                        vtkIdList *allEndIds,
+                        std::vector<int> &nodeCount);
+  int GetLinesEndPoints(vtkPolyData *pd,
+                        vtkIdList *endPointIds,
+                        vtkPoints *endPoints,
+                        std::vector<std::vector<int> > &connectedEdgePts,
+                        int &firstVertex);
 
   vtkIdList* SourceSeedIds;
   vtkIdList* TargetSeedIds;

@@ -221,6 +221,25 @@ public:
   vtkSetMacro(NumberOfCenterlineRemovePts,int);
   vtkGetMacro(NumberOfCenterlineRemovePts,int);
   //@}
+  //
+  //@{
+  /// \brief Get/Set to use absolute distance
+  vtkSetMacro(UseAbsoluteMergeDistance, int);
+  vtkGetMacro(UseAbsoluteMergeDistance, int);
+  vtkBooleanMacro(UseAbsoluteMergeDistance, int);
+  //@}
+
+  //@{
+  /// \brief Get/Set to use absolute distance
+  vtkSetMacro(RadiusMergeRatio, double);
+  vtkGetMacro(RadiusMergeRatio, double);
+  //@}
+
+  //@{
+  /// \brief Get/Set to use absolute distance
+  vtkSetMacro(MergeDistance, double);
+  vtkGetMacro(MergeDistance, double);
+  //@}
 
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
@@ -456,11 +475,14 @@ protected:
   int NumberOfCenterlineRemovePts;
   int PolycubeDivisions;
   int BoundaryEnforceFactor;
+  int UseAbsoluteMergeDistance;
 
   double CutoffRadiusFactor;
   double ClipValue;
   double PolycubeUnitLength;
   double NormalsWeighting;
+  double RadiusMergeRatio;
+  double MergeDistance;
 
   vtkSVCenterlineGraph *CenterlineGraph;
 
