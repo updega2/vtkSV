@@ -113,6 +113,15 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
   vtkPolyData *cleanInput = vtkPolyData::New();
   cleanInput->DeepCopy(cleaner->GetOutput());
   cleanInput->BuildLinks();
+  for (int i=0; i<cleanInput->GetNumberOfCells(); i++)
+  {
+    if (cleanInput->GetCellType(i) != VTK_LINE)
+    {
+      cleanInput->DeleteCell(i);
+    }
+  }
+  cleanInput->RemoveDeletedCells();
+  cleanInput->BuildLinks();
   cleaner->Delete();
 
   // must remove duplicate cells

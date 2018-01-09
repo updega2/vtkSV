@@ -149,7 +149,7 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->NormalsWeighting = 0.8;
   this->IsVasculature = 1;
   this->NumberOfCenterlineRemovePts = 3;
-  this->BoundaryEnforceFactor = 0;
+  this->BoundaryEnforceFactor = 1;
 
   this->UseAbsoluteMergeDistance = 0;
   this->RadiusMergeRatio = 0.5;
@@ -449,11 +449,11 @@ int vtkSVGroupsSegmenter::RunFilter()
     CVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
     CVT->SetBlankingArrayName(this->BlankingArrayName);
     CVT->SetUseRadiusInformation(this->UseRadiusInformation);
-    //CVT->SetUseBifurcationInformation(1);
-    CVT->SetUsePointNormal(1);
     //CVT->SetUseRadiusInformation(0);
+    //CVT->SetUsePointNormal(1);
+    CVT->SetUsePointNormal(0);
     CVT->SetUseBifurcationInformation(0);
-    //CVT->SetUsePointNormal(0);
+    //CVT->SetUseBifurcationInformation(1);
     CVT->SetMaximumNumberOfIterations(0);
     CVT->Update();
 
@@ -511,11 +511,11 @@ int vtkSVGroupsSegmenter::RunFilter()
     return SV_ERROR;
   }
 
-  if (this->CheckGroups2() != SV_OK)
-  {
-    vtkErrorMacro("Error in correcting groups");
-    return SV_ERROR;
-  }
+  //if (this->CheckGroups2() != SV_OK)
+  //{
+  //  vtkErrorMacro("Error in correcting groups");
+  //  return SV_ERROR;
+  //}
 
   //if (this->FixGroupsWithPolycube() != SV_OK)
   //{
@@ -744,6 +744,7 @@ int vtkSVGroupsSegmenter::RunFilter()
   //    double absLocalX[3];
   //    noRadiusTubes->GetLastLocalCoordX(absLocalX);
   //    vtkMath::Normalize(absLocalX);
+
 
   //    if (absLinePtId >= nlinepts - 1)
   //    {
@@ -4366,6 +4367,7 @@ int vtkSVGroupsSegmenter::CheckGroups2()
   {
     // Now re-segment with these new centerlines
 
+    vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/NEWMERGECENTER.vtp", newMergedCenterlinesPd);
     int stopCellNumber = ceil(this->WorkPd->GetNumberOfCells()*0.0001);
     vtkNew(vtkSVCenterlinesEdgeWeightedCVT, betterCVT);
     betterCVT->SetInputData(this->WorkPd);
@@ -5576,7 +5578,7 @@ int vtkSVGroupsSegmenter::CheckFace(vtkPolyData *polycubePd, int faceId,
                                     int &nTopPts, int &nBotPts,
                                     int &flatTop, int &flatBot)
 {
-  double tol = 1.0e-5;
+  double tol = 1.0e-4;
   fprintf(stdout,"CHECKING FACE: %d\n", faceId);
   vtkIdType npts, *ptIds;
   polycubePd->GetCellPoints(faceId, npts, ptIds);
@@ -5591,6 +5593,10 @@ int vtkSVGroupsSegmenter::CheckFace(vtkPolyData *polycubePd, int faceId,
 
     polycubePd->GetPoint(ptId0, pts[i]);
     polycubePd->GetPoint(ptId1, pts[(i+1)%npts]);
+
+    //fprintf(stdout,"POINT %d: %.6f %.6f %.6f\n", i, pts[i][0], pts[i][1], pts[i][2]);
+    //fprintf(stdout,"POINT %d: %.6f %.6f %.6f\n", (i+1)%npts, pts[(i+1)%npts][0], pts[(i+1)%npts][1], pts[(i+1)%npts][2]);
+    //fprintf(stdout,"MAKES VEC: %d\n", i);
 
     vtkMath::Subtract(pts[(i+1)%npts], pts[i], vecs[i]);
     vtkMath::Normalize(vecs[i]);
@@ -5623,8 +5629,8 @@ int vtkSVGroupsSegmenter::CheckFace(vtkPolyData *polycubePd, int faceId,
 
   double testDot2 = vtkMath::Dot(vecs[npts-1], vecs[npts-2]);
   double testDot3 = vtkMath::Dot(vecs[npts-2], vecs[0]);
-  fprintf(stdout,"TEST DOT 2: %.8f\n", testDot0);
-  fprintf(stdout,"TEST DOT 3: %.8f\n", testDot1);
+  fprintf(stdout,"TEST DOT 2: %.8f\n", testDot2);
+  fprintf(stdout,"TEST DOT 3: %.8f\n", testDot3);
 
   if (testDot2 <= tol && testDot2 >= -1.0*tol)
     flatBot = 1;

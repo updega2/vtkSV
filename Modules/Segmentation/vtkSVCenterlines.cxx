@@ -220,6 +220,40 @@ int vtkSVCenterlines::RequestData(
     return SV_ERROR;
   }
 
+  // ------------------------------------------------------------------------
+  // Calculating genus
+  // Start edge insertion for edge table
+  fprintf(stdout,"CHECKING INPUT...\n");
+  input->BuildLinks();
+  int numNonTriangleCells, numNonManifoldEdges, numOpenEdges, surfaceGenus;
+  vtkSVGeneralUtils::CheckSurface(input, numNonTriangleCells, numNonManifoldEdges, numOpenEdges, surfaceGenus);
+
+  fprintf(stdout,"NUM NON TRIANGLE CELLS: %d\n", numNonTriangleCells);
+  fprintf(stdout,"NUM NON MANIFOLD EDGES: %d\n", numNonManifoldEdges);
+  fprintf(stdout,"NUM OPEN EDGES: %d\n", numOpenEdges);
+  fprintf(stdout,"SURFACE GENUS: %d\n", surfaceGenus);
+
+  if (numNonTriangleCells > 0)
+  {
+    vtkErrorMacro("Surface contains non-triangular cells. Number of non-triangular cells: " << numNonTriangleCells);
+    return SV_ERROR;
+  }
+  if (numNonManifoldEdges > 0)
+  {
+    vtkErrorMacro("Surface contains non-manifold edges. Number of non-manifold edges: " << numNonManifoldEdges);
+    return SV_ERROR;
+  }
+  if (numOpenEdges > 0)
+  {
+    vtkErrorMacro("Surface contains open edges. Number of open edges: " << numOpenEdges);
+    return SV_ERROR;
+  }
+  if (surfaceGenus > 0)
+  {
+    vtkErrorMacro("Surface genus is greater than 0. Surface genus is: " << surfaceGenus);
+    return SV_ERROR;
+  }
+
   vtkNew(vtkPolyDataNormals, surfaceNormals);
   surfaceNormals->SetInputData(input);
   surfaceNormals->SplittingOff();
@@ -272,40 +306,6 @@ int vtkSVCenterlines::RequestData(
     voronoiDiagramSimplifier->Update();
     voronoiDiagram = voronoiDiagramSimplifier->GetOutput();
     voronoiDiagram->Register(this);
-  }
-
-  // ------------------------------------------------------------------------
-  // Calculating genus
-  // Start edge insertion for edge table
-  fprintf(stdout,"CHECKING INPUT...\n");
-  input->BuildLinks();
-  int numNonTriangleCells, numNonManifoldEdges, numOpenEdges, surfaceGenus;
-  vtkSVGeneralUtils::CheckSurface(input, numNonTriangleCells, numNonManifoldEdges, numOpenEdges, surfaceGenus);
-
-  fprintf(stdout,"NUM NON TRIANGLE CELLS: %d\n", numNonTriangleCells);
-  fprintf(stdout,"NUM NON MANIFOLD EDGES: %d\n", numNonManifoldEdges);
-  fprintf(stdout,"NUM OPEN EDGES: %d\n", numOpenEdges);
-  fprintf(stdout,"SURFACE GENUS: %d\n", surfaceGenus);
-
-  if (numNonTriangleCells > 0)
-  {
-    vtkErrorMacro("Surface contains non-triangular cells. Number of non-triangular cells: " << numNonTriangleCells);
-    return SV_ERROR;
-  }
-  if (numNonManifoldEdges > 0)
-  {
-    vtkErrorMacro("Surface contains non-manifold edges. Number of non-manifold edges: " << numNonManifoldEdges);
-    return SV_ERROR;
-  }
-  if (numOpenEdges > 0)
-  {
-    vtkErrorMacro("Surface contains open edges. Number of open edges: " << numOpenEdges);
-    return SV_ERROR;
-  }
-  if (surfaceGenus > 0)
-  {
-    vtkErrorMacro("Surface genus is greater than 0. Surface genus is: " << surfaceGenus);
-    return SV_ERROR;
   }
 
   // ------------------------------------------------------------------------
@@ -564,6 +564,9 @@ int vtkSVCenterlines::RequestData(
     int edge0IsId = allEndIds->IsId(edgeId0);
     int edgeNIsId = allEndIds->IsId(edgeIdN);
 
+    //fprintf(stdout,"EDGE POINT 0: %d\n", edgeId0);
+    //fprintf(stdout,"EDGE POINT N: %d\n", edgeIdN);
+
     if (edge0IsId != -1 && edgeNIsId != -1)
     {
       // Both edges of this node already in list, delete it!
@@ -571,6 +574,12 @@ int vtkSVCenterlines::RequestData(
       needToDelete[i] = 1;
       nodeCount[edge0IsId]++;
       nodeCount[edgeNIsId]++;
+    }
+    else if (edgeId0 == edgeIdN)
+    {
+      // This is a loop with same start and end point, just remove, but
+      // dont add to nodecount because it would mess the count up
+      needToDelete[i] = 1;
     }
     else
     {
@@ -846,9 +855,26 @@ int vtkSVCenterlines::RequestData(
   int nEdgeE = linesPd->GetNumberOfCells();
   int nEdgeV = linesPd->GetNumberOfPoints();
   int nFaces = nEdgeE - nEdgeV + 2;
+  fprintf(stdout,"NUM LINE EDGES: %d\n", nEdgeE);
+  fprintf(stdout,"NUM LINE VERTS: %d\n", nEdgeV);
+  fprintf(stdout,"NUM FACES THEN: %d\n", nFaces);
   if (nFaces != 1)
   {
     vtkErrorMacro("After processing, centerline contains faces, or contains loops or cycles");
+    vtkNew(vtkIntArray, isSpecialPoint);
+    isSpecialPoint->SetNumberOfTuples(nEdgeV);
+    isSpecialPoint->FillComponent(0, 0);
+    isSpecialPoint->SetName("SpecialPoint");
+
+    vtkNew(vtkIdList, allPointCells);
+    for (int i=0; i<nEdgeV; i++)
+    {
+      linesPd->GetPointCells(i, allPointCells);
+      if (allPointCells->GetNumberOfIds() != 2)
+        isSpecialPoint->SetTuple1(i, 1);
+    }
+    linesPd->GetPointData()->AddArray(isSpecialPoint);
+    output->ShallowCopy(linesPd);
     return SV_ERROR;
   }
   // ------------------------------------------------------------------------
@@ -965,7 +991,11 @@ int vtkSVCenterlines::RequestData(
   vtkNew(vtkIdList, voronoiCapIds);
   if (this->CapCenterIds)
   {
-    this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiCapIds);
+    if (this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiCapIds) != SV_OK)
+    {
+      vtkErrorMacro("Error getting voronoi seeds from caps");
+      return SV_ERROR;
+    }
   }
 
   if (this->SourceSeedIds)
@@ -1125,6 +1155,8 @@ int vtkSVCenterlines::RequestData(
                 if (this->CapCenterIds)
                 {
                   voronoiSeeds[k][l] = voronoiCapIds->GetId(this->TargetSeedIds->GetId(j));
+                  if (voronoiSeeds[k][l] ==-1)
+                    fprintf(stdout,"SECOND\n");
                 }
                 else
                 {
@@ -1281,7 +1313,7 @@ int vtkSVCenterlines::RequestData(
   return SV_OK;
 }
 
-void vtkSVCenterlines::FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList *boundaryBaricenterIds, vtkDataArray *normals, vtkIdList *seedIds)
+int vtkSVCenterlines::FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList *boundaryBaricenterIds, vtkDataArray *normals, vtkIdList *seedIds)
 {
   vtkIdType i, j;
   vtkIdList *pointCells;
@@ -1309,6 +1341,11 @@ void vtkSVCenterlines::FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList
     maxRadiusCellId = -1;
     secondMaxRadiusCellId = -1;
 
+    if (pointCells->GetNumberOfIds() == 0)
+    {
+      vtkErrorMacro("Cap point not attached to cell in delaunay");
+      return SV_ERROR;
+    }
     for (j=0; j<pointCells->GetNumberOfIds(); j++)
       {
       tetra = vtkTetra::SafeDownCast(delaunay->GetCell(pointCells->GetId(j)));
@@ -1376,6 +1413,8 @@ void vtkSVCenterlines::FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList
     }
 
   pointCells->Delete();
+
+  return SV_OK;
 }
 
 void vtkSVCenterlines::AppendEndPoints(vtkPoints* endPointPairs)
@@ -2001,14 +2040,18 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
 	stopCriteria = 0;
   firstVertex = startVertex;
 
+  //fprintf(stdout,"START: %d\n", startVertex);
+
 	while (!stopCriteria)
 	{
 
+    //fprintf(stdout,"  NOW LOOKING AT: %d\n", firstVertex);
 		prevVertex = -1;
 		secondVertex = -1;
 
 		if (connectedEdgePts[firstVertex].size() == 1)
 		{
+      //fprintf(stdout,"END POINT\n");
 			index = connectedEdgePts[firstVertex][0];
 			if (pointUsed[index] == 0)
 			{
@@ -2021,8 +2064,11 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
 		}
 		else if (connectedEdgePts[firstVertex].size() == 2)
 		{
+      //fprintf(stdout,"CONTINUTING POINT\n");
       testIndex0 = connectedEdgePts[firstVertex][0];
       testIndex1 = connectedEdgePts[firstVertex][1];
+      //fprintf(stdout,"TEST INDEX 0: %d\n", testIndex0);
+      //fprintf(stdout,"TEST INDEX 1: %d\n", testIndex1);
 
       if (pointUsed[testIndex0]  && pointUsed[testIndex1])
       {
@@ -2042,9 +2088,13 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
           thisEdge.push_back(testIndex0);
         else if(!found1)
           thisEdge.push_back(testIndex1);
+        else if (found0 && testIndex0 == thisEdge[0])
+          thisEdge.push_back(testIndex0);
+        else if (found1 && testIndex1 == thisEdge[0])
+          thisEdge.push_back(testIndex1);
         else
         {
-          fprintf(stderr,"BOTH ALREADY IN EDGE!\n");
+          //fprintf(stderr,"BOTH ALREADY IN EDGE!\n");
           return SV_ERROR;
         }
         allEdges.push_back(thisEdge);
@@ -2067,6 +2117,7 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
 		}
     else if (connectedEdgePts[firstVertex].size() > 2)
     {
+      //fprintf(stdout,"MORE THAN TWO FOR %d!!!\n", firstVertex);
       pointUsed[firstVertex] = 1;
       thisEdge.push_back(firstVertex);
       allEdges.push_back(thisEdge);
@@ -2087,8 +2138,11 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
           int alreadyEdge = 0;
           for (int j=0; j<allEdges.size(); j++)
           {
-            if ((allEdges[j][0] == potEdge[0] && allEdges[j][allEdges[j].size()-1] == potEdge[1]) ||
-                (allEdges[j][0] == potEdge[1] && allEdges[j][allEdges[j].size()-1] == potEdge[0]))
+            // TODO: Figure out if actually right
+            //if ((allEdges[j][0] == potEdge[0] && allEdges[j][allEdges[j].size()-1] == potEdge[1]) ||
+            //    (allEdges[j][0] == potEdge[1] && allEdges[j][allEdges[j].size()-1] == potEdge[0]))
+            if ((allEdges[j][0] == potEdge[0] && allEdges[j][1] == potEdge[1]) ||
+                (allEdges[j][0] == potEdge[1] && allEdges[j][1] == potEdge[0]))
             {
               alreadyEdge = 1;
             }
@@ -2220,10 +2274,13 @@ int vtkSVCenterlines::RemoveMarkedCells(vtkPolyData *pd,
         }
       }
 
-      nodeId0 = allEndIds->IsId(allEdges[i][0]);
-      nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
-      nodeCount[nodeId0]--;
-      nodeCount[nodeIdN]--;
+      if (allEdges[i][0] != allEdges[i][edgeSize - 1])
+      {
+        nodeId0 = allEndIds->IsId(allEdges[i][0]);
+        nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+        nodeCount[nodeId0]--;
+        nodeCount[nodeIdN]--;
+      }
       isDeleted[i] = 1;
     }
   }
