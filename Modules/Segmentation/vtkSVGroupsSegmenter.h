@@ -368,6 +368,7 @@ protected:
                                 vtkDoubleArray *avgVecs,
                                 vtkIntArray *patchDirs);
   int CheckGroups();
+  int CheckGroups2();
   int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                const Region region, std::vector<int> allEdges,
                std::vector<int> fixEdges, vtkIdList *critPts);

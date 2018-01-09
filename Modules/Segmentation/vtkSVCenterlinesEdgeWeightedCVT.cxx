@@ -179,7 +179,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
         this->DistanceFunction->SetPointNormal(pointNormal);
       }
 
-      int cellGenerator = 0;
+      int cellGenerator = -1;
       double minDist = VTK_SV_LARGE_DOUBLE;
 
       vtkNew(vtkIdList, groupId);
@@ -187,8 +187,10 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
 
       double dist = this->DistanceFunction->EvaluateFunction(center);
       int lastCellId = this->DistanceFunction->GetLastPolyBallCellId();
-      cellGenerator = this->WorkGenerators->GetCellData()->GetArray(
-          this->GroupIdsArrayName)->GetTuple1(lastCellId);
+      if (lastCellId != -1)
+      {
+        cellGenerator = this->WorkGenerators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(lastCellId);
+      }
 
       this->PatchIdsArray->SetTuple1(i, cellGenerator);
     }

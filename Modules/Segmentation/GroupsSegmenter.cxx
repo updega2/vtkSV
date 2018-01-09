@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
   double clipValue = 0.0;
   double cutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   double mergeDistance = 0.1;
-  double radiusMergeRatio = 0.35;
+  double radiusMergeRatio = 0.5;
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string blankingArrayName = "Blanking";

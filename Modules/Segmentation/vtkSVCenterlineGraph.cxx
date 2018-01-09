@@ -803,6 +803,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
 
       length += vtkSVMathUtils::Distance(pt0, pt1);
     }
+    //length = 4.0;
 
     vtkSVCenterlineGCell *parent = gCell->Parent;
     if (parent == NULL)

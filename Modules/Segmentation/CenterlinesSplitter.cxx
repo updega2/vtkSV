@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
   // Default values for options
   int useAbsoluteMergeDistance = 0;
   double mergeDistance = 0.1;
-  double radiusMergeRatio = 0.35;
+  double radiusMergeRatio = 0.5;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
 
   // argc is the number of strings on the command-line

@@ -55,7 +55,7 @@ vtkStandardNewMacro(vtkSVCenterlineBranchSplitter);
 vtkSVCenterlineBranchSplitter::vtkSVCenterlineBranchSplitter()
 {
   this->UseAbsoluteMergeDistance = 0;
-  this->RadiusMergeRatio = 0.35;
+  this->RadiusMergeRatio = 0.5;
   this->MergeDistance = 0.1;
 }
 
@@ -198,29 +198,77 @@ void vtkSVCenterlineBranchSplitter::ComputeCenterlineSplitting(vtkPolyData* inpu
       int done=0;
       int iter = 1;
       double dist = 0.0;
+      double prevDist = 0.0;
       while(!done)
       {
-        double prevPt[3], cPt[3];
-        centerline->GetPoints()->GetPoint(i+iter-1, prevPt);
-        centerline->GetPoints()->GetPoint(i+iter, cPt);
+        double point0[3], point1[3];
+        centerline->GetPoints()->GetPoint(i+iter-1, point0);
+        centerline->GetPoints()->GetPoint(i+iter, point1);
 
-        dist += std::sqrt(vtkMath::Distance2BetweenPoints(prevPt, cPt));
+        dist += std::sqrt(vtkMath::Distance2BetweenPoints(point0, point1));
 
         if (dist > mergeDist || i + iter + 1 >= numPts - 1)
         {
+          double pCoord = (mergeDist - prevDist) / (dist - prevDist);
+          if (pCoord > 1.0)
+            pCoord = 1.0;
+          if (pCoord < 0.0)
+            pCoord = 0.0;
+
+          //fprintf(stdout,"INSERTING INTER: %d\n", i+iter-1);
           intersectionSubIds->InsertNextId(i+iter);
+          intersectionPCoords->InsertNextValue(pCoord);
           done=1;
 
         }
+        prevDist = dist;
 
         iter ++;
       }
 
-      touchingSubIds->InsertNextId(i);
+      if (i == 0)
+      {
+        touchingSubIds->InsertNextId(i);
+        touchingPCoords->InsertNextValue(0.0);
+        ptCellIds->Delete();
+        continue;
+      }
 
-      touchingPCoords->InsertNextValue(0.0);
+      done = 0;
+      iter = 1;
+      dist = 0.0;
+      prevDist = 0.0;
+      while(!done)
+      {
+        double point0[3], point1[3];
+        centerline->GetPoints()->GetPoint(i-iter+1, point0);
+        centerline->GetPoints()->GetPoint(i-iter, point1);
 
-      intersectionPCoords->InsertNextValue(0.0);
+        dist += std::sqrt(vtkMath::Distance2BetweenPoints(point0, point1));
+
+        if (dist > mergeDist || i-iter <= 0)
+        {
+          double pCoord = (mergeDist - prevDist) / (dist - prevDist);
+          if (pCoord > 1.0)
+            pCoord = 1.0;
+          if (pCoord < 0.0)
+            pCoord = 0.0;
+
+          //fprintf(stdout,"INSERTING TOUCH: %d\n", i-iter);
+          touchingSubIds->InsertNextId(i-iter);
+          touchingPCoords->InsertNextValue((1.0-pCoord));
+          done=1;
+        }
+
+        iter ++;
+      }
+      prevDist = dist;
+
+      //touchingSubIds->InsertNextId(i);
+
+      //touchingPCoords->InsertNextValue(0.0);
+
+      //intersectionPCoords->InsertNextValue(0.0);
 
     }
     ptCellIds->Delete();
