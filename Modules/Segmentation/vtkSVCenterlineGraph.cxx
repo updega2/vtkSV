@@ -63,6 +63,7 @@ vtkSVCenterlineGraph::vtkSVCenterlineGraph()
 {
   this->NumberOfCells = 0;
   this->NumberOfNodes = 1; // The root
+  this->CubeSize = 0.0;
   this->Root = NULL;
 
   this->Lines = vtkPolyData::New();
@@ -264,7 +265,7 @@ int vtkSVCenterlineGraph::BuildGraph()
 // ----------------------
 // GetSurfacePolycube
 // ----------------------
-int vtkSVCenterlineGraph::GetSurfacePolycube(const double height, const double width, vtkPolyData *outPd)
+int vtkSVCenterlineGraph::GetSurfacePolycube(const double cubeSize, vtkPolyData *outPd)
 {
   int numSegs = this->NumberOfCells;
 
@@ -278,7 +279,7 @@ int vtkSVCenterlineGraph::GetSurfacePolycube(const double height, const double w
     // Corresponding GCell
     vtkSVCenterlineGCell *gCell = this->GetCell(i);
 
-    gCell->GetCubePoints(height, width, allPoints, allCells,
+    gCell->GetCubePoints(cubeSize, cubeSize, allPoints, allCells,
                          groupIds, patchIds);
 
   }
@@ -803,7 +804,6 @@ int vtkSVCenterlineGraph::GetGraphPoints()
 
       length += vtkSVMathUtils::Distance(pt0, pt1);
     }
-    //length = 4.0;
 
     vtkSVCenterlineGCell *parent = gCell->Parent;
     if (parent == NULL)
@@ -1051,11 +1051,17 @@ int vtkSVCenterlineGraph::GetGraphPoints()
           rotationAngle = 180.0*gCell->RefAngle/SV_PI;
       }
 
-      fprintf(stdout,"LETS SEE ANG!!!: %.6f\n", rotationAngle);
+      //fprintf(stdout,"LETS SEE ANG!!!: %.6f\n", rotationAngle);
       this->RotateVecAroundLine(rotateVec, rotationAngle, crossVec, lineDir);
       vtkMath::Normalize(lineDir);
 
       // Get end point from new direction
+      double minLength;
+      this->ComputeMinimumLength(gCell, minLength);
+      //fprintf(stdout,"SEE LENGTH: %.6f\n", length);
+      //fprintf(stdout,"SEE CALCULATED MIN LENGTH: %.6f\n", minLength);
+      if (minLength > length)
+        length = minLength;
       vtkMath::MultiplyScalar(lineDir, length);
       vtkMath::Add(gCell->StartPt, lineDir, gCell->EndPt);
     }
@@ -1547,6 +1553,70 @@ int vtkSVCenterlineGraph::FlipLinePoints(vtkPolyData *pd, const int cellId)
   pd->BuildLinks();
 
   delete [] tmpPts;
+
+  return SV_OK;
+}
+
+// ----------------------
+// ComputeMinimumLength
+// ----------------------
+int vtkSVCenterlineGraph::ComputeMinimumLength(vtkSVCenterlineGCell *gCell, double &minLength)
+{
+  if (this->CubeSize == 0.0)
+  {
+    minLength = 0.0;
+    return SV_OK;
+  }
+
+  // Get all brothers
+  double minTopLength = 0.0;
+  if (gCell->Parent != NULL)
+  {
+    vtkSVCenterlineGCell *parent = gCell->Parent;
+
+    for (int i=0; i<parent->Children.size(); i++)
+    {
+      if (parent->Children[i] == gCell)
+        continue;
+
+      vtkSVCenterlineGCell *brother = parent->Children[i];
+
+      double broAng = -1.0;
+      if (brother->BranchDir == gCell->BranchDir)
+      {
+        broAng = fabs(brother->RefAngle - gCell->RefAngle);
+      }
+      else if ((brother->BranchDir + gCell->BranchDir)%2 == 0)
+      {
+        broAng = (SV_PI - brother->RefAngle) + (SV_PI - gCell->RefAngle);
+      }
+
+      double tmpLength = (this->CubeSize/2.) / ( sin(broAng/2.));
+
+      if (tmpLength > minTopLength)
+      {
+        minTopLength = tmpLength;
+      }
+    }
+  }
+
+  // Get all children
+  double minBottomLength = 0.0;
+
+  for (int i=0; i<gCell->Children.size(); i++)
+  {
+    vtkSVCenterlineGCell *child = gCell->Children[i];
+    double childAng = child->RefAngle;
+
+    double tmpLength = (this->CubeSize/2.) / ( sin(childAng/2.));
+
+    if (tmpLength > minBottomLength)
+    {
+      minBottomLength = tmpLength;
+    }
+  }
+
+  minLength = minTopLength + minBottomLength;
 
   return SV_OK;
 }

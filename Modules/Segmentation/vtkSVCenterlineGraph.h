@@ -72,12 +72,18 @@ public:
   vtkGetMacro(NumberOfNodes,int);
   //@}
 
+  //@{
+  /// \brief Get/Set cube size
+  vtkSetMacro(CubeSize,double);
+  vtkGetMacro(CubeSize,double);
+  //@}
+
   //Member functions
   vtkSVCenterlineGCell* GetCell(const int findId);
   vtkSVCenterlineGCell* LookUp(vtkSVCenterlineGCell *lookCell, const int findId);
   int BuildGraph();
   int PrintGraph();
-  int GetSurfacePolycube(const double height, const double width, vtkPolyData *outPd);
+  int GetSurfacePolycube(const double cubeSize, vtkPolyData *outPd);
   int GrowGraph(vtkSVCenterlineGCell *parent);
   int GetGraphDirections();
   int GetGraphPoints();
@@ -105,7 +111,7 @@ public:
                           double outVec[3]);
 
   int FlipLinePoints(vtkPolyData *pd, const int cellId);
-
+  int ComputeMinimumLength(vtkSVCenterlineGCell *gCell, double &minLength);
 
   /// \brief directions of nodes in graph simplification
   enum SV_DIRECTIONS
@@ -150,6 +156,7 @@ public:
   vtkSVCenterlineGCell *Root;
   int NumberOfCells;
   int NumberOfNodes;
+  double CubeSize;
 
   //Member data needed to build
   vtkPolyData *Lines;

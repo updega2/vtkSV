@@ -34,6 +34,8 @@
 #include "vtkSVNURBSObject.h"
 #include "vtkSVGlobals.h"
 
+#include <algorithm>
+
 vtkStandardNewMacro(vtkSVNURBSCollection);
 
 /**

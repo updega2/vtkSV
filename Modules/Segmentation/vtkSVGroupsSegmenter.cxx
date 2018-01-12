@@ -345,18 +345,6 @@ int vtkSVGroupsSegmenter::PrepFilter()
     return SV_ERROR;
   }
 
-  this->CenterlineGraph = new vtkSVCenterlineGraph(0, this->MergedCenterlines,
-                                                this->GroupIdsArrayName);
-
-  if (this->CenterlineGraph->BuildGraph() != SV_OK)
-  {
-    vtkErrorMacro("Unable to form graph of centerlines");
-    return SV_ERROR;
-  }
-
-  this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
-  this->MergedCenterlines->DeepCopy(this->CenterlineGraph->Lines);
-
   double polycubeSize;
   if (this->PolycubeUnitLength == 0.0)
   {
@@ -368,7 +356,21 @@ int vtkSVGroupsSegmenter::PrepFilter()
     polycubeSize = this->PolycubeUnitLength*this->PolycubeDivisions;
   }
 
-  this->CenterlineGraph->GetSurfacePolycube(polycubeSize, polycubeSize, this->PolycubePd);
+  this->CenterlineGraph = new vtkSVCenterlineGraph(0, this->MergedCenterlines,
+                                                this->GroupIdsArrayName);
+  this->CenterlineGraph->SetCubeSize(polycubeSize);
+
+  if (this->CenterlineGraph->BuildGraph() != SV_OK)
+  {
+    vtkErrorMacro("Unable to form graph of centerlines");
+    return SV_ERROR;
+  }
+
+  this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
+  this->MergedCenterlines->DeepCopy(this->CenterlineGraph->Lines);
+
+
+  this->CenterlineGraph->GetSurfacePolycube(polycubeSize, this->PolycubePd);
 
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(this->PolycubePd);
