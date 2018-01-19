@@ -55,17 +55,17 @@
 #include "vtkUnstructuredGrid.h"
 
 #if VTKSV_DELAUNAY_TYPE == TRIANGLE
-extern "C"
-{
-#define ANSI_DECLARATORS
-#ifndef VOID
-# define VOID void
-#endif
-#ifndef REAL
-# define REAL double
-#endif
-}
-#include "predicates.h"
+  extern "C"
+  {
+  #define ANSI_DECLARATORS
+  #ifndef VOID
+  # define VOID void
+  #endif
+  #ifndef REAL
+  # define REAL double
+  #endif
+  }
+  #include "predicates.h"
 #endif
 
 #include <string>
@@ -735,6 +735,7 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
   transPD = transformer->GetOutput();
   transPD->BuildLinks();
 
+#if VTKSV_DELAUNAY_TYPE == TRIANGLE
   // Calculate area
   double tedgepts[3][3];
   for(int i=0;i<transPD->GetNumberOfPoints();i++)
@@ -748,6 +749,36 @@ int vtkSVLoopBooleanPolyDataFilter::Impl::GetCellOrientation(
     value = -1;
   else
     value = 1;
+#else
+  // Calculate area
+  double area = 0;
+  double tedgept1[3];
+  double tedgept2[3];
+  vtkIdType newpt;
+  for(newpt=0;newpt<transPD->GetNumberOfPoints()-1;newpt++)
+    {
+      transPD->GetPoint(newpt, tedgept1);
+      transPD->GetPoint(newpt+1, tedgept2);
+      area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
+    }
+  transPD->GetPoint(newpt, tedgept1);
+  transPD->GetPoint(0, tedgept2);
+  area = area + (tedgept1[0]*tedgept2[1])-(tedgept2[0]*tedgept1[1]);
+
+  // Check with tolerance
+  int value=0;
+  double tolerance = 1e-6;
+  if (area < 0 && fabs(area) > tolerance)
+    value = -1;
+  else if (area > 0 && fabs(area) > tolerance)
+    value = 1;
+  else
+    {
+    vtkDebugWithObjectMacro(this->ParentFilter, <<"Line pts are "<<p0<<" and "<<p1);
+    vtkDebugWithObjectMacro(this->ParentFilter, <<"PD pts are "<<cellPtId0<<" and "<<cellPtId1);
+    value = 0;
+    }
+#endif
 
   return value;
 }
@@ -880,7 +911,11 @@ vtkSVLoopBooleanPolyDataFilter::vtkSVLoopBooleanPolyDataFilter() :
   this->NumberOfIntersectionLines = 0;
 
   this->Status = 1;
+#if VTKSV_DELAUNAY_TYPE == TRIANGLE
   this->Tolerance = 1e-3;
+#else
+  this->Tolerance = 1e-6;
+#endif
 }
 
 // ----------------------
