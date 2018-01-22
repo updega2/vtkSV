@@ -31,16 +31,21 @@
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataArray.h"
+#include "vtkDataSetSurfaceFilter.h"
 #include "vtkDataWriter.h"
 #include "vtkInformation.h"
+#include "vtkMassProperties.h"
 #include "vtkPointData.h"
+#include "vtkPointLocator.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSplineFilter.h"
+#include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
 
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
+#include "vtkSVGeneralUtils.h"
 #include "vtkSVCenterlines.h"
 #include "vtkSVCenterlineBranchSplitter.h"
 #include "vtkSVSeedSelector.h"
@@ -149,6 +154,31 @@ int main(int argc, char *argv[])
   vtkNew(vtkIdList, capCenterIds);
   if (seedSelector == "pickpoints")
   {
+    int numNonTriangleCells = 0;
+    int numNonManifoldEdges = 0;
+    int numOpenEdges = 0;
+    int surfaceGenus = 0;
+
+    vtkSVGeneralUtils::CheckSurface(inputPd, numNonTriangleCells,
+                                    numNonManifoldEdges, numOpenEdges,
+                                    surfaceGenus);
+
+    if (numOpenEdges > 0)
+    {
+      fprintf(stderr,"The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile\n");
+      return EXIT_FAILURE;
+    }
+    if (numNonManifoldEdges > 0)
+    {
+      fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
+      return EXIT_FAILURE;
+    }
+    if (surfaceGenus > 0)
+    {
+      fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
+      return EXIT_FAILURE;
+    }
+
     vtkSVPickPointSeedSelector *pointPicker =
       vtkSVPickPointSeedSelector::New();
     pointPicker->SetInputData(inputPd);
@@ -171,7 +201,7 @@ int main(int argc, char *argv[])
 
     seedPointPicker = pointPicker;
   }
-  else if (seedSelector == "openprofiles")
+  else if (seedSelector == "openprofiles" || seedSelector == "maxareaprofile")
   {
     std::cout << "Capping Surface..." << endl;
 
@@ -179,34 +209,92 @@ int main(int argc, char *argv[])
     surfaceCapper->SetInputData(inputPd);
     surfaceCapper->SetDisplacement(0.0);
     surfaceCapper->SetInPlaneDisplacement(0.0);
+    surfaceCapper->SetCellEntityIdsArrayName("CapIds");
     surfaceCapper->Update();
 
     capCenterIds->DeepCopy(surfaceCapper->GetCapCenterIds());
 
-    inputPd->DeepCopy(surfaceCapper->GetOutput());
+    std::cout << "Cleaning Capped Surface..." << endl;
 
-    vtkSVOpenProfilesSeedSelector *openProfilesPicker =
-      vtkSVOpenProfilesSeedSelector::New();
-    openProfilesPicker->SetInputData(inputPd);
-    openProfilesPicker->SetSeedIds(surfaceCapper->GetCapCenterIds());
-    openProfilesPicker->Update();
+    cleaner->SetInputData(surfaceCapper->GetOutput());
+    cleaner->Update();
 
-    int numSourceSeeds = openProfilesPicker->GetSourceSeedIds()->GetNumberOfIds();
-    int numTargetSeeds = openProfilesPicker->GetTargetSeedIds()->GetNumberOfIds();
+    if (cleaner->GetOutput()->GetNumberOfPoints() != inputPd->GetNumberOfPoints() ||
+        cleaner->GetOutput()->GetNumberOfCells() != inputPd->GetNumberOfCells())
+    {
+      std::cout << "Cleaner Removed Some Points, Using Point Locator To Reset Cap Center Ids..." << endl;
+      inputPd->DeepCopy(cleaner->GetOutput());
 
-    fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
-    fprintf(stdout,"  Source Seeds Ids: ");
-    for (int i=0; i<numSourceSeeds; i++)
-      fprintf(stdout,"%d ", openProfilesPicker->GetSourceSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
+      vtkNew(vtkPointLocator, pointLocator);
+      pointLocator->SetDataSet(inputPd);
+      pointLocator->BuildLocator();
 
-    fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
-    fprintf(stdout,"  Target Seeds Ids: ");
-    for (int i=0; i<numTargetSeeds; i++)
-      fprintf(stdout,"%d ", openProfilesPicker->GetTargetSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
+      int currCapCenterId, newCapCenterId;
+      double pt[3];
+      for (int i=0; i<capCenterIds->GetNumberOfIds(); i++)
+      {
+        currCapCenterId = capCenterIds->GetId(i);
+        surfaceCapper->GetOutput()->GetPoint(currCapCenterId, pt);
 
-    seedPointPicker = openProfilesPicker;
+        newCapCenterId = pointLocator->FindClosestPoint(pt);
+        capCenterIds->SetId(i, newCapCenterId);
+      }
+    }
+    else
+    {
+      inputPd->DeepCopy(surfaceCapper->GetOutput());
+    }
+
+    int numNonTriangleCells = 0;
+    int numNonManifoldEdges = 0;
+    int numOpenEdges = 0;
+    int surfaceGenus = 0;
+
+    vtkSVGeneralUtils::CheckSurface(inputPd, numNonTriangleCells,
+                                    numNonManifoldEdges, numOpenEdges,
+                                    surfaceGenus);
+
+    if (numOpenEdges > 0)
+    {
+      fprintf(stderr,"The surface has free edges, which means the capper did not work correctly, something must be wrong with the surface\n");
+      return EXIT_FAILURE;
+    }
+    if (numNonManifoldEdges > 0)
+    {
+      fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
+      return EXIT_FAILURE;
+    }
+    if (surfaceGenus > 0)
+    {
+      fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
+      return EXIT_FAILURE;
+    }
+
+    if (seedSelector == "openprofiles")
+    {
+      vtkSVOpenProfilesSeedSelector *openProfilesPicker =
+        vtkSVOpenProfilesSeedSelector::New();
+      openProfilesPicker->SetInputData(inputPd);
+      openProfilesPicker->SetSeedIds(surfaceCapper->GetCapCenterIds());
+      openProfilesPicker->Update();
+
+      int numSourceSeeds = openProfilesPicker->GetSourceSeedIds()->GetNumberOfIds();
+      int numTargetSeeds = openProfilesPicker->GetTargetSeedIds()->GetNumberOfIds();
+
+      fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
+      fprintf(stdout,"  Source Seeds Ids: ");
+      for (int i=0; i<numSourceSeeds; i++)
+        fprintf(stdout,"%d ", openProfilesPicker->GetSourceSeedIds()->GetId(i));
+      fprintf(stdout,"\n");
+
+      fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
+      fprintf(stdout,"  Target Seeds Ids: ");
+      for (int i=0; i<numTargetSeeds; i++)
+        fprintf(stdout,"%d ", openProfilesPicker->GetTargetSeedIds()->GetId(i));
+      fprintf(stdout,"\n");
+
+      seedPointPicker = openProfilesPicker;
+    }
   }
   else if (seedSelector == "none")
   {
@@ -216,7 +304,6 @@ int main(int argc, char *argv[])
   {
     std::cerr << "Incorrect seedselector given, must be none, pickpoints or openprofiles" << endl;
   }
-
 
   // Filter
   vtkNew(vtkSVCenterlines, CenterlineFilter);
@@ -230,6 +317,55 @@ int main(int argc, char *argv[])
     CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
     if (seedSelector == "openprofiles")
       CenterlineFilter->SetCapCenterIds(capCenterIds);
+  }
+  else if (seedSelector == "maxareaprofile")
+  {
+    vtkNew(vtkThreshold, capThresholder);
+    capThresholder->SetInputData(inputPd);
+    capThresholder->SetInputArrayToProcess(0, 0, 0, 1, "CapIds");
+
+    vtkNew(vtkDataSetSurfaceFilter, surfacer);
+
+    vtkNew(vtkMassProperties, measurer);
+
+    double maxArea = -1.0;
+    int maxAreaCapId = -1;
+
+    int numCaps = capCenterIds->GetNumberOfIds();
+    for (int i=0; i<numCaps; i++)
+    {
+      capThresholder->ThresholdBetween(i+2, i+2);
+      capThresholder->Update();
+
+      surfacer->SetInputData(capThresholder->GetOutput());
+      surfacer->Update();
+
+      measurer->SetInputData(surfacer->GetOutput());
+      measurer->Update();
+
+      if (measurer->GetSurfaceArea() > maxArea)
+      {
+        maxArea = measurer->GetSurfaceArea();
+        maxAreaCapId = i;
+      }
+    }
+
+    vtkNew(vtkIdList, newSourceId);
+    newSourceId->InsertNextId(maxAreaCapId);
+
+    vtkNew(vtkIdList, newTargetIds);
+    int testId;
+    for (int i=0; i<numCaps; i++)
+    {
+      if (i != maxAreaCapId)
+      {
+        newTargetIds->InsertNextId(i);
+      }
+    }
+
+    CenterlineFilter->SetSourceSeedIds(newSourceId);
+    CenterlineFilter->SetTargetSeedIds(newTargetIds);
+    CenterlineFilter->SetCapCenterIds(capCenterIds);
   }
   CenterlineFilter->SetInputData(inputPd);
   CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());

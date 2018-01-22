@@ -1101,6 +1101,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
   {
     // Corresponding GCell
     vtkSVCenterlineGCell *gCell = this->GetCell(i);
+    fprintf(stdout,"DOING GROUP %d\n", gCell->GroupId);
 
     // The front direction of segment
     for (int j=0; j<3; j++)
@@ -1231,6 +1232,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
       if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
       {
+        // TODO: Double check this
         // Check to see if its in dir of local x
         if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
         {
@@ -1250,7 +1252,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
     if (isTerminating == 0)
     {
-      fprintf(stdout,"FIXING FOR NOT TERMINATING BRANCH\n");
+      fprintf(stdout,"FIXING GROUP %d FOR NOT TERMINATING BRANCH\n", gCell->GroupId);
 
       // Get update that needs to happen
       int maxDir;
@@ -1411,8 +1413,9 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
         if (vtkMath::Dot(checkRefs[0], updateRefVecs[0]) < 0)
         {
+          // TODO: Double check this
           // Check to see if its in dir of local x
-          if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
+          if (fabs(vtkMath::Dot(checkRefs[1], updateRefVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], updateRefVecs[0])))
           {
             for (int k=0; k<3; k++)
             {
