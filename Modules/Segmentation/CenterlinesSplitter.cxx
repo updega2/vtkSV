@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
+  int useVmtk = 0;
   int useAbsoluteMergeDistance = 0;
   double mergeDistance = 0.1;
   double radiusMergeRatio = 0.5;
@@ -84,6 +85,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-input")            {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-output")           {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-radius")           {radiusArrayName = argv[++iarg];}
+      else if(tmpstr=="-usevmtk")          {useVmtk = atoi(argv[++iarg]);}
       else if(tmpstr=="-radiusmergeratio") {radiusMergeRatio = atof(argv[++iarg]);}
       else if(tmpstr=="-usemergedistance") {useAbsoluteMergeDistance = atoi(argv[++iarg]);}
       else if(tmpstr=="-mergedistance")    {mergeDistance = atof(argv[++iarg]);}
@@ -103,6 +105,7 @@ int main(int argc, char *argv[])
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -output             : Output file name"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
+    cout << "  -usevmtk            : Use the vmtk centerlines extractor rather than vtksv [default 0]"<< endl;
     cout << "  -radiusmergeratio   : When extracting centerline branches, the portion of the radius to use (radius at bifurcation location) to use as the merging distance [default 0.35]"<< endl;
     cout << "  -usemergedistance   : Instead of using a ratio to the radius, use an absolute distance for the merge distance [default 0]" << endl;
     cout << "  -mergedistance      : The merge distance; only used is usemergedistance is on [default 0.1]" << endl;
@@ -125,24 +128,47 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
 
   std::cout<<"Splitting Centerlines..."<<endl;
-  vtkNew(vtkSVCenterlineBranchSplitter, BranchSplitter);
-  //vtkNew(vtkvmtkCenterlineBranchExtractor, BranchSplitter);
-  BranchSplitter->SetInputData(inputPd);
-  BranchSplitter->SetGroupingModeToFirstPoint();
-  BranchSplitter->SetBlankingArrayName("Blanking");
-  BranchSplitter->SetRadiusArrayName(radiusArrayName.c_str());
-  BranchSplitter->SetGroupIdsArrayName("GroupIds");
-  BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
-  BranchSplitter->SetTractIdsArrayName("TractIds");
-  BranchSplitter->SetRadiusMergeRatio(radiusMergeRatio);
-  BranchSplitter->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
-  BranchSplitter->SetMergeDistance(mergeDistance);
-  BranchSplitter->Update();
-  std::cout<<"Done"<<endl;
 
-  //Write Files
-  std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
+  if (useVmtk)
+  {
+    vtkNew(vtkvmtkCenterlineBranchExtractor, BranchSplitter);
+    BranchSplitter->SetInputData(inputPd);
+    //BranchSplitter->SetGroupingModeToFirstPoint();
+    BranchSplitter->SetBlankingArrayName("Blanking");
+    BranchSplitter->SetRadiusArrayName(radiusArrayName.c_str());
+    BranchSplitter->SetGroupIdsArrayName("GroupIds");
+    BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
+    BranchSplitter->SetTractIdsArrayName("TractIds");
+    BranchSplitter->Update();
+
+    std::cout<<"Done"<<endl;
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
+  }
+  else
+  {
+    vtkNew(vtkSVCenterlineBranchSplitter, BranchSplitter);
+    //vtkNew(vtkvmtkCenterlineBranchExtractor, BranchSplitter);
+    BranchSplitter->SetInputData(inputPd);
+    BranchSplitter->SetGroupingModeToFirstPoint();
+    BranchSplitter->SetBlankingArrayName("Blanking");
+    BranchSplitter->SetRadiusArrayName(radiusArrayName.c_str());
+    BranchSplitter->SetGroupIdsArrayName("GroupIds");
+    BranchSplitter->SetCenterlineIdsArrayName("CenterlineIds");
+    BranchSplitter->SetTractIdsArrayName("TractIds");
+    BranchSplitter->SetRadiusMergeRatio(radiusMergeRatio);
+    BranchSplitter->SetUseAbsoluteMergeDistance(useAbsoluteMergeDistance);
+    BranchSplitter->SetMergeDistance(mergeDistance);
+    BranchSplitter->Update();
+
+    std::cout<<"Done"<<endl;
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, BranchSplitter->GetOutput(0));
+  }
 
   //Exit the program without errors
   return EXIT_SUCCESS;

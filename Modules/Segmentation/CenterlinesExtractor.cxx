@@ -74,11 +74,16 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
+  int useVmtk = 0;
   int appendEndPoints = 0;
   int pickSeedPoints = 0;
   int useAbsoluteMergeDistance = 0;
+  int medialEdgeThreshold = 5;
+  int absoluteThreshold = 3;
   double mergeDistance = 0.1;
   double radiusMergeRatio = 0.35;
+  double relativeThreshold = 0.5;
+
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string seedSelector = "none";
 
@@ -88,15 +93,19 @@ int main(int argc, char *argv[])
       arglength = strlen(argv[iarg]);
       // replace 0..arglength-1 with argv[iarg]
       tmpstr.replace(0,arglength,argv[iarg],0,arglength);
-      if(tmpstr=="-h")                     {RequestedHelp = true;}
-      else if(tmpstr=="-input")            {InputProvided = true; inputFilename = argv[++iarg];}
-      else if(tmpstr=="-output")           {OutputProvided = true; outputFilename = argv[++iarg];}
-      else if(tmpstr=="-radius")           {radiusArrayName = argv[++iarg];}
-      else if(tmpstr=="-appendendpoints")  {appendEndPoints = atoi(argv[++iarg]);}
-      else if(tmpstr=="-seedselector")     {seedSelector = argv[++iarg];}
-      else if(tmpstr=="-radiusmergeratio") {radiusMergeRatio = atof(argv[++iarg]);}
-      else if(tmpstr=="-usemergedistance") {useAbsoluteMergeDistance = atoi(argv[++iarg]);}
-      else if(tmpstr=="-mergedistance")    {mergeDistance = atof(argv[++iarg]);}
+      if(tmpstr=="-h")                        {RequestedHelp = true;}
+      else if(tmpstr=="-input")               {InputProvided = true; inputFilename = argv[++iarg];}
+      else if(tmpstr=="-output")              {OutputProvided = true; outputFilename = argv[++iarg];}
+      else if(tmpstr=="-radius")              {radiusArrayName = argv[++iarg];}
+      else if(tmpstr=="-usevmtk")             {useVmtk = atoi(argv[++iarg]);}
+      else if(tmpstr=="-appendendpoints")     {appendEndPoints = atoi(argv[++iarg]);}
+      else if(tmpstr=="-seedselector")        {seedSelector = argv[++iarg];}
+      else if(tmpstr=="-radiusmergeratio")    {radiusMergeRatio = atof(argv[++iarg]);}
+      else if(tmpstr=="-usemergedistance")    {useAbsoluteMergeDistance = atoi(argv[++iarg]);}
+      else if(tmpstr=="-mergedistance")       {mergeDistance = atof(argv[++iarg]);}
+      else if(tmpstr=="-absolutethreshold")   {absoluteThreshold = atoi(argv[++iarg]);}
+      else if(tmpstr=="-relativethreshold")   {relativeThreshold = atof(argv[++iarg]);}
+      else if(tmpstr=="-medialedgethreshold") {medialEdgeThreshold = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -109,15 +118,19 @@ int main(int argc, char *argv[])
     cout << "  CenterlinesExtractor -input [Input Filename] -output [Output Filename] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
-    cout << "  -h                  : Display usage and command-line argument summary"<< endl;
-    cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -output             : Output file name"<< endl;
-    cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-    cout << "  -appendendpoints    : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
-    cout << "  -seedselector       : How to choose source and target seeds if desired, options are none, pickpoints, and openprofiles [default none]"<< endl;
-    cout << "  -radiusmergeratio   : When extracting centerline branches, the portion of the radius to use (radius at bifurcation location) to use as the merging distance [default 0.35]"<< endl;
-    cout << "  -usemergedistance   : Instead of using a ratio to the radius, use an absolute distance for the merge distance [default 0]" << endl;
-    cout << "  -mergedistance      : The merge distance; only used is usemergedistance is on [default 0.1]" << endl;
+    cout << "  -h                   : Display usage and command-line argument summary"<< endl;
+    cout << "  -input               : Input file name (.vtp or .stl)"<< endl;
+    cout << "  -output              : Output file name"<< endl;
+    cout << "  -radius              : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
+    cout << "  -usevmtk             : Use the vmtk centerlines extractor rather than vtksv [default 0]"<< endl;
+    cout << "  -appendendpoints     : Append end points to the end of the centerline paths to touch surface [default 0]"<< endl;
+    cout << "  -seedselector        : How to choose source and target seeds if desired, options are none, pickpoints, and openprofiles [default none]"<< endl;
+    cout << "  -radiusmergeratio    : When extracting centerline branches, the portion of the radius to use (radius at bifurcation location) to use as the merging distance [default 0.35]"<< endl;
+    cout << "  -usemergedistance    : Instead of using a ratio to the radius, use an absolute distance for the merge distance [default 0]" << endl;
+    cout << "  -mergedistance       : The merge distance; only used is usemergedistance is on [default 0.1]" << endl;
+    cout << "  -absolutethreshold   : The threshold for the absolute persistance metric in the cell thinning process. [default 3]" << endl;
+    cout << "  -relativethreshold   : The threshold for the relative persistance metric in the cell thinning process. [default 0.5]" << endl;
+    cout << "  -medialedgethreshold : During the cell thinning process, medial edges are extracted. Connected components of more than this threshold value are defined as the medial axis. A higher value will remove small spurious lines. [default 5]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -163,21 +176,30 @@ int main(int argc, char *argv[])
                                     numNonManifoldEdges, numOpenEdges,
                                     surfaceGenus);
 
+    int allGood = 1;
     if (numOpenEdges > 0)
     {
       fprintf(stderr,"The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile\n");
-      return EXIT_FAILURE;
+      allGood = 0;
+    }
+    if (numNonTriangleCells > 0)
+    {
+      fprintf(stderr,"Surface contains non-triangle cells. Number of non-triangle cells: %d\n", numNonTriangleCells);
+      allGood = 0;
     }
     if (numNonManifoldEdges > 0)
     {
       fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
-      return EXIT_FAILURE;
+      allGood = 0;
     }
     if (surfaceGenus > 0)
     {
       fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
-      return EXIT_FAILURE;
+      allGood = 0;
     }
+
+    if (!allGood)
+      return EXIT_FAILURE;
 
     vtkSVPickPointSeedSelector *pointPicker =
       vtkSVPickPointSeedSelector::New();
@@ -222,9 +244,20 @@ int main(int argc, char *argv[])
     if (cleaner->GetOutput()->GetNumberOfPoints() != inputPd->GetNumberOfPoints() ||
         cleaner->GetOutput()->GetNumberOfCells() != inputPd->GetNumberOfCells())
     {
-      std::cout << "Cleaner Removed Some Points, Using Point Locator To Reset Cap Center Ids..." << endl;
       inputPd->DeepCopy(cleaner->GetOutput());
+      inputPd->BuildLinks();
 
+      for (int i=0; i<inputPd->GetNumberOfCells(); i++)
+      {
+        if (inputPd->GetCellType(i) != VTK_TRIANGLE)
+        {
+          inputPd->DeleteCell(i);
+        }
+      }
+      inputPd->RemoveDeletedCells();
+      inputPd->BuildLinks();
+
+      std::cout << "Cleaner Removed Some Points and Cells, Using Point Locator To Reset Cap Center Ids..." << endl;
       vtkNew(vtkPointLocator, pointLocator);
       pointLocator->SetDataSet(inputPd);
       pointLocator->BuildLocator();
@@ -239,6 +272,7 @@ int main(int argc, char *argv[])
         newCapCenterId = pointLocator->FindClosestPoint(pt);
         capCenterIds->SetId(i, newCapCenterId);
       }
+
     }
     else
     {
@@ -254,21 +288,30 @@ int main(int argc, char *argv[])
                                     numNonManifoldEdges, numOpenEdges,
                                     surfaceGenus);
 
+    int allGood = 1;
     if (numOpenEdges > 0)
     {
       fprintf(stderr,"The surface has free edges, which means the capper did not work correctly, something must be wrong with the surface\n");
-      return EXIT_FAILURE;
+      allGood = 0;
+    }
+    if (numNonTriangleCells > 0)
+    {
+      fprintf(stderr,"Surface contains non-triangle cells. Number of non-triangle cells: %d\n", numNonTriangleCells);
+      allGood = 0;
     }
     if (numNonManifoldEdges > 0)
     {
       fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
-      return EXIT_FAILURE;
+      allGood = 0;
     }
     if (surfaceGenus > 0)
     {
       fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
-      return EXIT_FAILURE;
+      allGood = 0;
     }
+
+    if (!allGood)
+      return EXIT_FAILURE;
 
     if (seedSelector == "openprofiles")
     {
@@ -299,6 +342,41 @@ int main(int argc, char *argv[])
   else if (seedSelector == "none")
   {
     std::cout << "No seed points given" << endl;
+
+    int numNonTriangleCells = 0;
+    int numNonManifoldEdges = 0;
+    int numOpenEdges = 0;
+    int surfaceGenus = 0;
+
+    vtkSVGeneralUtils::CheckSurface(inputPd, numNonTriangleCells,
+                                    numNonManifoldEdges, numOpenEdges,
+                                    surfaceGenus);
+
+    int allGood = 1;
+
+    if (numOpenEdges > 0)
+    {
+      fprintf(stderr,"The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile\n");
+      allGood = 0;
+    }
+    if (numNonTriangleCells > 0)
+    {
+      fprintf(stderr,"Surface contains non-triangle cells. Number of non-triangle cells: %d\n", numNonTriangleCells);
+      allGood = 0;
+    }
+    if (numNonManifoldEdges > 0)
+    {
+      fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
+      allGood = 0;
+    }
+    if (surfaceGenus > 0)
+    {
+      fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
+      allGood = 0;
+    }
+
+    if (!allGood)
+      return EXIT_FAILURE;
   }
   else
   {
@@ -306,83 +384,193 @@ int main(int argc, char *argv[])
   }
 
   // Filter
-  vtkNew(vtkSVCenterlines, CenterlineFilter);
-  //vtkNew(vtkvmtkPolyDataCenterlines, CenterlineFilter);
-
-  //OPERATION
-  std::cout<<"Getting Centerlines..."<<endl;
-  if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
+  if (useVmtk)
   {
-    CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
-    CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
-    if (seedSelector == "openprofiles")
+    vtkNew(vtkvmtkPolyDataCenterlines, CenterlineFilter);
+
+    //OPERATION
+    std::cout<<"Getting Centerlines..."<<endl;
+    if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
+    {
+      CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
+      CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
+      if (seedSelector == "openprofiles")
+        CenterlineFilter->SetCapCenterIds(capCenterIds);
+    }
+    else if (seedSelector == "maxareaprofile")
+    {
+      vtkNew(vtkThreshold, capThresholder);
+      capThresholder->SetInputData(inputPd);
+      capThresholder->SetInputArrayToProcess(0, 0, 0, 1, "CapIds");
+
+      vtkNew(vtkDataSetSurfaceFilter, surfacer);
+
+      vtkNew(vtkMassProperties, measurer);
+
+      double maxArea = -1.0;
+      int maxAreaCapId = -1;
+
+      int numCaps = capCenterIds->GetNumberOfIds();
+      for (int i=0; i<numCaps; i++)
+      {
+        capThresholder->ThresholdBetween(i+2, i+2);
+        capThresholder->Update();
+
+        surfacer->SetInputData(capThresholder->GetOutput());
+        surfacer->Update();
+
+        measurer->SetInputData(surfacer->GetOutput());
+        measurer->Update();
+
+        if (measurer->GetSurfaceArea() > maxArea)
+        {
+          maxArea = measurer->GetSurfaceArea();
+          maxAreaCapId = i;
+        }
+      }
+
+      vtkNew(vtkIdList, newSourceId);
+      newSourceId->InsertNextId(maxAreaCapId);
+
+      vtkNew(vtkIdList, newTargetIds);
+      int testId;
+      for (int i=0; i<numCaps; i++)
+      {
+        if (i != maxAreaCapId)
+        {
+          newTargetIds->InsertNextId(i);
+        }
+      }
+
+      CenterlineFilter->SetSourceSeedIds(newSourceId);
+      CenterlineFilter->SetTargetSeedIds(newTargetIds);
       CenterlineFilter->SetCapCenterIds(capCenterIds);
+    }
+    CenterlineFilter->SetInputData(inputPd);
+    CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
+    CenterlineFilter->SetCostFunction("1/R");
+    CenterlineFilter->SetSimplifyVoronoi(0);
+    CenterlineFilter->SetAppendEndPointsToCenterlines(appendEndPoints);
+    CenterlineFilter->SetCenterlineResampling(0);
+    CenterlineFilter->SetResamplingStepLength(0.0);
+    CenterlineFilter->DebugOn();
+    CenterlineFilter->Update();
+
+    std::cout<<"Done"<<endl;
+
+    if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
+      seedPointPicker->Delete();
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
+
+    if (seedSelector == "openprofiles" || seedSelector == "maxareaprofile")
+    {
+      if (CenterlineFilter->GetOutput()->GetNumberOfLines() != capCenterIds->GetNumberOfIds() - 1)
+      {
+        std::cerr << "Incorrect number of lines found: "<< CenterlineFilter->GetOutput()->GetNumberOfLines() << ". But should be " << capCenterIds->GetNumberOfIds() -1 << endl;
+        return EXIT_FAILURE;
+      }
+    }
+
   }
-  else if (seedSelector == "maxareaprofile")
+  else
   {
-    vtkNew(vtkThreshold, capThresholder);
-    capThresholder->SetInputData(inputPd);
-    capThresholder->SetInputArrayToProcess(0, 0, 0, 1, "CapIds");
+    vtkNew(vtkSVCenterlines, CenterlineFilter);
 
-    vtkNew(vtkDataSetSurfaceFilter, surfacer);
-
-    vtkNew(vtkMassProperties, measurer);
-
-    double maxArea = -1.0;
-    int maxAreaCapId = -1;
-
-    int numCaps = capCenterIds->GetNumberOfIds();
-    for (int i=0; i<numCaps; i++)
+    //OPERATION
+    std::cout<<"Getting Centerlines..."<<endl;
+    if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
     {
-      capThresholder->ThresholdBetween(i+2, i+2);
-      capThresholder->Update();
+      CenterlineFilter->SetSourceSeedIds(seedPointPicker->GetSourceSeedIds());
+      CenterlineFilter->SetTargetSeedIds(seedPointPicker->GetTargetSeedIds());
+      if (seedSelector == "openprofiles")
+        CenterlineFilter->SetCapCenterIds(capCenterIds);
+    }
+    else if (seedSelector == "maxareaprofile")
+    {
+      vtkNew(vtkThreshold, capThresholder);
+      capThresholder->SetInputData(inputPd);
+      capThresholder->SetInputArrayToProcess(0, 0, 0, 1, "CapIds");
 
-      surfacer->SetInputData(capThresholder->GetOutput());
-      surfacer->Update();
+      vtkNew(vtkDataSetSurfaceFilter, surfacer);
 
-      measurer->SetInputData(surfacer->GetOutput());
-      measurer->Update();
+      vtkNew(vtkMassProperties, measurer);
 
-      if (measurer->GetSurfaceArea() > maxArea)
+      double maxArea = -1.0;
+      int maxAreaCapId = -1;
+
+      int numCaps = capCenterIds->GetNumberOfIds();
+      for (int i=0; i<numCaps; i++)
       {
-        maxArea = measurer->GetSurfaceArea();
-        maxAreaCapId = i;
+        capThresholder->ThresholdBetween(i+2, i+2);
+        capThresholder->Update();
+
+        surfacer->SetInputData(capThresholder->GetOutput());
+        surfacer->Update();
+
+        measurer->SetInputData(surfacer->GetOutput());
+        measurer->Update();
+
+        if (measurer->GetSurfaceArea() > maxArea)
+        {
+          maxArea = measurer->GetSurfaceArea();
+          maxAreaCapId = i;
+        }
+      }
+
+      vtkNew(vtkIdList, newSourceId);
+      newSourceId->InsertNextId(maxAreaCapId);
+
+      vtkNew(vtkIdList, newTargetIds);
+      int testId;
+      for (int i=0; i<numCaps; i++)
+      {
+        if (i != maxAreaCapId)
+        {
+          newTargetIds->InsertNextId(i);
+        }
+      }
+
+      CenterlineFilter->SetSourceSeedIds(newSourceId);
+      CenterlineFilter->SetTargetSeedIds(newTargetIds);
+      CenterlineFilter->SetCapCenterIds(capCenterIds);
+    }
+    CenterlineFilter->SetInputData(inputPd);
+    CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
+    CenterlineFilter->SetCostFunction("1/R");
+    CenterlineFilter->SetSimplifyVoronoi(0);
+    CenterlineFilter->SetAppendEndPointsToCenterlines(appendEndPoints);
+    CenterlineFilter->SetCenterlineResampling(0);
+    CenterlineFilter->SetResamplingStepLength(0.0);
+    CenterlineFilter->SetAbsoluteThreshold(absoluteThreshold);
+    CenterlineFilter->SetRelativeThreshold(relativeThreshold);
+    CenterlineFilter->SetMedialEdgeThreshold(medialEdgeThreshold);
+    //CenterlineFilter->SetProcessCenterlinesIntoTree(0);
+    CenterlineFilter->DebugOn();
+    CenterlineFilter->Update();
+
+    std::cout<<"Done"<<endl;
+
+    if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
+      seedPointPicker->Delete();
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
+
+    if (seedSelector == "openprofiles" || seedSelector == "maxareaprofile")
+    {
+      if (CenterlineFilter->GetOutput()->GetNumberOfLines() != capCenterIds->GetNumberOfIds() - 1)
+      {
+        std::cerr << "Incorrect number of lines found: "<< CenterlineFilter->GetOutput()->GetNumberOfLines() << ". But should be " << capCenterIds->GetNumberOfIds() -1 << endl;
+        return EXIT_FAILURE;
       }
     }
 
-    vtkNew(vtkIdList, newSourceId);
-    newSourceId->InsertNextId(maxAreaCapId);
-
-    vtkNew(vtkIdList, newTargetIds);
-    int testId;
-    for (int i=0; i<numCaps; i++)
-    {
-      if (i != maxAreaCapId)
-      {
-        newTargetIds->InsertNextId(i);
-      }
-    }
-
-    CenterlineFilter->SetSourceSeedIds(newSourceId);
-    CenterlineFilter->SetTargetSeedIds(newTargetIds);
-    CenterlineFilter->SetCapCenterIds(capCenterIds);
   }
-  CenterlineFilter->SetInputData(inputPd);
-  CenterlineFilter->SetRadiusArrayName(radiusArrayName.c_str());
-  CenterlineFilter->SetCostFunction("1/R");
-  CenterlineFilter->SetSimplifyVoronoi(0);
-  CenterlineFilter->SetAppendEndPointsToCenterlines(appendEndPoints);
-  CenterlineFilter->SetCenterlineResampling(0);
-  CenterlineFilter->SetResamplingStepLength(0.0);
-  CenterlineFilter->Update();
-  std::cout<<"Done"<<endl;
 
-  if (seedSelector == "pickpoints" || seedSelector == "openprofiles")
-    seedPointPicker->Delete();
-
-  //Write Files
-  std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, CenterlineFilter->GetOutput(0));
 
   //Exit the program without errors
   return EXIT_SUCCESS;

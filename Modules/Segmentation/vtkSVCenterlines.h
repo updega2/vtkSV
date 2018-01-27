@@ -67,6 +67,9 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
 
   vtkGetObjectMacro(PoleIds,vtkIdList);
 
+  vtkGetObjectMacro(RawCenterlines, vtkPolyData);
+  vtkSetObjectMacro(RawCenterlines, vtkPolyData);
+
   vtkSetStringMacro(RadiusArrayName);
   vtkGetStringMacro(RadiusArrayName);
 
@@ -108,9 +111,20 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
   vtkGetMacro(GenerateDelaunayTessellation,int);
   vtkBooleanMacro(GenerateDelaunayTessellation,int);
 
+  vtkSetMacro(MedialEdgeThreshold, int);
+  vtkGetMacro(MedialEdgeThreshold, int);
+
+  vtkSetMacro(AbsoluteThreshold, int);
+  vtkGetMacro(AbsoluteThreshold, int);
+
+  vtkSetMacro(ProcessCenterlinesIntoTree, int);
+  vtkGetMacro(ProcessCenterlinesIntoTree, int);
+
+  vtkSetMacro(RelativeThreshold, double);
+  vtkGetMacro(RelativeThreshold, double);
+
   vtkSetMacro(DelaunayTolerance,double);
   vtkGetMacro(DelaunayTolerance,double);
-
 
   protected:
   vtkSVCenterlines();
@@ -155,6 +169,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
   vtkUnstructuredGrid* DelaunayTessellation;
 
   vtkPolyData* VoronoiDiagram;
+  vtkPolyData* RawCenterlines;
 
   vtkIdList* PoleIds;
 
@@ -169,8 +184,12 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
   int SimplifyVoronoi;
   int AppendEndPointsToCenterlines;
   int CenterlineResampling;
+  int MedialEdgeThreshold;
+  int AbsoluteThreshold;
+  int ProcessCenterlinesIntoTree;
 
   double ResamplingStepLength;
+  double RelativeThreshold;
 
   int GenerateDelaunayTessellation;
   double DelaunayTolerance;

@@ -49,6 +49,8 @@ set(SRCS
   vtkSVIntegrateAttributes.cxx
   vtkSVSurfaceVectors.cxx
   vtkSVBestFitPlane.cxx
+  vtkSVPolyDataSurfaceInspector.cxx
+  vtkSVCellComplexThinner.cxx
   )
 set(HDRS
   vtkSVFindGeodesicPath.h
@@ -67,6 +69,8 @@ set(HDRS
   vtkSVIntegrateAttributes.h
   vtkSVSurfaceVectors.h
   vtkSVBestFitPlane.h
+  vtkSVPolyDataSurfaceInspector.h
+  vtkSVCellComplexThinner.h
   )
 #------------------------------------------------------------------------------
 
@@ -127,8 +131,17 @@ endif()
 #------------------------------------------------------------------------------
 # Executables
 if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST FindGeodesicPath FindSeparateRegions GetBoundaryFaces
-    HausdorffDistance PassDataArray RawToVtk RawToVtp RawToVtu VtkToRaw)
+  set(EXE_LIST FindGeodesicPath
+    FindSeparateRegions
+    GetBoundaryFaces
+    HausdorffDistance
+    PassDataArray
+    RawToVtk
+    RawToVtp
+    RawToVtu
+    VtkToRaw
+    PolyDataSurfaceInspector
+    )
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
     target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME} ${SV_LIB_VTKSVCOMMON_NAME})

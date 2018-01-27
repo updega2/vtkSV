@@ -50,7 +50,6 @@
 #include "vtkvmtkMergeCenterlines.h"
 #include "vtkvmtkCapPolyData.h"
 #include "vtkvmtkPolyDataCenterlines.h"
-#include "vtkvmtkCenterlineBranchExtractor.h"
 
 int main(int argc, char *argv[])
 {
@@ -90,7 +89,7 @@ int main(int argc, char *argv[])
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  CenterlinesSplitter -input [Input Filename] -output [Output Filename] ..." << endl;
+    cout << "  CenterlinesMerger -input [Input Filename] -output [Output Filename] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;

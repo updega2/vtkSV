@@ -185,19 +185,6 @@ int vtkvmtkPolyDataCenterlines::RequestData(
     return 1;
     }
 
-  fprintf(stdout,"SOURCE IDS: ");
-  for (int i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
-    fprintf(stdout,"%d ", this->SourceSeedIds->GetId(i));
-  fprintf(stdout,"\n");
-  fprintf(stdout,"TARGET IDS: ");
-  for (int i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
-    fprintf(stdout,"%d ", this->TargetSeedIds->GetId(i));
-  fprintf(stdout,"\n");
-  fprintf(stdout,"CAPCENTER IDS: ");
-  for (int i=0; i<this->CapCenterIds->GetNumberOfIds(); i++)
-    fprintf(stdout,"%d ", this->CapCenterIds->GetId(i));
-  fprintf(stdout,"\n");
-
   if (!this->GenerateDelaunayTessellation && !this->DelaunayTessellation)
     {
     vtkErrorMacro(<< "GenerateDelaunayTessellation is off but a DelaunayTessellation has not been set.");
