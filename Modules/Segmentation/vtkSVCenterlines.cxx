@@ -644,73 +644,9 @@ int vtkSVCenterlines::RequestData(
 
   // ------------------------------------------------------------------------
   // Delete cells based on what still needs to be removed
-  vtkNew(vtkIdList, pointsEdgeId);
-  vtkNew(vtkIdList, edgePointIds);
   std::vector<int> isDeleted(allEdges.size(), 0);
 
-  // We loop as long as is necessary to remove duplicate graph edges
-  int done = 0;
-  while (!done)
-  {
-    // Remove cells that have been marked
-    this->RemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
-
-    // Get next iteration of cells to delete
-    std::vector<int> newNeedToDelete(allEdges.size(), 0);
-    for (int i=0; i<needToDelete.size(); i++)
-    {
-      // Look to see if points on deleted cells are in large graph or isolated and need to be deleted
-      if (needToDelete[i] == 1)
-      {
-        int edgeSize = allEdges[i].size();
-
-        int nodeId0 = allEndIds->IsId(allEdges[i][0]);
-        int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
-
-        // This cell is isolated, must delete
-        if (nodeCount[nodeId0] == 1 || nodeCount[nodeIdN] == 1)
-        {
-          for (int j=0; j<allEdges.size(); j++)
-          {
-            if (isDeleted[j])
-            {
-              continue;
-            }
-
-            int delEdgeSize = allEdges[j].size();
-
-            // Get edge that corresponds to where we are in iteration
-            if (nodeCount[nodeId0] == 1)
-            {
-              if (allEdges[j][0] == allEdges[i][0] ||
-                  allEdges[j][delEdgeSize-1] == allEdges[i][0])
-              {
-                newNeedToDelete[j] = 1;
-              }
-            }
-            if (nodeCount[nodeIdN] == 1)
-            {
-              if (allEdges[j][0] == allEdges[i][edgeSize-1] ||
-                  allEdges[j][delEdgeSize-1] == allEdges[i][edgeSize-1])
-              {
-                newNeedToDelete[j] = 1;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // Check if done
-    done = 1;
-    for (int i=0; i<needToDelete.size(); i++)
-    {
-      if (newNeedToDelete[i])
-        done = 0;
-      needToDelete[i] = newNeedToDelete[i];
-    }
-  }
-  // ------------------------------------------------------------------------
+  this->LoopRemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
 
   // ------------------------------------------------------------------------
   // Delete very small entrance lines
@@ -730,7 +666,7 @@ int vtkSVCenterlines::RequestData(
     }
   }
 
-  this->RemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
+  this->LoopRemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
   // ------------------------------------------------------------------------
 
   // ------------------------------------------------------------------------
@@ -891,7 +827,7 @@ int vtkSVCenterlines::RequestData(
     }
 
     // Again remove the marked cells
-    this->RemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
+    this->LoopRemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
   }
 
   // ------------------------------------------------------------------------
@@ -1884,6 +1820,84 @@ int vtkSVCenterlines::RecursiveGetFullCenterlines(std::vector<std::vector<int> >
     fullCenterlineEdges.push_back(newEdge);
   }
 
+  return SV_OK;
+}
+
+int vtkSVCenterlines::LoopRemoveMarkedCells(vtkPolyData *pd,
+                                            std::vector<std::vector<int> > allEdges,
+                                            std::vector<int> needToDelete,
+                                            std::vector<int> &isDeleted,
+                                            vtkIdList *allEndIds,
+                                            std::vector<int> &nodeCount)
+{
+
+  // We loop as long as is necessary to remove duplicate graph edges
+  int done = 0;
+  while (!done)
+  {
+    // Remove cells that have been marked
+    this->RemoveMarkedCells(pd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
+
+    // Get next iteration of cells to delete
+    std::vector<int> newNeedToDelete(allEdges.size(), 0);
+    for (int i=0; i<needToDelete.size(); i++)
+    {
+      // Look to see if points on deleted cells are in large graph or isolated and need to be deleted
+      if (needToDelete[i] == 1)
+      {
+        int edgeSize = allEdges[i].size();
+        vtkDebugMacro("EDGE WITH END POINTS " << allEdges[i][0] << " AND " << allEdges[i][edgeSize-1] << " NEEDS TO BE DELETED");
+
+        int nodeId0 = allEndIds->IsId(allEdges[i][0]);
+        int nodeIdN = allEndIds->IsId(allEdges[i][edgeSize-1]);
+
+        // This cell is isolated, must delete
+        if (nodeCount[nodeId0] == 1 || nodeCount[nodeIdN] == 1)
+        {
+          for (int j=0; j<allEdges.size(); j++)
+          {
+            if (isDeleted[j])
+            {
+              continue;
+            }
+
+            int delEdgeSize = allEdges[j].size();
+
+            // Get edge that corresponds to where we are in iteration
+            if (nodeCount[nodeId0] == 1)
+            {
+              if (allEdges[j][0] == allEdges[i][0] ||
+                  allEdges[j][delEdgeSize-1] == allEdges[i][0])
+              {
+                vtkDebugMacro("THIS ONE NOW ONLY HAS ONE AND NEEDS TO BE MARKED " << allEdges[i][0]);
+                newNeedToDelete[j] = 1;
+              }
+            }
+            if (nodeCount[nodeIdN] == 1)
+            {
+              if (allEdges[j][0] == allEdges[i][edgeSize-1] ||
+                  allEdges[j][delEdgeSize-1] == allEdges[i][edgeSize-1])
+              {
+                vtkDebugMacro("THIS ONE NOW ONLY HAS ONE AND NEEDS TO BE MARKED " << allEdges[i][edgeSize-1]);
+                newNeedToDelete[j] = 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check if done
+    done = 1;
+    for (int i=0; i<needToDelete.size(); i++)
+    {
+      if (newNeedToDelete[i])
+        done = 0;
+      needToDelete[i] = newNeedToDelete[i];
+    }
+  }
+
+  // ------------------------------------------------------------------------
   return SV_OK;
 }
 

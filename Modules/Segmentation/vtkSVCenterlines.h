@@ -155,6 +155,12 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
                         std::vector<int> &isDeleted,
                         vtkIdList *allEndIds,
                         std::vector<int> &nodeCount);
+  int LoopRemoveMarkedCells(vtkPolyData *pd,
+                            std::vector<std::vector<int> > allEdges,
+                            std::vector<int> needToDelete,
+                            std::vector<int> &isDeleted,
+                            vtkIdList *allEndIds,
+                            std::vector<int> &nodeCount);
   int GetLinesEndPoints(vtkPolyData *pd,
                         vtkIdList *endPointIds,
                         vtkPoints *endPoints,
