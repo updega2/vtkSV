@@ -644,9 +644,11 @@ int vtkSVCenterlines::RequestData(
 
   // ------------------------------------------------------------------------
   // Delete cells based on what still needs to be removed
+  vtkDebugMacro("Deleting lines from one side of loops");
   std::vector<int> isDeleted(allEdges.size(), 0);
 
   this->LoopRemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
+  std::fill(needToDelete.begin(), needToDelete.end(), 0);
 
   // ------------------------------------------------------------------------
   // Delete very small entrance lines
@@ -661,12 +663,20 @@ int vtkSVCenterlines::RequestData(
     {
       if (nodeCount[nodeId0] <= 1 || nodeCount[nodeIdN] <= 1)
       {
+        vtkDebugMacro("FOUND A SMALL LINE THAT NEEDS TO BE DELETED " << i );
         needToDelete[i] = 1;
       }
     }
   }
 
-  this->LoopRemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
+  vtkDebugMacro("Deleting lines that are from very small branching lines");
+  vtkDebugMacro("LINES THAT ARE GONE");
+  for (int i=0; i<isDeleted.size(); i++)
+  {
+    vtkDebugMacro("WHAT " << i << ": " << isDeleted[i]);
+  }
+  this->RemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
+  std::fill(needToDelete.begin(), needToDelete.end(), 0);
   // ------------------------------------------------------------------------
 
   // ------------------------------------------------------------------------
@@ -827,6 +837,7 @@ int vtkSVCenterlines::RequestData(
     }
 
     // Again remove the marked cells
+    vtkDebugMacro("Deleting lines that do not match to a given target or source point");
     this->LoopRemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
   }
 
@@ -1922,6 +1933,7 @@ int vtkSVCenterlines::RemoveMarkedCells(vtkPolyData *pd,
     // Delete this one
     if (needToDelete[i] == 1)
     {
+      vtkDebugMacro("IN QUAIF");
       // Loop through and delete each cell in connected edge
       edgeSize = allEdges[i].size();
       for (int j=0; j<edgeSize-1; j++)
