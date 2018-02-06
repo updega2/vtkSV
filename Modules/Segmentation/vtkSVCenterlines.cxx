@@ -559,12 +559,6 @@ int vtkSVCenterlines::RequestData(
   // ------------------------------------------------------------------------
 
   // ------------------------------------------------------------------------
-  // Set the end point locator
-  vtkNew(vtkPointLocator, linesEndPointLocator);
-  vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
-  // ------------------------------------------------------------------------
-
-  // ------------------------------------------------------------------------
   // Check if an end point found
   if (firstVertex == -1)
   {
@@ -677,6 +671,27 @@ int vtkSVCenterlines::RequestData(
   }
   this->RemoveMarkedCells(linesPd, allEdges, needToDelete, isDeleted, allEndIds, nodeCount);
   std::fill(needToDelete.begin(), needToDelete.end(), 0);
+  // ------------------------------------------------------------------------
+
+  // ------------------------------------------------------------------------
+  // Now re-calc the end points so that end points that were deleted previously
+  // arent taken into consideration
+  // Find the end points of the lines
+  linesEndPointIds->Reset();
+  linesEndPoints->Reset();
+
+  // Remove the cells that have been deleted so that when we try to find the
+  // close end points we dont find ones that have already been deleted
+  linesPd->RemoveDeletedCells();
+  linesPd->BuildLinks();
+
+  this->GetLinesEndPoints(linesPd, linesEndPointIds, linesEndPoints, connectedEdgePts, firstVertex);
+  // ------------------------------------------------------------------------
+
+  // ------------------------------------------------------------------------
+  // Set the end point locator
+  vtkNew(vtkPointLocator, linesEndPointLocator);
+  vtkNew(vtkPolyData, linesEndPointsPd);  linesEndPointsPd->SetPoints(linesEndPoints);
   // ------------------------------------------------------------------------
 
   // ------------------------------------------------------------------------
@@ -1933,7 +1948,6 @@ int vtkSVCenterlines::RemoveMarkedCells(vtkPolyData *pd,
     // Delete this one
     if (needToDelete[i] == 1)
     {
-      vtkDebugMacro("IN QUAIF");
       // Loop through and delete each cell in connected edge
       edgeSize = allEdges[i].size();
       for (int j=0; j<edgeSize-1; j++)
@@ -1947,6 +1961,7 @@ int vtkSVCenterlines::RemoveMarkedCells(vtkPolyData *pd,
         pd->GetCellNeighbors(-1, edgePointIds, pointsEdgeId);
         if (pointsEdgeId->GetNumberOfIds() == 1)
         {
+          vtkDebugMacro("CELL " << pointsEdgeId->GetId(0) << " HAS BEEN MARKED IN PD TO BE DELETED");
           pd->DeleteCell(pointsEdgeId->GetId(0));
         }
       }
