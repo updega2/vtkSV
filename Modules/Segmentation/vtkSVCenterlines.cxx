@@ -538,6 +538,33 @@ int vtkSVCenterlines::RequestData(
   linesPd->RemoveDeletedCells();
   linesPd->BuildLinks();
 
+  // ------------------------------------------------------------------------
+  // Check to see if duplicate lines, and remove if necessary
+  vtkIdType npts, *pts;
+  vtkNew(vtkIdList, cellEdgeNeighbors);
+  std::vector<int> dupDeleted(linesPd->GetNumberOfCells(), 0);
+  for (int i=0; i<linesPd->GetNumberOfCells(); i++)
+  {
+    if (dupDeleted[i])
+      continue;
+
+    linesPd->GetCellPoints(i, npts, pts);
+    linesPd->GetCellEdgeNeighbors(i, pts[0], pts[1], cellEdgeNeighbors);
+
+    if (cellEdgeNeighbors->GetNumberOfIds() > 0)
+    {
+      for (int j=0; j<cellEdgeNeighbors->GetNumberOfIds(); j++)
+      {
+        linesPd->DeleteCell(cellEdgeNeighbors->GetId(j));
+        dupDeleted[cellEdgeNeighbors->GetId(j)] = 1;
+        vtkWarningMacro("Duplicate cell in lines is being deleted");
+      }
+    }
+  }
+  linesPd->RemoveDeletedCells();
+  linesPd->BuildLinks();
+  // ------------------------------------------------------------------------
+
   // If we only raw centerlines, we dont need to process
   if (!this->ProcessCenterlinesIntoTree)
   {
@@ -864,7 +891,6 @@ int vtkSVCenterlines::RequestData(
 
   linesPd->DeepCopy(cleaner->GetOutput());
   linesPd->BuildLinks();
-  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYTEST.vtp", linesPd);
   // ------------------------------------------------------------------------
 
   // ------------------------------------------------------------------------
@@ -874,6 +900,31 @@ int vtkSVCenterlines::RequestData(
     if (linesPd->GetCellType(i) != VTK_LINE)
     {
       linesPd->DeleteCell(i);
+    }
+  }
+  linesPd->RemoveDeletedCells();
+  linesPd->BuildLinks();
+  // ------------------------------------------------------------------------
+
+  // ------------------------------------------------------------------------
+  // Check to see if duplicate lines, and remove if necessary
+  std::vector<int> checkDeleted(linesPd->GetNumberOfCells(), 0);
+  for (int i=0; i<linesPd->GetNumberOfCells(); i++)
+  {
+    if (checkDeleted[i])
+      continue;
+
+    linesPd->GetCellPoints(i, npts, pts);
+    linesPd->GetCellEdgeNeighbors(i, pts[0], pts[1], cellEdgeNeighbors);
+
+    if (cellEdgeNeighbors->GetNumberOfIds() > 0)
+    {
+      for (int j=0; j<cellEdgeNeighbors->GetNumberOfIds(); j++)
+      {
+        linesPd->DeleteCell(cellEdgeNeighbors->GetId(j));
+        checkDeleted[cellEdgeNeighbors->GetId(j)] = 1;
+        vtkWarningMacro("Duplicate cell in lines is being deleted");
+      }
     }
   }
   linesPd->RemoveDeletedCells();
