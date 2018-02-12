@@ -365,6 +365,10 @@ int vtkSVCenterlines::RequestData(
   vtkNew(vtkPolyData, edgePd);
   vtkSVGeneralUtils::GetEdgePolyData(triPd, edgePd);
   // ------------------------------------------------------------------------
+  vtkDebugMacro("Number of Cells on input: " << input->GetNumberOfCells());
+  vtkDebugMacro("Length of input: " << input->GetLength());
+  vtkDebugMacro("Number of Cells on voronoi: " << triPd->GetNumberOfCells());
+  vtkDebugMacro("Length of voronoi: " << triPd->GetLength());
 
   // ------------------------------------------------------------------------
   // Pruning voronoi diagram
@@ -1281,7 +1285,7 @@ int vtkSVCenterlines::RequestData(
     voronoiFastMarching->Update();
     vtkDebugMacro("Done");
 
-    this->VoronoiDiagram->ShallowCopy(voronoiFastMarching->GetOutput());
+    //this->VoronoiDiagram->ShallowCopy(voronoiFastMarching->GetOutput());
 
     vtkNew(vtkvmtkSteepestDescentLineTracer, centerlineBacktracing);
     centerlineBacktracing->SetInputConnection(voronoiFastMarching->GetOutputPort());
