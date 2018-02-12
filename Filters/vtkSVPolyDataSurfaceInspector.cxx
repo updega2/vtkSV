@@ -6,6 +6,7 @@
 #include "vtkEdgeTable.h"
 #include "vtkFeatureEdges.h"
 #include "vtkIdList.h"
+#include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
