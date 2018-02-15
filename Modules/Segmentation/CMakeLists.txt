@@ -46,6 +46,7 @@ set(SRCS
   vtkSVCenterlineGraph.cxx
   vtkSVCenterlineGCell.cxx
   vtkSVCenterlineBranchSplitter.cxx
+  vtkSVPolycubeGenerator.cxx
   )
 
 set(HDRS
@@ -62,6 +63,7 @@ set(HDRS
   vtkSVCenterlineGraph.h
   vtkSVCenterlineGCell.h
   vtkSVCenterlineBranchSplitter.h
+  vtkSVPolycubeGenerator.h
   )
 #------------------------------------------------------------------------------
 
@@ -123,7 +125,7 @@ endif()
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
-    GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger)
+    GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger PolycubeGenerator)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
     target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}

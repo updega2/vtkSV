@@ -61,39 +61,6 @@ public:
   //Destructor
   ~vtkSVCenterlineGCell();
 
-  int GetTrifurcationType(int &type);
-  int GetCubePoints(const double height, const double width,
-                    vtkPoints *allPoints, vtkCellArray *allCells,
-                    vtkIntArray *groupIds, vtkIntArray *patchIds);
-  int GetBeginningType(int &beginningType, int &splitType);
-  int GetEndType(int &endType, int &splitType);
-  int GetSquare(const double startPt[3], const double vec0[3],
-                const double vec1[3], const double height, const double width,
-                vtkPoints *points);
-  int GetWedge(const double pt0[3], const double pt1[3],
-               const double pt2[3], const double vec0[3], const double height,
-               vtkPoints *points);
-  int FormBifurcation(const double pt0[3], const double pt1[3],
-                      const double pt2[3], const double pt3[3],
-                      const double pt4[3], const double pt5[3],
-                      const double centerPt[3],
-                      const double factor,
-                      double vecs[3][3],
-                      double returnPts[2][3]);
-  int FormTrifurcation(const double pt0[3], const double pt1[3],
-                       const double pt2[3], const double pt3[3],
-                       const double pt4[3], const double pt5[3],
-                       const double centerPt[3],
-                       const double factor,
-                       double vecs[3][3],
-                       double returnPts[2][3]);
-  int GetBifurcationPoint(const double startPt[3],
-                          const double vec0[3],
-                          const double vec1[3],
-                          const double vec2[3],
-                          const double factor,
-                          double returnPt[3]);
-
   //Member data
   vtkSVCenterlineGCell *Parent;
   std::vector<vtkSVCenterlineGCell *> Children;
@@ -110,43 +77,9 @@ public:
   int AligningChild;
   int IsAlign;
 
-  /// \brief directions of nodes in graph simplification
-  enum SV_DIRECTIONS
-  {
-    RIGHT = 0,
-    BACK,
-    LEFT,
-    FRONT,
-  };
+  int GetBeginningType(int &beginningType, int &splitType);
+  int GetEndType(int &endType, int &splitType);
 
-  /// \brief possible split types
-  enum SV_CUBE_TYPE
-  {
-    NONE = 0,
-    VERT_WEDGE,
-    HORZ_WEDGE,
-    C_TET_0, // Corner tets
-    C_TET_1,
-    C_TET_2,
-    C_TET_3,
-    S_TET_0, // Side tets
-    S_TET_1,
-    S_TET_2,
-    S_TET_3,
-    NOTHANDLED
-  };
-
-  /// \brief possible split types
-  enum SV_SPLIT_TYPE
-  {
-    ZERO = 0,
-    UNO,
-    BI,
-    TRI,
-    QUAD,
-    PENT,
-    TOOMANY
-  };
 
 private:
   vtkSVCenterlineGCell(const vtkSVCenterlineGCell&); // Not implemented.

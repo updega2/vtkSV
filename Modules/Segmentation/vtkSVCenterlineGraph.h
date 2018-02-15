@@ -80,10 +80,11 @@ public:
 
   //Member functions
   vtkSVCenterlineGCell* GetCell(const int findId);
-  vtkSVCenterlineGCell* LookUp(vtkSVCenterlineGCell *lookCell, const int findId);
+  vtkSVCenterlineGCell* GetCellByGroupId(const int findId);
+  vtkSVCenterlineGCell* FindId(vtkSVCenterlineGCell *lookCell, const int findId);
+  vtkSVCenterlineGCell* FindGroupId(vtkSVCenterlineGCell *lookCell, const int findId);
   int BuildGraph();
   int PrintGraph();
-  int GetSurfacePolycube(const double cubeSize, vtkPolyData *outPd);
   int GrowGraph(vtkSVCenterlineGCell *parent);
   int GetGraphDirections();
   int GetGraphPoints();
@@ -112,45 +113,6 @@ public:
 
   int FlipLinePoints(vtkPolyData *pd, const int cellId);
   int ComputeMinimumLength(vtkSVCenterlineGCell *gCell, double &minLength);
-
-  /// \brief directions of nodes in graph simplification
-  enum SV_DIRECTIONS
-  {
-    RIGHT = 0,
-    BACK,
-    LEFT,
-    FRONT,
-  };
-
-  /// \brief possible split types
-  enum SV_CUBE_TYPE
-  {
-    NONE = 0,
-    VERT_WEDGE,
-    HORZ_WEDGE,
-    C_TET_0, // Corner tets
-    C_TET_1,
-    C_TET_2,
-    C_TET_3,
-    S_TET_0, // Side tets
-    S_TET_1,
-    S_TET_2,
-    S_TET_3,
-    NOTHANDLED
-  };
-
-  /// \brief possible split types
-  enum SV_SPLIT_TYPE
-  {
-    ZERO = 0,
-    UNO,
-    BI,
-    TRI,
-    QUAD,
-    PENT,
-    TOOMANY
-  };
-
 
   //Member data
   vtkSVCenterlineGCell *Root;

@@ -48,7 +48,6 @@
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkIdList.h"
-#include "vtkSVCenterlineGraph.h"
 #include "vtkMatrix4x4.h"
 
 #include "vtkSVSegmentationModule.h" // For export
@@ -274,10 +273,6 @@ public:
   static int SplitBoundary(vtkPolyData *pd, std::vector<int> boundary,
                            int numDivs, int groupId, std::vector<int> &newSlicePoints);
 
-  static int MatchBoundaries(vtkPolyData *pd, std::string checkArrayName,
-                             std::string fitArrayName,
-                             std::vector<Region> allRegions);
-
   static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
   static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
 
@@ -306,6 +301,7 @@ public:
                                       vtkPolyData *mappedPd,
                                       std::string dataMatchingArrayName);
 
+  // NOT USED CURRENTLY
   static int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
 
   static int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
@@ -333,6 +329,7 @@ protected:
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
   int GetApproximatePolycubeSize(double &polycubeSize);
+  int FlipLinePoints(vtkPolyData *pd, const int cellId);
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
   int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
                 vtkCellArray *newCells, std::vector<std::vector<int> >  &splitCells);
@@ -406,11 +403,6 @@ protected:
   int FixPatchesWithPolycubeOld();
   int ParameterizeSurface(vtkPolyData *fullMapPd);
   int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
-  int FormParametricHexMesh(vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
-                            int w_div, int &l_div, int h_div);
-  int CheckFace(vtkPolyData *polycubePd, int faceId,
-                int &nTopPts, int &nBotPts,
-                int &flatTop, int &flatBot);
   int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
                            vtkPolyData *pdWithCleanInterior,
                            vtkPolyData *pdWithoutInterior,
@@ -437,21 +429,13 @@ protected:
                 vtkStructuredGrid *mappedVolume);
   int ConvertUGToSG(vtkUnstructuredGrid *ug,
                     vtkStructuredGrid *sg,
-                    const int w_div, const int l_div, const int h_div);
+                    const int w_div, const int h_div, const int l_div);
   int GetPointConnectivity(vtkUnstructuredGrid *hexMesh,
                            std::vector<std::vector<int> > &ptEdgeNeighbors);
   int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
   int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters,
                              std::string fixedPointsArrayName);
   int RemoveInteriorCells(vtkPolyData *quadMesh);
-  int PushStructuredGridXAxis(vtkStructuredGrid *paraHexMesh,
-                              const double midPt0[3],
-                              const double midPt1[3],
-                              const int isBottom);
-  int PushStructuredGridZAxis(vtkStructuredGrid *paraHexMesh,
-                              const double midPt0[3],
-                              const double midPt1[3],
-                              const int isBottom);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
@@ -484,8 +468,6 @@ protected:
   double NormalsWeighting;
   double RadiusMergeRatio;
   double MergeDistance;
-
-  vtkSVCenterlineGraph *CenterlineGraph;
 
 private:
   vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.

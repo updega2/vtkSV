@@ -67,4 +67,42 @@
 #define svmaximum(A, B) ((A) > (B) ? (A) : (B))
 #define svminimum(A, B) ((A) < (B) ? (A) : (B))
 
+/// \brief directions of nodes in graph simplification
+typedef enum SV_DIRECTIONS
+{
+  RIGHT = 0,
+  BACK,
+  LEFT,
+  FRONT,
+};
+
+/// \brief possible cube types
+typedef enum SV_CUBE_TYPE
+{
+  NONE = 0,
+  VERT_WEDGE,
+  HORZ_WEDGE,
+  C_TET_0, // Corner tets
+  C_TET_1,
+  C_TET_2,
+  C_TET_3,
+  S_TET_0, // Side tets
+  S_TET_1,
+  S_TET_2,
+  S_TET_3,
+  NOTHANDLED
+};
+
+/// \brief possible split types
+typedef enum SV_SPLIT_TYPE
+{
+  ZERO = 0,
+  UNO,
+  BI,
+  TRI,
+  QUAD,
+  PENT,
+  TOOMANY
+};
+
 #endif

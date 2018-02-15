@@ -245,6 +245,12 @@ int vtkSVCenterlineGraph::BuildGraph()
     this->Root->Children.push_back(newCell);
   }
 
+  if (this->Root->Children.size() > 3)
+  {
+    vtkErrorMacro("GREATER THAN TRIFURCATION IS NOT HANDLED");
+    return SV_ERROR;
+  }
+
   this->NumberOfNodes += this->Root->Children.size()+1;
 
   this->ComputeGlobalReferenceVectors(this->Root);
@@ -252,72 +258,15 @@ int vtkSVCenterlineGraph::BuildGraph()
     this->ComputeBranchReferenceVectors(this->Root);
 
   for (int i=0; i<this->Root->Children.size(); i++)
-    this->GrowGraph(this->Root->Children[i]);
+  {
+    if (this->GrowGraph(this->Root->Children[i]) != SV_OK)
+      return SV_ERROR;
+  }
 
   if (this->GetGraphDirections() != SV_OK)
     return SV_ERROR;
   if (this->GetGraphPoints() != SV_OK)
     return SV_ERROR;
-
-  return SV_OK;
-}
-
-// ----------------------
-// GetSurfacePolycube
-// ----------------------
-int vtkSVCenterlineGraph::GetSurfacePolycube(const double cubeSize, vtkPolyData *outPd)
-{
-  int numSegs = this->NumberOfCells;
-
-  vtkNew(vtkPoints, allPoints);
-  vtkNew(vtkCellArray, allCells);
-  vtkNew(vtkIntArray, groupIds); groupIds->SetName("GroupIds");
-  vtkNew(vtkIntArray, patchIds); patchIds->SetName("PatchIds");
-
-  for (int i=0; i<numSegs; i++)
-  {
-    // Corresponding GCell
-    vtkSVCenterlineGCell *gCell = this->GetCell(i);
-
-    gCell->GetCubePoints(cubeSize, cubeSize, allPoints, allCells,
-                         groupIds, patchIds);
-
-  }
-
-  vtkNew(vtkUnstructuredGrid, polycube);
-  polycube->SetPoints(allPoints);
-  polycube->SetCells(VTK_POLYGON, allCells);
-
-  // Get final patch ids by adding to group ids
-  vtkNew(vtkIdList, groupVals);
-  for (int i=0; i<polycube->GetNumberOfCells(); i++)
-  {
-    int groupVal = groupIds->GetTuple1(i);
-    groupVals->InsertUniqueId(groupVal);
-  }
-  vtkSortDataArray::Sort(groupVals);
-  int numGroups = groupVals->GetNumberOfIds();
-  vtkNew(vtkIdList, addVals);
-  addVals->SetNumberOfIds(numGroups);
-  for (int i=0; i<numGroups; i++)
-    addVals->SetId(i, 6*i);
-
-  for (int i=0; i<polycube->GetNumberOfCells(); i++)
-  {
-    int patchVal = patchIds->GetTuple1(i);
-    int groupVal = groupIds->GetTuple1(i);
-    int newVal = patchVal + (addVals->GetId(groupVals->IsId(groupVal)));
-    patchIds->SetTuple1(i, newVal);
-  }
-
-  polycube->GetCellData()->AddArray(groupIds);
-  polycube->GetCellData()->AddArray(patchIds);
-
-  vtkNew(vtkDataSetSurfaceFilter, surfacer);
-  surfacer->SetInputData(polycube);
-  surfacer->Update();
-
-  outPd->DeepCopy(surfacer->GetOutput());
 
   return SV_OK;
 }
@@ -355,6 +304,11 @@ int vtkSVCenterlineGraph::GrowGraph(vtkSVCenterlineGCell *parent)
       parent->Children.push_back(newCell);
       count++;
     }
+  }
+  if (count > 3)
+  {
+    vtkErrorMacro("GREATER THAN TRIFURCATION IS NOT HANDLED");
+    return SV_ERROR;
   }
   if (count > 0)
   {
@@ -741,13 +695,13 @@ vtkSVCenterlineGCell* vtkSVCenterlineGraph::GetCell(const int findId)
     fprintf(stdout,"Id is larger than number of cells\n");
     return NULL;
   }
-  return this->LookUp(this->Root, findId);
+  return this->FindId(this->Root, findId);
 }
 
 // ----------------------
-// LookUp
+// FindId
 // ----------------------
-vtkSVCenterlineGCell* vtkSVCenterlineGraph::LookUp(vtkSVCenterlineGCell *lookCell, const int findId)
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::FindId(vtkSVCenterlineGCell *lookCell, const int findId)
 {
   if (lookCell == NULL)
   {
@@ -763,7 +717,50 @@ vtkSVCenterlineGCell* vtkSVCenterlineGraph::LookUp(vtkSVCenterlineGCell *lookCel
     {
       for (int i=0; i<lookCell->Children.size(); i++)
       {
-        vtkSVCenterlineGCell* foundCell = this->LookUp(lookCell->Children[i], findId);
+        vtkSVCenterlineGCell* foundCell = this->FindId(lookCell->Children[i], findId);
+        if (foundCell != NULL)
+          return foundCell;
+      }
+    }
+  }
+
+  return NULL;
+}
+
+// ----------------------
+// GetCellByGroupId
+// ----------------------
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::GetCellByGroupId(const int findId)
+{
+  //if (findId > this->NumberOfCells)
+  //{
+  //  fprintf(stdout,"Id is larger than number of cells\n");
+  //  return NULL;
+  //}
+  return this->FindGroupId(this->Root, findId);
+}
+
+
+// ----------------------
+// FindGroupId
+// ----------------------
+vtkSVCenterlineGCell* vtkSVCenterlineGraph::FindGroupId(vtkSVCenterlineGCell *lookCell, const int findId)
+{
+  if (lookCell == NULL)
+  {
+    return lookCell;
+  }
+  if (lookCell->GroupId == findId)
+  {
+    return lookCell;
+  }
+  else
+  {
+    if (lookCell->Children.size() != 0)
+    {
+      for (int i=0; i<lookCell->Children.size(); i++)
+      {
+        vtkSVCenterlineGCell* foundCell = this->FindGroupId(lookCell->Children[i], findId);
         if (foundCell != NULL)
           return foundCell;
       }
@@ -915,42 +912,87 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Cross(tempVec, parentVec, crossVec);
         vtkMath::Normalize(crossVec);
 
-        if ((grandParent->BranchDir + parent->BranchDir)%2 != 0)
+        if ((grandParent->BranchDir + parent->BranchDir)%2 != 0) // && gCell->GroupId != 72 && gCell->GroupId != 86 && gCell->GroupId != 232 && gCell->GroupId != 236 && gCell->GroupId != 257 && gCell->GroupId != 261)
         {
           fprintf(stdout,"GRANDPARENT AND PARENT SWITCH\n");
-          vtkMath::Cross(parentVec, crossVec, tempVec);
-          vtkMath::Normalize(tempVec);
-          for (int j=0; j<3; j++)
-            crossVec[j] = tempVec[j];
 
-          if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+          if (parentBegType >= C_TET_0 && parentBegType <= C_TET_3)
           {
-            if (parent->BranchDir == gCell->BranchDir)
+            vtkSVCenterlineGCell *grandParentDiverging = grandParent->Children[grandParent->DivergingChild];
+            fprintf(stdout,"PARENT IS DIRECTLY IN LINE WITH GRANDPARENT\n");
+            double divergingVec[3];
+            vtkMath::Subtract(grandParentDiverging->EndPt, grandParentDiverging->StartPt, divergingVec);
+
+            vtkMath::Cross(grandParentVec, divergingVec, crossVec);
+            vtkMath::Normalize(crossVec);
+
+            if ((grandParentDiverging->BranchDir + gCell->BranchDir)%2 == 0)
             {
-              fprintf(stdout,"PARENT AND CHILD SAME\n");
+              if (grandParentDiverging->BranchDir == gCell->BranchDir)
+              {
+                fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD SAME\n");
+              }
+              else
+              {
+                fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD OPPOSITE\n");
+                for (int j=0; j<3; j++)
+                  crossVec[j] = -1.0*crossVec[j];
+              }
             }
             else
             {
-              fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+              vtkMath::Cross(grandParentVec, crossVec, tempVec);
+              vtkMath::Normalize(tempVec);
               for (int j=0; j<3; j++)
-                crossVec[j] = -1.0*crossVec[j];
+                crossVec[j] = tempVec[j];
+              if ((grandParentDiverging->BranchDir + 1)%4 == gCell->BranchDir)
+              {
+                fprintf(stdout,"GRANDPARENT DIVERGING PLUS ONE IS CHILD\n");
+              }
+              else
+              {
+                fprintf(stdout,"GRANDPARENT DIVERGING PLUS THREE IS CHILD\n");
+                for (int j=0; j<3; j++)
+                  crossVec[j] = -1.0*crossVec[j];
+              }
             }
           }
           else
           {
-            vtkMath::Cross(crossVec, parentVec, tempVec);
+            vtkMath::Cross(parentVec, crossVec, tempVec);
             vtkMath::Normalize(tempVec);
-            if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+            for (int j=0; j<3; j++)
+              crossVec[j] = tempVec[j];
+
+            if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
             {
-              fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
-              for (int j=0; j<3; j++)
-                crossVec[j] = 1.0*tempVec[j];
+              if (parent->BranchDir == gCell->BranchDir)
+              {
+                fprintf(stdout,"PARENT AND CHILD SAME\n");
+              }
+              else
+              {
+                fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+                for (int j=0; j<3; j++)
+                  crossVec[j] = -1.0*crossVec[j];
+              }
             }
             else
             {
-              for (int j=0; j<3; j++)
-                crossVec[j] = -1.0*tempVec[j];
-              fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+              vtkMath::Cross(crossVec, parentVec, tempVec);
+              vtkMath::Normalize(tempVec);
+              if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+              {
+                fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+                for (int j=0; j<3; j++)
+                  crossVec[j] = 1.0*tempVec[j];
+              }
+              else
+              {
+                for (int j=0; j<3; j++)
+                  crossVec[j] = -1.0*tempVec[j];
+                fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+              }
             }
           }
         }
@@ -1230,6 +1272,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
 
+      fprintf(stdout,"BEF LET US SEEEEEEEEE: %.6f\n", vtkMath::Dot(checkRefs[0], refVecs[0]));
       if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
       {
         // TODO: Double check this
@@ -1257,6 +1300,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       // Get update that needs to happen
       int maxDir;
       double maxDot = -0.1;
+
       for (int j=0; j<3; j++)
       {
         double compare = fabs(vtkMath::Dot(endVecs[j], refVecs[1]));
@@ -1277,17 +1321,34 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
       vtkMath::MultiplyScalar(projVec, projDot);
       vtkMath::Normalize(projVec);
+
+      vtkNew(vtkPoints, singlePoint);
+      singlePoint->InsertNextPoint(-2.4899, 2.50698, -10.0931);
+      singlePoint->InsertNextPoint(-2.4899, 2.50698, -10.0931);
+      vtkNew(vtkDoubleArray, singleArray);
+      singleArray->SetNumberOfComponents(3);
+      singleArray->SetNumberOfTuples(2);
+      singleArray->SetName("DUMMY");
+      singleArray->SetTuple(0, refVecs[1]);
+      singleArray->SetTuple(1, projVec);
+      vtkNew(vtkPolyData, singlePD);
+      singlePD->SetPoints(singlePoint);
+      singlePD->GetPointData()->AddArray(singleArray);
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DOMBONE.vtp", singlePD);
+
+
       double angleVec1[3];
       vtkMath::Cross(refVecs[1], projVec, angleVec1);
-      double updateAngle = atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(refVecs[1], projVec));
-      updateAngle = (180.0*updateAngle/SV_PI) * (1./(npts-1));
-      fprintf(stdout, "THE UPDATE ANGLE IS : %.6f\n", updateAngle);
+      double updateAngle = 180.0*atan2(vtkMath::Norm(angleVec1), vtkMath::Dot(refVecs[1], projVec))/SV_PI;
 
+      fprintf(stdout,"FULL UPDATE ANGLE %.6f\n", updateAngle);
       if (updateAngle > 45.0)
       {
         fprintf(stdout,"ERROR: Angle cannot be larger than 45\n");
         return SV_ERROR;
       }
+
+      updateAngle = updateAngle * (1./(npts-1));
 
       fprintf(stdout,"MAX DIR: %d\n", maxDir);
       int updateDir;
@@ -1303,6 +1364,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
         }
         else
         {
+          fprintf(stdout,"SHOULD BE HERE\n");
           updateDir = 2;
           if (dotCheck < 0)
             updateAngle *= -1.0;
@@ -1330,6 +1392,8 @@ int vtkSVCenterlineGraph::GetGraphDirections()
         fprintf(stderr,"ERROR: This is incorrect, something wrong in end vectors\n");
         return SV_ERROR;
       }
+
+      fprintf(stdout,"WAHT IS IT AFTER %.6f\n", updateAngle);
 
       // update branch dirs
       this->UpdateBranchDirs(gCell, updateDir);
@@ -1405,8 +1469,11 @@ int vtkSVCenterlineGraph::GetGraphDirections()
           vtkMath::Subtract(pt0, pt1, updateRefVecs[0]);
         vtkMath::Normalize(updateRefVecs[0]);
 
+        // THIS IS A PRETTY MASSIVE CHANGE HERE
+        double thisUpdateAngle = fabs(vtkMath::Dot(checkRefs[0], updateRefVecs[0])) * updateAngle;
+
         double updateVec[3];
-        this->RotateVecAroundLine(updateRefVecs[1], updateAngle, updateRefVecs[0], updateVec);
+        this->RotateVecAroundLine(updateRefVecs[1], thisUpdateAngle, updateRefVecs[0], updateVec);
         this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateVec, tmpX, updateRefVecs[2]);
         for (int k=0; k<3; k++)
           updateRefVecs[1][k] = tmpX[k];
@@ -1435,7 +1502,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       fprintf(stdout,"Final check: %.4f\n", finalCheck);
       if (finalCheck < 0.9)
       {
-        fprintf(stderr,"ERROR: The vector was not updated to correct ending vector\n");
+        fprintf(stderr,"ERROR: The vector for %d was not updated to correct ending vector\n", gCell->GroupId);
         fprintf(stderr,"The checking dot is %.6f\n", finalCheck);
         return SV_ERROR;
       }
