@@ -870,7 +870,10 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         }
 
         int begType, begSplitType;
-        gCell->GetBeginningType(begType, begSplitType);
+        if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+        {
+          return SV_ERROR;
+        }
 
         if (begType >= C_TET_0 && begType <= S_TET_3)
         {
@@ -890,12 +893,21 @@ int vtkSVCenterlineGraph::GetGraphPoints()
       else
       {
         int begType, begSplitType;
-        gCell->GetBeginningType(begType, begSplitType);
+        if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+        {
+          return SV_ERROR;
+        }
 
         int parentBegType, parentBegSplitType;
-        parent->GetBeginningType(parentBegType, parentBegSplitType);
+        if (parent->GetBeginningType(parentBegType, parentBegSplitType) != SV_OK)
+        {
+          return SV_ERROR;
+        }
         int parentEndType, parentEndSplitType;
-        parent->GetEndType(parentEndType, parentEndSplitType);
+        if (parent->GetEndType(parentEndType, parentEndSplitType) != SV_OK)
+        {
+          return SV_ERROR;
+        }
 
         double grandParentVec[3];
         vtkMath::Subtract(grandParent->StartPt, grandParent->EndPt, grandParentVec);
@@ -1197,7 +1209,10 @@ int vtkSVCenterlineGraph::GetGraphDirections()
     //  refVecs[1][j] = tmpX[j];
 
     int begType, begSplitType;
-    gCell->GetBeginningType(begType, begSplitType);
+    if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+    {
+      return SV_ERROR;
+    }
 
     if (gCell->Parent == NULL)
     {
@@ -1272,7 +1287,6 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
 
-      fprintf(stdout,"BEF LET US SEEEEEEEEE: %.6f\n", vtkMath::Dot(checkRefs[0], refVecs[0]));
       if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
       {
         // TODO: Double check this

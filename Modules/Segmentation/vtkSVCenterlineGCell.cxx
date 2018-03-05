@@ -185,6 +185,13 @@ int vtkSVCenterlineGCell::GetBeginningType(int &beginningType, int &splitType)
     splitType     = ZERO;
     beginningType = NONE;
   }
+  else if (parent->Children.size() == 1)
+  {
+    beginningType   = NOTHANDLED;
+    splitType = UNO;
+    vtkErrorMacro("There is only one child of this cell, something wrong in centerlines");
+    return SV_ERROR;
+  }
   else if (parent->Children.size() == 2)
   {
     splitType = BI;
@@ -300,9 +307,10 @@ int vtkSVCenterlineGCell::GetBeginningType(int &beginningType, int &splitType)
   {
     beginningType = NOTHANDLED;
     splitType     = TOOMANY;
-    fprintf(stdout,"Cannot currently handle more than a trifurcation\n");
+    vtkErrorMacro("Cannot currently handle more than a trifurcation");
     return SV_ERROR;
   }
+
 
   return SV_OK;
 }
@@ -316,6 +324,13 @@ int vtkSVCenterlineGCell::GetEndType(int &endType, int &splitType)
   {
     endType   = NONE;
     splitType = ZERO;
+  }
+  else if (this->Children.size() == 1)
+  {
+    endType   = NOTHANDLED;
+    splitType = UNO;
+    vtkErrorMacro("There is only one child of this cell, something wrong in centerlines");
+    return SV_ERROR;
   }
   else if (this->Children.size() == 2)
   {
@@ -401,7 +416,7 @@ int vtkSVCenterlineGCell::GetEndType(int &endType, int &splitType)
   {
     endType   = NOTHANDLED;
     splitType = TOOMANY;
-    fprintf(stdout,"Cannot currently handle more than a trifurcation\n");
+    vtkErrorMacro("Cannot currently handle more than a trifurcation");
     return SV_ERROR;
   }
 

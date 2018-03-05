@@ -353,7 +353,11 @@ int vtkSVPolycubeGenerator::GetVolumePolycube()
     whl_divs.push_back(whl);
   }
 
-  this->SynchronizePolycubeDivisions(whl_divs);
+  if (this->SynchronizePolycubeDivisions(whl_divs) != SV_OK)
+  {
+    vtkErrorMacro("Could not synchronize polycube divisions");
+    return SV_ERROR;
+  }
 
   vtkNew(vtkIntArray, polycubeDivisionsArray);
   polycubeDivisionsArray->SetNumberOfComponents(4);
@@ -452,7 +456,10 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
   // Get beginning type
   int begType, begSplitType;
-  gCell->GetBeginningType(begType, begSplitType);
+  if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+  {
+    return SV_ERROR;
+  }
   fprintf(stdout,"BEG SPLIT TYPE: %d\n", begSplitType);
   fprintf(stdout,"BEG ORIEN TYPE: %d\n", begType);
 
@@ -862,7 +869,10 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
   // Get end type
   int endType, endSplitType;
-  gCell->GetEndType(endType, endSplitType);
+  if (gCell->GetEndType(endType, endSplitType) != SV_OK)
+  {
+    return SV_ERROR;
+  }
   fprintf(stdout,"END SPLIT TYPE: %d\n", endSplitType);
   fprintf(stdout,"END ORIEN TYPE: %d\n", endType);
 
@@ -1776,8 +1786,14 @@ int vtkSVPolycubeGenerator::SynchronizePolycubeDivisions(std::vector<std::vector
 
     vtkSVCenterlineGCell *gCell = this->CenterlineGraph->GetCellByGroupId(groupId);
 
-    gCell->GetBeginningType(begType, begSplitType);
-    gCell->GetEndType(endType, endSplitType);
+    if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+    {
+      return SV_ERROR;
+    }
+    if (gCell->GetEndType(endType, endSplitType) != SV_OK)
+    {
+      return SV_ERROR;
+    }
 
     if (begType == S_TET_1 || begType == S_TET_3)
     {
@@ -1826,10 +1842,16 @@ int vtkSVPolycubeGenerator::GetPolycubeDivisions(vtkSVCenterlineGCell *gCell,
 {
 
   int begType, begSplitType;
-  gCell->GetBeginningType(begType, begSplitType);
+  if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+  {
+    return SV_ERROR;
+  }
 
   int endType, endSplitType;
-  gCell->GetEndType(endType, endSplitType);
+  if (gCell->GetEndType(endType, endSplitType) != SV_OK)
+  {
+    return SV_ERROR;
+  }
 
   // W div
   w_div = this->PolycubeDivisions;
@@ -2170,11 +2192,17 @@ int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, v
   cubeTypes.push_back("NOTHANDLED");
 
   int begType, begSplitType;
-  gCell->GetBeginningType(begType, begSplitType);
+  if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
+  {
+    return SV_ERROR;
+  }
   fprintf(stdout,"CORRESPONDINGLY, BEG TYPE: %s\n", cubeTypes[begType].c_str());
 
   int endType, endSplitType;
-  gCell->GetEndType(endType, endSplitType);
+  if (gCell->GetEndType(endType, endSplitType) != SV_OK)
+  {
+    return SV_ERROR;
+  }
   fprintf(stdout,"CORRESPONDINGLY, END TYPE: %s\n", cubeTypes[endType].c_str());
   fprintf(stdout,"\n");
 
