@@ -1283,23 +1283,23 @@ int vtkSVCenterlineGraph::GetGraphDirections()
         vtkMath::Subtract(pt0, pt1, refVecs[0]);
       vtkMath::Normalize(refVecs[0]);
 
-      this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
+      this->ComputeLocalCoordinateSystem(checkRefs[0], refVecs[0], refVecs[1], tmpX, refVecs[2]);
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
 
-      if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
-      {
-        // TODO: Double check this
-        // Check to see if its in dir of local x
-        if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
-        {
-          for (int k=0; k<3; k++)
-          {
-            refVecs[1][k] = -1.0*refVecs[1][k];
-            refVecs[2][k] = -1.0*refVecs[2][k];
-          }
-        }
-      }
+      //if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
+      //{
+      //  // TODO: Double check this
+      //  // Check to see if its in dir of local x
+      //  if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
+      //  {
+      //    for (int k=0; k<3; k++)
+      //    {
+      //      refVecs[1][k] = -1.0*refVecs[1][k];
+      //      refVecs[2][k] = -1.0*refVecs[2][k];
+      //    }
+      //  }
+      //}
 
       localArrayX->SetTuple(pts[j], refVecs[1]);
       localArrayY->SetTuple(pts[j], refVecs[2]);
@@ -1483,28 +1483,29 @@ int vtkSVCenterlineGraph::GetGraphDirections()
           vtkMath::Subtract(pt0, pt1, updateRefVecs[0]);
         vtkMath::Normalize(updateRefVecs[0]);
 
-        // THIS IS A PRETTY MASSIVE CHANGE HERE
-        double thisUpdateAngle = fabs(vtkMath::Dot(checkRefs[0], updateRefVecs[0])) * updateAngle;
+        // TODO: THIS IS A PRETTY MASSIVE CHANGE HERE
+        //double thisUpdateAngle = fabs(vtkMath::Dot(checkRefs[0], updateRefVecs[0])) * updateAngle;
+        double thisUpdateAngle = updateAngle;
 
         double updateVec[3];
         this->RotateVecAroundLine(updateRefVecs[1], thisUpdateAngle, updateRefVecs[0], updateVec);
-        this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateVec, tmpX, updateRefVecs[2]);
+        this->ComputeLocalCoordinateSystem(checkRefs[0], updateRefVecs[0], updateVec, tmpX, updateRefVecs[2]);
         for (int k=0; k<3; k++)
           updateRefVecs[1][k] = tmpX[k];
 
-        if (vtkMath::Dot(checkRefs[0], updateRefVecs[0]) < 0)
-        {
-          // TODO: Double check this
-          // Check to see if its in dir of local x
-          if (fabs(vtkMath::Dot(checkRefs[1], updateRefVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], updateRefVecs[0])))
-          {
-            for (int k=0; k<3; k++)
-            {
-              updateRefVecs[1][k] = -1.0*updateRefVecs[1][k];
-              updateRefVecs[2][k] = -1.0*updateRefVecs[2][k];
-            }
-          }
-        }
+        //if (vtkMath::Dot(checkRefs[0], updateRefVecs[0]) < 0)
+        //{
+        //  // TODO: Double check this
+        //  // Check to see if its in dir of local x
+        //  if (fabs(vtkMath::Dot(checkRefs[1], updateRefVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], updateRefVecs[0])))
+        //  {
+        //    for (int k=0; k<3; k++)
+        //    {
+        //      updateRefVecs[1][k] = -1.0*updateRefVecs[1][k];
+        //      updateRefVecs[2][k] = -1.0*updateRefVecs[2][k];
+        //    }
+        //  }
+        //}
 
         localArrayX->SetTuple(pts[j], updateRefVecs[1]);
         localArrayY->SetTuple(pts[j], updateRefVecs[2]);
@@ -1563,17 +1564,48 @@ int vtkSVCenterlineGraph::UpdateBranchDirs(vtkSVCenterlineGCell *gCell, const in
 // ----------------------
 // ComputeLocalCoordinateSystem
 // ----------------------
-int vtkSVCenterlineGraph::ComputeLocalCoordinateSystem(const double vz[3],
-                                                       const double vstart[3],
+int vtkSVCenterlineGraph::ComputeLocalCoordinateSystem(const double prev_vz[3],
+                                                       const double vz[3],
+                                                       const double prev_vx[3],
                                                        double vx[3],
                                                        double vy[3])
 {
-	double tempArray[3];
-  double tempLength = vtkMath::Dot(vstart, vz);
-	for (int i = 0; i < 3; i++)
-		tempArray[i] = tempLength * vz[i];
+	//double tempArray[3];
+  //double tempLength = vtkMath::Dot(prev_vx, vz);
+	//for (int i = 0; i < 3; i++)
+	//	tempArray[i] = tempLength * vz[i];
 
-  vtkMath::Subtract(vstart, tempArray, vx);
+  //vtkMath::Subtract(prev_vx, tempArray, vx);
+  //vtkMath::Normalize(vx);
+
+  //vtkMath::Cross(vz, vx, vy);
+  //vtkMath::Normalize(vy);
+
+  double dot = vtkMath::Dot(prev_vz, vz);
+
+  double theta;
+  if (1 - dot < 1.0e-6)
+  {
+    theta = 0.0;
+  }
+  else
+  {
+    theta = acos(dot) * 180.0 / SV_PI;
+  }
+
+  double tempArray[3];
+  vtkMath::Cross(prev_vz, vz, tempArray);
+
+  vtkNew(vtkTransform, transform);
+  transform->Identity();
+  transform->RotateWXYZ(theta, tempArray);
+  transform->TransformPoint(prev_vx, vx);
+
+  dot = vtkMath::Dot(vz, vx);
+  vx[0] -= dot * vz[0];
+  vx[1] -= dot * vz[1];
+  vx[2] -= dot * vz[2];
+
   vtkMath::Normalize(vx);
 
   vtkMath::Cross(vz, vx, vy);

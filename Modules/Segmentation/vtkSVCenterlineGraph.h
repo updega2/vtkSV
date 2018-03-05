@@ -103,7 +103,8 @@ public:
   static int InsertGCellPoints(vtkSVCenterlineGCell *gCell, void *arg0, void *arg1, void *arg2);
 
 
-  int ComputeLocalCoordinateSystem(const double vz[3], const double vstart[3],
+  int ComputeLocalCoordinateSystem(const double prev_vz[3], const double vz[3],
+                                   const double prev_vx[3],
                                    double vx[3], double vy[3]);
 
   int RotateVecAroundLine(const double inVec[3],
