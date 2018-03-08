@@ -31,6 +31,7 @@
 #include "vtkSVPolycubeGenerator.h"
 
 #include "vtkAppendFilter.h"
+#include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataSetSurfaceFilter.h"

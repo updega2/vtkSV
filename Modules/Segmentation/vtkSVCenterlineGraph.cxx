@@ -318,7 +318,12 @@ int vtkSVCenterlineGraph::GrowGraph(vtkSVCenterlineGCell *parent)
     this->ComputeBranchReferenceVectors(parent);
 
     for (int i=0; i<parent->Children.size(); i++)
-      this->GrowGraph(parent->Children[i]);
+    {
+      if (this->GrowGraph(parent->Children[i]) != SV_OK)
+      {
+        return SV_ERROR;
+      }
+    }
   }
   else
   {
