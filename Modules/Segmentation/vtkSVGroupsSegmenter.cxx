@@ -1396,14 +1396,14 @@ int vtkSVGroupsSegmenter::RunFilter()
       return SV_ERROR;
     }
 
-    if (this->MergedCenterlines->GetNumberOfCells() > 1)
-    {
+    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    //{
       if (this->FixEndPatches(branchPd) != SV_OK)
       {
         vtkErrorMacro("Error fixing end patches");
         return SV_ERROR;
       }
-    }
+    //}
 
     if (this->MergedCenterlines->GetNumberOfCells() > 1)
     {
@@ -5583,12 +5583,12 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   ////  writer->Write();
   ////}
 
-  fprintf(stdout,"Writing NURBS...\n");
-  std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
-  vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
-  writer->SetInputData(nurbs);
-  writer->SetFileName(pername.c_str());
-  writer->Update();
+  //fprintf(stdout,"Writing NURBS...\n");
+  //std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
+  //vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
+  //writer->SetInputData(nurbs);
+  //writer->SetFileName(pername.c_str());
+  //writer->Update();
 
   //loftAppender->Update();
   //loftedVolume->DeepCopy(loftAppender->GetOutput());

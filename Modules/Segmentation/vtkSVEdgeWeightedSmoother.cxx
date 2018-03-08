@@ -150,6 +150,7 @@ double vtkSVEdgeWeightedSmoother::GetEdgeWeightedDistance(const int generatorId,
   double edgeWeightedDist = 1.0;
 
   double totalWeight = 0.0;
+  int numSameGeneratorNeighbors = 0;
   for (int i=0; i<this->NumberOfNeighbors[evalId]; i++)
   {
     int neighborId = this->Neighbors[evalId][i];
@@ -159,11 +160,13 @@ double vtkSVEdgeWeightedSmoother::GetEdgeWeightedDistance(const int generatorId,
       double normal[3];
       cellNormals->GetTuple(neighborId, normal);
 
-      double crossVec[3];
-      vtkMath::Cross(currNormal, normal, crossVec);
-      double ang = atan2(vtkMath::Norm(crossVec), vtkMath::Dot(currNormal, normal));
+      //double crossVec[3];
+      //vtkMath::Cross(currNormal, normal, crossVec);
+      //double ang = atan2(vtkMath::Norm(crossVec), vtkMath::Dot(currNormal, normal));
+      //totalWeight += ang/SV_PI;
 
-      totalWeight += ang/SV_PI;
+      totalWeight += vtkMath::Dot(currNormal, normal);
+      numSameGeneratorNeighbors++;
     }
   }
 
@@ -180,8 +183,10 @@ double vtkSVEdgeWeightedSmoother::GetEdgeWeightedDistance(const int generatorId,
   double edgeWeight = this->EdgeWeight;
   if (this->UseCurvatureWeight)
   {
-    if (this->NeighborPatchesNumberOfElements[evalId][stopI] != 0)
-      edgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][stopI];
+    //if (this->NeighborPatchesNumberOfElements[evalId][stopI] != 0)
+    //  edgeWeight = totalWeight/this->NeighborPatchesNumberOfElements[evalId][stopI];
+    if (numSameGeneratorNeighbors != 0)
+      edgeWeight = 1.0 - totalWeight/numSameGeneratorNeighbors;
   }
 
   // Get the edge weighted portion
