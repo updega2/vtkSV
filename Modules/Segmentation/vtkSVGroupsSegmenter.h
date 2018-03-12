@@ -336,6 +336,10 @@ protected:
   int FixMultipleGroups(vtkPolyData *pd, vtkPolyData *polycubePd,
                         std::vector<Region> surfaceGroups,
                         std::vector<Region> polycubeGroups);
+  /** \brief Cluster branch */
+  int ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
+  int ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPolyData *polyPd);
+
   int FixEndPatches(vtkPolyData *pd);
   int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
   int CheckEndPatches(vtkPolyData *pd,

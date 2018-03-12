@@ -425,7 +425,7 @@ int vtkSVGroupsSegmenter::RunFilter()
     CVT->SetGenerators(this->MergedCenterlines);
     CVT->SetNumberOfRings(2);
     CVT->SetThreshold(stopCellNumber);
-    CVT->SetUseCurvatureWeight(1);
+    CVT->SetUseCurvatureWeight(0);
     CVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
     CVT->SetCVTDataArrayName("Normals");
     CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
@@ -1377,6 +1377,9 @@ int vtkSVGroupsSegmenter::RunFilter()
   for (int i=0; i<numGroups; i++)
   {
     int groupId = groupIds->GetId(i);
+    vtkIdType nlinepts, *linepts;
+    int centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
+    this->MergedCenterlines->GetCellPoints(centerlineId, nlinepts, linepts);
 
     fprintf(stdout,"CLUSTERING AND MATCHING ENDS OF %d\n", groupId);
 
@@ -1390,27 +1393,21 @@ int vtkSVGroupsSegmenter::RunFilter()
       this->GroupIdsArrayName, polyBranchPd);
     polyBranchPd->BuildLinks();
 
-    if (this->RunEdgeWeightedCVT(branchPd, generatorsPd) != SV_OK)
+    if (nlinepts > 5 && groupId != 6)
     {
-      vtkErrorMacro("Error in cvt");
-      return SV_ERROR;
-    }
-
-    //if (this->MergedCenterlines->GetNumberOfCells() > 1)
-    //{
-      if (this->FixEndPatches(branchPd) != SV_OK)
+      if (this->ClusterBranchWithCVT(branchPd, generatorsPd) != SV_OK)
       {
-        vtkErrorMacro("Error fixing end patches");
+        vtkErrorMacro("Error clustering branch with cvt into patches");
         return SV_ERROR;
       }
-    //}
-
-    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    }
+    else
     {
-      if (this->FixSidePatches(branchPd) != SV_OK)
+      fprintf(stdout,"SMALL GROUP HERE!!\n");
+      if (this->ClusterBranchWithGeodesics(branchPd, polyBranchPd) != SV_OK)
       {
-        vtkErrorMacro("Error fixing side patches");
-        return SV_ERROR;
+      vtkErrorMacro("Error clustering branch with geodesics into patches");
+      return SV_ERROR;
       }
     }
 
@@ -1696,6 +1693,272 @@ int vtkSVGroupsSegmenter::FlipLinePoints(vtkPolyData *pd, const int cellId)
   pd->BuildLinks();
 
   delete [] tmpPts;
+
+  return SV_OK;
+}
+
+// ----------------------
+// ClusterBranchWithCVT
+// ----------------------
+int vtkSVGroupsSegmenter::ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData *generatorsPd)
+{
+  if (this->RunEdgeWeightedCVT(pd, generatorsPd) != SV_OK)
+  {
+    vtkErrorMacro("Error in cvt");
+    return SV_ERROR;
+  }
+
+  //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+  //{
+    if (this->FixEndPatches(pd) != SV_OK)
+    {
+      vtkErrorMacro("Error fixing end patches");
+      return SV_ERROR;
+    }
+  //}
+
+  if (this->MergedCenterlines->GetNumberOfCells() > 1)
+  {
+    if (this->FixSidePatches(pd) != SV_OK)
+    {
+      vtkErrorMacro("Error fixing side patches");
+      return SV_ERROR;
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// ClusterBranchWithGeodesics
+// ----------------------
+int vtkSVGroupsSegmenter::ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPolyData *polyPd)
+{
+  std::vector<int> openCornerPoints;
+  std::vector<std::vector<int> > openEdges;
+  if (this->GetOpenBoundaryEdges(pd, openCornerPoints, openEdges) != SV_OK)
+  {
+    vtkErrorMacro("Error getting open boundary edges");
+    return SV_ERROR;
+  }
+
+  if (openEdges.size() != 2)
+  {
+    vtkErrorMacro("Incorrect number of open edges on small connecting group");
+    return SV_ERROR;
+  }
+
+  std::vector<std::vector<int> > shiftedOpenEdges;
+  if (this->ShiftEdgeList(pd, openEdges, shiftedOpenEdges) != SV_OK)
+  {
+    vtkErrorMacro("Error shifting edges");
+    return SV_ERROR;
+  }
+
+  if (shiftedOpenEdges.size() != 2)
+  {
+    vtkErrorMacro("Incorrect number of open edges on small connecting group");
+    return SV_ERROR;
+  }
+
+  std::vector<std::vector<int> > allPatchValues;
+  std::vector<std::vector<std::vector<int> > > allPatchEdgePoints;
+  std::vector<std::vector<int> > allPatchEdgeCells;
+  for (int i=0; i<shiftedOpenEdges.size(); i++)
+  {
+    std::vector<std::vector<int> > splitOpenEdges;
+    this->SplitEdgeList(pd, shiftedOpenEdges[i], splitOpenEdges);
+
+    std::vector<int> edgePatchValues;
+    std::vector<std::vector<int> > edgePatchPoints;
+    std::vector<int> edgePatchCells;
+
+    for (int j=0; j<splitOpenEdges.size(); j++)
+    {
+      int edgeSize = splitOpenEdges[j].size();
+      if (edgeSize < 3)
+      {
+        fprintf(stderr,"EDGE SIZE IS LESS THAN 3, IT IS %d!!!\n", edgeSize);
+        return SV_ERROR;
+      }
+
+      int edgePtId0 = pd->GetPointData()->GetArray("TmpInternalIds")->
+        GetTuple1(splitOpenEdges[j][0]);
+      int edgePtIdN = pd->GetPointData()->GetArray("TmpInternalIds")->
+        GetTuple1(splitOpenEdges[j][edgeSize-1]);
+
+      int branchPtId0   = splitOpenEdges[j][0];
+      int branchPtId1   = splitOpenEdges[j][1];
+      int branchPtIdN   = splitOpenEdges[j][edgeSize-1];
+
+      vtkNew(vtkIdList, firstCellId);
+      pd->GetCellEdgeNeighbors(-1, branchPtId0, branchPtId1, firstCellId);
+      if (firstCellId->GetNumberOfIds() != 1)
+      {
+        fprintf(stderr,"Something went wrong here\n");
+        return SV_OK;
+      }
+      edgePatchCells.push_back(firstCellId->GetId(0));
+
+      int polyPtId0 = polyPd->GetPointData()->GetArray("SlicePoints")->
+        LookupValue(edgePtId0);
+      int polyPtIdN = polyPd->GetPointData()->GetArray("SlicePoints")->
+        LookupValue(edgePtIdN);
+
+      if (polyPtId0 == -1 || polyPtIdN == -1)
+      {
+        fprintf(stdout,"Could not recover true ids from polycube\n");
+        return SV_ERROR;
+      }
+
+      vtkNew(vtkIdList, polyCellId);
+      vtkNew(vtkIdList, cellPointIds);
+      cellPointIds->SetNumberOfIds(2);
+      cellPointIds->SetId(0, polyPtId0);
+      cellPointIds->SetId(1, polyPtIdN);
+      polyPd->GetCellNeighbors(-1, cellPointIds, polyCellId);
+
+      if (polyCellId->GetNumberOfIds() != 1)
+      {
+        fprintf(stdout,"Should have one and only one cell here\n");
+        return SV_ERROR;
+      }
+
+      int patchVal = polyPd->GetCellData()->GetArray("PatchIds")->
+        GetTuple1(polyCellId->GetId(0));
+      patchVal = patchVal%6;
+
+      edgePatchValues.push_back(patchVal);
+
+      vtkNew(vtkIdList, touchingPatchVals);
+      vtkSVGeneralUtils::GetPointCellsValues(polyPd, "PatchIds", polyPtId0, touchingPatchVals);
+      for (int k=0; k<touchingPatchVals->GetNumberOfIds(); k++)
+      {
+        touchingPatchVals->SetId(k, touchingPatchVals->GetId(k)%6);
+      }
+
+      std::vector<int> singleEdgePatchPoints(2);
+      if (touchingPatchVals->IsId((patchVal+1)%4) == -1)
+      {
+        singleEdgePatchPoints[0] = branchPtId0;
+        singleEdgePatchPoints[1] = branchPtIdN;
+      }
+      else
+      {
+        singleEdgePatchPoints[0] = branchPtIdN;
+        singleEdgePatchPoints[1] = branchPtId0;
+      }
+      edgePatchPoints.push_back(singleEdgePatchPoints);
+
+    }
+    allPatchValues.push_back(edgePatchValues);
+    allPatchEdgePoints.push_back(edgePatchPoints);
+    allPatchEdgeCells.push_back(edgePatchCells);
+  }
+
+  int patchVal0, patchVal1;
+  for (int i=0; i<allPatchValues[0].size(); i++)
+  {
+    patchVal0 = allPatchValues[0][i];
+
+    for (int j=0; j<allPatchValues[1].size(); j++)
+    {
+      patchVal1 = allPatchValues[1][j];
+
+      if (patchVal0 != patchVal1)
+      {
+        continue;
+      }
+
+      vtkNew(vtkSVFindGeodesicPath, finder0);
+      finder0->SetInputData(pd);
+      finder0->SetStartPtId(allPatchEdgePoints[0][i][0]);
+      finder0->SetEndPtId(allPatchEdgePoints[1][j][0]);
+      finder0->SetDijkstraArrayName("DijkstraDistance");
+      finder0->SetRepelCloseBoundaryPoints(1);
+      finder0->Update();
+
+      vtkNew(vtkSVFindGeodesicPath, finder1);
+      finder1->SetInputData(pd);
+      finder1->SetStartPtId(allPatchEdgePoints[0][i][1]);
+      finder1->SetEndPtId(allPatchEdgePoints[1][j][1]);
+      finder1->SetDijkstraArrayName("DijkstraDistance");
+      finder1->SetRepelCloseBoundaryPoints(1);
+      finder1->Update();
+
+      vtkIdList *finder0Ids = finder0->GetPathIds();
+      vtkIdList *finder1Ids = finder1->GetPathIds();
+
+      fprintf(stdout,"NEW FINDER0 POINTS:              ");
+      for (int l=0; l<finder0Ids->GetNumberOfIds(); l++)
+        fprintf(stdout,"%d ", finder0Ids->GetId(l));
+      fprintf(stdout,"\n");
+
+      fprintf(stdout,"NEW FINDER1 POINTS:              ");
+      for (int l=0; l<finder1Ids->GetNumberOfIds(); l++)
+        fprintf(stdout,"%d ", finder1Ids->GetId(l));
+      fprintf(stdout,"\n");
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYTEMPER.vtp", pd);
+
+      int count = 1;
+      std::vector<int> tempCells;
+      tempCells.push_back(allPatchEdgeCells[0][i]);
+      std::vector<int> cellUsed(pd->GetNumberOfCells());
+      for (int k=0; k<pd->GetNumberOfCells(); k++)
+        cellUsed[k] = 0;
+
+      for (int k=0; k<count; k++)
+      {
+        int tmpCellId = tempCells[k];
+        cellUsed[tmpCellId] = 1;
+        pd->GetCellData()->GetArray("PatchIds")->SetTuple1(tmpCellId, patchVal0);
+
+        vtkIdType npts, *pts;
+        pd->GetCellPoints(tmpCellId, npts, pts);
+        for (int l=0; l<npts; l++)
+        {
+          int ptId0 = pts[l];
+          int ptId1 = pts[(l+1)%npts];
+
+          int freeEdge = 0;
+          int patchEdge = 0;
+          int newEdge = 0;
+
+          vtkNew(vtkIdList, cellEdgeNeighbors);
+          pd->GetCellEdgeNeighbors(tmpCellId, ptId0, ptId1, cellEdgeNeighbors);
+
+          if (cellEdgeNeighbors->GetNumberOfIds() == 0)
+          {
+            freeEdge = 1;
+          }
+          else
+          {
+            if (finder0Ids->IsId(ptId0) != -1 && finder0Ids->IsId(ptId1) != -1)
+            {
+              patchEdge = 1;
+            }
+            if (finder1Ids->IsId(ptId0) != -1 && finder1Ids->IsId(ptId1) != -1)
+            {
+              patchEdge = 1;
+            }
+
+            int testCellId = cellEdgeNeighbors->GetId(0);
+            if (cellUsed[testCellId])
+            {
+              newEdge = 1;
+            }
+          }
+
+          if (!freeEdge && !patchEdge && !newEdge)
+          {
+            int nextCellId = cellEdgeNeighbors->GetId(0);
+            tempCells.push_back(nextCellId);
+            count++;
+          }
+        }
+      }
+    }
+  }
 
   return SV_OK;
 }
@@ -4163,6 +4426,7 @@ int vtkSVGroupsSegmenter::CheckGroups2()
           vtkWarningMacro("EXPECTED TWO EDGES ON NON-TERMINATING GROUP "<< groupId << ", BUT THERE ARE " << connector->GetNumberOfExtractedRegions() << " EDGES");
           addNewCenterlines = 1;
         }
+        //TODO: Add test here for single cell thickness group
       }
 
       if (addNewCenterlines)
@@ -4224,7 +4488,7 @@ int vtkSVGroupsSegmenter::CheckGroups2()
         CVT->SetGenerators(removedGroupsCenterlinesPd);
         CVT->SetNumberOfRings(2);
         CVT->SetThreshold(stopCellNumber);
-        CVT->SetUseCurvatureWeight(1);
+        CVT->SetUseCurvatureWeight(0);
         CVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
         CVT->SetCVTDataArrayName("Normals");
         CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
@@ -4385,6 +4649,7 @@ int vtkSVGroupsSegmenter::CheckGroups2()
         }
 
         double radiusValAtCenter = tmpCenterlinesPd->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(centerPtId);
+        vtkNew(vtkPolyLine, newPts0);
         for (int j=0; j<newCenterlinePts->GetNumberOfPoints(); j++)
         {
           ptId0 = newPoints->InsertNextPoint(newCenterPt);
@@ -4429,7 +4694,7 @@ int vtkSVGroupsSegmenter::CheckGroups2()
       betterCVT->SetGenerators(newMergedCenterlinesPd);
       betterCVT->SetNumberOfRings(2);
       betterCVT->SetThreshold(stopCellNumber);
-      betterCVT->SetUseCurvatureWeight(1);
+      betterCVT->SetUseCurvatureWeight(0);
       betterCVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
       betterCVT->SetCVTDataArrayName("Normals");
       betterCVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
