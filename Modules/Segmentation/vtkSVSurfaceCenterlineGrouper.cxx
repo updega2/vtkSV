@@ -268,6 +268,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
 
   if (this->EnforcePolycubeBoundaries)
   {
+    vtkDebugMacro("Need to enforce polycube");
     if (this->PolycubePd == NULL)
     {
       vtkDebugMacro("Polycube not provided, generating from centerlines");
@@ -278,14 +279,16 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
       polycuber->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
       polycuber->Update();
 
+      this->PolycubePd = vtkPolyData::New();
       this->PolycubePd->DeepCopy(polycuber->GetOutput());
+      vtkDebugMacro("Polycube created");
     }
-  }
 
-  if (this->PolycubePd->GetNumberOfCells() == 0)
-  {
-    vtkErrorMacro("Polycube is empty");
-    return SV_ERROR;
+    if (this->PolycubePd->GetNumberOfCells() == 0)
+    {
+      vtkErrorMacro("Polycube is empty");
+      return SV_ERROR;
+    }
   }
 
   if (!this->GroupSurface)

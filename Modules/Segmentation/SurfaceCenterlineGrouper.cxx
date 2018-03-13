@@ -157,6 +157,7 @@ int main(int argc, char *argv[])
   Grouper->SetUseRadiusInformation(useRadiusInfo);
   Grouper->SetEnforcePolycubeBoundaries(enforcePolycubeBoundaries);
   Grouper->SetGroupSurface(groupSurface);
+  Grouper->DebugOn();
   Grouper->Update();
   std::cout<<"Done"<<endl;
 
