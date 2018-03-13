@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVGroupsSegmenter
+ *  \class vtkSVSurfaceCenterlineGrouper
  *  \brief Using a polydata centerlines, separate the polydata into regions
  *  based on the centerlines
  *
@@ -39,8 +39,8 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVGroupsSegmenter_h
-#define vtkSVGroupsSegmenter_h
+#ifndef vtkSVSurfaceCenterlineGrouper_h
+#define vtkSVSurfaceCenterlineGrouper_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
@@ -73,24 +73,18 @@ struct XYZ
   double z;
 };
 
-class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
+class VTKSVSEGMENTATION_EXPORT vtkSVSurfaceCenterlineGrouper : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVGroupsSegmenter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVSurfaceCenterlineGrouper,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static vtkSVGroupsSegmenter *New();
+  static vtkSVSurfaceCenterlineGrouper *New();
 
   //@{
   /// \brief Get/Set macro for the object's centerlines
   vtkSetObjectMacro(Centerlines,vtkPolyData);
   vtkGetObjectMacro(Centerlines,vtkPolyData);
-  //@}
-
-  //@{
-  /// \brief Get the graph for the model
-  vtkSetObjectMacro(GraphPd,vtkPolyData);
-  vtkGetObjectMacro(GraphPd,vtkPolyData);
   //@}
 
   //@{
@@ -106,18 +100,6 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set macro for surface polycube
-  vtkSetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
-  vtkGetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
-  //@}
-
-  //@{
-  /// \brief Get/Set macro for surface polycube
-  vtkSetObjectMacro(FinalHexMesh,vtkUnstructuredGrid);
-  vtkGetObjectMacro(FinalHexMesh,vtkUnstructuredGrid);
-  //@}
-
-  //@{
   /// \brief Get/Set macro for array name used by the filter. Must
   //  be present on the centerlines.
   vtkSetStringMacro(CenterlineGroupIdsArrayName);
@@ -128,26 +110,10 @@ public:
   vtkGetStringMacro(GroupIdsArrayName);
   vtkSetStringMacro(BlankingArrayName);
   vtkGetStringMacro(BlankingArrayName);
-  //@}
-
-  //@{
-  /// \brief Get/Set the cutoff radius factor for clipping of the surface
-  //  distance functions
-  vtkSetMacro(CutoffRadiusFactor,double);
-  vtkGetMacro(CutoffRadiusFactor,double);
-  //@}
-
-  //@{
-  /// \brief Get/Set the factor for enforcing of the boundary directions. Approximately represents the number of centerline points to enforce per branch. Default is 1, and typically a fairly low value works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems.
-  vtkSetMacro(BoundaryEnforceFactor,int);
-  vtkGetMacro(BoundaryEnforceFactor,int);
-  //@}
-
-
-  //@{
-  /// \brief Get/Set the clip value for clipping of the surface distance functions.
-  vtkSetMacro(ClipValue,double);
-  vtkGetMacro(ClipValue,double);
+  vtkSetStringMacro(CenterlineIdsArrayName);
+  vtkGetStringMacro(CenterlineIdsArrayName);
+  vtkSetStringMacro(TractIdsArrayName);
+  vtkGetStringMacro(TractIdsArrayName);
   //@}
 
   //@{
@@ -158,55 +124,12 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set the initial group clipper to use
-  vtkSetMacro(UseVmtkClipping,int);
-  vtkGetMacro(UseVmtkClipping,int);
-  vtkBooleanMacro(UseVmtkClipping,int);
+  /// \brief Get/Set the radius information
+  vtkSetMacro(EnforcePolycubeBoundaries, int);
+  vtkGetMacro(EnforcePolycubeBoundaries, int);
+  vtkBooleanMacro(EnforcePolycubeBoundaries, int);
   //@}
 
-  //@{
-  /// \brief Get/Set whether the boundary at separating patches should be more
-  //  strictly enforced.
-  vtkSetMacro(EnforceBoundaryDirections,int);
-  vtkGetMacro(EnforceBoundaryDirections,int);
-  vtkBooleanMacro(EnforceBoundaryDirections,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set the number of divisions to use along width and height of polycube
-  vtkSetMacro(PolycubeDivisions,int);
-  vtkGetMacro(PolycubeDivisions,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set the unit length for each division of the polycube
-  vtkSetMacro(PolycubeUnitLength,double);
-  vtkGetMacro(PolycubeUnitLength,double);
-  //@}
-
-  //@{
-  /// \brief Get/Set the scalar determing how much influence to put on the normal
-  // of the cell and how much influence to put on the position of the cell for
-  // the cube patch clustering.
-  vtkSetMacro(NormalsWeighting,double);
-  vtkGetMacro(NormalsWeighting,double);
-  //@}
-
-  //@{
-  /// \brief Get/Set whether the model is a vascular model with artificial truncated
-  //  boundaries
-  vtkSetMacro(IsVasculature,int);
-  vtkGetMacro(IsVasculature,int);
-  vtkBooleanMacro(IsVasculature,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set If model is not vasculature, indicate how many centerline
-  //  points to remove from the ends
-  vtkSetMacro(NumberOfCenterlineRemovePts,int);
-  vtkGetMacro(NumberOfCenterlineRemovePts,int);
-  //@}
-  //
   //@{
   /// \brief Get/Set to use absolute distance
   vtkSetMacro(UseAbsoluteMergeDistance, int);
@@ -299,8 +222,8 @@ public:
 
 
 protected:
-  vtkSVGroupsSegmenter();
-  ~vtkSVGroupsSegmenter();
+  vtkSVSurfaceCenterlineGrouper();
+  ~vtkSVSurfaceCenterlineGrouper();
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
@@ -311,48 +234,15 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int MergeCenterlines();
-  int GetPatches();
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
-  int FlipLinePoints(vtkPolyData *pd, const int cellId);
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
   int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
                 vtkCellArray *newCells, std::vector<std::vector<int> >  &splitCells);
   int FixMultipleGroups(vtkPolyData *pd, vtkPolyData *polycubePd,
                         std::vector<Region> surfaceGroups,
                         std::vector<Region> polycubeGroups);
-  /** \brief Cluster branch */
-  int ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
-  int ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPolyData *polyPd);
 
-  int FixEndPatches(vtkPolyData *pd);
-  int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
-  int CheckEndPatches(vtkPolyData *pd,
-                      std::vector<Region> endRegions,
-                      std::vector<int> &individualFix,
-                      std::vector<int> &wholePatchFix);
-  int FixSidePatches(vtkPolyData *pd);
-  int CheckSidePatches(vtkPolyData *pd,
-                      std::vector<Region> endRegions,
-                      std::vector<int> &wholePatchFix);
-  int GetOpenBoundaryEdges(vtkPolyData *branchPd,
-                           std::vector<int> &openCornerPoints,
-                           std::vector<std::vector<int> > &openEdges);
-  int GetOpenBoundaryEdges(vtkPolyData *branchPd, std::vector<Region> regions,
-                           std::string arrayName,
-                           std::vector<int> &openCornerPoints,
-                           std::vector<std::vector<int> > &openEdges);
-  int ShiftEdgeList(vtkPolyData *branchPd, std::vector<std::vector<int> > &openEdges,
-                    std::vector<std::vector<int> > &shiftedOpenEdges);
-  int SplitEdgeList(vtkPolyData *branchPd, std::vector<int> &openEdges,
-                    std::vector<std::vector<int> > &shiftedOpenEdges);
-  int GetTrueBoundaryDirections(vtkPolyData *branchPd,
-                                vtkPolyData *polyBranchPd,
-                                const int groupId,
-                                vtkSVPolyBallLine *groupTubes,
-                                std::vector<std::vector<int> > &shiftedOpenEdges,
-                                vtkDoubleArray *avgVecs,
-                                vtkIntArray *patchDirs);
   int CheckGroups(vtkPolyData *pd);
   int CheckGroups2();
   int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
@@ -382,83 +272,31 @@ protected:
                            int totNumberOfRings,
                            std::vector<std::vector<int> > &neighbors);
 
-  int GetCellDirectNeighbors(vtkPolyData *pd,
-                             std::vector<std::vector<int> > &neighbors,
-                             std::vector<int> &numNeighbors);
-
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
-  int FixPatchesWithPolycube();
-  int FixPatchesWithPolycubeOld();
-  int ParameterizeSurface(vtkPolyData *fullMapPd);
-  int ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstructuredGrid *loftedVolume);
-  int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
-                           vtkPolyData *pdWithCleanInterior,
-                           vtkPolyData *pdWithoutInterior,
-                           std::vector<int> &ptMap,
-                           std::vector<std::vector<int> > &invPtMap);
-  int GetVolumePointMaps(vtkUnstructuredGrid *ugAll,
-                         vtkUnstructuredGrid *ugClean,
-                         std::vector<int> &ptMap,
-                         std::vector<std::vector<int> > &invPtMap);
-  int MapInteriorBoundary(vtkStructuredGrid *paraHexVolume,
-                          vtkPolyData *mappedSurface,
-                          const std::vector<int> ptMap);
-  int FixInteriorBoundary(vtkPolyData *mappedSurface,
-                          const std::vector<std::vector<int> > invPtMap);
-  int FixVolume(vtkUnstructuredGrid *mappedVolume,
-                vtkUnstructuredGrid *cleanVolume,
-                const std::vector<int> ptMap);
-  int SetControlMeshBoundaries(vtkUnstructuredGrid *mappedVolume,
-                               vtkUnstructuredGrid *cleanVolume,
-                               const std::vector<int> ptMap,
-                               const std::vector<std::vector<int> > invPtMap);
-  int MapVolume(vtkStructuredGrid *paraHexVolume,
-                vtkPolyData *mappedSurface,
-                vtkStructuredGrid *mappedVolume);
-  int ConvertUGToSG(vtkUnstructuredGrid *ug,
-                    vtkStructuredGrid *sg,
-                    const int w_div, const int h_div, const int l_div);
-  int GetPointConnectivity(vtkUnstructuredGrid *hexMesh,
-                           std::vector<std::vector<int> > &ptEdgeNeighbors);
-  int SmoothStructuredGrid(vtkStructuredGrid *hexMesh, const int iters);
-  int SmoothUnstructuredGrid(vtkUnstructuredGrid *hexMesh, const int iters,
-                             std::string fixedPointsArrayName);
-  int RemoveInteriorCells(vtkPolyData *quadMesh);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
+  char *CenterlineIdsArrayName;
   char *GroupIdsArrayName;
   char *BlankingArrayName;
+  char *TractIdsArrayName;
 
   vtkPolyData *WorkPd;
-  vtkPolyData *GraphPd;
   vtkPolyData *Centerlines;
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
 
-  vtkUnstructuredGrid *PolycubeUg;
-  vtkUnstructuredGrid *FinalHexMesh;
-
+  int EnforcePolycubeBoundaries;
   int UseRadiusInformation;
-  int UseVmtkClipping;
-  int EnforceBoundaryDirections;
-  int IsVasculature;
-  int NumberOfCenterlineRemovePts;
-  int PolycubeDivisions;
-  int BoundaryEnforceFactor;
   int UseAbsoluteMergeDistance;
 
-  double CutoffRadiusFactor;
-  double ClipValue;
-  double PolycubeUnitLength;
-  double NormalsWeighting;
   double RadiusMergeRatio;
   double MergeDistance;
 
 private:
-  vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.
-  void operator=(const vtkSVGroupsSegmenter&);  // Not implemented.
+  vtkSVSurfaceCenterlineGrouper(const vtkSVSurfaceCenterlineGrouper&);  // Not implemented.
+  void operator=(const vtkSVSurfaceCenterlineGrouper&);  // Not implemented.
 };
 
 #endif

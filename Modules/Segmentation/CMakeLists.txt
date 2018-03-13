@@ -47,6 +47,7 @@ set(SRCS
   vtkSVCenterlineGCell.cxx
   vtkSVCenterlineBranchSplitter.cxx
   vtkSVPolycubeGenerator.cxx
+  vtkSVSurfaceCenterlineGrouper.cxx
   )
 
 set(HDRS
@@ -64,6 +65,7 @@ set(HDRS
   vtkSVCenterlineGCell.h
   vtkSVCenterlineBranchSplitter.h
   vtkSVPolycubeGenerator.h
+  vtkSVSurfaceCenterlineGrouper.h
   )
 #------------------------------------------------------------------------------
 

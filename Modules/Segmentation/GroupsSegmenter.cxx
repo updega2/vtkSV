@@ -198,7 +198,6 @@ int main(int argc, char *argv[])
   Grouper->SetBlankingArrayName(blankingArrayName.c_str());
   Grouper->SetCutoffRadiusFactor(cutoffRadiusFactor);
   Grouper->SetClipValue(clipValue);
-  Grouper->ClipAllCenterlineGroupIdsOn();
   Grouper->SetUseRadiusInformation(useRadiusInfo);
   Grouper->SetUseVmtkClipping(useVmtkClipping);
   Grouper->SetEnforceBoundaryDirections(enforceBoundaryDirections);

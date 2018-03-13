@@ -62,8 +62,6 @@ public:
   vtkGetStringMacro(CenterlineRadiusArrayName);
   vtkSetStringMacro(GroupIdsArrayName);
   vtkGetStringMacro(GroupIdsArrayName);
-  vtkSetStringMacro(BlankingArrayName);
-  vtkGetStringMacro(BlankingArrayName);
   //@}
 
   //@{

@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
   std::string cvtDataArrayName  = "CellNormals";
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
-  std::string blankingArrayName = "Blanking";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -105,7 +104,6 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-edgeweight")         {edgeWeight = atof(argv[++iarg]);}
       else if(tmpstr=="-groupids")           {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-radius")             {radiusArrayName = argv[++iarg];}
-      else if(tmpstr=="-blanking")           {blankingArrayName = argv[++iarg];}
       else if(tmpstr=="-useradiusinfo")      {useRadiusInfo = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a  valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
@@ -131,7 +129,6 @@ int main(int argc, char *argv[])
     cout << "  -maximumnumberofiterations        : Set a maximum number of iterations [default 1000]"<< endl;
     cout << "  -groupids           : Name to be used for group ids [default GroupIds]"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-    cout << "  -blanking           : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
     cout << "  -useradiusinfo      : Use radius to help in clipping operation [default 1]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
@@ -196,7 +193,6 @@ int main(int argc, char *argv[])
   CVT->SetCVTDataArrayName(cvtDataArrayName.c_str());
   CVT->SetGroupIdsArrayName(groupIdsArrayName.c_str());
   CVT->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
-  CVT->SetBlankingArrayName(blankingArrayName.c_str());
   CVT->SetUseRadiusInformation(useRadiusInfo);
   CVT->Update();
 
@@ -216,7 +212,6 @@ int main(int argc, char *argv[])
   CVT2->SetCVTDataArrayName(cvtDataArrayName.c_str());
   CVT2->SetGroupIdsArrayName(groupIdsArrayName.c_str());
   CVT2->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
-  CVT2->SetBlankingArrayName(blankingArrayName.c_str());
   CVT2->SetUseRadiusInformation(useRadiusInfo);
   CVT2->SetUseBifurcationInformation(0);
   CVT2->SetUseCurvatureWeight(0);

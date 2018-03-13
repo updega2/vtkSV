@@ -53,7 +53,6 @@ vtkSVCenterlinesEdgeWeightedCVT::vtkSVCenterlinesEdgeWeightedCVT()
   this->DistanceFunction = vtkSVPolyBallLine::New();
 
   this->GroupIdsArrayName = NULL;
-  this->BlankingArrayName = NULL;
   this->CenterlineRadiusArrayName =   NULL;
 
   this->EdgeWeight = 1.0;
@@ -78,11 +77,6 @@ vtkSVCenterlinesEdgeWeightedCVT::~vtkSVCenterlinesEdgeWeightedCVT()
   {
     delete [] this->GroupIdsArrayName;
     this->GroupIdsArrayName = NULL;
-  }
-  if (this->BlankingArrayName != NULL)
-  {
-    delete [] this->BlankingArrayName;
-    this->BlankingArrayName = NULL;
   }
   if (this->CenterlineRadiusArrayName != NULL)
   {
