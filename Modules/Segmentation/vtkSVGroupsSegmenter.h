@@ -50,28 +50,9 @@
 #include "vtkIdList.h"
 #include "vtkMatrix4x4.h"
 
+#include "vtkSVGlobals.h"
+
 #include "vtkSVSegmentationModule.h" // For export
-
-struct Region
-{
-  int Index;
-  int IndexCluster;
-
-  int NumberOfCorners;
-  std::vector<int> CornerPoints;
-
-  std::vector<std::vector<int> > BoundaryEdges;
-
-  int NumberOfElements;
-  std::vector<int> Elements;
-
-};
-struct XYZ
-{
-  double x;
-  double y;
-  double z;
-};
 
 class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
 {
@@ -228,7 +209,6 @@ public:
 
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
-  static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
   static int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
                                            vtkIdList *targetRegions);
 
@@ -243,7 +223,6 @@ public:
   static int ComputeRotationMatrix(const double vx[3], const double vy[3],
                                    const double vz[3], double rotMatrix[9]);
 
-  static int SmoothBoundaries(vtkPolyData *pd, std::string arrayName);
   static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName,
                                       vtkIdList *targetRegions);
 
@@ -286,14 +265,6 @@ public:
                                       vtkPolyData *targetBasePd,
                                       vtkPolyData *mappedPd,
                                       std::string dataMatchingArrayName);
-
-  // NOT USED CURRENTLY
-  static int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
-
-  static int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
-                               std::vector<int> &cellBool,
-                               int &currRow, const int numRows,
-                               std::vector<int> &allCells);
 
   const static double GlobalCoords[3][3];
 
@@ -346,41 +317,6 @@ protected:
                     std::vector<std::vector<int> > &shiftedOpenEdges);
   int SplitEdgeList(vtkPolyData *branchPd, std::vector<int> &openEdges,
                     std::vector<std::vector<int> > &shiftedOpenEdges);
-  int GetTrueBoundaryDirections(vtkPolyData *branchPd,
-                                vtkPolyData *polyBranchPd,
-                                const int groupId,
-                                vtkSVPolyBallLine *groupTubes,
-                                std::vector<std::vector<int> > &shiftedOpenEdges,
-                                vtkDoubleArray *avgVecs,
-                                vtkIntArray *patchDirs);
-  int CheckGroups(vtkPolyData *pd);
-  int CheckGroups2();
-  int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
-               const Region region, std::vector<int> allEdges,
-               std::vector<int> fixEdges, vtkIdList *critPts);
-  int FixPlanarTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
-                            const Region region, std::vector<int> allEdges,
-                            std::vector<int> badEdges, vtkIdList *critPts);
-  int FixPerpenTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
-                            const Region region, std::vector<int> allEdges,
-                            std::vector<int> badEdges, vtkIdList *critPts);
-  int FixOffsetTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
-                            std::string arrayName,
-                            const Region region, const Region polyRegion,
-                            std::vector<int> allEdges,
-                            std::vector<int> badEdges, vtkIdList *critPts);
-  int FixCloseGroup(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
-                    std::string arrayName,
-                    const Region region, const Region polyRegion,
-                    std::vector<int> allEdges,
-                    std::vector<int> badEdges, vtkIdList *critPts);
-  int FixGroupsWithPolycube();
-
-  int GetCellRingNeighbors(vtkPolyData *pd,
-                           vtkIdList *cellIds,
-                           int ringNumber,
-                           int totNumberOfRings,
-                           std::vector<std::vector<int> > &neighbors);
 
   int GetCellDirectNeighbors(vtkPolyData *pd,
                              std::vector<std::vector<int> > &neighbors,

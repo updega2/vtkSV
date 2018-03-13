@@ -40,6 +40,8 @@
 #ifndef vtkSVGlobals_h
 #define vtkSVGlobals_h
 
+#include <vector>
+
 #include "vtkSmartPointer.h"
 #define vtkNew(type,name) \
   vtkSmartPointer<type> name = vtkSmartPointer<type>::New()
@@ -103,6 +105,28 @@ typedef enum SV_SPLIT_TYPE
   QUAD,
   PENT,
   TOOMANY
+};
+
+struct Region
+{
+  int Index;
+  int IndexCluster;
+
+  int NumberOfCorners;
+  std::vector<int> CornerPoints;
+
+  std::vector<std::vector<int> > BoundaryEdges;
+
+  int NumberOfElements;
+  std::vector<int> Elements;
+
+};
+
+struct XYZ
+{
+  double x;
+  double y;
+  double z;
 };
 
 #endif

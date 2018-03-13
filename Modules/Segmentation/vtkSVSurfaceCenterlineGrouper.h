@@ -50,28 +50,9 @@
 #include "vtkIdList.h"
 #include "vtkMatrix4x4.h"
 
+#include "vtkSVGlobals.h"
+
 #include "vtkSVSegmentationModule.h" // For export
-
-struct Region
-{
-  int Index;
-  int IndexCluster;
-
-  int NumberOfCorners;
-  std::vector<int> CornerPoints;
-
-  std::vector<std::vector<int> > BoundaryEdges;
-
-  int NumberOfElements;
-  std::vector<int> Elements;
-
-};
-struct XYZ
-{
-  double x;
-  double y;
-  double z;
-};
 
 class VTKSVSEGMENTATION_EXPORT vtkSVSurfaceCenterlineGrouper : public vtkPolyDataAlgorithm
 {
@@ -80,12 +61,6 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent);
 
   static vtkSVSurfaceCenterlineGrouper *New();
-
-  //@{
-  /// \brief Get/Set macro for the object's centerlines
-  vtkSetObjectMacro(Centerlines,vtkPolyData);
-  vtkGetObjectMacro(Centerlines,vtkPolyData);
-  //@}
 
   //@{
   /// \brief Get/Set macro for merged centerlines
@@ -131,23 +106,12 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set to use absolute distance
-  vtkSetMacro(UseAbsoluteMergeDistance, int);
-  vtkGetMacro(UseAbsoluteMergeDistance, int);
-  vtkBooleanMacro(UseAbsoluteMergeDistance, int);
+  /// \brief Get/Set the radius information
+  vtkSetMacro(GroupSurface, int);
+  vtkGetMacro(GroupSurface, int);
+  vtkBooleanMacro(GroupSurface, int);
   //@}
 
-  //@{
-  /// \brief Get/Set to use absolute distance
-  vtkSetMacro(RadiusMergeRatio, double);
-  vtkGetMacro(RadiusMergeRatio, double);
-  //@}
-
-  //@{
-  /// \brief Get/Set to use absolute distance
-  vtkSetMacro(MergeDistance, double);
-  vtkGetMacro(MergeDistance, double);
-  //@}
 
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
@@ -283,16 +247,12 @@ protected:
   char *TractIdsArrayName;
 
   vtkPolyData *WorkPd;
-  vtkPolyData *Centerlines;
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
 
   int EnforcePolycubeBoundaries;
+  int GroupSurface;
   int UseRadiusInformation;
-  int UseAbsoluteMergeDistance;
-
-  double RadiusMergeRatio;
-  double MergeDistance;
 
 private:
   vtkSVSurfaceCenterlineGrouper(const vtkSVSurfaceCenterlineGrouper&);  // Not implemented.

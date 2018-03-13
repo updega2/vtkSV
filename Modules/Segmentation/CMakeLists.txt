@@ -127,7 +127,7 @@ endif()
 # Create additional executables
 if(VTKSV_BUILD_FILTER_EXES)
   set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
-    GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger PolycubeGenerator)
+    GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger PolycubeGenerator SurfaceCenterlineGrouper)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
     target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}

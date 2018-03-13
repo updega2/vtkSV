@@ -61,8 +61,6 @@
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
 
-#include "vtkvmtkMergeCenterlines.h"
-
 #include <algorithm>
 
 // ----------------------
@@ -78,7 +76,6 @@ vtkSVSurfaceCenterlineGrouper::vtkSVSurfaceCenterlineGrouper()
   this->WorkPd = vtkPolyData::New();
   this->MergedCenterlines = vtkPolyData::New();
   this->PolycubePd = NULL;
-  this->Centerlines = NULL;
 
   this->CenterlineGroupIdsArrayName = NULL;
   this->CenterlineRadiusArrayName = NULL;
@@ -88,11 +85,8 @@ vtkSVSurfaceCenterlineGrouper::vtkSVSurfaceCenterlineGrouper()
   this->TractIdsArrayName = NULL;
 
   this->UseRadiusInformation = 1;
-  this->EnforcePolycubeBoundaries = 1;
-
-  this->UseAbsoluteMergeDistance = 0;
-  this->RadiusMergeRatio = 0.5;
-  this->MergeDistance = 0.1;
+  this->EnforcePolycubeBoundaries = 0;
+  this->GroupSurface = 1;
 }
 
 // ----------------------
@@ -109,11 +103,6 @@ vtkSVSurfaceCenterlineGrouper::~vtkSVSurfaceCenterlineGrouper()
   {
     this->MergedCenterlines->Delete();
     this->MergedCenterlines = NULL;
-  }
-  if (this->Centerlines != NULL)
-  {
-    this->Centerlines->Delete();
-    this->Centerlines = NULL;
   }
   if (this->PolycubePd != NULL)
   {
@@ -199,15 +188,9 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
 // ----------------------
 int vtkSVSurfaceCenterlineGrouper::PrepFilter()
 {
-  if (!this->Centerlines)
+  if (!this->MergedCenterlines)
   {
     vtkErrorMacro(<< "Centerlines not set.");
-    return SV_ERROR;
-  }
-
-  if (this->MergeCenterlines() != SV_OK)
-  {
-    vtkErrorMacro("Problem merging centerlines");
     return SV_ERROR;
   }
 
@@ -225,15 +208,9 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     strcpy(this->GroupIdsArrayName, "GroupIds");
   }
 
-  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->CenterlineGroupIdsArrayName) != SV_OK)
-  {
-    vtkErrorMacro(<< "CenterlineGroupIdsArray with name specified does not exist");
-    return SV_OK;
-  }
-
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->CenterlineGroupIdsArrayName) != SV_OK)
   {
-    vtkErrorMacro(<< "CenterlineGroupIdsArray with name specified does not exist");
+    vtkErrorMacro(<< "CenterlineGroupIdsArray with name specified does not exist on centerlines");
     return SV_OK;
   }
 
@@ -244,9 +221,9 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     strcpy(this->BlankingArrayName, "Blanking");
   }
 
-  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->BlankingArrayName) != SV_OK)
+  if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->BlankingArrayName) != SV_OK)
   {
-    vtkErrorMacro(<< "BlankingArrayName with name specified does not exist");
+    vtkErrorMacro(<< "BlankingArrayName with name specified does not exist on centerlines");
     return SV_ERROR;
   }
 
@@ -257,9 +234,9 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     strcpy(this->CenterlineRadiusArrayName, "MaximumInscribedSphereRadius");
   }
 
-  if (!this->Centerlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
+  if (!this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName))
   {
-    vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
+    vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist on centerlines");
     return SV_ERROR;
   }
 
@@ -270,9 +247,9 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     strcpy(this->CenterlineIdsArrayName, "CenterlineIds");
   }
 
-  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->CenterlineIdsArrayName) != SV_OK)
+  if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->CenterlineIdsArrayName) != SV_OK)
   {
-    vtkErrorMacro(<< "CenterlineIdsArray with name specified does not exist");
+    vtkErrorMacro(<< "CenterlineIdsArray with name specified does not exist on centerlines");
     return SV_OK;
   }
 
@@ -283,9 +260,9 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     strcpy(this->TractIdsArrayName, "TractIds");
   }
 
-  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->TractIdsArrayName) != SV_OK)
+  if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->TractIdsArrayName) != SV_OK)
   {
-    vtkErrorMacro(<< "TractIdsArray with name specified does not exist");
+    vtkErrorMacro(<< "TractIdsArray with name specified does not exist on centerlines");
     return SV_OK;
   }
 
@@ -311,6 +288,17 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     return SV_ERROR;
   }
 
+  if (!this->GroupSurface)
+  {
+    if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->GroupIdsArrayName) != SV_OK)
+    {
+      vtkErrorMacro(<< "GroupIdsArray with name specified does not exist on surface");
+      return SV_OK;
+    }
+  }
+
+  //TODO: Check to make sure centerlines and polycube match if polycube given
+
   return SV_OK;
 }
 
@@ -332,28 +320,32 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
   vtkDataArray *normalsArray =
     this->WorkPd->GetCellData()->GetArray("Normals");
 
-  int stopCellNumber = ceil(this->WorkPd->GetNumberOfCells()*0.0001);
+  if (this->GroupSurface)
+  {
+    int stopCellNumber = ceil(this->WorkPd->GetNumberOfCells()*0.0001);
 
-  vtkNew(vtkSVCenterlinesEdgeWeightedCVT, CVT);
-  CVT->SetInputData(this->WorkPd);
-  CVT->SetGenerators(this->MergedCenterlines);
-  CVT->SetNumberOfRings(2);
-  CVT->SetThreshold(stopCellNumber);
-  CVT->SetUseCurvatureWeight(0);
-  CVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
-  CVT->SetCVTDataArrayName("Normals");
-  CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
-  CVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
-  CVT->SetUseRadiusInformation(this->UseRadiusInformation);
-  //CVT->SetUseRadiusInformation(0);
-  //CVT->SetUsePointNormal(1);
-  CVT->SetUsePointNormal(0);
-  CVT->SetUseBifurcationInformation(0);
-  //CVT->SetUseBifurcationInformation(1);
-  CVT->SetMaximumNumberOfIterations(0);
-  CVT->Update();
+    vtkNew(vtkSVCenterlinesEdgeWeightedCVT, CVT);
+    CVT->SetInputData(this->WorkPd);
+    CVT->SetGenerators(this->MergedCenterlines);
+    CVT->SetNumberOfRings(2);
+    CVT->SetThreshold(stopCellNumber);
+    CVT->SetUseCurvatureWeight(0);
+    CVT->SetPatchIdsArrayName(this->GroupIdsArrayName);
+    CVT->SetCVTDataArrayName("Normals");
+    CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
+    CVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
+    CVT->SetUseRadiusInformation(this->UseRadiusInformation);
+    //CVT->SetUseRadiusInformation(0);
+    //CVT->SetUsePointNormal(1);
+    CVT->SetUsePointNormal(0);
+    CVT->SetUseBifurcationInformation(0);
+    //CVT->SetUseBifurcationInformation(1);
+    CVT->SetMaximumNumberOfIterations(0);
+    CVT->Update();
 
-  this->WorkPd->DeepCopy(CVT->GetOutput());
+    this->WorkPd->DeepCopy(CVT->GetOutput());
+
+  }
 
   if (this->CheckGroups(this->WorkPd) != SV_OK)
   {
@@ -430,56 +422,6 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
   normaler->Update();
   this->WorkPd->DeepCopy(normaler->GetOutput());
   this->WorkPd->BuildLinks();
-
-  return SV_OK;
-}
-
-// ----------------------
-// MergeCenterlines
-// ----------------------
-int vtkSVSurfaceCenterlineGrouper::MergeCenterlines()
-{
-  if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->GroupIdsArrayName) != SV_OK)
-  {
-    vtkDebugMacro("Splitting centerlines...");
-    vtkNew(vtkSVCenterlineBranchSplitter, branchSplitter);
-    branchSplitter->SetInputData(this->Centerlines);
-    branchSplitter->SetGroupingModeToFirstPoint();
-    branchSplitter->SetBlankingArrayName(this->BlankingArrayName);
-    branchSplitter->SetRadiusArrayName(this->CenterlineRadiusArrayName);
-    branchSplitter->SetGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
-    branchSplitter->SetCenterlineIdsArrayName(this->CenterlineIdsArrayName);
-    branchSplitter->SetTractIdsArrayName(TractIdsArrayName);
-    branchSplitter->SetRadiusMergeRatio(this->RadiusMergeRatio);
-    branchSplitter->SetUseAbsoluteMergeDistance(this->UseAbsoluteMergeDistance);
-    branchSplitter->SetMergeDistance(this->MergeDistance);
-    branchSplitter->Update();
-
-    this->Centerlines->DeepCopy(branchSplitter->GetOutput());
-  }
-
-  vtkDebugMacro("Merging centerlines...");
-  vtkNew(vtkvmtkMergeCenterlines, merger);
-  merger->SetInputData(this->Centerlines);
-  merger->SetRadiusArrayName(this->CenterlineRadiusArrayName);
-  merger->SetGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
-  merger->SetCenterlineIdsArrayName(this->CenterlineIdsArrayName);
-  merger->SetTractIdsArrayName(TractIdsArrayName);
-  merger->SetBlankingArrayName(this->BlankingArrayName);
-  merger->SetResamplingStepLength(0.0);
-  merger->SetMergeBlanked(1);
-  merger->Update();
-
-  int numFullPts = merger->GetOutput()->GetNumberOfPoints();
-
-  vtkNew(vtkCleanPolyData, lineCleaner);
-  lineCleaner->SetInputData(merger->GetOutput());
-  lineCleaner->Update();
-
-  this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
-  this->MergedCenterlines->BuildLinks();
-
-  vtkDebugMacro("Merged");
 
   return SV_OK;
 }
