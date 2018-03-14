@@ -50,12 +50,9 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->LastPolyBallCenter[0] = this->LastPolyBallCenter[1] = this->LastPolyBallCenter[2] = 0.0;
   this->LastPolyBallCenterRadius = 0.0;
   this->UseRadiusInformation = 1;
-  this->UseBifurcationInformation = 0;
   this->UsePointNormal = 0;
-  this->UseRadiusWeighting = 0;
   this->UseLocalCoordinates = 0;
-  this->UseProjectionVector = 0;
-  this->RemoveEndPoints = 0;
+  this->FastEvaluate = 0;
   this->PointLocator = vtkPointLocator::New();
 
   for (int i=0; i<3; i++)
@@ -112,6 +109,83 @@ double vtkSVPolyBallLine::ComplexDot(double x[4], double y[4])
 }
 
 // ----------------------
+// PreprocessInputForFastEvaluate
+// ----------------------
+void vtkSVPolyBallLine::PreprocessInputForFastEvaluate()
+{
+  vtkIdType npts, *pts;
+  double pt[3];
+
+  this->Input->BuildCells();
+
+  vtkNew(vtkIdList, cellIds);
+  if (this->InputCellIds)
+  {
+    cellIds->DeepCopy(this->InputCellIds);
+  }
+  else if (this->InputCellId != -1)
+  {
+    cellIds->InsertNextId(this->InputCellId);
+  }
+  else
+  {
+    cellIds->SetNumberOfIds(this->Input->GetNumberOfCells());
+    for (int k=0; k<this->Input->GetNumberOfCells(); k++)
+    {
+      cellIds->SetId(k,k);
+    }
+  }
+
+  this->CellPointsVector.clear();
+  this->CellPointsVector.resize(cellIds->GetNumberOfIds());
+
+  for (int c=0; c<cellIds->GetNumberOfIds(); c++)
+  {
+    int cellId = cellIds->GetId(c);
+
+    if (this->Input->GetCellType(cellId)!=VTK_LINE && this->Input->GetCellType(cellId)!=VTK_POLY_LINE)
+    {
+      continue;
+    }
+
+    this->Input->GetCellPoints(cellId,npts,pts);
+
+    for (int i=0; i<npts; i++)
+    {
+      this->CellPointsVector[cellId].push_back(pts[i]);
+    }
+  }
+
+  vtkDataArray *polyballRadiusArray = this->Input->GetPointData()->GetArray(this->PolyBallRadiusArrayName);
+
+  if (polyballRadiusArray==NULL)
+  {
+    vtkErrorMacro(<<"PolyBallRadiusArray with name specified does not exist!");
+  }
+
+  this->PointsVector.clear();
+  this->PointsVector.resize(this->Input->GetNumberOfPoints());
+
+  this->RadiusVector.clear();
+  this->RadiusVector.resize(this->Input->GetNumberOfPoints());
+
+
+  for (int i=0; i<this->Input->GetNumberOfPoints(); i++)
+  {
+    this->Input->GetPoint(i, pt);
+
+    this->PointsVector[i].x = pt[0];
+    this->PointsVector[i].y = pt[1];
+    this->PointsVector[i].z = pt[2];
+
+    this->RadiusVector[i] = polyballRadiusArray->GetComponent(i, 0);
+  }
+
+  return;
+}
+
+
+// ----------------------
 // BuildLocator
 // ----------------------
 void vtkSVPolyBallLine::BuildLocator()
@@ -162,12 +236,15 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
       return SV_ERROR;
       }
 
-    polyballRadiusArray = this->Input->GetPointData()->GetArray(this->PolyBallRadiusArrayName);
+    if (!this->FastEvaluate)
+    {
+      polyballRadiusArray = this->Input->GetPointData()->GetArray(this->PolyBallRadiusArrayName);
 
-    if (polyballRadiusArray==NULL)
-      {
-      vtkErrorMacro(<<"PolyBallRadiusArray with name specified does not exist!");
-      return SV_ERROR;
+      if (polyballRadiusArray==NULL)
+        {
+        vtkErrorMacro(<<"PolyBallRadiusArray with name specified does not exist!");
+        return SV_ERROR;
+        }
       }
     }
 
@@ -193,7 +270,10 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     return SV_ERROR;
     }
 
-  this->Input->BuildCells();
+  if (!this->FastEvaluate)
+  {
+    this->Input->BuildCells();
+  }
 #if (VTK_MAJOR_VERSION <= 5)
   this->Input->Update();
 #endif
@@ -227,28 +307,76 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
       }
     }
 
+  if (this->FastEvaluate)
+  {
+    if (this->CellPointsVector.size() != cellIds->GetNumberOfIds())
+    {
+      vtkErrorMacro("Need to call PreprocessInputForFastEvaluate() prior to EvaluateFunction call if FastEvaluate turned on");
+      return SV_ERROR;
+    }
+    if (this->PointsVector.size() != this->Input->GetNumberOfPoints())
+    {
+      vtkErrorMacro("Need to call PreprocessInputForFastEvaluate() prior to EvaluateFunction call if FastEvaluate turned on");
+      return SV_ERROR;
+    }
+  }
+
   for (int c=0; c<cellIds->GetNumberOfIds(); c++)
     {
     int cellId = cellIds->GetId(c);
 
-    if (this->Input->GetCellType(cellId)!=VTK_LINE && this->Input->GetCellType(cellId)!=VTK_POLY_LINE)
+    if (this->FastEvaluate)
+    {
+      npts = this->CellPointsVector[cellId].size();
+      pts = new vtkIdType[npts];
+      for (int i=0; i<npts; i++)
       {
-      continue;
+        pts[i] = this->CellPointsVector[cellId][i];
       }
+    }
+    else
+    {
+      if (this->Input->GetCellType(cellId)!=VTK_LINE && this->Input->GetCellType(cellId)!=VTK_POLY_LINE)
+        {
+        continue;
+        }
 
-    this->Input->GetCellPoints(cellId,npts,pts);
+      this->Input->GetCellPoints(cellId,npts,pts);
+    }
 
     for (i=0; i<npts-1; i++)
       {
         int ptId0 = pts[i];
         int ptId1 = pts[i+1];
-      this->Input->GetPoint(pts[i],point0);
-      this->Input->GetPoint(pts[i+1],point1);
+
+        if (this->FastEvaluate)
+        {
+          point0[0] = this->PointsVector[pts[i]].x;
+          point0[1] = this->PointsVector[pts[i]].y;
+          point0[2] = this->PointsVector[pts[i]].z;
+
+          point1[0] = this->PointsVector[pts[i+1]].x;
+          point1[1] = this->PointsVector[pts[i+1]].y;
+          point1[2] = this->PointsVector[pts[i+1]].z;
+        }
+        else
+        {
+          this->Input->GetPoint(pts[i],point0);
+          this->Input->GetPoint(pts[i+1],point1);
+        }
 
       if (this->UseRadiusInformation)
         {
-          radius0 = polyballRadiusArray->GetComponent(ptId0,0);
-          radius1 = polyballRadiusArray->GetComponent(ptId1,0);
+          if (this->FastEvaluate)
+          {
+            radius0 = this->RadiusVector[ptId0];
+            radius1 = this->RadiusVector[ptId1];
+          }
+          else
+          {
+            radius0 = polyballRadiusArray->GetComponent(ptId0,0);
+            radius1 = polyballRadiusArray->GetComponent(ptId1,0);
+          }
         }
       else
         {
@@ -371,75 +499,8 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
           }
         }
 
-      if (this->UseProjectionVector)
-      {
-        double tangent[3];
-        vtkMath::Subtract(point1, point0, tangent);
-        vtkMath::Normalize(tangent);
-
-        double projectedPoint[3];
-        vtkPlane::ProjectPoint(x, closestPoint, tangent, projectedPoint);
-
-        double positionVector[3];
-        vtkMath::Subtract(projectedPoint, closestPoint, positionVector);
-        vtkMath::Normalize(positionVector);
-
-        double dir0[3];
-        vtkMath::Subtract(x, closestPoint, dir0);
-        vtkMath::Normalize(dir0);
-
-        double alignDot = vtkMath::Dot(positionVector, dir0);
-
-        if (alignDot < 0.0)
-          alignDot = 0.0;
-
-        polyballFunctionValue += polyballFunctionValue * (1.0 - alignDot);
-
-
-        //double normalPoint[3];
-        //vtkMath::Add(closestPoint, absLocalX, normalPoint);
-
-        //double projectedNormalPoint[3];
-        //vtkPlane::ProjectPoint(normalPoint, closestPoint, tangent, projectedNormalPoint);
-
-        //double projectedNormal[3];
-        //vtkMath::Subtract(projectedNormalPoint, closestPoint, projectedNormal);
-        //vtkMath::Normalize(projectedNormal);
-
-        //double cross[3];
-        //vtkMath::Cross(positionVector, projectedNormal, cross);
-
-        //double tangentDot = vtkMath::Dot(tangent, cross);
-
-        //double circAngle = vtkvmtkMath::AngleBetweenNormals(positionVector, projectedNormal);
-
-        //if (tangentDot < 0.0)
-        //  {
-        //  circAngle *= -1.0;
-        //  }
-
-      }
-
-      if (this->UseRadiusWeighting && this->UseRadiusInformation)
-        {
-        double factor = 0.1;
-        double weight = fabs(radius1 - radius0)*fabs(radius1-radius0);
-        weight = (weight*factor)/svminimum(radius0, radius1);
-        polyballFunctionValue += weight;
-        }
-
        if (polyballFunctionValue<minPolyBallFunctionValue)
         {
-          if (this->UseBifurcationInformation)
-          {
-            this->Input->GetPointCells(ptId0, tmpList);
-            this->Input->GetPointCells(ptId1, tmpList2);
-
-            if (tmpList->GetNumberOfIds() > 1)
-              this->FindBifurcationCellId(ptId0, tmpList, x, closestPoint, t, radius0, cellId);
-            else if (tmpList2->GetNumberOfIds() > 1)
-              this->FindBifurcationCellId(ptId1, tmpList2, x, closestPoint, 1-t, radius1, cellId);
-          }
         minPolyBallFunctionValue = polyballFunctionValue;
         this->LastPolyBallCellId = cellId;
         this->LastPolyBallCellSubId = i;
@@ -459,6 +520,11 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
           }
         }
       }
+
+    if (this->FastEvaluate)
+    {
+      delete [] pts;
+    }
     }
 
   cellIds->Delete();
@@ -481,188 +547,4 @@ void vtkSVPolyBallLine::EvaluateGradient(double x[3], double n[3])
 void vtkSVPolyBallLine::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-}
-
-// ----------------------
-// FindBifurcationCellId
-// ----------------------
-int vtkSVPolyBallLine::FindBifurcationCellId(const int ptId, vtkIdList *cellIds,
-                                              const double surfacePt[3],
-                                              const double closestPt[3],
-                                              const double parameter,
-                                              const double radius,
-                                              int &bestCellId)
-{
-  vtkNew(vtkIdList, checkIds);
-  vtkNew(vtkIdList, cellList);
-
-  for (int i=0; i<cellIds->GetNumberOfIds(); i++)
-  {
-    vtkIdType npts, *pts;
-    this->Input->GetCellPoints(cellIds->GetId(i), npts, pts);
-    for (int j=0; j<npts; j++)
-    {
-      if (pts[j] == ptId)
-      {
-        if (j == 0)
-        {
-          checkIds->InsertNextId(pts[j+1]);
-          cellList->InsertNextId(cellIds->GetId(i));
-        }
-        if (j == npts-1)
-        {
-          checkIds->InsertNextId(pts[j-1]);
-          cellList->InsertNextId(cellIds->GetId(i));
-        }
-      }
-    }
-  }
-
-  double pt0[3];
-  this->Input->GetPoint(ptId, pt0);
-
-  double bigAngle = -1.0;
-  int bigPoint = 0;
-  for (int i=0; i<checkIds->GetNumberOfIds(); i++)
-  {
-    double pt1[3];
-    this->Input->GetPoint(checkIds->GetId(i), pt1);
-
-    double vec0[3];
-    vtkMath::Subtract(pt1, pt0, vec0);
-    vtkMath::Normalize(vec0);
-
-    double angleSum = 0.0;
-    for (int j=0; j<checkIds->GetNumberOfIds(); j++)
-    {
-      if (i != j)
-      {
-        double pt2[3];
-        this->Input->GetPoint(checkIds->GetId(j), pt2);
-
-        double vec1[3];
-        vtkMath::Subtract(pt2, pt0, vec1);
-        vtkMath::Normalize(vec1);
-
-        double crossVec[3];
-        vtkMath::Cross(vec0, vec1, crossVec);
-
-        double ang = 180.0*atan2(vtkMath::Norm(crossVec), vtkMath::Dot(vec0, vec1))/SV_PI;
-        angleSum += ang;
-      }
-    }
-    if (angleSum > bigAngle)
-    {
-      bigAngle = angleSum;
-      bigPoint = i;
-    }
-  }
-
-  std::vector<double> angles;
-  std::vector<int> cells;
-  std::vector<int> points;
-
-  double pt1[3];
-  this->Input->GetPoint(checkIds->GetId(bigPoint), pt1);
-  angles.push_back(180.0);
-  cells.push_back(cellList->GetId(bigPoint));
-  points.push_back(checkIds->GetId(bigPoint));
-
-  double vec0[3];
-  vtkMath::Subtract(pt1, pt0, vec0);
-  vtkMath::Normalize(vec0);
-
-  for (int i=0; i<checkIds->GetNumberOfIds(); i++)
-  {
-    if (i != bigPoint)
-    {
-      double pt2[3];
-      this->Input->GetPoint(checkIds->GetId(i), pt2);
-
-      double vec1[3];
-      vtkMath::Subtract(pt2, pt0, vec1);
-      vtkMath::Normalize(vec1);
-
-      double crossVec[3];
-      vtkMath::Cross(vec0, vec1, crossVec);
-
-      double ang = 180.0*atan2(vtkMath::Norm(crossVec), vtkMath::Dot(vec0, vec1))/SV_PI;
-      angles.push_back(ang);
-      cells.push_back(cellList->GetId(i));
-      points.push_back(checkIds->GetId(i));
-    }
-  }
-
-  std::vector<int> isAligning;
-  for (int i=0; i<angles.size(); i++)
-  {
-    if (angles[i] < 90.0)
-      isAligning.push_back(0);
-    else
-      isAligning.push_back(1);
-  }
-
-  double surfVec[3];
-  vtkMath::Subtract(surfacePt, closestPt, surfVec);
-  vtkMath::Normalize(surfVec);
-
-  double lineDist = vtkSVMathUtils::Distance(closestPt, pt0);
-
-  for (int i=0; i<angles.size(); i++)
-  {
-    int doIt = 0;
-    if (this->UseRadiusInformation)
-    {
-      if (lineDist < radius)
-        doIt = 1;
-    }
-    else
-    {
-      if (parameter < 0.75)
-        doIt = 1;
-    }
-    if (!isAligning[i] && cells[i] == bestCellId && doIt)
-    {
-      double pt2[3];
-      this->Input->GetPoint(points[i], pt2);
-
-      double vec1[3];
-      vtkMath::Subtract(pt2, pt0, vec1);
-      vtkMath::Normalize(vec1);
-
-      int inMaxDot = -1.1;
-      int inMaxCellId = -1;
-      for (int j=0; j<angles.size(); j++)
-      {
-        if (isAligning[j] && i != j)
-        {
-          double pt3[3];
-          this->Input->GetPoint(points[j], pt3);
-
-          double vec2[3];
-          vtkMath::Subtract(pt3, pt0, vec2);
-          vtkMath::Normalize(vec2);
-
-          double vec3[3];
-          vtkMath::Cross(vec2, vec1, vec3);
-          vtkMath::Normalize(vec3);
-
-          double vec4[3];
-          vtkMath::Cross(vec1, vec3, vec4);
-          vtkMath::Normalize(vec4);
-
-          double compare = vtkMath::Dot(surfVec, vec4);
-          if (compare > inMaxDot)
-          {
-            inMaxDot = compare;
-            inMaxCellId = cells[j];
-          }
-        }
-      }
-      bestCellId = inMaxCellId;
-      break;
-    }
-  }
-
-  return SV_OK;
 }

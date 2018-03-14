@@ -27,10 +27,13 @@ Version:   $Revision: 1.4 $
 #define vtkSVPolyBallLine_h
 
 #include "vtkImplicitFunction.h"
-#include "vtkSVSegmentationModule.h" // For export
 #include "vtkPolyData.h"
 #include "vtkPointLocator.h"
 #include "vtkIdList.h"
+
+#include "vtkSVGlobals.h"
+
+#include "vtkSVSegmentationModule.h" // For export
 
 class VTKSVSEGMENTATION_EXPORT vtkSVPolyBallLine : public vtkImplicitFunction
 {
@@ -106,12 +109,6 @@ public:
   vtkGetVectorMacro(LastPolyBallCenter,double,3);
   vtkGetMacro(LastPolyBallCenterRadius,double);
   //@}
-  //
-  /// \brief Use proj
-  vtkSetMacro(UseProjectionVector,int);
-  vtkGetMacro(UseProjectionVector,int);
-  vtkBooleanMacro(UseProjectionVector,int);
-  //@}
 
   //@{
   /// \brief Use radius information
@@ -128,10 +125,9 @@ public:
   //@}
 
   //@{
-  /// \brief Use given normal for directional help
-  vtkSetMacro(UseRadiusWeighting,int);
-  vtkGetMacro(UseRadiusWeighting,int);
-  vtkBooleanMacro(UseRadiusWeighting,int);
+  vtkSetMacro(FastEvaluate,int);
+  vtkGetMacro(FastEvaluate,int);
+  vtkBooleanMacro(FastEvaluate,int);
   //@}
 
   //@{
@@ -141,34 +137,14 @@ public:
   vtkBooleanMacro(UseLocalCoordinates,int);
   //@}
 
-  //@{
-  /// \brief Use radius information
-  vtkSetMacro(UseBifurcationInformation,int);
-  vtkGetMacro(UseBifurcationInformation,int);
-  vtkBooleanMacro(UseBifurcationInformation,int);
-  //@}
-
-  //@{
-  /// \brief Remove end points from centerline possible points to check
-  vtkSetMacro(RemoveEndPoints,int);
-  vtkGetMacro(RemoveEndPoints,int);
-  vtkBooleanMacro(RemoveEndPoints,int);
-  //@}
-
   static double ComplexDot(double x[4], double y[4]);
 
   void BuildLocator();
+  void PreprocessInputForFastEvaluate();
 
 protected:
   vtkSVPolyBallLine();
   ~vtkSVPolyBallLine();
-
-  int FindBifurcationCellId(const int ptId, vtkIdList *cellIds,
-                            const double surfacePt[3],
-                            const double closestPt[3],
-                            const double parameter,
-                            const double radius,
-                            int &bestCellId);
 
   char* PolyBallRadiusArrayName;
   char* LocalCoordinatesArrayName;
@@ -184,11 +160,8 @@ protected:
 
   int UseRadiusInformation;
   int UsePointNormal;
-  int UseRadiusWeighting;
   int UseLocalCoordinates;
-  int UseBifurcationInformation;
-  int UseProjectionVector;
-  int RemoveEndPoints;
+  int FastEvaluate;
 
   double LastPolyBallCellPCoord;
   double LastPolyBallCenter[3];
@@ -197,6 +170,10 @@ protected:
   double LastLocalCoordY[3];
   double LastLocalCoordZ[3];
   double PointNormal[3];
+
+  std::vector<std::vector<int> > CellPointsVector;
+  std::vector<XYZ> PointsVector;
+  std::vector<double> RadiusVector;
 
 private:
   vtkSVPolyBallLine(const vtkSVPolyBallLine&);  // Not implemented.

@@ -36,18 +36,23 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+#include "vtkSplineFilter.h"
+
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVSurfaceCenterlineGrouper.h"
+#include "vtkSVPassDataArray.h"
+
+#include "vtkvmtkPolyDataCenterlineGroupsClipper.h"
 
 int main(int argc, char *argv[])
 {
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
   // Assume no options specified at command line
   bool RequestedHelp       = false;
-  bool InputProvided       = false;
-  bool OutputProvided      = false;
-  bool CenterlinesProvided = false;
+  bool InputProvided       = true;
+  bool OutputProvided      = true;
+  bool CenterlinesProvided = true;
   bool PolycubeProvided    = false;
 
   // Variables used in processing the commandline
@@ -59,8 +64,12 @@ int main(int argc, char *argv[])
   std::string outputFilename;
   std::string centerlinesFilename;
   std::string polycubeFilename;
+  inputFilename = "/Users/adamupdegrove/Documents/CleanModels/0003_0001/Models/0003_0001_polydata_fine.vtp";
+  centerlinesFilename = "/Users/adamupdegrove/Documents/2018-01-23-CenterlineTests/0003_0001/0003_0001_polydata_fine_wall_vtksv_merged_centerlines.vtp";
+  outputFilename = "/Users/adamupdegrove/Desktop/tmp/0003_0001_polydata_fine_segmented_0.1_merged_centerlines.vtp";
 
   // Default values for options
+  int useVmtk = 0;
   int useRadiusInfo = 1;
   int groupSurface = 1;
   int enforcePolycubeBoundaries = 0;
@@ -79,6 +88,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-input")         {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-mergedcenterlines")   {CenterlinesProvided = true; centerlinesFilename = argv[++iarg];}
       else if(tmpstr=="-output")        {OutputProvided = true; outputFilename = argv[++iarg];}
+      else if(tmpstr=="-usevmtk")       {useVmtk = atoi(argv[++iarg]);}
       else if(tmpstr=="-polycube")      {PolycubeProvided = true; polycubeFilename = argv[++iarg];}
       else if(tmpstr=="-groupids")      {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
@@ -102,6 +112,7 @@ int main(int argc, char *argv[])
     cout << "  -input                         : Input file name (.vtp or .stl)"<< endl;
     cout << "  -mergedcenterlines                   : Split and merged centerlines file name (.vtp)"<< endl;
     cout << "  -output                        : Output file name"<< endl;
+    cout << "  -usevmtk                       : Use the vmtk clipper rather than vtksv [default 0]"<< endl;
     cout << "  -polycube                      : Polycube file name (.vtp)"<< endl;
     cout << "  -groupids                      : Name to be used for group ids [default GroupIds]"<< endl;
     cout << "  -radius                        : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
@@ -137,33 +148,78 @@ int main(int argc, char *argv[])
       return EXIT_FAILURE;
   }
 
-  // Filter
-  vtkNew(vtkSVSurfaceCenterlineGrouper, Grouper);
-
   //OPERATION
   std::cout<<"Performing Operation..."<<endl;
-  Grouper->SetInputData(inputPd);
-  Grouper->SetMergedCenterlines(centerlinesPd);
-  if (PolycubeProvided)
+  if (useVmtk)
   {
-    Grouper->SetPolycubePd(polycubePd);
-  }
-  Grouper->SetCenterlineGroupIdsArrayName(groupIdsArrayName.c_str());
-  Grouper->SetGroupIdsArrayName(groupIdsArrayName.c_str());
-  Grouper->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
-  Grouper->SetBlankingArrayName(blankingArrayName.c_str());
-  Grouper->SetCenterlineIdsArrayName("CenterlineIds");
-  Grouper->SetTractIdsArrayName("TractIds");
-  Grouper->SetUseRadiusInformation(useRadiusInfo);
-  Grouper->SetEnforcePolycubeBoundaries(enforcePolycubeBoundaries);
-  Grouper->SetGroupSurface(groupSurface);
-  Grouper->DebugOn();
-  Grouper->Update();
-  std::cout<<"Done"<<endl;
+    vtkNew(vtkSplineFilter, Resampler);
+    Resampler->SetInputData(centerlinesPd);
+    //Resampler->SetInputData(this->MergedCenterlines);
+    Resampler->SetSubdivideToLength();
+    Resampler->SetLength(centerlinesPd->GetLength()/100.);
+    Resampler->Update();
 
-  //Write Files
-  std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetOutput(0));
+    vtkNew(vtkvmtkPolyDataCenterlineGroupsClipper, BranchClipper);
+    BranchClipper->SetInputData(inputPd);
+    BranchClipper->SetCenterlines(Resampler->GetOutput());
+    BranchClipper->SetGroupIdsArrayName(groupIdsArrayName.c_str());
+    BranchClipper->SetCenterlineGroupIdsArrayName(groupIdsArrayName.c_str());
+    BranchClipper->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
+    BranchClipper->SetBlankingArrayName(blankingArrayName.c_str());
+    BranchClipper->SetCutoffRadiusFactor(VTK_SV_LARGE_DOUBLE);
+    BranchClipper->SetClipValue(0.0);
+    BranchClipper->SetUseRadiusInformation(useRadiusInfo);
+    BranchClipper->SetClipAllCenterlineGroupIds(1);
+    BranchClipper->Update();
+
+    vtkNew(vtkSVPassDataArray, DataPasser);
+    DataPasser->SetInputData(0, BranchClipper->GetOutput());
+    DataPasser->SetInputData(1, inputPd);
+    DataPasser->SetPassArrayName(groupIdsArrayName.c_str());
+    DataPasser->SetPassDataIsCellData(0);
+    DataPasser->SetPassDataToCellData(1);
+    DataPasser->Update();
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, DataPasser->GetOutput(0));
+
+  }
+  else
+  {
+    // Filter
+    vtkNew(vtkSVSurfaceCenterlineGrouper, Grouper);
+
+    Grouper->SetInputData(inputPd);
+    Grouper->SetMergedCenterlines(centerlinesPd);
+    if (PolycubeProvided)
+    {
+      Grouper->SetPolycubePd(polycubePd);
+    }
+    Grouper->SetCenterlineGroupIdsArrayName(groupIdsArrayName.c_str());
+    Grouper->SetGroupIdsArrayName(groupIdsArrayName.c_str());
+    Grouper->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
+    Grouper->SetBlankingArrayName(blankingArrayName.c_str());
+    Grouper->SetCenterlineIdsArrayName("CenterlineIds");
+    Grouper->SetTractIdsArrayName("TractIds");
+    Grouper->SetUseRadiusInformation(useRadiusInfo);
+    Grouper->SetEnforcePolycubeBoundaries(enforcePolycubeBoundaries);
+    Grouper->SetGroupSurface(groupSurface);
+    Grouper->DebugOn();
+    Grouper->Update();
+    std::cout<<"Done"<<endl;
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetOutput(0));
+
+    if (Grouper->GetErrorCode() != 0)
+    {
+      std::cerr << "Surface centerline grouper failed. " <<endl;
+      return EXIT_FAILURE;
+    }
+
+  }
 
   //Exit the program without errors
   return EXIT_SUCCESS;

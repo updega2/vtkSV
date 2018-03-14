@@ -57,6 +57,7 @@
 #include "vtkAppendPolyData.h"
 #include "vtkAppendFilter.h"
 #include "vtkExecutive.h"
+#include "vtkErrorCode.h"
 #include "vtkCellArray.h"
 #include "vtkCellLocator.h"
 #include "vtkConnectivityFilter.h"
@@ -243,6 +244,7 @@ int vtkSVGroupsSegmenter::RequestData(
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -251,6 +253,7 @@ int vtkSVGroupsSegmenter::RequestData(
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(this->WorkPd);
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 
@@ -527,7 +530,6 @@ int vtkSVGroupsSegmenter::RunFilter()
     groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
     groupTubes->UsePointNormalOff();
-    groupTubes->UseRadiusWeightingOff();
     groupTubes->UseLocalCoordinatesOn();
     groupTubes->SetLocalCoordinatesArrayName("Local");
 

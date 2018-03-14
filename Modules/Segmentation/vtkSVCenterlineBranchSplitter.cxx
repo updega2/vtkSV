@@ -30,7 +30,6 @@
 
 #include "vtkSVCenterlineBranchSplitter.h"
 #include "vtkvmtkCenterlineSphereDistance.h"
-#include "vtkvmtkPolyBallLine.h"
 #include "vtkCellArray.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkIntArray.h"

@@ -35,6 +35,7 @@
 #include "vtkSVFindGeodesicPath.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVPolycubeGenerator.h"
 
@@ -45,6 +46,7 @@
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
 #include "vtkExecutive.h"
+#include "vtkErrorCode.h"
 #include "vtkFeatureEdges.h"
 #include "vtkIdFilter.h"
 #include "vtkInformation.h"
@@ -167,6 +169,7 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -175,6 +178,7 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(this->WorkPd);
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 
@@ -338,11 +342,7 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
     CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
     CVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
     CVT->SetUseRadiusInformation(this->UseRadiusInformation);
-    //CVT->SetUseRadiusInformation(0);
-    //CVT->SetUsePointNormal(1);
-    CVT->SetUsePointNormal(0);
-    CVT->SetUseBifurcationInformation(0);
-    //CVT->SetUseBifurcationInformation(1);
+    CVT->SetUsePointNormal(1);
     CVT->SetMaximumNumberOfIterations(0);
     CVT->Update();
 
@@ -2189,8 +2189,8 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
   int allGood = 0;
   int iter = 0;
   vtkPolyData *newMergedCenterlinesPd = NULL;
-  int maxIters = 1;
-  while(!allGood && iter < maxIters)
+  int maxIters = 3;
+  while(!allGood && iter < maxIters+1)
   {
     allGood = 1;
     // Get all group ids
@@ -2211,6 +2211,7 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
     vtkNew(vtkDataSetSurfaceFilter, surfacer);
     vtkNew(vtkConnectivityFilter, connector);
     vtkNew(vtkIdList, backNeighbors);
+    vtkNew(vtkIdList, frontNeighbors);
     vtkNew(vtkFeatureEdges, featureEdges);
     vtkNew(vtkIdFilter, ider);
 
@@ -2223,7 +2224,16 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
 
       centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
       this->MergedCenterlines->GetCellPoints(centerlineId, nlinepts, linepts);
-      isTerminating = 0;
+      isTerminating = 1;
+
+      this->MergedCenterlines->GetPointCells(linepts[0], frontNeighbors);
+      vtkNew(vtkIdList, frontGroupNeighbors);
+      for (int j=0; j<frontNeighbors->GetNumberOfIds(); j++)
+      {
+        frontGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
+          this->GroupIdsArrayName)->GetTuple1(frontNeighbors->GetId(j)));
+      }
+
       this->MergedCenterlines->GetPointCells(linepts[nlinepts-1], backNeighbors);
       vtkNew(vtkIdList, backGroupNeighbors);
       for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
@@ -2231,8 +2241,8 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
         backGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
           this->GroupIdsArrayName)->GetTuple1(backNeighbors->GetId(j)));
       }
-      if (backNeighbors->GetNumberOfIds() == 1)
-        isTerminating = 1;
+      if (backNeighbors->GetNumberOfIds() != 1 && frontNeighbors->GetNumberOfIds() != 1)
+        isTerminating = 0;
 
       groupThresholder->ThresholdBetween(groupId, groupId);
       groupThresholder->Update();
@@ -2356,15 +2366,6 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
         removedGroupsCenterlinesPd->DeepCopy(newMergedCenterlinesPd);
         removedGroupsCenterlinesPd->BuildLinks();
 
-        vtkNew(vtkIdList, frontNeighbors);
-        this->MergedCenterlines->GetPointCells(linepts[0], frontNeighbors);
-        vtkNew(vtkIdList, frontGroupNeighbors);
-        for (int j=0; j<frontNeighbors->GetNumberOfIds(); j++)
-        {
-          frontGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
-            this->GroupIdsArrayName)->GetTuple1(frontNeighbors->GetId(j)));
-        }
-
         int cellGroupId, centerlineIdForGroup;
         for (int j=0; j<testPd0->GetNumberOfCells(); j++)
         {
@@ -2404,11 +2405,8 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
         CVT->SetCVTDataArrayName("Normals");
         CVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
         CVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
-        //CVT->SetUseBifurcationInformation(1);
         CVT->SetUsePointNormal(1);
         CVT->SetUseRadiusInformation(0);
-        CVT->SetUseBifurcationInformation(0);
-        //CVT->SetUsePointNormal(0);
         CVT->SetMaximumNumberOfIterations(0);
         CVT->Update();
 
@@ -2582,7 +2580,7 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
           newPts0->GetPointIds()->InsertNextId(ptId1);
           newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId0);
           newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId1);
-          newPointData->GetArray(this->CenterlineRadiusArrayName)->SetTuple1(ptId1, 0.1*radiusValAtCenter);
+          newPointData->GetArray(this->CenterlineRadiusArrayName)->SetTuple1(ptId1, 0.2*radiusValAtCenter);
 
           newCellId = newCells->InsertNextCell(newPts0);
           newCellData->CopyData(tmpCenterlinesPd->GetCellData(), centerlineId, newCellId);
@@ -2606,8 +2604,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
 
     }
 
-    if (!allGood)
+    if (!allGood && iter < maxIters)
     {
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYSURFACEDUMBNEWCENTERLINES.vtp", newMergedCenterlinesPd);
       // Now re-segment with these new centerlines
       int stopCellNumber = ceil(this->WorkPd->GetNumberOfCells()*0.0001);
       vtkNew(vtkSVCenterlinesEdgeWeightedCVT, betterCVT);
@@ -2621,11 +2620,7 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
       betterCVT->SetGroupIdsArrayName(this->GroupIdsArrayName);
       betterCVT->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
       betterCVT->SetUsePointNormal(1);
-      //betterCVT->SetUsePointNormal(0);
-      //betterCVT->SetUseRadiusInformation(0);
       betterCVT->SetUseRadiusInformation(this->UseRadiusInformation);
-      betterCVT->SetUseBifurcationInformation(0);
-      //betterCVT->SetUseBifurcationInformation(1);
       betterCVT->SetMaximumNumberOfIterations(0);
       betterCVT->Update();
 
@@ -2649,6 +2644,12 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
   if (newMergedCenterlinesPd != NULL)
   {
     newMergedCenterlinesPd->Delete();
+  }
+
+  if (!allGood)
+  {
+    vtkErrorMacro("Correction of groups failed");
+    return SV_ERROR;
   }
 
   return SV_OK;

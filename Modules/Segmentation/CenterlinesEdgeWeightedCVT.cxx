@@ -213,7 +213,6 @@ int main(int argc, char *argv[])
   CVT2->SetGroupIdsArrayName(groupIdsArrayName.c_str());
   CVT2->SetCenterlineRadiusArrayName(radiusArrayName.c_str());
   CVT2->SetUseRadiusInformation(useRadiusInfo);
-  CVT2->SetUseBifurcationInformation(0);
   CVT2->SetUseCurvatureWeight(0);
   CVT2->SetNoInitialization(1);
   CVT2->Update();

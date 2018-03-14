@@ -166,7 +166,6 @@ int vtkSVGroupsClipper::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
     return SV_ERROR;
   }
 
@@ -174,7 +173,6 @@ int vtkSVGroupsClipper::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(input);
     return SV_ERROR;
   }
 
@@ -274,8 +272,6 @@ int vtkSVGroupsClipper::RunFilter()
   groupTubes->SetInput(this->Centerlines);
   groupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   groupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
-  groupTubes->SetUseRadiusWeighting(this->UseRadiusWeighting);
-  groupTubes->SetUseBifurcationInformation(this->UseBifurcationInformation);
   groupTubes->SetUsePointNormal(this->UsePointNormal);
   groupTubes->BuildLocator();
 
@@ -284,8 +280,6 @@ int vtkSVGroupsClipper::RunFilter()
   nonGroupTubes->SetInput(this->Centerlines);
   nonGroupTubes->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
   nonGroupTubes->SetUseRadiusInformation(this->UseRadiusInformation);
-  nonGroupTubes->SetUseRadiusWeighting(this->UseRadiusWeighting);
-  nonGroupTubes->SetUseBifurcationInformation(this->UseBifurcationInformation);
   nonGroupTubes->SetUsePointNormal(this->UsePointNormal);
   nonGroupTubes->BuildLocator();
 

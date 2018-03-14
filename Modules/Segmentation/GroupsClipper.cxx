@@ -60,7 +60,6 @@ int main(int argc, char *argv[])
 
   // Default values for options
   int useRadiusInfo = 1;
-  int useRadiusWeighting = 0;
   int useBifurcationInfo = 0;
   int usePointNormal = 0;
   double clipValue = 0.0;
@@ -85,8 +84,6 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-cutoffradius")  {cutoffRadiusFactor = atof(argv[++iarg]);}
       else if(tmpstr=="-clipvalue")     {clipValue = atof(argv[++iarg]);}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
-      else if(tmpstr=="-useradiusweighting") {useRadiusWeighting = atoi(argv[++iarg]);}
-      else if(tmpstr=="-usebifurcationinfo") {useBifurcationInfo = atoi(argv[++iarg]);}
       else if(tmpstr=="-usepointnormal")     {usePointNormal = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
@@ -110,8 +107,6 @@ int main(int argc, char *argv[])
     cout << "  -cutoffradius       : Value at which a certain distance away from the centerline the function that is used for clipping is set to a large value, essentially clipping everything outside that radius [default 1.0e32]"<< endl;
     cout << "  -clipvalue          : Value to use for clipping function [default 0.0]"<< endl;
     cout << "  -useradiusinfo      : Use radius to help in clipping operation [default 1]"<< endl;
-    cout << "  -useradiusweighting : Weight the computation even more by the radius to help with close centerlines [default 0]"<< endl;
-    cout << "  -usebifurcationinfo : Use bifurcations to help in clipping operation [default 0]"<< endl;
     cout << "  -usepointnormal     : Compute the vector from function point to close point, if it doesn't align with normal at point, it is no good. Must provide PointNormal  [default 0]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
@@ -149,8 +144,6 @@ int main(int argc, char *argv[])
   Grouper->SetClipValue(clipValue);
   Grouper->ClipAllCenterlineGroupIdsOn();
   Grouper->SetUseRadiusInformation(useRadiusInfo);
-  Grouper->SetUseRadiusWeighting(useRadiusWeighting);
-  Grouper->SetUseBifurcationInformation(useBifurcationInfo);
   Grouper->SetUsePointNormal(usePointNormal);
   Grouper->Update();
   std::cout<<"Done"<<endl;
