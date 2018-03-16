@@ -4993,6 +4993,7 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
   int numPatches = patches.size();
 
   vtkNew(vtkAppendPolyData, appender);
+  vtkNew(vtkAppendPolyData, ogAppender);
 
   for (int i=0; i<numPatches; i++)
   {
@@ -5014,6 +5015,7 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
     thresholdPd->DeepCopy(this->WorkPd);
     vtkSVGeneralUtils::GiveIds(thresholdPd, "TmpInternalIds");
     vtkSVGeneralUtils::ThresholdPd(thresholdPd, patchId, patchId, 1, "PatchIds");
+    ogAppender->AddInputData(thresholdPd);
 
     // Set up boundary mapper
     vtkNew(vtkIntArray, boundaryCorners);
@@ -5089,6 +5091,103 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
     vtkNew(vtkPolyData, tmpPoly);
     tmpPoly->DeepCopy(mapper->GetOutput());
 
+    // ========================== ADDING TEXTURE COORDINATE ================
+    double pt[3], tc[3];
+    double tc0_min = VTK_SV_LARGE_DOUBLE;
+    double tc1_min = VTK_SV_LARGE_DOUBLE;
+    double tc0_max = -1.0*VTK_SV_LARGE_DOUBLE;
+    double tc1_max = -1.0*VTK_SV_LARGE_DOUBLE;
+    for (int t=0; t<tmpPoly->GetNumberOfPoints(); t++)
+    {
+      tmpPoly->GetPoint(t, pt);
+      if (patchDir == 0 ||  patchDir == 2)
+      {
+        if (pt[1] < tc0_min)
+        {
+          tc0_min = pt[1];
+        }
+        if (pt[2] < tc1_min)
+        {
+          tc1_min = pt[2];
+        }
+        if (pt[1] > tc0_max)
+        {
+          tc0_max = pt[1];
+        }
+        if (pt[2] > tc1_max)
+        {
+          tc1_max = pt[2];
+        }
+      }
+      else if (patchDir == 1 || patchDir == 3)
+      {
+        if (pt[0] < tc0_min)
+        {
+          tc0_min = pt[0];
+        }
+        if (pt[2] < tc1_min)
+        {
+          tc1_min = pt[2];
+        }
+        if (pt[0] > tc0_max)
+        {
+          tc0_max = pt[0];
+        }
+        if (pt[2] > tc1_max)
+        {
+          tc1_max = pt[2];
+        }
+      }
+      else if (patchDir == 4 || patchDir == 5)
+      {
+        if (pt[0] < tc0_min)
+        {
+          tc0_min = pt[0];
+        }
+        if (pt[1] < tc1_min)
+        {
+          tc1_min = pt[1];
+        }
+        if (pt[0] > tc0_max)
+        {
+          tc0_max = pt[0];
+        }
+        if (pt[1] > tc1_max)
+        {
+          tc1_max = pt[1];
+        }
+      }
+    }
+
+    vtkNew(vtkFloatArray, tCoords);
+    tCoords->SetNumberOfComponents(3);
+    tCoords->SetNumberOfTuples(tmpPoly->GetNumberOfPoints());
+    tCoords->SetName("TextureCoordinates");
+    for (int t=0; t<tmpPoly->GetNumberOfPoints(); t++)
+    {
+      tmpPoly->GetPoint(t, pt);
+      if (patchDir == 0 ||  patchDir == 2)
+      {
+        tc[0] = (pt[1] - tc0_min) / (tc0_max - tc0_min);
+        tc[1] = (pt[2] - tc1_min) / (tc1_max - tc1_min);
+      }
+      else if (patchDir == 1 || patchDir == 3)
+      {
+        tc[0] = (pt[0] - tc0_min) / (tc0_max - tc0_min);
+        tc[1] = (pt[2] - tc1_min) / (tc1_max - tc1_min);
+      }
+      else if (patchDir == 4 || patchDir == 5)
+      {
+        tc[0] = (pt[0] - tc0_min) / (tc0_max - tc0_min);
+        tc[1] = (pt[1] - tc1_min) / (tc1_max - tc1_min);
+      }
+      tc[2] = 0.0;
+
+      tCoords->SetTuple(t, tc);
+    }
+    tmpPoly->GetPointData()->SetTCoords(tCoords);
+    // ========================== ADDING TEXTURE COORDINATE ================
+
     rotMatrix0->Invert();
     rotMatrix1->Invert();
 
@@ -5100,6 +5199,14 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
   }
 
   appender->Update();
+  ogAppender->Update();
+
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/PCTEXTUREMAPPER.vtp", appender->GetOutput());
+  vtkNew(vtkPolyData, pickedApartPd);
+  pickedApartPd->DeepCopy(ogAppender->GetOutput());
+  pickedApartPd->GetPointData()->SetTCoords(appender->GetOutput()->GetPointData()->GetTCoords());
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/PDTEXTUREMAPPER.vtp", pickedApartPd);
+
 
   vtkNew(vtkCleanPolyData, polyCleaner);
   polyCleaner->SetInputData(appender->GetOutput());
@@ -5156,6 +5263,7 @@ int vtkSVGroupsSegmenter::ParameterizeSurface(vtkPolyData *fullMapPd)
   // all data on fullMapPd now
   vtkNew(vtkPolyData, mappedPd);
   this->InterpolateMapOntoTarget(polycubePd, this->WorkPd, fullMapPd, mappedPd, this->GroupIdsArrayName);
+
 
   return SV_OK;
 }
@@ -5280,8 +5388,8 @@ int vtkSVGroupsSegmenter::ParameterizeVolume(vtkPolyData *fullMapPd, vtkUnstruct
   std::vector<std::vector<int> > invSurfacePtMap;
   this->GetInteriorPointMaps(paraHexSurface, paraHexCleanSurface, cleanSurface, surfacePtMap, invSurfacePtMap);
 
-  //fn = "/Users/adamupdegrove/Desktop/tmp/Mapping_All2.vtp";
-  //vtkSVIOUtils::WriteVTPFile(fn, fullMapPd);
+  std::string fn = "/Users/adamupdegrove/Desktop/tmp/Mapping_All2.vtp";
+  vtkSVIOUtils::WriteVTPFile(fn, fullMapPd);
   //std::string fn2 = "/Users/adamupdegrove/Desktop/tmp/ParaHexSurface.vtp";
   //vtkSVIOUtils::WriteVTPFile(fn2, paraHexSurface);
   vtkNew(vtkPolyData, mappedSurface);

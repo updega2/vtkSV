@@ -1259,6 +1259,10 @@ int vtkSVCenterlines::RequestData(
   }
   // ------------------------------------------------------------------------
 
+  vtkNew(vtkPoints, voronoiPts);
+  vtkNew(vtkPolyData, voronoiPtsPd);
+  vtkNew(vtkIdList, voronoiPtIds);
+
   vtkNew(vtkAppendPolyData, appender);
 
   vtkNew(vtkvmtkNonManifoldFastMarching, voronoiFastMarching);
@@ -1270,6 +1274,22 @@ int vtkSVCenterlines::RequestData(
   {
     int voronoiId0 = voronoiSeeds[i][0];
     int voronoiIdN = voronoiSeeds[i][1];
+
+    if (voronoiPtIds->IsId(voronoiIdN) == -1)
+    {
+      voronoiPtIds->InsertNextId(voronoiIdN);
+      double pt[3];
+      voronoiDiagram->GetPoint(voronoiIdN, pt);
+      voronoiPts->InsertNextPoint(pt);
+    }
+
+    if (voronoiPtIds->IsId(voronoiId0) == -1)
+    {
+      voronoiPtIds->InsertNextId(voronoiId0);
+      double pt[3];
+      voronoiDiagram->GetPoint(voronoiId0, pt);
+      voronoiPts->InsertNextPoint(pt);
+    }
 
     vtkNew(vtkIdList, voronoiSourceSeedIds);
     voronoiSourceSeedIds->SetNumberOfIds(1);
@@ -1305,6 +1325,12 @@ int vtkSVCenterlines::RequestData(
   }
   appender->Update();
 
+  voronoiPtsPd->SetPoints(voronoiPts);
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ALL_BIF_POINTS.vtp", voronoiPtsPd);
+
+  vtkNew(vtkPoints, bifPoints);
+  vtkNew(vtkPolyData, bifPointsPd);
+
   vtkNew(vtkPolyData, currentLine);
   vtkNew(vtkCellArray, newCells);
   vtkNew(vtkPoints, newPoints);
@@ -1326,6 +1352,11 @@ int vtkSVCenterlines::RequestData(
           input->GetPoint(this->CapCenterIds->GetId(this->SourceSeedIds->GetId(0)), startPt);
         else
           input->GetPoint(this->SourceSeedIds->GetId(0), startPt);
+
+        if (i==0)
+        {
+          bifPoints->InsertNextPoint(startPt);
+        }
 
         int newPointId = newPoints->InsertNextPoint(startPt);
         newLine->GetPointIds()->InsertNextId(newPointId);
@@ -1372,6 +1403,8 @@ int vtkSVCenterlines::RequestData(
           else
             input->GetPoint(targetPointId, endPt);
 
+          bifPoints->InsertNextPoint(endPt);
+
           int numPtsInLine = appender->GetInput(fullCenterlineEdges[i][edgeSize-1])->GetNumberOfPoints();
 
           int newPointId = newPoints->InsertNextPoint(endPt);
@@ -1384,6 +1417,9 @@ int vtkSVCenterlines::RequestData(
     newCells->InsertNextCell(newLine);
   }
   newPointData->Squeeze();
+
+  bifPointsPd->SetPoints(bifPoints);
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ALL_END_PONTS.vtp", bifPointsPd);
 
   vtkNew(vtkPolyData, finalLinesPd);
   finalLinesPd->SetPoints(newPoints);
