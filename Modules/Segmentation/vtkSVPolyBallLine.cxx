@@ -495,7 +495,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
           {
           // We found a false positive
           //polyballFunctionValue = VTK_SV_LARGE_DOUBLE/2.0;
-          polyballFunctionValue = 2.0*polyballFunctionValue;
+          polyballFunctionValue = 100.0*polyballFunctionValue;
           }
         }
 

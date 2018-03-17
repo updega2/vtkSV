@@ -810,6 +810,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
         brother = parent->Children[parent->AligningChild];
         diver = parent->Children[parent->DivergingChild];
 
+        fprintf(stdout,"0000000000\n");
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
                               parent->StartPt, parent->EndPt,
@@ -822,6 +823,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
         brother = parent->Children[parent->AligningChild];
         diver = parent->Children[parent->DivergingChild];
 
+        fprintf(stdout,"11111111111111\n");
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
                              parent->StartPt, parent->EndPt,
@@ -835,6 +837,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
         diver = parent->Children[parent->AligningChild];
         sister  = parent->Children[myLoc + 1];
 
+        fprintf(stdout,"222222222222222\n");
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
                              brother->EndPt, brother->StartPt,
@@ -1528,7 +1531,10 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
   //  vtkMath::MultiplyScalar(midVec, -1.0);
   //  midLength = factor / ( cos(ang/2.));
   //}
-  midLength = factor / ( sin(ang/2.));
+  if (sin(ang/2.) > -1.0e-6 && sin(ang/2.) < 1.0e-6)
+    midLength = factor;
+  else
+    midLength = factor / ( sin(ang/2.));
 
   vtkMath::MultiplyScalar(midVec, midLength);
   vtkMath::Add(startPt, midVec, returnPt);

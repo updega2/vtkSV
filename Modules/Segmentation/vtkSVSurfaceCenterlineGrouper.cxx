@@ -2186,6 +2186,15 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups(vtkPolyData *pd)
 // ----------------------
 int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
 {
+  // ======================TRYING SOMETING==========
+  vtkNew(vtkSVPolyBallLine, polyBaller);
+  polyBaller->SetInput(this->MergedCenterlines);
+  polyBaller->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
+  polyBaller->SetUseRadiusInformation(this->UseRadiusInformation);
+  polyBaller->SetUsePointNormal(1);
+  polyBaller->FastEvaluateOn();
+  polyBaller->PreprocessInputForFastEvaluate();
+
   int allGood = 0;
   int iter = 0;
   vtkPolyData *newMergedCenterlinesPd = NULL;
@@ -2412,6 +2421,11 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
 
         testPd0->DeepCopy(CVT->GetOutput());
 
+        vtkNew(vtkIntArray, MYTESTARRAY);
+        MYTESTARRAY->SetNumberOfTuples(testPd0->GetNumberOfCells());
+        MYTESTARRAY->FillComponent(0, -1);
+        MYTESTARRAY->SetName("MYTESTARRAY");
+
         if (this->CheckGroups(testPd0) != SV_OK)
         {
           vtkErrorMacro("Error in correcting groups");
@@ -2486,6 +2500,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
                   vtkMath::MultiplyScalar(avgPt, 1./2);
 
                   newCenterlinePts->InsertNextPoint(avgPt);
+
+                  MYTESTARRAY->SetTuple1(cellId0, 1);
+                  MYTESTARRAY->SetTuple1(cellId1, 1);
                 }
               }
               else if (cellEdgeNeighbors->GetNumberOfIds() == 1)
@@ -2530,11 +2547,18 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
                   vtkMath::MultiplyScalar(avgPt, 1./2);
 
                   newCenterlinePts->InsertNextPoint(avgPt);
+
+                  MYTESTARRAY->SetTuple1(cellEdgeNeighbors->GetId(0), 1);
                 }
               }
             }
           }
         }
+
+        testPd0->GetCellData()->AddArray(MYTESTARRAY);
+        std::string thisfn = "/Users/adamupdegrove/Desktop/tmp/JUSTFORGETTINGGROUP_"+std::to_string(groupId)+"_ITER_"+std::to_string(iter)+".vtp";
+        vtkSVIOUtils::WriteVTPFile(thisfn, testPd0);
+
 
         int numNewCenterlinePts = newCenterlinePts->GetNumberOfPoints();
 
@@ -2572,6 +2596,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
         vtkNew(vtkPolyLine, newPts0);
         for (int j=0; j<newCenterlinePts->GetNumberOfPoints(); j++)
         {
+          //double closestRealCenterlinePtId = polyBaller->EvaluateFunction(newCenterlinePts->GetPoint(j));
+          //double radiusValAtCenter = this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(closestRealCenterlinePtId);
+
           ptId0 = newPoints->InsertNextPoint(newCenterPt);
           ptId1 = newPoints->InsertNextPoint(newCenterlinePts->GetPoint(j));
 
@@ -2625,6 +2652,8 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups2()
       betterCVT->Update();
 
       this->WorkPd->DeepCopy(betterCVT->GetOutput());
+      std::string workfn = "/Users/adamupdegrove/Desktop/tmp/WHATEVERWHATEVER_"+std::to_string(iter)+".vtp";
+      vtkSVIOUtils::WriteVTPFile(workfn, this->WorkPd);
 
       if (this->CheckGroups(this->WorkPd) != SV_OK)
       {
