@@ -533,7 +533,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
       minAngle = parent->Children[i]->RefAngle;
       minChild = i;
     }
-    if (parent->Children[i]->RefAngle > maxAngle)
+    if (parent->Children[i]->RefAngle >= maxAngle)
     {
       maxAngle = parent->Children[i]->RefAngle;
       maxChild = i;

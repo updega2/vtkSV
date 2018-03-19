@@ -1493,6 +1493,8 @@ int vtkSVPolycubeGenerator::FormBifurcation(vtkSVCenterlineGCell *gCell,
   // Get ending bifurcation points
   this->GetBifurcationPoint(centerPt, vecs[0], vecs[1], vecs[2], factor, returnPts[0]);
   this->GetBifurcationPoint(centerPt, vecs[0], vecs[2], vecs[1], factor, returnPts[1]);
+  fprintf(stdout,"WHAT ARE THEY: %.6f %.6f %.6f\n", returnPts[0][0], returnPts[0][1], returnPts[0][2]);
+  fprintf(stdout,"WHAT ARE THEY: %.6f %.6f %.6f\n", returnPts[1][0], returnPts[1][1], returnPts[1][2]);
 
   // Need to check to make sure they are on the right sides of the line
   double tmpVec0[3], tmpVec1[3];
@@ -1515,6 +1517,9 @@ int vtkSVPolycubeGenerator::FormBifurcation(vtkSVCenterlineGCell *gCell,
   double dotVec0[3], dotVec1[3];
   vtkMath::Subtract(tmpVec0, projVec0, dotVec0);
   vtkMath::Subtract(tmpVec1, projVec1, dotVec1);
+
+  fprintf(stdout,"AND DOT VECS: %.6f %.6f %.6f\n", dotVec0[0], dotVec0[1], dotVec0[2]);
+  fprintf(stdout,"AND DOT VECS: %.6f %.6f %.6f\n", dotVec1[0], dotVec1[1], dotVec1[2]);
 
   double dotCheck = vtkMath::Dot(dotVec0, dotVec1);
   fprintf(stdout,"WHAT IS DOT CHECK %.6f\n", dotCheck);
