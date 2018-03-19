@@ -805,25 +805,22 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     {
       fprintf(stdout,"BEG TRI WEDGE\n");
 
+      diver = parent->Children[parent->DivergingChild];
       if (myLoc == 0)
       {
-        brother = parent->Children[parent->AligningChild];
-        diver = parent->Children[parent->DivergingChild];
+        brother = parent->Children[myLoc + 1];
 
-        fprintf(stdout,"0000000000\n");
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
-                              parent->StartPt, parent->EndPt,
                               brother->EndPt, brother->StartPt,
+                              parent->StartPt, parent->EndPt,
                               gCell->StartPt,
                               width/2., vecs, triPts);
       }
       else if (myLoc == parent->Children.size() - 1)
       {
-        brother = parent->Children[parent->AligningChild];
-        diver = parent->Children[parent->DivergingChild];
+        brother = parent->Children[myLoc - 1];
 
-        fprintf(stdout,"11111111111111\n");
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
                              parent->StartPt, parent->EndPt,
@@ -834,33 +831,34 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
       else
       {
         brother = parent->Children[myLoc - 1];
-        diver = parent->Children[parent->AligningChild];
         sister  = parent->Children[myLoc + 1];
 
-        fprintf(stdout,"222222222222222\n");
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
-                             brother->EndPt, brother->StartPt,
                              sister->EndPt, sister->StartPt,
+                             brother->EndPt, brother->StartPt,
                              gCell->StartPt,
                              width/2., vecs, triPts);
       }
 
       // get vector towards top of cube
-      double diverVec[3];
+      double diverVec[3], parentVec[3];
       vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
       vtkMath::Normalize(diverVec);
+      vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
+      vtkMath::Normalize(parentVec);
 
-      vtkMath::Cross(diverVec, vecs[1], begVec);
+      vtkMath::Cross(diverVec, parentVec, begVec);
       vtkMath::Normalize(begVec);
 
       if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
         vtkMath::MultiplyScalar(begVec, -1.0);
 
-      if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
-        this->GetWedge(triPts[1], gCell->StartPt, triPts[0], begVec,
-                       height, begPoints);
-      else
+      //TODO: THIS COULD STILL BE AN ISSUEE!!
+      //if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
+      //  this->GetWedge(triPts[1], gCell->StartPt, triPts[0], begVec,
+      //                 height, begPoints);
+      //else
         this->GetWedge(triPts[0], gCell->StartPt, triPts[1], begVec,
                        height, begPoints);
 
@@ -1048,13 +1046,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     {
       fprintf(stdout,"END TRI WEDGE\n");
 
-      int crossChild;
-      for (int i=0; i<3; i++)
-      {
-        if (i != gCell->AligningChild && i != gCell->DivergingChild)
-          crossChild = i;
-      }
-      vtkSVCenterlineGCell *cross = gCell->Children[crossChild];
+      vtkSVCenterlineGCell *cross = gCell->Children[2];
       diver = gCell->Children[gCell->DivergingChild];
 
       double endPts[2][3];
@@ -1063,6 +1055,10 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
                             cross->EndPt, cross->StartPt,
                             gCell->EndPt,
                             width/2., vecs, endPts);
+      fprintf(stdout,"DIVER: %d\n", diver->GroupId);
+      fprintf(stdout,"CROSS: %d\n", cross->GroupId);
+      fprintf(stdout,"CROSS START: %.9f %.9f %.9f\n", cross->StartPt[0], cross->StartPt[1], cross->StartPt[2]);
+      fprintf(stdout,"END START: %.9f %.9f %.9f\n", cross->EndPt[0], cross->EndPt[1], cross->EndPt[2]);
 
       // TEMPORARYRYRY
       if (diver->BranchDir == RIGHT || diver->BranchDir == BACK)
@@ -1498,6 +1494,46 @@ int vtkSVPolycubeGenerator::FormBifurcation(vtkSVCenterlineGCell *gCell,
   this->GetBifurcationPoint(centerPt, vecs[0], vecs[1], vecs[2], factor, returnPts[0]);
   this->GetBifurcationPoint(centerPt, vecs[0], vecs[2], vecs[1], factor, returnPts[1]);
 
+  // Need to check to make sure they are on the right sides of the line
+  double tmpVec0[3], tmpVec1[3];
+  vtkMath::Subtract(returnPts[0], centerPt, tmpVec0);
+  vtkMath::Subtract(returnPts[1], centerPt, tmpVec1);
+
+  double dot0 = vtkMath::Dot(tmpVec0, vecs[0]);
+  double dot1 = vtkMath::Dot(tmpVec1, vecs[0]);
+
+  double projVec0[3], projVec1[3];
+  for (int i=0; i<3; i++)
+  {
+    projVec0[i] = vecs[0][i];
+    projVec1[i] = vecs[0][i];
+  }
+
+  vtkMath::MultiplyScalar(projVec0, dot0);
+  vtkMath::MultiplyScalar(projVec1, dot1);
+
+  double dotVec0[3], dotVec1[3];
+  vtkMath::Subtract(tmpVec0, projVec0, dotVec0);
+  vtkMath::Subtract(tmpVec1, projVec1, dotVec1);
+
+  double dotCheck = vtkMath::Dot(dotVec0, dotVec1);
+  fprintf(stdout,"WHAT IS DOT CHECK %.6f\n", dotCheck);
+
+  if (dotCheck > 0.0)
+  {
+    fprintf(stdout,"DOESNT HAPP#NENENEN!\n");
+    if (dot0 > dot1)
+    {
+      vtkMath::MultiplyScalar(tmpVec1, -1.0);
+      vtkMath::Add(centerPt, tmpVec1, returnPts[1]);
+    }
+    else
+    {
+      vtkMath::MultiplyScalar(tmpVec0, -1.0);
+      vtkMath::Add(centerPt, tmpVec0, returnPts[0]);
+    }
+  }
+
   return SV_OK;
 }
 
@@ -1511,17 +1547,43 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
                                                 const double factor,
                                                 double returnPt[3])
 {
+  fprintf(stdout,"VEC0: %.9f %.9f %.9f\n", vec0[0], vec0[1], vec0[2]);
+  fprintf(stdout,"VEC1: %.9f %.9f %.9f\n", vec1[0], vec1[1], vec1[2]);
   // Get vector in between the two
   double midVec[3];
   vtkMath::Add(vec0, vec1, midVec);
+
+  int isZero = 1;
+  for (int i=0; i<3; i++)
+  {
+    if (midVec[i] < -1.0e-6 || midVec[i] > 1.0e-6)
+    {
+      isZero = 0;
+    }
+  }
+  if (isZero)
+  {
+    //Need to get opposite of vec2
+    double projDot = vtkMath::Dot(vec2, vec0);
+    fprintf(stdout,"ITSSS ZEROOO!\n");
+    double tmpVec[3];
+    for (int i=0; i<3; i++)
+    {
+      tmpVec[i] = vec0[i];
+    }
+    vtkMath::MultiplyScalar(tmpVec, projDot);
+
+    vtkMath::Subtract(tmpVec, vec2, midVec);
+  }
+
+  fprintf(stdout,"ADDITION!: %.9f %.9f %.9f\n", midVec[0], midVec[1], midVec[2]);
   vtkMath::Normalize(midVec);
+  fprintf(stdout,"ADDITION!: %.9f %.9f %.9f\n", midVec[0], midVec[1], midVec[2]);
 
   // Get the angle between
   double perpVec[3];
   vtkMath::Cross(vec0, vec1, perpVec);
   double ang = atan2(vtkMath::Norm(perpVec), vtkMath::Dot(vec0, vec1));
-
-  double dotCheck = vtkMath::Dot(midVec, vec2);
 
   double midLength;
   //// TODO: CHECK ON THIS BECAUSE IM NOT SO SURE THAT THIS IS BAD,

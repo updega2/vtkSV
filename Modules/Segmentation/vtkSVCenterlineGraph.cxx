@@ -600,6 +600,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   for (int i=0; i<numChildren; i++)
     tempCells[i] = parent->Children[i];
 
+  fprintf(stdout,"NEW ORDER\n");
   // And replace
   int newDiverger;
   int newAligner;
@@ -607,6 +608,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   {
     int newVal = alignKeys->GetTuple1(i);
     parent->Children[i] = tempCells[newVal];
+    fprintf(stdout,"CHILD %d IS %d\n", i, parent->Children[i]->GroupId);
     if (parent->DivergingChild == newVal)
       newDiverger = i;
     if (parent->AligningChild == newVal)
@@ -679,12 +681,12 @@ int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *paren
     fprintf(stdout,"Child %d got direction %d\n", parent->Children[i]->GroupId, parent->Children[i]->BranchDir);
   }
 
-  // Trifurcation case, set aligning child to the correct directiono
-  if (numChildren >= 3)
-  {
-    parent->Children[parent->AligningChild]->BranchDir = RIGHT;
-    fprintf(stdout,"Aligning of group id %d set to %d\n", parent->Children[parent->AligningChild]->GroupId, RIGHT);
-  }
+  //// Trifurcation case, set aligning child to the correct directiono
+  //if (numChildren >= 3)
+  //{
+  //  parent->Children[parent->AligningChild]->BranchDir = RIGHT;
+  //  fprintf(stdout,"Aligning of group id %d set to %d\n", parent->Children[parent->AligningChild]->GroupId, RIGHT);
+  //}
 
   return SV_OK;
 }
