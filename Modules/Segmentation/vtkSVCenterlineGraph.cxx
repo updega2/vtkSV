@@ -924,177 +924,294 @@ int vtkSVCenterlineGraph::GetGraphPoints()
         vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
         vtkMath::Normalize(parentVec);
 
-        double tempVec[3];
-        vtkMath::Cross(grandParentVec, parentVec, tempVec);
-        vtkMath::Normalize(tempVec);
+        //double tempVec[3];
+        //vtkMath::Cross(grandParentVec, parentVec, tempVec);
+        //vtkMath::Normalize(tempVec);
 
-        vtkMath::Cross(tempVec, parentVec, crossVec);
+        //vtkMath::Cross(tempVec, parentVec, crossVec);
+        //vtkMath::Normalize(crossVec);
+
+        //double lineDot = vtkMath::Dot(grandParentVec, parentVec);
+        //if (lineDot < -1.0 + 1.0e-6 && lineDot > -1.0 - 1.0e-6)
+        //{
+        //  fprintf(stdout,"IS IN LINE!!!\n");
+        //}
+
+        double gDiverVec[3];
+        vtkSVCenterlineGCell *gDiver = grandParent->Children[grandParent->DivergingChild];
+        vtkMath::Subtract(gDiver->EndPt, gDiver->StartPt, gDiverVec);
+        vtkMath::Normalize(gDiverVec);
+
+        vtkMath::Cross(grandParentVec, gDiverVec, crossVec);
         vtkMath::Normalize(crossVec);
 
-        if ((grandParent->BranchDir + parent->BranchDir)%2 != 0) // && gCell->GroupId != 72 && gCell->GroupId != 86 && gCell->GroupId != 232 && gCell->GroupId != 236 && gCell->GroupId != 257 && gCell->GroupId != 261)
+        //vtkMath::Cross(tempVec, parentVec, crossVec);
+        //vtkMath::Normalize(crossVec);
+
+        if ((grandParent->BranchDir + parent->BranchDir)%2 == 0)
         {
-          fprintf(stdout,"GRANDPARENT AND PARENT SWITCH\n");
-
-          if (parentBegType >= C_TET_0 && parentBegType <= C_TET_3)
+          if (grandParent->BranchDir == parent->BranchDir)
           {
-            vtkSVCenterlineGCell *grandParentDiverging = grandParent->Children[grandParent->DivergingChild];
-            fprintf(stdout,"PARENT IS DIRECTLY IN LINE WITH GRANDPARENT\n");
-            double divergingVec[3];
-            vtkMath::Subtract(grandParentDiverging->EndPt, grandParentDiverging->StartPt, divergingVec);
+            fprintf(stdout,"GRANDPARENT AND PARENT SAME\n");
+          }
+          else
+          {
+            fprintf(stdout,"GRANDPARENT AND PARENT OPPOSITE\n");
+            for (int j=0; j<3; j++)
+              crossVec[j] = -1.0*crossVec[j];
 
-            vtkMath::Cross(grandParentVec, divergingVec, crossVec);
-            vtkMath::Normalize(crossVec);
+          }
 
-            if ((grandParentDiverging->BranchDir + gCell->BranchDir)%2 == 0)
+          fprintf(stdout,"GRANDPARENT AND PARENT SAME\n");
+          if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+          {
+            if (parent->BranchDir == gCell->BranchDir)
             {
-              if (grandParentDiverging->BranchDir == gCell->BranchDir)
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD SAME\n");
-              }
-              else
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD OPPOSITE\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-              }
+              fprintf(stdout,"PARENT AND CHILD SAME\n");
             }
             else
             {
-              vtkMath::Cross(grandParentVec, crossVec, tempVec);
-              vtkMath::Normalize(tempVec);
+              fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
               for (int j=0; j<3; j++)
-                crossVec[j] = tempVec[j];
-              if ((grandParentDiverging->BranchDir + 1)%4 == gCell->BranchDir)
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING PLUS ONE IS CHILD\n");
-              }
-              else
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING PLUS THREE IS CHILD\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-              }
+                crossVec[j] = -1.0*crossVec[j];
             }
           }
           else
           {
+            double tempVec[3];
             vtkMath::Cross(parentVec, crossVec, tempVec);
             vtkMath::Normalize(tempVec);
             for (int j=0; j<3; j++)
               crossVec[j] = tempVec[j];
-
-            if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+            if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
             {
-              if (parent->BranchDir == gCell->BranchDir)
-              {
-                fprintf(stdout,"PARENT AND CHILD SAME\n");
-              }
-              else
-              {
-                fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-              }
+              fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*crossVec[j];
             }
             else
             {
-              vtkMath::Cross(crossVec, parentVec, tempVec);
-              vtkMath::Normalize(tempVec);
-              if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
-              {
-                fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = 1.0*tempVec[j];
-              }
-              else
-              {
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*tempVec[j];
-                fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
-              }
+              fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
             }
           }
+
         }
         else
         {
-          fprintf(stdout,"GRANDPARENT AND PARENT SAME OR OPPOSITE\n");
-          if (parentBegType >= C_TET_0 && parentBegType <= C_TET_3)
+          double tempVec[3];
+          vtkMath::Cross(grandParentVec, crossVec, tempVec);
+          vtkMath::Normalize(tempVec);
+          for (int j=0; j<3; j++)
+            crossVec[j] = tempVec[j];
+
+          if ((grandParent->BranchDir + 1)%4 == parent->BranchDir)
           {
-            vtkSVCenterlineGCell *grandParentDiverging = grandParent->Children[grandParent->DivergingChild];
-            fprintf(stdout,"PARENT IS DIRECTLY IN LINE WITH GRANDPARENT\n");
-            double divergingVec[3];
-            vtkMath::Subtract(grandParentDiverging->EndPt, grandParentDiverging->StartPt, divergingVec);
+            fprintf(stdout,"GRANDPARENT PLUS ONE IS CHILD\n");
+            for (int j=0; j<3; j++)
+              crossVec[j] = -1.0*crossVec[j];
+          }
+          else
+          {
+            fprintf(stdout,"GRANDPARENT PLUS THREE IS CHILD\n");
+          }
 
-            vtkMath::Cross(grandParentVec, divergingVec, crossVec);
-            vtkMath::Normalize(crossVec);
-
-            if ((grandParentDiverging->BranchDir + gCell->BranchDir)%2 == 0)
+          if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+          {
+            double tempVec[3];
+            vtkMath::Cross(parentVec, crossVec, tempVec);
+            vtkMath::Normalize(tempVec);
+            for (int j=0; j<3; j++)
+              crossVec[j] = tempVec[j];
+            if (parent->BranchDir == gCell->BranchDir)
             {
-              if (grandParentDiverging->BranchDir == gCell->BranchDir)
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD SAME\n");
-              }
-              else
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD OPPOSITE\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-              }
+              fprintf(stdout,"PARENT AND CHILD SAME\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*crossVec[j];
             }
             else
             {
-              vtkMath::Cross(grandParentVec, crossVec, tempVec);
-              vtkMath::Normalize(tempVec);
-              for (int j=0; j<3; j++)
-                crossVec[j] = tempVec[j];
-              if ((grandParentDiverging->BranchDir + 1)%4 == gCell->BranchDir)
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING PLUS ONE IS CHILD\n");
-              }
-              else
-              {
-                fprintf(stdout,"GRANDPARENT DIVERGING PLUS THREE IS CHILD\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-              }
+              fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
             }
           }
           else
           {
-            if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+            if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
             {
-              vtkMath::Cross(parentVec, crossVec, tempVec);
-              vtkMath::Normalize(tempVec);
-              for (int j=0; j<3; j++)
-                crossVec[j] = tempVec[j];
-              if (parent->BranchDir == gCell->BranchDir)
-              {
-                fprintf(stdout,"PARENT AND CHILD SAME\n");
-              }
-              else
-              {
-                fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-              }
+              fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
             }
             else
             {
-              if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
-              {
-                fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
-                for (int j=0; j<3; j++)
-                  crossVec[j] = 1.0*crossVec[j];
-              }
-              else
-              {
-                for (int j=0; j<3; j++)
-                  crossVec[j] = -1.0*crossVec[j];
-                fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
-              }
+              fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+              for (int j=0; j<3; j++)
+                crossVec[j] = -1.0*crossVec[j];
             }
           }
         }
+
+        //if ((grandParent->BranchDir + parent->BranchDir)%2 != 0)
+        //{
+        //  fprintf(stdout,"GRANDPARENT AND PARENT SWITCH\n");
+
+        //  if (parentBegType >= C_TET_0 && parentBegType <= C_TET_3)
+        //  {
+        //    vtkSVCenterlineGCell *grandParentDiverging = grandParent->Children[grandParent->DivergingChild];
+        //    fprintf(stdout,"PARENT IS DIRECTLY IN LINE WITH GRANDPARENT\n");
+        //    double divergingVec[3];
+        //    vtkMath::Subtract(grandParentDiverging->EndPt, grandParentDiverging->StartPt, divergingVec);
+
+        //    vtkMath::Cross(grandParentVec, divergingVec, crossVec);
+        //    vtkMath::Normalize(crossVec);
+
+        //    if ((grandParentDiverging->BranchDir + gCell->BranchDir)%2 == 0)
+        //    {
+        //      if (grandParentDiverging->BranchDir == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD SAME\n");
+        //      }
+        //      else
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD OPPOSITE\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //      }
+        //    }
+        //    else
+        //    {
+        //      vtkMath::Cross(grandParentVec, crossVec, tempVec);
+        //      vtkMath::Normalize(tempVec);
+        //      for (int j=0; j<3; j++)
+        //        crossVec[j] = tempVec[j];
+        //      if ((grandParentDiverging->BranchDir + 1)%4 == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING PLUS ONE IS CHILD\n");
+        //      }
+        //      else
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING PLUS THREE IS CHILD\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //      }
+        //    }
+        //  }
+        //  else
+        //  {
+        //    vtkMath::Cross(parentVec, crossVec, tempVec);
+        //    vtkMath::Normalize(tempVec);
+        //    for (int j=0; j<3; j++)
+        //      crossVec[j] = tempVec[j];
+
+        //    if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+        //    {
+        //      if (parent->BranchDir == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"PARENT AND CHILD SAME\n");
+        //      }
+        //      else
+        //      {
+        //        fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //      }
+        //    }
+        //    else
+        //    {
+        //      vtkMath::Cross(crossVec, parentVec, tempVec);
+        //      vtkMath::Normalize(tempVec);
+        //      if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = 1.0*tempVec[j];
+        //      }
+        //      else
+        //      {
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*tempVec[j];
+        //        fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+        //      }
+        //    }
+        //  }
+        //}
+        //else
+        //{
+        //  fprintf(stdout,"GRANDPARENT AND PARENT SAME OR OPPOSITE\n");
+        //  if (parentBegType >= C_TET_0 && parentBegType <= C_TET_3)
+        //  {
+        //    vtkSVCenterlineGCell *grandParentDiverging = grandParent->Children[grandParent->DivergingChild];
+        //    fprintf(stdout,"PARENT IS DIRECTLY IN LINE WITH GRANDPARENT\n");
+        //    double divergingVec[3];
+        //    vtkMath::Subtract(grandParentDiverging->EndPt, grandParentDiverging->StartPt, divergingVec);
+
+        //    vtkMath::Cross(grandParentVec, divergingVec, crossVec);
+        //    vtkMath::Normalize(crossVec);
+
+        //    if ((grandParentDiverging->BranchDir + gCell->BranchDir)%2 == 0)
+        //    {
+        //      if (grandParentDiverging->BranchDir == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD SAME\n");
+        //      }
+        //      else
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING AND CHILD OPPOSITE\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //      }
+        //    }
+        //    else
+        //    {
+        //      vtkMath::Cross(grandParentVec, crossVec, tempVec);
+        //      vtkMath::Normalize(tempVec);
+        //      for (int j=0; j<3; j++)
+        //        crossVec[j] = tempVec[j];
+        //      if ((grandParentDiverging->BranchDir + 1)%4 == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING PLUS ONE IS CHILD\n");
+        //      }
+        //      else
+        //      {
+        //        fprintf(stdout,"GRANDPARENT DIVERGING PLUS THREE IS CHILD\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //      }
+        //    }
+        //  }
+        //  else
+        //  {
+        //    if ((parent->BranchDir + gCell->BranchDir)%2 == 0)
+        //    {
+        //      vtkMath::Cross(parentVec, crossVec, tempVec);
+        //      vtkMath::Normalize(tempVec);
+        //      for (int j=0; j<3; j++)
+        //        crossVec[j] = tempVec[j];
+        //      if (parent->BranchDir == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"PARENT AND CHILD SAME\n");
+        //      }
+        //      else
+        //      {
+        //        fprintf(stdout,"PARENT AND CHILD OPPOSITE\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //      }
+        //    }
+        //    else
+        //    {
+        //      if ((parent->BranchDir + 1)%4 == gCell->BranchDir)
+        //      {
+        //        fprintf(stdout,"PARENT PLUS ONE IS CHILD\n");
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = 1.0*crossVec[j];
+        //      }
+        //      else
+        //      {
+        //        for (int j=0; j<3; j++)
+        //          crossVec[j] = -1.0*crossVec[j];
+        //        fprintf(stdout,"PARENT PLUS THREE IS CHILD\n");
+        //      }
+        //    }
+        //  }
+        //}
 
         if (begType >= C_TET_0 && begType <= S_TET_3)
         {

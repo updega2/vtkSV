@@ -843,16 +843,22 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
       // get vector towards top of cube
       double diverVec[3], parentVec[3];
+      fprintf(stdout,"DIVER IS %d\n", diver->GroupId);
+      fprintf(stdout,"DIVER START %.6f %.6f %.6f\n", diver->StartPt[0], diver->StartPt[1], diver->StartPt[2]);
+      fprintf(stdout,"DIVER END %.6f %.6f %.6f\n", diver->EndPt[0], diver->EndPt[1], diver->EndPt[2]);
       vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
       vtkMath::Normalize(diverVec);
       vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
       vtkMath::Normalize(parentVec);
 
+      fprintf(stdout,"DIVER: %.6f %.6f %.6f\n", diverVec[0], diverVec[1], diverVec[2]);
+      fprintf(stdout,"PARENT: %.6f %.6f %.6f\n", parentVec[0], parentVec[1], parentVec[2]);
       vtkMath::Cross(diverVec, parentVec, begVec);
       vtkMath::Normalize(begVec);
+      fprintf(stdout,"BEG: %.6f %.6f %.6f\n", begVec[0], begVec[1], begVec[2]);
 
-      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
-        vtkMath::MultiplyScalar(begVec, -1.0);
+      //if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+      //  vtkMath::MultiplyScalar(begVec, -1.0);
 
       //TODO: THIS COULD STILL BE AN ISSUEE!!
       //if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
@@ -895,6 +901,9 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
       double endVec[3];
       if ((gCell->BranchDir)%2 == 0)
       {
+        fprintf(stdout,"WHAT BEG: %.6f %.6f %.6f\n", begVec[0], begVec[1], begVec[2]);
+        fprintf(stdout,"WHAT VEC0: %.6f %.6f %.6f\n", vecs[0], vecs[1], vecs[2]);
+        fprintf(stdout,"WHAT END: %.6f %.6f %.6f\n", endVec[0], endVec[1], endVec[2]);
         vtkMath::Cross(begVec, vecs[0], endVec);
         vtkMath::Normalize(endVec);
         this->GetSquare(gCell->EndPt, endVec, begVec,
@@ -1558,24 +1567,17 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
   double midVec[3];
   vtkMath::Add(vec0, vec1, midVec);
 
-  int isZero = 1;
-  for (int i=0; i<3; i++)
-  {
-    if (midVec[i] < -1.0e-6 || midVec[i] > 1.0e-6)
-    {
-      isZero = 0;
-    }
-  }
-  if (isZero)
+  double testDot = vtkMath::Dot(vec0, vec1);
+  if (testDot < -1.0 + 1.0e-6 && testDot > -1.0 - 1.0e-6)
   {
     //Need to get opposite of vec2
-    double projDot = vtkMath::Dot(vec2, vec0);
     fprintf(stdout,"ITSSS ZEROOO!\n");
     double tmpVec[3];
     for (int i=0; i<3; i++)
     {
       tmpVec[i] = vec0[i];
     }
+    double projDot = vtkMath::Dot(vec2, vec0);
     vtkMath::MultiplyScalar(tmpVec, projDot);
 
     vtkMath::Subtract(tmpVec, vec2, midVec);
