@@ -681,12 +681,27 @@ int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *paren
     fprintf(stdout,"Child %d got direction %d\n", parent->Children[i]->GroupId, parent->Children[i]->BranchDir);
   }
 
-  //// Trifurcation case, set aligning child to the correct directiono
-  //if (numChildren >= 3)
-  //{
-  //  parent->Children[parent->AligningChild]->BranchDir = RIGHT;
-  //  fprintf(stdout,"Aligning of group id %d set to %d\n", parent->Children[parent->AligningChild]->GroupId, RIGHT);
-  //}
+  // Trifurcation case, set aligning child to the correct directiono
+  if (numChildren >= 3)
+  {
+    vtkSVCenterlineGCell *brother;
+    for (int i=0; i<3; i++)
+    {
+      if (i != parent->DivergingChild && i != parent->AligningChild)
+        brother = parent->Children[i];
+    }
+    vtkSVCenterlineGCell *diver = parent->Children[parent->DivergingChild];
+    vtkSVCenterlineGCell *align = parent->Children[parent->AligningChild];
+
+    if ((brother->BranchDir + diver->BranchDir)%2 == 0)
+    {
+      if ((align->BranchDir + diver->BranchDir)%2 != 0)
+      {
+        parent->Children[parent->AligningChild]->BranchDir = RIGHT;
+        fprintf(stdout,"Aligning of group id %d set to %d\n", parent->Children[parent->AligningChild]->GroupId, RIGHT);
+      }
+    }
+  }
 
   return SV_OK;
 }

@@ -812,8 +812,8 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
-                              brother->EndPt, brother->StartPt,
                               parent->StartPt, parent->EndPt,
+                              brother->EndPt, brother->StartPt,
                               gCell->StartPt,
                               width/2., vecs, triPts);
       }
@@ -823,8 +823,8 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
-                             parent->StartPt, parent->EndPt,
                              brother->EndPt, brother->StartPt,
+                             parent->StartPt, parent->EndPt,
                              gCell->StartPt,
                              width/2., vecs, triPts);
       }
@@ -835,8 +835,8 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
         // Get ending bifurcation points
         this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
-                             sister->EndPt, sister->StartPt,
                              brother->EndPt, brother->StartPt,
+                             sister->EndPt, sister->StartPt,
                              gCell->StartPt,
                              width/2., vecs, triPts);
       }
@@ -848,7 +848,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
       fprintf(stdout,"DIVER END %.6f %.6f %.6f\n", diver->EndPt[0], diver->EndPt[1], diver->EndPt[2]);
       vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
       vtkMath::Normalize(diverVec);
-      vtkMath::Subtract(parent->EndPt, parent->StartPt, parentVec);
+      vtkMath::Subtract(parent->StartPt, parent->EndPt, parentVec);
       vtkMath::Normalize(parentVec);
 
       fprintf(stdout,"DIVER: %.6f %.6f %.6f\n", diverVec[0], diverVec[1], diverVec[2]);
@@ -857,16 +857,31 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
       vtkMath::Normalize(begVec);
       fprintf(stdout,"BEG: %.6f %.6f %.6f\n", begVec[0], begVec[1], begVec[2]);
 
-      //if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+      if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
+      {
+        vtkMath::MultiplyScalar(begVec, -1.0);
+        this->GetWedge(triPts[1], gCell->StartPt, triPts[0], begVec,
+                       height, begPoints);
+      }
+      else
+      {
+        this->GetWedge(triPts[0], gCell->StartPt, triPts[1], begVec,
+                       height, begPoints);
+      }
+      //
+      //if (diver->BranchDir != gCell->BranchDir)
       //  vtkMath::MultiplyScalar(begVec, -1.0);
 
-      //TODO: THIS COULD STILL BE AN ISSUEE!!
-      //if (gCell->BranchDir == LEFT || gCell->BranchDir == FRONT)
+      //if (myLoc != 0 && myLoc != parent->Children.size() - 1)
+      //  vtkMath::MultiplyScalar(begVec, -1.0);
+
+      //////TODO: THIS COULD STILL BE AN ISSUEE!!
+      //if (gCell->BranchDir != diver->BranchDir)
       //  this->GetWedge(triPts[1], gCell->StartPt, triPts[0], begVec,
       //                 height, begPoints);
       //else
-        this->GetWedge(triPts[0], gCell->StartPt, triPts[1], begVec,
-                       height, begPoints);
+      //  this->GetWedge(triPts[0], gCell->StartPt, triPts[1], begVec,
+      //                 height, begPoints);
 
     }
   }
