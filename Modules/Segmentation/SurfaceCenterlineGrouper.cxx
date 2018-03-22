@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                             : Display usage and command-line argument summary"<< endl;
     cout << "  -input                         : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -mergedcenterlines                   : Split and merged centerlines file name (.vtp)"<< endl;
+    cout << "  -mergedcenterlines             : Split and merged centerlines file name (.vtp)"<< endl;
     cout << "  -output                        : Output file name"<< endl;
     cout << "  -usevmtk                       : Use the vmtk clipper rather than vtksv [default 0]"<< endl;
     cout << "  -polycube                      : Polycube file name (.vtp)"<< endl;
