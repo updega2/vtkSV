@@ -2412,14 +2412,25 @@ int vtkSVSurfaceCenterlineGrouper::RemoveDuplicateGroups(vtkPolyData *pd, std::s
       }
     }
 
-    std::vector<int> badPatches;
+    std::vector<int> badIslandPatches;
+    std::vector<int> badSingleElementPatches;
     for (int j=0; j<groupRegions.size(); j++)
     {
       if (multipleGroups[i] == groupRegions[j].IndexCluster && j != maxPatch)
-        badPatches.push_back(j);
+      {
+        if (groupRegions[i].NumberOfElements == 1)
+        {
+          badSingleElementPatches.push_back(j);
+        }
+        else
+        {
+          badIslandPatches.push_back(j);
+        }
+      }
     }
 
-    vtkSVSurfaceCenterlineGrouper::FixRegions(pd, arrayName, groupRegions, badPatches, multipleGroups[i], 1);
+    vtkSVSurfaceCenterlineGrouper::FixRegions(pd, arrayName, groupRegions, badIslandPatches, multipleGroups[i], 1);
+    vtkSVSurfaceCenterlineGrouper::FixRegions(pd, arrayName, groupRegions, badSingleElementPatches, multipleGroups[i]);
   }
 
 
