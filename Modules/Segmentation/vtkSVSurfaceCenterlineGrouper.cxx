@@ -2519,7 +2519,7 @@ int vtkSVSurfaceCenterlineGrouper::FixRegions(vtkPolyData *pd, std::string array
       }
     }
 
-    if (onlyFixIslands && patchIds->GetNumberOfIds() != 1)
+    if (onlyFixIslands && patchIds->GetNumberOfIds() > 2)
     {
       continue;
     }
@@ -2614,7 +2614,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
   vtkPolyData *newCenterlinesPd = NULL;
 
   int allGood = 0;
-  int maxIters = 3;
+  int maxIters = 10;
   int iter = 0;
   while (!allGood && iter < maxIters+1)
   {
@@ -2627,6 +2627,17 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
       vtkErrorMacro("Couldn't get group regions");
       return SV_ERROR;
     }
+
+    std::vector<std::vector<int> > ringNeighbors(pd->GetNumberOfCells());
+    vtkNew(vtkIdList, ringCellIds); ringCellIds->SetNumberOfIds(pd->GetNumberOfCells());
+    for (int i=0; i<pd->GetNumberOfCells(); i++)
+    {
+      ringCellIds->SetId(i, i);
+      ringNeighbors[i].push_back(i);
+    }
+
+    this->GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
+
 
     for (int g=0; g<numGroups; g++)
     {
@@ -2797,6 +2808,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
         std::vector<int> pointUsed(pd->GetNumberOfPoints(), 0);
         for (int i=0; i<groupRegions.size(); i++)
         {
+          // ================FIX FOR BAD EDGES NEAR GROUP====================
           for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
           {
             edgeSize = groupRegions[i].BoundaryEdges[j].size();
@@ -2857,9 +2869,19 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
                 for (int k=0; k<edgeSize; k++)
                 {
                   ptId = groupRegions[i].BoundaryEdges[j][k];
-                  pd->GetPoint(ptId, pt);
+                  //pd->GetPoint(ptId, pt);
 
-                  newCenterlinePts->InsertNextPoint(pt);
+                  //newCenterlinePts->InsertNextPoint(pt);
+
+                  pd->GetPointCells(ptId, pointCellIds);
+                  for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+                  {
+                    cellId = pointCellIds->GetId(l);
+                    for (int m=0; m<ringNeighbors[cellId].size(); m++)
+                    {
+                      pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][m], groupId);
+                    }
+                  }
                 }
               }
             }
@@ -2869,6 +2891,38 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
           {
             continue;
           }
+
+          // ================FIX FOR TOUCHING CORNERS========================
+          vtkNew(vtkIdList, uniqueCorners);
+          std::vector<int> fixCorners;
+          for (int j=0; j<groupRegions[i].CornerPoints.size(); j++)
+          {
+            ptId = groupRegions[i].CornerPoints[j];
+            if (uniqueCorners->IsId(ptId) == -1)
+            {
+              uniqueCorners->InsertNextId(ptId);
+            }
+            else
+            {
+              fixCorners.push_back(ptId);
+            }
+          }
+
+          for (int j=0; j<fixCorners.size(); j++)
+          {
+            ptId = fixCorners[j];
+            pd->GetPointCells(ptId, pointCellIds);
+            for (int k=0; k<pointCellIds->GetNumberOfIds(); k++)
+            {
+              cellId = pointCellIds->GetId(k);
+              for (int l=0; l<ringNeighbors[cellId].size(); l++)
+              {
+                pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][l], groupId);
+              }
+            }
+          }
+
+          // ================FIX FOR ONE CELL THICK REGION===================
           for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
           {
             edgeSize = groupRegions[i].BoundaryEdges[j].size();
@@ -2887,11 +2941,15 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
                   {
                     if (pointEdgeId[pts[m]] != 0)
                     {
-                      pd->GetPoint(ptId, pt);
-                      newCenterlinePts->InsertNextPoint(pt);
+                      //pd->GetPoint(ptId, pt);
+                      //newCenterlinePts->InsertNextPoint(pt);
 
-                      pd->GetPoint(pts[m], pt);
-                      newCenterlinePts->InsertNextPoint(pt);
+                      //pd->GetPoint(pts[m], pt);
+                      //newCenterlinePts->InsertNextPoint(pt);
+                      for (int n=0; n<ringNeighbors[cellId].size(); n++)
+                      {
+                        pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][n], groupId);
+                      }
                     }
                   }
                 }
@@ -2900,94 +2958,94 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
           }
         }
 
-        int numNewCenterlinePts = newCenterlinePts->GetNumberOfPoints();
+        //int numNewCenterlinePts = newCenterlinePts->GetNumberOfPoints();
 
-        vtkNew(vtkPolyData, tmpCenterlinesPd);
-        tmpCenterlinesPd->DeepCopy(newCenterlinesPd);
-        tmpCenterlinesPd->BuildLinks();
+        //vtkNew(vtkPolyData, tmpCenterlinesPd);
+        //tmpCenterlinesPd->DeepCopy(newCenterlinesPd);
+        //tmpCenterlinesPd->BuildLinks();
 
-        vtkNew(vtkPoints, newPoints);
-        vtkNew(vtkPointData, newPointData);
-        newPointData->CopyAllocate(tmpCenterlinesPd->GetPointData(),
-                                   tmpCenterlinesPd->GetNumberOfPoints() + 2*numNewCenterlinePts);
+        //vtkNew(vtkPoints, newPoints);
+        //vtkNew(vtkPointData, newPointData);
+        //newPointData->CopyAllocate(tmpCenterlinesPd->GetPointData(),
+        //                           tmpCenterlinesPd->GetNumberOfPoints() + 2*numNewCenterlinePts);
 
-        vtkNew(vtkCellArray, newCells);
-        vtkNew(vtkCellData, newCellData);
-        newCellData->CopyAllocate(tmpCenterlinesPd->GetCellData(),
-                                  tmpCenterlinesPd->GetNumberOfPoints() + numNewCenterlinePts);
+        //vtkNew(vtkCellArray, newCells);
+        //vtkNew(vtkCellData, newCellData);
+        //newCellData->CopyAllocate(tmpCenterlinesPd->GetCellData(),
+        //                          tmpCenterlinesPd->GetNumberOfPoints() + numNewCenterlinePts);
 
-        int newPointId;
-        for (int j=0; j<tmpCenterlinesPd->GetNumberOfPoints(); j++)
-        {
-          newPointId = newPoints->InsertNextPoint(tmpCenterlinesPd->GetPoint(j));
-          newPointData->CopyData(tmpCenterlinesPd->GetPointData(), j, newPointId);
-        }
+        //int newPointId;
+        //for (int j=0; j<tmpCenterlinesPd->GetNumberOfPoints(); j++)
+        //{
+        //  newPointId = newPoints->InsertNextPoint(tmpCenterlinesPd->GetPoint(j));
+        //  newPointData->CopyData(tmpCenterlinesPd->GetPointData(), j, newPointId);
+        //}
 
-        int newCellId;
-        for (int j=0; j<tmpCenterlinesPd->GetNumberOfCells(); j++)
-        {
-          vtkNew(vtkPolyLine, newLine);
-          newLine->GetPointIds()->DeepCopy(tmpCenterlinesPd->GetCell(j)->GetPointIds());
-          newCellId = newCells->InsertNextCell(newLine);
-          newCellData->CopyData(tmpCenterlinesPd->GetCellData(), j, newCellId);
-        }
+        //int newCellId;
+        //for (int j=0; j<tmpCenterlinesPd->GetNumberOfCells(); j++)
+        //{
+        //  vtkNew(vtkPolyLine, newLine);
+        //  newLine->GetPointIds()->DeepCopy(tmpCenterlinesPd->GetCell(j)->GetPointIds());
+        //  newCellId = newCells->InsertNextCell(newLine);
+        //  newCellData->CopyData(tmpCenterlinesPd->GetCellData(), j, newCellId);
+        //}
 
-        double radiusValAtCenter = tmpCenterlinesPd->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(centerPtId);
-        vtkNew(vtkPolyLine, newPts0);
-        for (int j=0; j<newCenterlinePts->GetNumberOfPoints(); j++)
-        {
-          ptId0 = newPoints->InsertNextPoint(newCenterPt);
-          ptId1 = newPoints->InsertNextPoint(newCenterlinePts->GetPoint(j));
+        //double radiusValAtCenter = tmpCenterlinesPd->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(centerPtId);
+        //vtkNew(vtkPolyLine, newPts0);
+        //for (int j=0; j<newCenterlinePts->GetNumberOfPoints(); j++)
+        //{
+        //  ptId0 = newPoints->InsertNextPoint(newCenterPt);
+        //  ptId1 = newPoints->InsertNextPoint(newCenterlinePts->GetPoint(j));
 
-          vtkNew(vtkPolyLine, newPts0);
-          newPts0->GetPointIds()->InsertNextId(ptId0);
-          newPts0->GetPointIds()->InsertNextId(ptId1);
-          newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId0);
-          newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId1);
-          newPointData->GetArray(this->CenterlineRadiusArrayName)->SetTuple1(ptId1, 0.2*radiusValAtCenter);
+        //  vtkNew(vtkPolyLine, newPts0);
+        //  newPts0->GetPointIds()->InsertNextId(ptId0);
+        //  newPts0->GetPointIds()->InsertNextId(ptId1);
+        //  newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId0);
+        //  newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId1);
+        //  newPointData->GetArray(this->CenterlineRadiusArrayName)->SetTuple1(ptId1, 0.2*radiusValAtCenter);
 
-          newCellId = newCells->InsertNextCell(newPts0);
-          newCellData->CopyData(tmpCenterlinesPd->GetCellData(), centerlineId, newCellId);
-        }
+        //  newCellId = newCells->InsertNextCell(newPts0);
+        //  newCellData->CopyData(tmpCenterlinesPd->GetCellData(), centerlineId, newCellId);
+        //}
 
-        newPointData->Squeeze();
-        newCellData->Squeeze();
+        //newPointData->Squeeze();
+        //newCellData->Squeeze();
 
-        tmpCenterlinesPd->Reset();
-        tmpCenterlinesPd->SetPoints(newPoints);
-        tmpCenterlinesPd->SetLines(newCells);
+        //tmpCenterlinesPd->Reset();
+        //tmpCenterlinesPd->SetPoints(newPoints);
+        //tmpCenterlinesPd->SetLines(newCells);
 
-        tmpCenterlinesPd->GetPointData()->PassData(newPointData);
-        tmpCenterlinesPd->GetCellData()->PassData(newCellData);
-        tmpCenterlinesPd->BuildLinks();
+        //tmpCenterlinesPd->GetPointData()->PassData(newPointData);
+        //tmpCenterlinesPd->GetCellData()->PassData(newCellData);
+        //tmpCenterlinesPd->BuildLinks();
 
-        newCenterlinesPd->DeepCopy(tmpCenterlinesPd);
+        //newCenterlinesPd->DeepCopy(tmpCenterlinesPd);
       }
     }
 
     if (!allGood && iter < maxIters)
     {
-      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYSURFACEDUMBNEWCENTERLINES.vtp", newCenterlinesPd);
-      // Now re-segment with these new centerlines
-      int stopCellNumber = ceil(pd->GetNumberOfCells()*0.0001);
-      vtkNew(vtkSVCenterlinesEdgeWeightedCVT, betterCVT);
-      betterCVT->SetInputData(pd);
-      betterCVT->SetGenerators(newCenterlinesPd);
-      betterCVT->SetNumberOfRings(2);
-      betterCVT->SetThreshold(stopCellNumber);
-      betterCVT->SetUseCurvatureWeight(0);
-      betterCVT->SetPatchIdsArrayName(pdArrayName.c_str());
-      betterCVT->SetCVTDataArrayName("Normals");
-      betterCVT->SetGroupIdsArrayName(pdArrayName.c_str());
-      betterCVT->SetCenterlineRadiusArrayName(centerlinesRadiusArrayName.c_str());
-      betterCVT->SetUsePointNormal(1);
-      betterCVT->SetUseRadiusInformation(useRadiusInformation);
-      betterCVT->SetMaximumNumberOfIterations(0);
-      betterCVT->Update();
+      //vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYSURFACEDUMBNEWCENTERLINES.vtp", newCenterlinesPd);
+      //// Now re-segment with these new centerlines
+      //int stopCellNumber = ceil(pd->GetNumberOfCells()*0.0001);
+      //vtkNew(vtkSVCenterlinesEdgeWeightedCVT, betterCVT);
+      //betterCVT->SetInputData(pd);
+      //betterCVT->SetGenerators(newCenterlinesPd);
+      //betterCVT->SetNumberOfRings(2);
+      //betterCVT->SetThreshold(stopCellNumber);
+      //betterCVT->SetUseCurvatureWeight(0);
+      //betterCVT->SetPatchIdsArrayName(pdArrayName.c_str());
+      //betterCVT->SetCVTDataArrayName("Normals");
+      //betterCVT->SetGroupIdsArrayName(pdArrayName.c_str());
+      //betterCVT->SetCenterlineRadiusArrayName(centerlinesRadiusArrayName.c_str());
+      //betterCVT->SetUsePointNormal(1);
+      //betterCVT->SetUseRadiusInformation(useRadiusInformation);
+      //betterCVT->SetMaximumNumberOfIterations(0);
+      //betterCVT->Update();
 
-      pd->DeepCopy(betterCVT->GetOutput());
-      std::string workfn = "/Users/adamupdegrove/Desktop/tmp/WHATEVERWHATEVER_"+std::to_string(iter)+".vtp";
-      vtkSVIOUtils::WriteVTPFile(workfn, pd);
+      //pd->DeepCopy(betterCVT->GetOutput());
+      //std::string workfn = "/Users/adamupdegrove/Desktop/tmp/WHATEVERWHATEVER_"+std::to_string(iter)+".vtp";
+      //vtkSVIOUtils::WriteVTPFile(workfn, pd);
 
       if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(pd, pdArrayName.c_str()) != SV_OK)
       {
@@ -5464,9 +5522,9 @@ int vtkSVSurfaceCenterlineGrouper::SplitEdge(vtkPolyData *pd, int cellId, int pt
 // GetCellRingNeighbors
 // ----------------------
 int vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(vtkPolyData *pd, vtkIdList *cellIds,
-                                               int ringNumber,
-                                               int totNumberOfRings,
-                                               std::vector<std::vector<int> > &neighbors)
+                                                        int ringNumber,
+                                                        int totNumberOfRings,
+                                                        std::vector<std::vector<int> > &neighbors)
 {
   // Number of cells
   int numCells = cellIds->GetNumberOfIds();
