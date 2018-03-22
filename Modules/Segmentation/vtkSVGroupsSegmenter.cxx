@@ -417,7 +417,7 @@ int vtkSVGroupsSegmenter::RunFilter()
     grouper->SetGroupIdsArrayName(this->GroupIdsArrayName);
     grouper->SetTractIdsArrayName("TractIds");
     grouper->GroupSurfaceOn();
-    grouper->EnforcePolycubeBoundariesOn();
+    grouper->EnforcePolycubeConnectivityOn();
     grouper->Update();
 
     this->WorkPd->DeepCopy(grouper->GetOutput());
@@ -435,7 +435,8 @@ int vtkSVGroupsSegmenter::RunFilter()
     grouper->SetGroupIdsArrayName(this->GroupIdsArrayName);
     grouper->SetTractIdsArrayName("TractIds");
     grouper->GroupSurfaceOn();
-    grouper->EnforcePolycubeBoundariesOn();
+    grouper->EnforceCenterlinesConnectivityOn();
+    grouper->EnforcePolycubeConnectivityOn();
     grouper->Update();
 
     this->WorkPd->DeepCopy(grouper->GetOutput());

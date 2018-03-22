@@ -64,15 +64,13 @@ int main(int argc, char *argv[])
   std::string outputFilename;
   std::string centerlinesFilename;
   std::string polycubeFilename;
-  inputFilename = "/Users/adamupdegrove/Documents/CleanModels/0003_0001/Models/0003_0001_polydata_fine.vtp";
-  centerlinesFilename = "/Users/adamupdegrove/Documents/2018-01-23-CenterlineTests/0003_0001/0003_0001_polydata_fine_wall_vtksv_merged_centerlines.vtp";
-  outputFilename = "/Users/adamupdegrove/Desktop/tmp/0003_0001_polydata_fine_segmented_0.1_merged_centerlines.vtp";
 
   // Default values for options
   int useVmtk = 0;
   int useRadiusInfo = 1;
   int groupSurface = 1;
-  int enforcePolycubeBoundaries = 0;
+  int enforcePolycubeConnectivity = 0;
+  int enforceCenterlinesConnectivity = 0;
 
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
@@ -95,7 +93,8 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-blanking")      {blankingArrayName = argv[++iarg];}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
       else if(tmpstr=="-groupsurface")  {groupSurface = atoi(argv[++iarg]);}
-      else if(tmpstr=="-enforcepolycubeboundaries")     {enforcePolycubeBoundaries = atoi(argv[++iarg]);}
+      else if(tmpstr=="-enforcecenterlinesconnectivity")     {enforceCenterlinesConnectivity = atoi(argv[++iarg]);}
+      else if(tmpstr=="-enforcepolycubeconnectivity")     {enforcePolycubeConnectivity = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -108,18 +107,19 @@ int main(int argc, char *argv[])
     cout << "  SurfaceCenterlineGrouper -input [Input Filename] -mergedcenterlines [Centerlines] -output [Output Filename] -groupids [GroupIds Array Name] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
-    cout << "  -h                             : Display usage and command-line argument summary"<< endl;
-    cout << "  -input                         : Input file name (.vtp or .stl)"<< endl;
-    cout << "  -mergedcenterlines             : Split and merged centerlines file name (.vtp)"<< endl;
-    cout << "  -output                        : Output file name"<< endl;
-    cout << "  -usevmtk                       : Use the vmtk clipper rather than vtksv [default 0]"<< endl;
-    cout << "  -polycube                      : Polycube file name (.vtp)"<< endl;
-    cout << "  -groupids                      : Name to be used for group ids [default GroupIds]"<< endl;
-    cout << "  -radius                        : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
-    cout << "  -blanking                      : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
-    cout << "  -useradiusinfo                 : Use radius to help in clipping operation [default 1]"<< endl;
-    cout << "  -enforcepolycubeboundaries     : Enforce the connectivity of the polycube on the surface [default 0]" << endl;
-    cout << "  -groupsurface                  : Group the surface using centerlines. If surface already has groups and the polycube connectivity needs to be enforced, this can be turned off [default 1]" << endl;
+    cout << "  -h                              : Display usage and command-line argument summary"<< endl;
+    cout << "  -input                          : Input file name (.vtp or .stl)"<< endl;
+    cout << "  -mergedcenterlines              : Split and merged centerlines file name (.vtp)"<< endl;
+    cout << "  -output                         : Output file name"<< endl;
+    cout << "  -usevmtk                        : Use the vmtk clipper rather than vtksv [default 0]"<< endl;
+    cout << "  -polycube                       : Polycube file name (.vtp)"<< endl;
+    cout << "  -groupids                       : Name to be used for group ids [default GroupIds]"<< endl;
+    cout << "  -radius                         : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
+    cout << "  -blanking                       : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
+    cout << "  -useradiusinfo                  : Use radius to help in clipping operation [default 1]"<< endl;
+    cout << "  -enforcecenterlinesconnectivity : Enforce the connectivity of the centerlines on the surface [default 0]" << endl;
+    cout << "  -enforcepolycubeconnectivity    : Enforce the connectivity of the polycube on the surface [default 0]" << endl;
+    cout << "  -groupsurface                   : Group the surface using centerlines. If surface already has groups and the polycube connectivity needs to be enforced, this can be turned off [default 1]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -203,7 +203,8 @@ int main(int argc, char *argv[])
     Grouper->SetCenterlineIdsArrayName("CenterlineIds");
     Grouper->SetTractIdsArrayName("TractIds");
     Grouper->SetUseRadiusInformation(useRadiusInfo);
-    Grouper->SetEnforcePolycubeBoundaries(enforcePolycubeBoundaries);
+    Grouper->SetEnforceCenterlinesConnectivity(enforceCenterlinesConnectivity);
+    Grouper->SetEnforcePolycubeConnectivity(enforcePolycubeConnectivity);
     Grouper->SetGroupSurface(groupSurface);
     Grouper->DebugOn();
     Grouper->Update();

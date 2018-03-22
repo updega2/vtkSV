@@ -100,9 +100,16 @@ public:
 
   //@{
   /// \brief Get/Set the radius information
-  vtkSetMacro(EnforcePolycubeBoundaries, int);
-  vtkGetMacro(EnforcePolycubeBoundaries, int);
-  vtkBooleanMacro(EnforcePolycubeBoundaries, int);
+  vtkSetMacro(EnforcePolycubeConnectivity, int);
+  vtkGetMacro(EnforcePolycubeConnectivity, int);
+  vtkBooleanMacro(EnforcePolycubeConnectivity, int);
+  //@}
+
+  //@{
+  /// \brief Get/Set the radius information
+  vtkSetMacro(EnforceCenterlinesConnectivity, int);
+  vtkGetMacro(EnforceCenterlinesConnectivity, int);
+  vtkBooleanMacro(EnforceCenterlinesConnectivity, int);
   //@}
 
   //@{
@@ -233,7 +240,10 @@ protected:
                     std::vector<int> allEdges,
                     std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
-  int FixGroupsWithCenterlines();
+  int FixGroupsWithCenterlines(vtkPolyData *pd,
+                               vtkPolyData *centerlines,
+                               std::string pdArrayName,
+                               std::string centerlinesArrayName);
 
   int GetCellRingNeighbors(vtkPolyData *pd,
                            vtkIdList *cellIds,
@@ -244,11 +254,13 @@ protected:
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
 
-  int CleanUp(vtkPolyData *pd, std::string arrayName, int removeDuplicateGroups);
+  int RemoveNegativeGroups(vtkPolyData *pd, std::string arrayName);
+  int RemoveDuplicateGroups(vtkPolyData *pd, std::string arrayName);
   int FixRegions(vtkPolyData *pd, std::string arrayName,
                         std::vector<Region> &allRegions,
                         std::vector<int> badRegions,
-                        const int currentValue);
+                        const int currentValue,
+                        const int onlyFixIslands = 0);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
@@ -261,7 +273,8 @@ protected:
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
 
-  int EnforcePolycubeBoundaries;
+  int EnforcePolycubeConnectivity;
+  int EnforceCenterlinesConnectivity;
   int GroupSurface;
   int UseRadiusInformation;
 
