@@ -233,6 +233,7 @@ protected:
                     std::vector<int> allEdges,
                     std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
+  int FixGroupsWithCenterlines();
 
   int GetCellRingNeighbors(vtkPolyData *pd,
                            vtkIdList *cellIds,
@@ -242,6 +243,12 @@ protected:
 
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
+
+  int CleanUp(vtkPolyData *pd, std::string arrayName, int removeDuplicateGroups);
+  int FixRegions(vtkPolyData *pd, std::string arrayName,
+                        std::vector<Region> &allRegions,
+                        std::vector<int> badRegions,
+                        const int currentValue);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
