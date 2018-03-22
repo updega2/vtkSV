@@ -2587,6 +2587,8 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
     return SV_ERROR;
   }
 
+  int anyBad = 0;
+
   int goodEdge;
   int centerlineId;
   int isTerminating;
@@ -2748,6 +2750,9 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
       }
     }
 
+    if (needFix)
+      anyBad = 1;
+
     //for (int i=0; i<groupRegions.size(); i++)
     //{
     //  for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
@@ -2801,6 +2806,11 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
     //    }
     //  }
     //}
+  }
+
+  if (anyBad)
+  {
+    return SV_ERROR;
   }
 
   return SV_OK;
