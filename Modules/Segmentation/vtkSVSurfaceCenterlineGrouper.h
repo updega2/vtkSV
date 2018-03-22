@@ -134,6 +134,10 @@ public:
   static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName,
                                       vtkIdList *targetRegions);
 
+  static int GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
+                               const int cellId, const int pointId,
+                               vtkIdList *sameCells);
+
   static int GetRegions(vtkPolyData *pd, std::string arrayName,
                         std::vector<Region> &allRegions);
   static int GetSpecificRegions(vtkPolyData *pd, std::string arrayName,

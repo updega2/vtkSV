@@ -1256,12 +1256,49 @@ int vtkSVSurfaceCenterlineGrouper::SmoothSpecificBoundaries(vtkPolyData *pd, std
 }
 
 // ----------------------
+// GetPointEdgeCells
+// ----------------------
+int vtkSVSurfaceCenterlineGrouper::GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
+                                                     const int cellId, const int pointId,
+                                                     vtkIdList *sameCells)
+{
+  int sameValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId);
+
+  vtkIdType npts, *pts;
+  pd->GetCellPoints(cellId, npts, pts);
+
+  for (int i=0; i<npts; i++)
+  {
+    int ptId0 = pts[i];
+    int ptId1 = pts[(i+1)%npts];
+
+    if (ptId0 == pointId || ptId1 == pointId)
+    {
+      vtkNew(vtkIdList, cellNeighbor);
+      pd->GetCellEdgeNeighbors(cellId, ptId0, ptId1, cellNeighbor);
+
+      for (int j=0; j<cellNeighbor->GetNumberOfIds(); j++)
+      {
+        int cellNeighborId = cellNeighbor->GetId(j);
+        int cellNeighborValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellNeighborId);
+        if (sameCells->IsId(cellNeighborId) == -1 && cellNeighborValue == sameValue)
+        {
+          sameCells->InsertUniqueId(cellNeighborId);
+          vtkSVSurfaceCenterlineGrouper::GetPointEdgeCells(pd, arrayName, cellNeighborId, pointId, sameCells);
+        }
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
 // GetRegions
 // ----------------------
 int vtkSVSurfaceCenterlineGrouper::GetRegions(vtkPolyData *pd, std::string arrayName,
                                      std::vector<Region> &allRegions)
 {
-
   int numCells = pd->GetNumberOfCells();
   int numPoints = pd->GetNumberOfPoints();
 
@@ -1514,10 +1551,17 @@ int vtkSVSurfaceCenterlineGrouper::GetRegions(vtkPolyData *pd, std::string array
               j = -1;
 
               // Need to cellId to be first in the odd case where the corner point is a two-time corner point
-              overrideCells->InsertNextId(cellId);
-              vtkNew(vtkIdList, tempCells);
+              vtkNew(vtkIdList, addCells);
+              addCells->InsertNextId(cellId);
+              vtkSVSurfaceCenterlineGrouper::GetPointEdgeCells(pd, arrayName, cellId, pointCCWId, addCells);
+              for (int ii=0; ii<addCells->GetNumberOfIds(); ii++)
+              {
+                overrideCells->InsertUniqueId(addCells->GetId(ii));
+              }
 
+              vtkNew(vtkIdList, tempCells);
               pd->GetPointCells(pointCCWId, tempCells);
+
               for (int ii=0; ii<tempCells->GetNumberOfIds(); ii++)
               {
                 overrideCells->InsertUniqueId(tempCells->GetId(ii));
@@ -1832,10 +1876,17 @@ int vtkSVSurfaceCenterlineGrouper::GetSpecificRegions(vtkPolyData *pd, std::stri
               j = -1;
 
               // Need to cellId to be first in the odd case where the corner point is a two-time corner point
-              overrideCells->InsertNextId(cellId);
-              vtkNew(vtkIdList, tempCells);
+              vtkNew(vtkIdList, addCells);
+              addCells->InsertNextId(cellId);
+              vtkSVSurfaceCenterlineGrouper::GetPointEdgeCells(pd, arrayName, cellId, pointCCWId, addCells);
+              for (int ii=0; ii<addCells->GetNumberOfIds(); ii++)
+              {
+                overrideCells->InsertUniqueId(addCells->GetId(ii));
+              }
 
+              vtkNew(vtkIdList, tempCells);
               pd->GetPointCells(pointCCWId, tempCells);
+
               for (int ii=0; ii<tempCells->GetNumberOfIds(); ii++)
               {
                 overrideCells->InsertUniqueId(tempCells->GetId(ii));
