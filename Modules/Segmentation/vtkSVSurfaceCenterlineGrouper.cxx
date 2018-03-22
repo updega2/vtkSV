@@ -371,70 +371,70 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
 
   if (this->EnforceCenterlinesConnectivity)
   {
-    if (this->FixGroupsWithCenterlines(this->WorkPd, this->MergedCenterlines, this->CenterlineGroupIdsArrayName, this->GroupIdsArrayName) != SV_OK)
+    if (this->FixGroupsWithCenterlines(this->WorkPd, this->MergedCenterlines, this->CenterlineGroupIdsArrayName, this->GroupIdsArrayName, this->CenterlineRadiusArrayName, this->UseRadiusInformation) != SV_OK)
     {
       vtkErrorMacro("Error in correcting groups with centerlines");
       return SV_ERROR;
     }
   }
 
-  //if (this->EnforcePolycubeConnectivity)
-  //{
-  //  if (this->FixGroupsWithPolycube() != SV_OK)
-  //  {
-  //    vtkErrorMacro("Error in correcting groups");
-  //    return SV_ERROR;
-  //  }
+  if (this->EnforcePolycubeConnectivity)
+  {
+    if (this->FixGroupsWithPolycube() != SV_OK)
+    {
+      vtkErrorMacro("Error in correcting groups");
+      return SV_ERROR;
+    }
 
-  //  if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  //  {
-  //    vtkErrorMacro("Could not correcto boundaries of surface");
-  //    return SV_ERROR;
-  //  }
+    if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+    {
+      vtkErrorMacro("Could not correcto boundaries of surface");
+      return SV_ERROR;
+    }
 
-  //}
+  }
 
-  //if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not smootho boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro("Could not smootho boundaries of surface");
+    return SV_ERROR;
+  }
 
-  //std::vector<Region> groupRegions;
-  //if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
-  //{
-  //  vtkErrorMacro("Couldn't get group regions");
-  //  return SV_ERROR;
-  //}
-  //if (this->CurveFitBoundaries(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not curve fit boundaries of surface");
-  //  return SV_ERROR;
-  //}
+  std::vector<Region> groupRegions;
+  if (this->GetRegions(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get group regions");
+    return SV_ERROR;
+  }
+  if (this->CurveFitBoundaries(this->WorkPd, this->GroupIdsArrayName, groupRegions) != SV_OK)
+  {
+    vtkErrorMacro("Could not curve fit boundaries of surface");
+    return SV_ERROR;
+  }
 
-  //if (this->EnforcePolycubeConnectivity)
-  //{
-  //  if (this->MatchSurfaceToPolycube() != SV_OK)
-  //  {
-  //    vtkErrorMacro("Couldn't fix stuff\n");
-  //    return SV_ERROR;
-  //  }
+  if (this->EnforcePolycubeConnectivity)
+  {
+    if (this->MatchSurfaceToPolycube() != SV_OK)
+    {
+      vtkErrorMacro("Couldn't fix stuff\n");
+      return SV_ERROR;
+    }
 
-  //  if (this->CheckSlicePoints() != SV_OK)
-  //  {
-  //    vtkErrorMacro("Error when checking slice points\n");
-  //    return SV_ERROR;
-  //  }
-  //}
+    if (this->CheckSlicePoints() != SV_OK)
+    {
+      vtkErrorMacro("Error when checking slice points\n");
+      return SV_ERROR;
+    }
+  }
 
-  //// Get new normals
-  //normaler->SetInputData(this->WorkPd);
-  //normaler->ComputePointNormalsOff();
-  //normaler->ComputeCellNormalsOn();
-  //normaler->SplittingOff();
-  //normaler->Update();
-  //this->WorkPd->DeepCopy(normaler->GetOutput());
-  //this->WorkPd->BuildLinks();
+  // Get new normals
+  normaler->SetInputData(this->WorkPd);
+  normaler->ComputePointNormalsOff();
+  normaler->ComputeCellNormalsOn();
+  normaler->SplittingOff();
+  normaler->Update();
+  this->WorkPd->DeepCopy(normaler->GetOutput());
+  this->WorkPd->BuildLinks();
 
   return SV_OK;
 }
@@ -2556,7 +2556,9 @@ int vtkSVSurfaceCenterlineGrouper::FixRegions(vtkPolyData *pd, std::string array
 int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
                                                             vtkPolyData *centerlines,
                                                             std::string pdArrayName,
-                                                            std::string centerlinesArrayName)
+                                                            std::string centerlinesArrayName,
+                                                            std::string centerlinesRadiusArrayName,
+                                                            int useRadiusInformation)
 {
   int numPoints = centerlines->GetNumberOfPoints();
 
@@ -2591,15 +2593,6 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
   vtkSortDataArray::Sort(groupIds);
   int numGroups = groupIds->GetNumberOfIds();
 
-  std::vector<Region> groupRegions;
-  if (this->GetRegions(pd, pdArrayName.c_str(), groupRegions) != SV_OK)
-  {
-    vtkErrorMacro("Couldn't get group regions");
-    return SV_ERROR;
-  }
-
-  int anyBad = 0;
-
   int goodEdge;
   int centerlineId;
   int isTerminating;
@@ -2608,124 +2601,104 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
   int addNewCenterlines;
   int edgeSize, groupId;
   int cellId;
-  int ptId, ptId0, ptId1, ptIdN;
+  int ptId, ptId0, ptId1, ptIdN, centerPtId;
   int edgeCellId0, edgeCellId1, edgeCellValue0, edgeCellValue1;
+  double pt[3], newCenterPt[3];
   vtkIdType npts, *pts;
   vtkIdType nlinepts, *linepts;
-  std::vector<int> usedPoints(pd->GetNumberOfPoints(), 0);
   vtkNew(vtkIdList, edgeCellIds);
   vtkNew(vtkIdList, frontNeighbors);
   vtkNew(vtkIdList, backNeighbors);
-  for (int g=0; g<numGroups; g++)
+  vtkNew(vtkIdList, point0GroupIds);
+  vtkNew(vtkIdList, pointNGroupIds);
+  vtkPolyData *newCenterlinesPd = NULL;
+
+  int allGood = 0;
+  int maxIters = 3;
+  int iter = 0;
+  while (!allGood && iter < maxIters+1)
   {
-    needFix = 0;
+    vtkDebugMacro("ENFORCE CENTERLINE CONNECTIVITY ITERATION " << iter);
+    allGood = 1;
 
-    groupId = groupIds->GetId(g);
-
-    centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->CenterlineGroupIdsArrayName)->LookupValue(groupId);
-    this->MergedCenterlines->GetCellPoints(centerlineId, nlinepts, linepts);
-    isTerminating = 1;
-
-    this->MergedCenterlines->GetPointCells(linepts[0], frontNeighbors);
-    vtkNew(vtkIdList, frontGroupNeighbors);
-    for (int j=0; j<frontNeighbors->GetNumberOfIds(); j++)
+    std::vector<Region> groupRegions;
+    if (this->GetRegions(pd, pdArrayName.c_str(), groupRegions) != SV_OK)
     {
-      if (frontNeighbors->GetId(j) != centerlineId)
-      {
-        frontGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
-          this->CenterlineGroupIdsArrayName)->GetTuple1(frontNeighbors->GetId(j)));
-      }
+      vtkErrorMacro("Couldn't get group regions");
+      return SV_ERROR;
     }
 
-    this->MergedCenterlines->GetPointCells(linepts[nlinepts-1], backNeighbors);
-    vtkNew(vtkIdList, backGroupNeighbors);
-    for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
+    for (int g=0; g<numGroups; g++)
     {
-      if (backNeighbors->GetId(j) != centerlineId)
+      needFix = 0;
+
+      groupId = groupIds->GetId(g);
+      vtkDebugMacro("CHECKING GROUP " << groupId);
+
+      centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->CenterlineGroupIdsArrayName)->LookupValue(groupId);
+      this->MergedCenterlines->GetCellPoints(centerlineId, nlinepts, linepts);
+      isTerminating = 1;
+
+      this->MergedCenterlines->GetPointCells(linepts[0], frontNeighbors);
+      vtkNew(vtkIdList, frontGroupNeighbors);
+      for (int j=0; j<frontNeighbors->GetNumberOfIds(); j++)
       {
-        backGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
-          this->CenterlineGroupIdsArrayName)->GetTuple1(backNeighbors->GetId(j)));
-      }
-    }
-    if (backNeighbors->GetNumberOfIds() != 1 && frontNeighbors->GetNumberOfIds() != 1)
-      isTerminating = 0;
-
-    groupCount = 0;
-    for (int i=0; i<groupRegions.size(); i++)
-    {
-      if (groupRegions[i].IndexCluster == groupId)
-      {
-        groupCount++;
-      }
-    }
-
-    if (groupCount == 0)
-    {
-      vtkWarningMacro("THERE ARE NO CELLS ON SURFACE FOR GROUP "<< groupId);
-      needFix = 1;
-    }
-
-    if (groupCount > 1)
-    {
-      vtkWarningMacro("EXPECTED ONE EXTRACTED REGION FOR GROUP "<< groupId << ", BUT THERE ARE " << groupCount << " REGIONS");
-      needFix = 1;
-    }
-
-    std::vector<int> pointEdgeId(pd->GetNumberOfPoints(), 0);
-    edgeCount = 0;
-    for (int i=0; i<groupRegions.size(); i++)
-    {
-      if (groupRegions[i].IndexCluster != groupId)
-      {
-        continue;
-      }
-
-      edgeStartId = groupRegions[i].BoundaryEdges[0][0];
-      for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
-      {
-        edgeSize = groupRegions[i].BoundaryEdges[j].size();
-
-        for (int k=0; k<edgeSize; k++)
+        if (frontNeighbors->GetId(j) != centerlineId)
         {
-          ptId = groupRegions[i].BoundaryEdges[j][k];
-          pointEdgeId[ptId] = edgeCount;
-        }
-
-        ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
-        if (ptIdN == edgeStartId)
-        {
-          edgeCount++;
-          if (j+1 < groupRegions[i].BoundaryEdges.size())
-          {
-            edgeStartId = groupRegions[i].BoundaryEdges[j+1][0];
-          }
+          frontGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
+            this->CenterlineGroupIdsArrayName)->GetTuple1(frontNeighbors->GetId(j)));
         }
       }
-    }
 
-    if (isTerminating)
-    {
-      if (edgeCount != 1)
+      this->MergedCenterlines->GetPointCells(linepts[nlinepts-1], backNeighbors);
+      vtkNew(vtkIdList, backGroupNeighbors);
+      for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
       {
-        vtkErrorMacro("EXPECTED ONE EDGE ON TERMINATING GROUP "<< groupId << ", BUT THERE ARE " << edgeCount << " EDGES");
-        return SV_ERROR;
+        if (backNeighbors->GetId(j) != centerlineId)
+        {
+          backGroupNeighbors->InsertNextId(this->MergedCenterlines->GetCellData()->GetArray(
+            this->CenterlineGroupIdsArrayName)->GetTuple1(backNeighbors->GetId(j)));
+        }
       }
-    }
-    else
-    {
-      if (edgeCount != 2)
+      if (backNeighbors->GetNumberOfIds() != 1 && frontNeighbors->GetNumberOfIds() != 1)
+        isTerminating = 0;
+
+      groupCount = 0;
+      for (int i=0; i<groupRegions.size(); i++)
       {
-        vtkWarningMacro("EXPECTED TWO EDGES ON NON-TERMINATING GROUP "<< groupId << ", BUT THERE IS/ARE " << edgeCount << " EDGE/S");
+        if (groupRegions[i].IndexCluster == groupId)
+        {
+          groupCount++;
+        }
+      }
+
+      if (groupCount == 0)
+      {
+        vtkWarningMacro("THERE ARE NO CELLS ON SURFACE FOR GROUP "<< groupId);
         needFix = 1;
       }
 
-      badGroup = 0;
+      if (groupCount > 1)
+      {
+        vtkWarningMacro("EXPECTED ONE EXTRACTED REGION FOR GROUP "<< groupId << ", BUT THERE ARE " << groupCount << " REGIONS");
+        needFix = 1;
+      }
+
+      std::vector<int> pointEdgeId(pd->GetNumberOfPoints(), 0);
+      edgeCount = 0;
       for (int i=0; i<groupRegions.size(); i++)
       {
         if (groupRegions[i].IndexCluster != groupId)
         {
           continue;
         }
+
+        if (groupRegions[i].BoundaryEdges.size() <= 0)
+        {
+          continue;
+        }
+
+        edgeStartId = groupRegions[i].BoundaryEdges[0][0];
         for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
         {
           edgeSize = groupRegions[i].BoundaryEdges[j].size();
@@ -2733,96 +2706,322 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
           for (int k=0; k<edgeSize; k++)
           {
             ptId = groupRegions[i].BoundaryEdges[j][k];
-            if (pointEdgeId[ptId] == 0)
+            pointEdgeId[ptId] = edgeCount;
+          }
+
+          ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
+          if (ptIdN == edgeStartId)
+          {
+            edgeCount++;
+            if (j+1 < groupRegions[i].BoundaryEdges.size())
             {
-              pd->GetPointCells(ptId, pointCellIds);
-              for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+              edgeStartId = groupRegions[i].BoundaryEdges[j+1][0];
+            }
+          }
+        }
+      }
+
+      if (isTerminating)
+      {
+        if (edgeCount != 1)
+        {
+          vtkErrorMacro("EXPECTED ONE EDGE ON TERMINATING GROUP "<< groupId << ", BUT THERE ARE " << edgeCount << " EDGES");
+          return SV_ERROR;
+        }
+      }
+      else
+      {
+        if (edgeCount != 2)
+        {
+          vtkWarningMacro("EXPECTED TWO EDGES ON NON-TERMINATING GROUP "<< groupId << ", BUT THERE IS/ARE " << edgeCount << " EDGE/S");
+          needFix = 1;
+        }
+
+        badGroup = 0;
+        for (int i=0; i<groupRegions.size(); i++)
+        {
+          if (groupRegions[i].IndexCluster != groupId)
+          {
+            continue;
+          }
+          for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
+          {
+            edgeSize = groupRegions[i].BoundaryEdges[j].size();
+
+            for (int k=0; k<edgeSize; k++)
+            {
+              ptId = groupRegions[i].BoundaryEdges[j][k];
+              if (pointEdgeId[ptId] == 0)
               {
-                cellId = pointCellIds->GetId(l);
-                pd->GetCellPoints(cellId, npts, pts);
-                for (int m=0; m<npts; m++)
+                pd->GetPointCells(ptId, pointCellIds);
+                for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
                 {
-                  if (pointEdgeId[pts[m]] != 0)
+                  cellId = pointCellIds->GetId(l);
+                  pd->GetCellPoints(cellId, npts, pts);
+                  for (int m=0; m<npts; m++)
                   {
-                    badGroup = 1;
-                    break;
+                    if (pointEdgeId[pts[m]] != 0)
+                    {
+                      badGroup = 1;
+                      break;
+                    }
                   }
                 }
               }
             }
           }
         }
+
+        if (badGroup)
+        {
+          vtkWarningMacro("NON-TERMINATING GROUP "<< groupId << " IS ONLY ONE CELL THICK IN AT LEAST ONE LOCATION");
+          needFix = 1;
+        }
       }
 
-      if (badGroup)
+      if (needFix)
       {
-        vtkWarningMacro("NON-TERMINATING GROUP "<< groupId << " IS ONLY ONE CELL THICK IN AT LEAST ONE LOCATION");
-        needFix = 1;
+        allGood = 0;
+
+        if (newCenterlinesPd == NULL)
+        {
+          newCenterlinesPd = vtkPolyData::New();
+          newCenterlinesPd->DeepCopy(centerlines);
+        }
+
+        vtkNew(vtkPoints, newCenterlinePts);
+        centerPtId = linepts[nlinepts/2];
+        centerlines->GetPoint(centerPtId, newCenterPt);
+
+        vtkDebugMacro("TRYING TO DO FIX FOR GROUP " << groupId);
+        std::vector<int> pointUsed(pd->GetNumberOfPoints(), 0);
+        for (int i=0; i<groupRegions.size(); i++)
+        {
+          for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
+          {
+            edgeSize = groupRegions[i].BoundaryEdges[j].size();
+
+            ptId0 = groupRegions[i].BoundaryEdges[j][0];
+            ptId1 = groupRegions[i].BoundaryEdges[j][1];
+            ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
+
+            if (pointUsed[ptId0] && pointUsed[ptIdN])
+            {
+              continue;
+            }
+
+            vtkSVGeneralUtils::GetPointCellsValues(pd, pdArrayName, ptId0, point0GroupIds);
+            vtkSVGeneralUtils::GetPointCellsValues(pd, pdArrayName, ptIdN, pointNGroupIds);
+
+            if (point0GroupIds->IsId(groupId) == -1 && pointNGroupIds->IsId(groupId) == -1)
+            {
+              continue;
+            }
+
+            pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, edgeCellIds);
+
+            goodEdge = 0;
+
+            if (edgeCellIds->GetNumberOfIds() == 2)
+            {
+              edgeCellId0 = edgeCellIds->GetId(0);
+              edgeCellValue0 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId0);
+              edgeCellId1 = edgeCellIds->GetId(1);
+              edgeCellValue1 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId1);
+
+              for (int k=0; k<splitGroupIds.size(); k++)
+              {
+                for (int l=0; l<splitGroupIds[k].size(); l++)
+                {
+                  if(std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue0) != splitGroupIds[k].end() &&
+                     std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue1) != splitGroupIds[k].end())
+                  {
+                    goodEdge = 1;
+                  }
+                }
+              }
+            }
+
+            if (!goodEdge)
+            {
+              pointUsed[ptId0] = 1;
+              pointUsed[ptIdN] = 1;
+              if (edgeCellIds->GetNumberOfIds() != 2)
+              {
+                vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because not two cells on edge");
+              }
+              else
+              {
+                vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because values " << edgeCellValue0 << " and " << edgeCellValue1 << " do not exist in centerline connectivity");
+
+                for (int k=0; k<edgeSize; k++)
+                {
+                  ptId = groupRegions[i].BoundaryEdges[j][k];
+                  pd->GetPoint(ptId, pt);
+
+                  newCenterlinePts->InsertNextPoint(pt);
+                }
+              }
+            }
+          }
+
+          if (groupRegions[i].IndexCluster != groupId)
+          {
+            continue;
+          }
+          for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
+          {
+            edgeSize = groupRegions[i].BoundaryEdges[j].size();
+
+            for (int k=0; k<edgeSize; k++)
+            {
+              ptId = groupRegions[i].BoundaryEdges[j][k];
+              if (pointEdgeId[ptId] == 0)
+              {
+                pd->GetPointCells(ptId, pointCellIds);
+                for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+                {
+                  cellId = pointCellIds->GetId(l);
+                  pd->GetCellPoints(cellId, npts, pts);
+                  for (int m=0; m<npts; m++)
+                  {
+                    if (pointEdgeId[pts[m]] != 0)
+                    {
+                      pd->GetPoint(ptId, pt);
+                      newCenterlinePts->InsertNextPoint(pt);
+
+                      pd->GetPoint(pts[m], pt);
+                      newCenterlinePts->InsertNextPoint(pt);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        int numNewCenterlinePts = newCenterlinePts->GetNumberOfPoints();
+
+        vtkNew(vtkPolyData, tmpCenterlinesPd);
+        tmpCenterlinesPd->DeepCopy(newCenterlinesPd);
+        tmpCenterlinesPd->BuildLinks();
+
+        vtkNew(vtkPoints, newPoints);
+        vtkNew(vtkPointData, newPointData);
+        newPointData->CopyAllocate(tmpCenterlinesPd->GetPointData(),
+                                   tmpCenterlinesPd->GetNumberOfPoints() + 2*numNewCenterlinePts);
+
+        vtkNew(vtkCellArray, newCells);
+        vtkNew(vtkCellData, newCellData);
+        newCellData->CopyAllocate(tmpCenterlinesPd->GetCellData(),
+                                  tmpCenterlinesPd->GetNumberOfPoints() + numNewCenterlinePts);
+
+        int newPointId;
+        for (int j=0; j<tmpCenterlinesPd->GetNumberOfPoints(); j++)
+        {
+          newPointId = newPoints->InsertNextPoint(tmpCenterlinesPd->GetPoint(j));
+          newPointData->CopyData(tmpCenterlinesPd->GetPointData(), j, newPointId);
+        }
+
+        int newCellId;
+        for (int j=0; j<tmpCenterlinesPd->GetNumberOfCells(); j++)
+        {
+          vtkNew(vtkPolyLine, newLine);
+          newLine->GetPointIds()->DeepCopy(tmpCenterlinesPd->GetCell(j)->GetPointIds());
+          newCellId = newCells->InsertNextCell(newLine);
+          newCellData->CopyData(tmpCenterlinesPd->GetCellData(), j, newCellId);
+        }
+
+        double radiusValAtCenter = tmpCenterlinesPd->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(centerPtId);
+        vtkNew(vtkPolyLine, newPts0);
+        for (int j=0; j<newCenterlinePts->GetNumberOfPoints(); j++)
+        {
+          ptId0 = newPoints->InsertNextPoint(newCenterPt);
+          ptId1 = newPoints->InsertNextPoint(newCenterlinePts->GetPoint(j));
+
+          vtkNew(vtkPolyLine, newPts0);
+          newPts0->GetPointIds()->InsertNextId(ptId0);
+          newPts0->GetPointIds()->InsertNextId(ptId1);
+          newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId0);
+          newPointData->CopyData(tmpCenterlinesPd->GetPointData(), centerPtId, ptId1);
+          newPointData->GetArray(this->CenterlineRadiusArrayName)->SetTuple1(ptId1, 0.2*radiusValAtCenter);
+
+          newCellId = newCells->InsertNextCell(newPts0);
+          newCellData->CopyData(tmpCenterlinesPd->GetCellData(), centerlineId, newCellId);
+        }
+
+        newPointData->Squeeze();
+        newCellData->Squeeze();
+
+        tmpCenterlinesPd->Reset();
+        tmpCenterlinesPd->SetPoints(newPoints);
+        tmpCenterlinesPd->SetLines(newCells);
+
+        tmpCenterlinesPd->GetPointData()->PassData(newPointData);
+        tmpCenterlinesPd->GetCellData()->PassData(newCellData);
+        tmpCenterlinesPd->BuildLinks();
+
+        newCenterlinesPd->DeepCopy(tmpCenterlinesPd);
       }
     }
 
-    if (needFix)
-      anyBad = 1;
+    if (!allGood && iter < maxIters)
+    {
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYSURFACEDUMBNEWCENTERLINES.vtp", newCenterlinesPd);
+      // Now re-segment with these new centerlines
+      int stopCellNumber = ceil(pd->GetNumberOfCells()*0.0001);
+      vtkNew(vtkSVCenterlinesEdgeWeightedCVT, betterCVT);
+      betterCVT->SetInputData(pd);
+      betterCVT->SetGenerators(newCenterlinesPd);
+      betterCVT->SetNumberOfRings(2);
+      betterCVT->SetThreshold(stopCellNumber);
+      betterCVT->SetUseCurvatureWeight(0);
+      betterCVT->SetPatchIdsArrayName(pdArrayName.c_str());
+      betterCVT->SetCVTDataArrayName("Normals");
+      betterCVT->SetGroupIdsArrayName(pdArrayName.c_str());
+      betterCVT->SetCenterlineRadiusArrayName(centerlinesRadiusArrayName.c_str());
+      betterCVT->SetUsePointNormal(1);
+      betterCVT->SetUseRadiusInformation(useRadiusInformation);
+      betterCVT->SetMaximumNumberOfIterations(0);
+      betterCVT->Update();
 
-    //for (int i=0; i<groupRegions.size(); i++)
-    //{
-    //  for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
-    //  {
-    //    edgeSize = groupRegions[i].BoundaryEdges[j].size();
+      pd->DeepCopy(betterCVT->GetOutput());
+      std::string workfn = "/Users/adamupdegrove/Desktop/tmp/WHATEVERWHATEVER_"+std::to_string(iter)+".vtp";
+      vtkSVIOUtils::WriteVTPFile(workfn, pd);
 
-    //    ptId0 = groupRegions[i].BoundaryEdges[j][0];
-    //    ptId1 = groupRegions[i].BoundaryEdges[j][1];
-    //    ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
+      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(pd, pdArrayName.c_str()) != SV_OK)
+      {
+        vtkErrorMacro("Could not correcto boundaries of surface");
+        return SV_ERROR;
+      }
 
-    //    if (usedPoints[ptId0] && usedPoints[ptIdN])
-    //      continue;
+      if (vtkSVSurfaceCenterlineGrouper::RemoveNegativeGroups(pd, pdArrayName.c_str()) != SV_OK)
+      {
+        vtkErrorMacro("Couldn't remove negative group regions");
+        return SV_ERROR;
+      }
 
-    //    pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, edgeCellIds);
-
-    //    goodEdge = 0;
-
-    //    if (edgeCellIds->GetNumberOfIds() == 2)
-    //    {
-    //      edgeCellId0 = edgeCellIds->GetId(0);
-    //      edgeCellValue0 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId0);
-    //      edgeCellId1 = edgeCellIds->GetId(1);
-    //      edgeCellValue1 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId1);
-
-    //      for (int k=0; k<splitGroupIds.size(); k++)
-    //      {
-    //        for (int l=0; l<splitGroupIds[k].size(); l++)
-    //        {
-    //          if(std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue0) != splitGroupIds[k].end() &&
-    //             std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue1) != splitGroupIds[k].end())
-    //          {
-    //            goodEdge = 1;
-    //          }
-    //        }
-    //      }
-    //    }
-
-    //    if (!goodEdge)
-    //    {
-    //      usedPoints[ptId0] = 1;
-    //      usedPoints[ptIdN] = 1;
-
-    //      if (edgeCellIds->GetNumberOfIds() != 2)
-    //      {
-    //        vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because not two cells on edge");
-    //      }
-    //      else
-    //      {
-    //        vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because values " << edgeCellValue0 << " and " << edgeCellValue1 << " do not exist in centerline connectivity");
-    //      }
-    //    }
-    //  }
-    //}
+      if (vtkSVSurfaceCenterlineGrouper::RemoveDuplicateGroups(pd, pdArrayName.c_str()) != SV_OK)
+      {
+        vtkErrorMacro("Couldn't remove duplicate group regions");
+        return SV_ERROR;
+      }
+    }
+    iter++;
   }
 
-  if (anyBad)
+  if (newCenterlinesPd != NULL)
   {
+    newCenterlinesPd->Delete();
+  }
+
+  if (!allGood)
+  {
+    vtkErrorMacro("Correction of groups failed");
     return SV_ERROR;
   }
+
+  vtkDebugMacro("PASSED CENTERLINE CONNECTIVITY");
 
   return SV_OK;
 }

@@ -243,7 +243,9 @@ protected:
   int FixGroupsWithCenterlines(vtkPolyData *pd,
                                vtkPolyData *centerlines,
                                std::string pdArrayName,
-                               std::string centerlinesArrayName);
+                               std::string centerlinesArrayName,
+                               std::string centerlinesRadiusArrayName,
+                               int useRadiusInformation);
 
   int GetCellRingNeighbors(vtkPolyData *pd,
                            vtkIdList *cellIds,
