@@ -1586,7 +1586,6 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
   if (testDot < -1.0 + 1.0e-6 && testDot > -1.0 - 1.0e-6)
   {
     //Need to get opposite of vec2
-    fprintf(stdout,"ITSSS ZEROOO!\n");
     double tmpVec[3];
     for (int i=0; i<3; i++)
     {
@@ -1598,9 +1597,7 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
     vtkMath::Subtract(tmpVec, vec2, midVec);
   }
 
-  fprintf(stdout,"ADDITION!: %.9f %.9f %.9f\n", midVec[0], midVec[1], midVec[2]);
   vtkMath::Normalize(midVec);
-  fprintf(stdout,"ADDITION!: %.9f %.9f %.9f\n", midVec[0], midVec[1], midVec[2]);
 
   // Get the angle between
   double perpVec[3];
@@ -1608,13 +1605,7 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
   double ang = atan2(vtkMath::Norm(perpVec), vtkMath::Dot(vec0, vec1));
 
   double midLength;
-  //// TODO: CHECK ON THIS BECAUSE IM NOT SO SURE THAT THIS IS BAD,
-  //// I THINK I NEED IT BUT TBD LATER
-  //if (dotCheck > 0)
-  //{
-  //  vtkMath::MultiplyScalar(midVec, -1.0);
-  //  midLength = factor / ( cos(ang/2.));
-  //}
+
   if (sin(ang/2.) > -1.0e-6 && sin(ang/2.) < 1.0e-6)
     midLength = factor;
   else

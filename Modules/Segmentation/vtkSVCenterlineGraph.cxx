@@ -824,6 +824,14 @@ int vtkSVCenterlineGraph::GetGraphPoints()
       length += vtkSVMathUtils::Distance(pt0, pt1);
     }
 
+    // Get end point from new direction
+    double minLength;
+    this->ComputeMinimumLength(gCell, minLength);
+    //fprintf(stdout,"SEE LENGTH: %.6f\n", length);
+    //fprintf(stdout,"SEE CALCULATED MIN LENGTH: %.6f\n", minLength);
+    if (minLength > length)
+      length = minLength;
+
     vtkSVCenterlineGCell *parent = gCell->Parent;
     if (parent == NULL)
     {
@@ -1241,13 +1249,6 @@ int vtkSVCenterlineGraph::GetGraphPoints()
       this->RotateVecAroundLine(rotateVec, rotationAngle, crossVec, lineDir);
       vtkMath::Normalize(lineDir);
 
-      // Get end point from new direction
-      double minLength;
-      this->ComputeMinimumLength(gCell, minLength);
-      //fprintf(stdout,"SEE LENGTH: %.6f\n", length);
-      //fprintf(stdout,"SEE CALCULATED MIN LENGTH: %.6f\n", minLength);
-      if (minLength > length)
-        length = minLength;
       vtkMath::MultiplyScalar(lineDir, length);
       vtkMath::Add(gCell->StartPt, lineDir, gCell->EndPt);
     }
@@ -1833,6 +1834,7 @@ int vtkSVCenterlineGraph::ComputeMinimumLength(vtkSVCenterlineGCell *gCell, doub
   {
     vtkSVCenterlineGCell *parent = gCell->Parent;
 
+    double tmpLength;
     for (int i=0; i<parent->Children.size(); i++)
     {
       if (parent->Children[i] == gCell)
@@ -1840,7 +1842,7 @@ int vtkSVCenterlineGraph::ComputeMinimumLength(vtkSVCenterlineGCell *gCell, doub
 
       vtkSVCenterlineGCell *brother = parent->Children[i];
 
-      double broAng = -1.0;
+      double broAng = SV_PI * 45.0 / 180.0;
       if (brother->BranchDir == gCell->BranchDir)
       {
         broAng = fabs(brother->RefAngle - gCell->RefAngle);
@@ -1850,13 +1852,27 @@ int vtkSVCenterlineGraph::ComputeMinimumLength(vtkSVCenterlineGCell *gCell, doub
         broAng = (SV_PI - brother->RefAngle) + (SV_PI - gCell->RefAngle);
       }
 
-      double tmpLength = (this->CubeSize/2.) / ( sin(broAng/2.));
+      if (sin(broAng/2.) > -1.0e-6 && sin(broAng/2.) < 1.0e-6)
+        tmpLength = this->CubeSize/2.;
+      else
+        tmpLength = (this->CubeSize/2.) / ( sin(broAng/2.));
 
       if (tmpLength > minTopLength)
       {
         minTopLength = tmpLength;
       }
     }
+
+    if (sin(gCell->RefAngle/2.) > -1.0e-6 && sin(gCell->RefAngle/2.) < 1.0e-6)
+      tmpLength = this->CubeSize/2.;
+    else
+      tmpLength = (this->CubeSize/2.) / ( sin(gCell->RefAngle/2.));
+
+    if (tmpLength > minTopLength)
+    {
+      minTopLength = tmpLength;
+    }
+
   }
 
   // Get all children
@@ -1867,7 +1883,11 @@ int vtkSVCenterlineGraph::ComputeMinimumLength(vtkSVCenterlineGCell *gCell, doub
     vtkSVCenterlineGCell *child = gCell->Children[i];
     double childAng = child->RefAngle;
 
-    double tmpLength = (this->CubeSize/2.) / ( sin(childAng/2.));
+    double tmpLength;
+    if (sin(childAng/2.) > -1.0e-6 && sin(childAng/2.) < 1.0e-6)
+      tmpLength = this->CubeSize/2.;
+    else
+      tmpLength = (this->CubeSize/2.) / ( sin(childAng/2.));
 
     if (tmpLength > minBottomLength)
     {
@@ -1876,6 +1896,7 @@ int vtkSVCenterlineGraph::ComputeMinimumLength(vtkSVCenterlineGCell *gCell, doub
   }
 
   minLength = minTopLength + minBottomLength;
+  minLength *= 1.1;
 
   return SV_OK;
 }

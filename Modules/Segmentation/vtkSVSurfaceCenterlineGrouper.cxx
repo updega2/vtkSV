@@ -2418,7 +2418,7 @@ int vtkSVSurfaceCenterlineGrouper::RemoveDuplicateGroups(vtkPolyData *pd, std::s
     {
       if (multipleGroups[i] == groupRegions[j].IndexCluster && j != maxPatch)
       {
-        if (groupRegions[i].NumberOfElements == 1)
+        if (groupRegions[j].NumberOfElements == 1)
         {
           badSingleElementPatches.push_back(j);
         }
@@ -2737,7 +2737,8 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
         if (edgeCount != 1)
         {
           vtkErrorMacro("EXPECTED ONE EDGE ON TERMINATING GROUP "<< groupId << ", BUT THERE ARE " << edgeCount << " EDGES");
-          return SV_ERROR;
+          needFix = 1;
+          //return SV_ERROR;
         }
       }
       else
@@ -2804,151 +2805,169 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
         centerPtId = linepts[nlinepts/2];
         centerlines->GetPoint(centerPtId, newCenterPt);
 
-        vtkDebugMacro("TRYING TO DO FIX FOR GROUP " << groupId);
-        std::vector<int> pointUsed(pd->GetNumberOfPoints(), 0);
-        for (int i=0; i<groupRegions.size(); i++)
+        if (!allGood && iter < maxIters)
         {
-          // ================FIX FOR BAD EDGES NEAR GROUP====================
-          for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
+          vtkDebugMacro("TRYING TO DO FIX FOR GROUP " << groupId);
+          std::vector<int> pointUsed(pd->GetNumberOfPoints(), 0);
+          for (int i=0; i<groupRegions.size(); i++)
           {
-            edgeSize = groupRegions[i].BoundaryEdges[j].size();
-
-            ptId0 = groupRegions[i].BoundaryEdges[j][0];
-            ptId1 = groupRegions[i].BoundaryEdges[j][1];
-            ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
-
-            if (pointUsed[ptId0] && pointUsed[ptIdN])
+            // ================FIX FOR BAD EDGES NEAR GROUP====================
+            for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
             {
-              continue;
-            }
+              edgeSize = groupRegions[i].BoundaryEdges[j].size();
 
-            vtkSVGeneralUtils::GetPointCellsValues(pd, pdArrayName, ptId0, point0GroupIds);
-            vtkSVGeneralUtils::GetPointCellsValues(pd, pdArrayName, ptIdN, pointNGroupIds);
+              ptId0 = groupRegions[i].BoundaryEdges[j][0];
+              ptId1 = groupRegions[i].BoundaryEdges[j][1];
+              ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
 
-            if (point0GroupIds->IsId(groupId) == -1 && pointNGroupIds->IsId(groupId) == -1)
-            {
-              continue;
-            }
-
-            pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, edgeCellIds);
-
-            goodEdge = 0;
-
-            if (edgeCellIds->GetNumberOfIds() == 2)
-            {
-              edgeCellId0 = edgeCellIds->GetId(0);
-              edgeCellValue0 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId0);
-              edgeCellId1 = edgeCellIds->GetId(1);
-              edgeCellValue1 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId1);
-
-              for (int k=0; k<splitGroupIds.size(); k++)
+              if (pointUsed[ptId0] && pointUsed[ptIdN])
               {
-                for (int l=0; l<splitGroupIds[k].size(); l++)
+                continue;
+              }
+
+              vtkSVGeneralUtils::GetPointCellsValues(pd, pdArrayName, ptId0, point0GroupIds);
+              vtkSVGeneralUtils::GetPointCellsValues(pd, pdArrayName, ptIdN, pointNGroupIds);
+
+              if (point0GroupIds->IsId(groupId) == -1 && pointNGroupIds->IsId(groupId) == -1)
+              {
+                continue;
+              }
+
+              pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, edgeCellIds);
+
+              goodEdge = 0;
+
+              if (edgeCellIds->GetNumberOfIds() == 2)
+              {
+                edgeCellId0 = edgeCellIds->GetId(0);
+                edgeCellValue0 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId0);
+                edgeCellId1 = edgeCellIds->GetId(1);
+                edgeCellValue1 = pd->GetCellData()->GetArray(pdArrayName.c_str())->GetTuple1(edgeCellId1);
+
+                for (int k=0; k<splitGroupIds.size(); k++)
                 {
-                  if(std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue0) != splitGroupIds[k].end() &&
-                     std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue1) != splitGroupIds[k].end())
+                  for (int l=0; l<splitGroupIds[k].size(); l++)
                   {
-                    goodEdge = 1;
+                    if(std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue0) != splitGroupIds[k].end() &&
+                       std::find(splitGroupIds[k].begin(), splitGroupIds[k].end(), edgeCellValue1) != splitGroupIds[k].end())
+                    {
+                      goodEdge = 1;
+                    }
                   }
                 }
               }
-            }
 
-            if (!goodEdge)
-            {
-              pointUsed[ptId0] = 1;
-              pointUsed[ptIdN] = 1;
-              if (edgeCellIds->GetNumberOfIds() != 2)
+              if (!goodEdge)
               {
-                vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because not two cells on edge");
-              }
-              else
-              {
-                vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because values " << edgeCellValue0 << " and " << edgeCellValue1 << " do not exist in centerline connectivity");
-
-                for (int k=0; k<edgeSize; k++)
+                pointUsed[ptId0] = 1;
+                pointUsed[ptIdN] = 1;
+                if (edgeCellIds->GetNumberOfIds() != 2)
                 {
-                  ptId = groupRegions[i].BoundaryEdges[j][k];
-                  //pd->GetPoint(ptId, pt);
+                  vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because not two cells on edge");
+                }
+                else
+                {
+                  vtkWarningMacro("Bad edge of group " << groupRegions[i].IndexCluster << " because values " << edgeCellValue0 << " and " << edgeCellValue1 << " do not exist in centerline connectivity");
 
-                  //newCenterlinePts->InsertNextPoint(pt);
-
-                  pd->GetPointCells(ptId, pointCellIds);
-                  for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+                  int connectedGroup = 0;
+                  if ((frontGroupNeighbors->IsId(edgeCellValue0) != -1 &&
+                      backGroupNeighbors->IsId(edgeCellValue1) != -1) ||
+                      (frontGroupNeighbors->IsId(edgeCellValue1) != -1 &&
+                       backGroupNeighbors->IsId(edgeCellValue0) != -1))
                   {
-                    cellId = pointCellIds->GetId(l);
-                    for (int m=0; m<ringNeighbors[cellId].size(); m++)
+                    connectedGroup = 1;
+                  }
+                  // Just enforce the fix edges to part of front and back neighbor
+                  // groups for the frist five iterations, then get more aggresive
+                  if (!connectedGroup && iter < 5)
+                  {
+                    continue;
+                  }
+
+                  for (int k=0; k<edgeSize; k++)
+                  {
+                    ptId = groupRegions[i].BoundaryEdges[j][k];
+                    //pd->GetPoint(ptId, pt);
+
+                    //newCenterlinePts->InsertNextPoint(pt);
+
+                    pd->GetPointCells(ptId, pointCellIds);
+                    for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
                     {
-                      pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][m], groupId);
+                      cellId = pointCellIds->GetId(l);
+                      for (int m=0; m<ringNeighbors[cellId].size(); m++)
+                      {
+                        pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][m], groupId);
+                      }
                     }
                   }
                 }
               }
             }
-          }
 
-          if (groupRegions[i].IndexCluster != groupId)
-          {
-            continue;
-          }
-
-          // ================FIX FOR TOUCHING CORNERS========================
-          vtkNew(vtkIdList, uniqueCorners);
-          std::vector<int> fixCorners;
-          for (int j=0; j<groupRegions[i].CornerPoints.size(); j++)
-          {
-            ptId = groupRegions[i].CornerPoints[j];
-            if (uniqueCorners->IsId(ptId) == -1)
+            if (groupRegions[i].IndexCluster != groupId)
             {
-              uniqueCorners->InsertNextId(ptId);
+              continue;
             }
-            else
-            {
-              fixCorners.push_back(ptId);
-            }
-          }
 
-          for (int j=0; j<fixCorners.size(); j++)
-          {
-            ptId = fixCorners[j];
-            pd->GetPointCells(ptId, pointCellIds);
-            for (int k=0; k<pointCellIds->GetNumberOfIds(); k++)
+            // ================FIX FOR TOUCHING CORNERS========================
+            vtkNew(vtkIdList, uniqueCorners);
+            std::vector<int> fixCorners;
+            for (int j=0; j<groupRegions[i].CornerPoints.size(); j++)
             {
-              cellId = pointCellIds->GetId(k);
-              for (int l=0; l<ringNeighbors[cellId].size(); l++)
+              ptId = groupRegions[i].CornerPoints[j];
+              if (uniqueCorners->IsId(ptId) == -1)
               {
-                pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][l], groupId);
+                uniqueCorners->InsertNextId(ptId);
+              }
+              else
+              {
+                fixCorners.push_back(ptId);
               }
             }
-          }
 
-          // ================FIX FOR ONE CELL THICK REGION===================
-          for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
-          {
-            edgeSize = groupRegions[i].BoundaryEdges[j].size();
-
-            for (int k=0; k<edgeSize; k++)
+            for (int j=0; j<fixCorners.size(); j++)
             {
-              ptId = groupRegions[i].BoundaryEdges[j][k];
-              if (pointEdgeId[ptId] == 0)
+              ptId = fixCorners[j];
+              pd->GetPointCells(ptId, pointCellIds);
+              for (int k=0; k<pointCellIds->GetNumberOfIds(); k++)
               {
-                pd->GetPointCells(ptId, pointCellIds);
-                for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+                cellId = pointCellIds->GetId(k);
+                for (int l=0; l<ringNeighbors[cellId].size(); l++)
                 {
-                  cellId = pointCellIds->GetId(l);
-                  pd->GetCellPoints(cellId, npts, pts);
-                  for (int m=0; m<npts; m++)
-                  {
-                    if (pointEdgeId[pts[m]] != 0)
-                    {
-                      //pd->GetPoint(ptId, pt);
-                      //newCenterlinePts->InsertNextPoint(pt);
+                  pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][l], groupId);
+                }
+              }
+            }
 
-                      //pd->GetPoint(pts[m], pt);
-                      //newCenterlinePts->InsertNextPoint(pt);
-                      for (int n=0; n<ringNeighbors[cellId].size(); n++)
+            // ================FIX FOR ONE CELL THICK REGION===================
+            for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
+            {
+              edgeSize = groupRegions[i].BoundaryEdges[j].size();
+
+              for (int k=0; k<edgeSize; k++)
+              {
+                ptId = groupRegions[i].BoundaryEdges[j][k];
+                if (pointEdgeId[ptId] == 0)
+                {
+                  pd->GetPointCells(ptId, pointCellIds);
+                  for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+                  {
+                    cellId = pointCellIds->GetId(l);
+                    pd->GetCellPoints(cellId, npts, pts);
+                    for (int m=0; m<npts; m++)
+                    {
+                      if (pointEdgeId[pts[m]] != 0)
                       {
-                        pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][n], groupId);
+                        //pd->GetPoint(ptId, pt);
+                        //newCenterlinePts->InsertNextPoint(pt);
+
+                        //pd->GetPoint(pts[m], pt);
+                        //newCenterlinePts->InsertNextPoint(pt);
+                        for (int n=0; n<ringNeighbors[cellId].size(); n++)
+                        {
+                          pd->GetCellData()->GetArray(pdArrayName.c_str())->SetTuple1(ringNeighbors[cellId][n], groupId);
+                        }
                       }
                     }
                   }
@@ -2956,8 +2975,8 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(vtkPolyData *pd,
               }
             }
           }
-        }
 
+        }
         //int numNewCenterlinePts = newCenterlinePts->GetNumberOfPoints();
 
         //vtkNew(vtkPolyData, tmpCenterlinesPd);
@@ -3826,6 +3845,37 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
     return SV_ERROR;
   }
 
+  // Get all group ids
+  vtkNew(vtkIdList, surfaceGroupIds);
+  for (int i=0; i<surfaceGroups.size(); i++)
+  {
+    int groupVal = surfaceGroups[i].IndexCluster;
+    surfaceGroupIds->InsertUniqueId(groupVal);
+  }
+  vtkSortDataArray::Sort(surfaceGroupIds);
+  int numSurfaceGroups = surfaceGroupIds->GetNumberOfIds();
+
+  int surfaceGroupId;
+  int surfaceGroupCount = 0;
+  for (int i=0; i<numSurfaceGroups; i++)
+  {
+    surfaceGroupId = surfaceGroupIds->GetId(i);
+    surfaceGroupCount = 0;
+    for (int j=0; j<surfaceGroups.size(); j++)
+    {
+      if (surfaceGroups[j].IndexCluster == surfaceGroupId)
+      {
+        surfaceGroupCount++;
+      }
+    }
+
+    if (surfaceGroupCount > 1)
+    {
+      vtkErrorMacro("Multiple surface groups with value " <<  surfaceGroupId);
+      return SV_ERROR;
+    }
+  }
+
   vtkDebugMacro("GETTING POLYCUBE GROUPS");
   std::vector<Region> polycubeGroups;
   if (this->GetRegions(polycubePd, this->GroupIdsArrayName, polycubeGroups) != SV_OK)
@@ -3834,8 +3884,40 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
     return SV_ERROR;
   }
 
-  int numSurfaceGroups  = surfaceGroups.size();
-  int numPolycubeGroups = polycubeGroups.size();
+  // Get all group ids
+  vtkNew(vtkIdList, polycubeGroupIds);
+  for (int i=0; i<polycubeGroups.size(); i++)
+  {
+    int groupVal = polycubeGroups[i].IndexCluster;
+    polycubeGroupIds->InsertUniqueId(groupVal);
+  }
+  vtkSortDataArray::Sort(polycubeGroupIds);
+  int numPolycubeGroups = polycubeGroupIds->GetNumberOfIds();
+
+
+  int polycubeGroupId;
+  int polycubeGroupCount = 0;
+  for (int i=0; i<numPolycubeGroups; i++)
+  {
+    polycubeGroupId = polycubeGroupIds->GetId(i);
+    polycubeGroupCount = 0;
+    for (int j=0; j<polycubeGroups.size(); j++)
+    {
+      if (polycubeGroups[j].IndexCluster == polycubeGroupId)
+      {
+        polycubeGroupCount++;
+      }
+    }
+
+    if (polycubeGroupCount > 1)
+    {
+      vtkErrorMacro("Multiple polycube groups with value " <<  polycubeGroupId);
+      return SV_ERROR;
+    }
+  }
+
+  //int numSurfaceGroups  = surfaceGroups.size();
+  //int numPolycubeGroups = polycubeGroups.size();
 
   if (numSurfaceGroups != numPolycubeGroups)
   {
@@ -3999,11 +4081,11 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
           {
             this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
           }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 4 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
-              badEdges.size() == 2 && allEdges.size() == 4)
-          {
-            this->FixCloseGroup(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
-          }
+          //else if (surfaceGroups[i].BoundaryEdges.size() == 4 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
+          //    badEdges.size() == 2 && allEdges.size() == 4)
+          //{
+          //  this->FixCloseGroup(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
+          //}
           else
             vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
         }
@@ -4750,6 +4832,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
   {
     int badEdgeId = fixEdges[j];
     int edgeSize  = region.BoundaryEdges[badEdgeId].size();
+    vtkDebugMacro("EDGE SIZE IS: " << edgeSize);
 
     int startPtId = region.BoundaryEdges[badEdgeId][0];
     int finalPtId = region.BoundaryEdges[badEdgeId][edgeSize-1];
@@ -4796,6 +4879,11 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
 
         if (edgeSize == 2)
         {
+          if (region.BoundaryEdges[allEdges[k]][0] != finalPtId && region.BoundaryEdges[allEdges[k]][allEdgeSize-1] != startPtId)
+          {
+            continue;
+          }
+
           vtkNew(vtkIdList, startValues);
           vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, startPtId, startValues);
           vtkDebugMacro("WHAT ARE START VALS: ");
@@ -4903,6 +4991,134 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
             }
           }
         }
+        else if (edgeSize == 3)
+        {
+          if (region.BoundaryEdges[allEdges[k]][0] != finalPtId && region.BoundaryEdges[allEdges[k]][allEdgeSize-1] != startPtId)
+          {
+            continue;
+          }
+
+          vtkNew(vtkIdList, startValues);
+          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, startPtId, startValues);
+          vtkDebugMacro("WHAT ARE START VALS: ");
+          for (int f=0; f<startValues->GetNumberOfIds(); f++)
+            vtkDebugMacro(" " << startValues->GetId(f) << " ");
+          vtkDebugMacro("\n");
+
+          vtkNew(vtkIdList, finalValues);
+          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, finalPtId, finalValues);
+          vtkDebugMacro("WHAT ARE FINAL VALS: ");
+          for (int f=0; f<finalValues->GetNumberOfIds(); f++)
+            vtkDebugMacro(" " << finalValues->GetId(f) << " ");
+          vtkDebugMacro("\n");
+
+          if (startValues->GetNumberOfIds() == 4 || finalValues->GetNumberOfIds() == 4)
+          {
+            continue;
+          }
+
+          vtkNew(vtkIdList, centerCells);
+          vtkNew(vtkIdList, centerValues);
+          pd->GetCellEdgeNeighbors(-1, halfId, startPtId, centerCells);
+          for (int l=0; l<centerCells->GetNumberOfIds(); l++)
+          {
+            int tmpCellId = centerCells->GetId(l);
+            int edgeCellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+            centerValues->InsertUniqueId(edgeCellValue);
+          }
+
+          vtkDebugMacro("WHAT ARE CENTER VALS: ");
+          for (int f=0; f<centerValues->GetNumberOfIds(); f++)
+            vtkDebugMacro(" " << centerValues->GetId(f) << " ");
+          vtkDebugMacro("\n");
+
+          vtkNew(vtkIdList, startCellIds);
+          pd->GetPointCells(startPtId, startCellIds);
+
+          int startCellValue = -1;
+          int startCellCount = 0;
+          for (int l=0; l<startCellIds->GetNumberOfIds(); l++)
+          {
+            int tmpCellId = startCellIds->GetId(l);
+            int edgeCellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+            if (edgeCellValue == patchValue)
+            {
+              startCellCount++;
+            }
+
+            vtkDebugMacro("this start CEL VAL: " << edgeCellValue);
+            if (centerValues->IsId(edgeCellValue) == -1)
+            {
+              startCellValue = edgeCellValue;
+            }
+          }
+          vtkDebugMacro("FOUND START VALUE: " << startCellValue);
+
+          centerValues->Reset();
+          pd->GetCellEdgeNeighbors(-1, halfId, startPtId, centerCells);
+          for (int l=0; l<centerCells->GetNumberOfIds(); l++)
+          {
+            int tmpCellId = centerCells->GetId(l);
+            int edgeCellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+            centerValues->InsertUniqueId(edgeCellValue);
+          }
+
+          vtkDebugMacro("WHAT ARE CENTER VALS: ");
+          for (int f=0; f<centerValues->GetNumberOfIds(); f++)
+            vtkDebugMacro(" " << centerValues->GetId(f) << " ");
+          vtkDebugMacro("\n");
+
+          vtkNew(vtkIdList, finalCellIds);
+          pd->GetPointCells(finalPtId, finalCellIds);
+
+          int finalCellValue = -1;
+          int finalCellCount = 0;
+          for (int l=0; l<finalCellIds->GetNumberOfIds(); l++)
+          {
+            int tmpCellId = finalCellIds->GetId(l);
+            int edgeCellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+            if (edgeCellValue == patchValue)
+            {
+              finalCellCount++;
+            }
+
+            vtkDebugMacro("this final CEL VAL: " << edgeCellValue);
+            if (centerValues->IsId(edgeCellValue) == -1)
+            {
+              finalCellValue = edgeCellValue;
+            }
+          }
+          vtkDebugMacro("FOUND FINAL VALUE: " << finalCellValue);
+
+          if (startCellCount <= 2)
+          {
+            for (int l=0; l<startCellIds->GetNumberOfIds(); l++)
+            {
+              int tmpCellId = startCellIds->GetId(l);
+              int edgeCellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+              if (edgeCellValue == patchValue)
+              {
+                int branchCellId  = branchPd->GetCellData()->GetArray("TmpInternalIds")->LookupValue(tmpCellId);
+                branchPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(branchCellId, startCellValue);
+                pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(tmpCellId, startCellValue);
+              }
+            }
+          }
+          if (finalCellCount <= 2)
+          {
+            for (int l=0; l<finalCellIds->GetNumberOfIds(); l++)
+            {
+              int tmpCellId = finalCellIds->GetId(l);
+              int edgeCellValue = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+              if (edgeCellValue == patchValue)
+              {
+                int branchCellId  = branchPd->GetCellData()->GetArray("TmpInternalIds")->LookupValue(tmpCellId);
+                branchPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(branchCellId, finalCellValue);
+                pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(tmpCellId, finalCellValue);
+              }
+            }
+          }
+        }
         else
         {
           if (region.BoundaryEdges[allEdges[k]][0] == finalPtId)
@@ -4956,7 +5172,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
           }
         }
 
-        if (stopId != -1 && edgeSize != 2)
+        if (stopId != -1 && edgeSize > 3)
         {
           if (edgeCell == -1)
           {
@@ -4989,7 +5205,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
           int numToAdd = tmpIds->GetNumberOfIds();
           vtkDebugMacro("NEW POINTS:              ");
           for (int l=0; l<numToAdd; l++)
-            vtkDebugMacro(" " << tmpIds->GetId(l) << " ");
+            vtkDebugMacro(" " << tmpIds->GetId(l) << " " << "IN BIG TIME-> " << branchPd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(tmpIds->GetId(l)));
           vtkDebugMacro("\n");
 
           int count = 1;
@@ -4999,9 +5215,13 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
           for (int l=0; l<count; l++)
           {
             int tmpCellId = tempCells[l];
-            vtkDebugMacro("DOING CELL: " << tmpCellId);
+            if (branchPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId) == newCellValue)
+            {
+              continue;
+            }
             branchPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(tmpCellId, newCellValue);
             int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(tmpCellId);
+            vtkDebugMacro("DOING CELL: " << tmpCellId << " IN BIG TIME-> " << realCellId);
             pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(realCellId, newCellValue);
 
 
