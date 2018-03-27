@@ -1554,15 +1554,16 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       }
 
       //Update now
+      double locals[3][3];
       for (int j=1; j<npts; j++)
       {
         this->Lines->GetPoint(pts[j-1], pt0);
         this->Lines->GetPoint(pts[j], pt1);
 
-        double locals[3][3];
         localArrayX->GetTuple(pts[j], locals[1]);
         localArrayY->GetTuple(pts[j], locals[2]);
         localArrayZ->GetTuple(pts[j], locals[0]);
+        localArrayZ->GetTuple(pts[j], updateRefVecs[0]);
 
         double singleUpdateAngle = updateAngle * j;
 
@@ -1653,7 +1654,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
         localArrayX->SetTuple(pts[j], updateRefVecs[1]);
         localArrayY->SetTuple(pts[j], updateRefVecs[2]);
-        //localArrayZ->SetTuple(pts[j], updateRefVecs[0]);
+        localArrayZ->SetTuple(pts[j], updateRefVecs[0]);
 
       }
 

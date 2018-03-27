@@ -123,8 +123,6 @@ public:
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
   static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
-  static int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
-                                           vtkIdList *targetRegions);
 
   /** \brief Naive implementation to get most reoccuring number in list. Okay
    *  because list size is small. */
@@ -138,8 +136,6 @@ public:
                                    const double vz[3], double rotMatrix[9]);
 
   static int SmoothBoundaries(vtkPolyData *pd, std::string arrayName);
-  static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName,
-                                      vtkIdList *targetRegions);
 
   static int GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
                                const int cellId, const int pointId,
@@ -147,9 +143,6 @@ public:
 
   static int GetRegions(vtkPolyData *pd, std::string arrayName,
                         std::vector<Region> &allRegions);
-  static int GetSpecificRegions(vtkPolyData *pd, std::string arrayName,
-                                std::vector<Region> &allRegions,
-                                vtkIdList *targetRegions);
 
   static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
                                 std::vector<Region> allRegions);

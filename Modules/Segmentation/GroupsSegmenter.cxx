@@ -227,6 +227,11 @@ int main(int argc, char *argv[])
   if (writeFinalHexMesh)
     vtkSVIOUtils::WriteVTUFile(outputFilename, Grouper->GetFinalHexMesh(), "_FinalHexMesh");
 
+  if (Grouper->GetErrorCode() != 0)
+  {
+    std::cerr << "Group segmenter failed. " <<endl;
+    return EXIT_FAILURE;
+  }
 
   //Exit the program without errors
   return EXIT_SUCCESS;

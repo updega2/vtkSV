@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVGroupsSegmenter
+ *  \class vtkSVSurfaceCenterlineAttributesPasser
  *  \brief Using a polydata centerlines, separate the polydata into regions
  *  based on the centerlines
  *
@@ -39,8 +39,8 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVGroupsSegmenter_h
-#define vtkSVGroupsSegmenter_h
+#ifndef vtkSVSurfaceCenterlineAttributesPasser_h
+#define vtkSVSurfaceCenterlineAttributesPasser_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
@@ -54,25 +54,13 @@
 
 #include "vtkSVSegmentationModule.h" // For export
 
-class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
+class VTKSVSEGMENTATION_EXPORT vtkSVSurfaceCenterlineAttributesPasser : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVGroupsSegmenter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVSurfaceCenterlineAttributesPasser,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static vtkSVGroupsSegmenter *New();
-
-  //@{
-  /// \brief Get/Set macro for the object's centerlines
-  vtkSetObjectMacro(Centerlines,vtkPolyData);
-  vtkGetObjectMacro(Centerlines,vtkPolyData);
-  //@}
-
-  //@{
-  /// \brief Get the graph for the model
-  vtkSetObjectMacro(GraphPd,vtkPolyData);
-  vtkGetObjectMacro(GraphPd,vtkPolyData);
-  //@}
+  static vtkSVSurfaceCenterlineAttributesPasser *New();
 
   //@{
   /// \brief Get/Set macro for merged centerlines
@@ -87,18 +75,6 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set macro for surface polycube
-  vtkSetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
-  vtkGetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
-  //@}
-
-  //@{
-  /// \brief Get/Set macro for surface polycube
-  vtkSetObjectMacro(FinalHexMesh,vtkUnstructuredGrid);
-  vtkGetObjectMacro(FinalHexMesh,vtkUnstructuredGrid);
-  //@}
-
-  //@{
   /// \brief Get/Set macro for array name used by the filter. Must
   //  be present on the centerlines.
   vtkSetStringMacro(CenterlineGroupIdsArrayName);
@@ -109,26 +85,16 @@ public:
   vtkGetStringMacro(GroupIdsArrayName);
   vtkSetStringMacro(BlankingArrayName);
   vtkGetStringMacro(BlankingArrayName);
-  //@}
-
-  //@{
-  /// \brief Get/Set the cutoff radius factor for clipping of the surface
-  //  distance functions
-  vtkSetMacro(CutoffRadiusFactor,double);
-  vtkGetMacro(CutoffRadiusFactor,double);
+  vtkSetStringMacro(CenterlineIdsArrayName);
+  vtkGetStringMacro(CenterlineIdsArrayName);
+  vtkSetStringMacro(TractIdsArrayName);
+  vtkGetStringMacro(TractIdsArrayName);
   //@}
 
   //@{
   /// \brief Get/Set the factor for enforcing of the boundary directions. Approximately represents the number of centerline points to enforce per branch. Default is 1, and typically a fairly low value works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems.
   vtkSetMacro(BoundaryEnforceFactor,int);
   vtkGetMacro(BoundaryEnforceFactor,int);
-  //@}
-
-
-  //@{
-  /// \brief Get/Set the clip value for clipping of the surface distance functions.
-  vtkSetMacro(ClipValue,double);
-  vtkGetMacro(ClipValue,double);
   //@}
 
   //@{
@@ -139,30 +105,11 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set the initial group clipper to use
-  vtkSetMacro(UseVmtkClipping,int);
-  vtkGetMacro(UseVmtkClipping,int);
-  vtkBooleanMacro(UseVmtkClipping,int);
-  //@}
-
-  //@{
   /// \brief Get/Set whether the boundary at separating patches should be more
   //  strictly enforced.
   vtkSetMacro(EnforceBoundaryDirections,int);
   vtkGetMacro(EnforceBoundaryDirections,int);
   vtkBooleanMacro(EnforceBoundaryDirections,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set the number of divisions to use along width and height of polycube
-  vtkSetMacro(PolycubeDivisions,int);
-  vtkGetMacro(PolycubeDivisions,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set the unit length for each division of the polycube
-  vtkSetMacro(PolycubeUnitLength,double);
-  vtkGetMacro(PolycubeUnitLength,double);
   //@}
 
   //@{
@@ -181,35 +128,19 @@ public:
   vtkBooleanMacro(IsVasculature,int);
   //@}
 
-  //@{
-  /// \brief Get/Set If model is not vasculature, indicate how many centerline
-  //  points to remove from the ends
-  vtkSetMacro(NumberOfCenterlineRemovePts,int);
-  vtkGetMacro(NumberOfCenterlineRemovePts,int);
-  //@}
-  //
-  //@{
-  /// \brief Get/Set to use absolute distance
-  vtkSetMacro(UseAbsoluteMergeDistance, int);
-  vtkGetMacro(UseAbsoluteMergeDistance, int);
-  vtkBooleanMacro(UseAbsoluteMergeDistance, int);
-  //@}
+  /** \brief From three vectors, compute transformation from global to local */
+  static int ComputeRotationMatrix(const double vx[3], const double vy[3],
+                                   const double vz[3], double rotMatrix[9]);
 
-  //@{
-  /// \brief Get/Set to use absolute distance
-  vtkSetMacro(RadiusMergeRatio, double);
-  vtkGetMacro(RadiusMergeRatio, double);
-  //@}
+  const static double GlobalCoords[3][3];
 
-  //@{
-  /// \brief Get/Set to use absolute distance
-  vtkSetMacro(MergeDistance, double);
-  vtkGetMacro(MergeDistance, double);
-  //@}
+  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
+
+  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
 
 protected:
-  vtkSVGroupsSegmenter();
-  ~vtkSVGroupsSegmenter();
+  vtkSVSurfaceCenterlineAttributesPasser();
+  ~vtkSVSurfaceCenterlineAttributesPasser();
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
@@ -219,41 +150,39 @@ protected:
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
 
-  int MergeCenterlines();
+  int GetOpenBoundaryEdges(vtkPolyData *branchPd,
+                           std::vector<int> &openCornerPoints,
+                           std::vector<std::vector<int> > &openEdges);
+  int ShiftEdgeList(vtkPolyData *branchPd, std::vector<std::vector<int> > &openEdges,
+                    std::vector<std::vector<int> > &shiftedOpenEdges);
+  int SplitEdgeList(vtkPolyData *branchPd, std::vector<int> &openEdges,
+                    std::vector<std::vector<int> > &shiftedOpenEdges);
+  int GetCellDirectNeighbors(vtkPolyData *pd,
+                             std::vector<std::vector<int> > &neighbors,
+                             std::vector<int> &numNeighbors);
+
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
+  char *CenterlineIdsArrayName;
   char *GroupIdsArrayName;
   char *BlankingArrayName;
+  char *TractIdsArrayName;
 
   vtkPolyData *WorkPd;
-  vtkPolyData *GraphPd;
-  vtkPolyData *Centerlines;
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
 
-  vtkUnstructuredGrid *PolycubeUg;
-  vtkUnstructuredGrid *FinalHexMesh;
-
-  int UseRadiusInformation;
-  int UseVmtkClipping;
   int EnforceBoundaryDirections;
   int IsVasculature;
-  int NumberOfCenterlineRemovePts;
-  int PolycubeDivisions;
   int BoundaryEnforceFactor;
-  int UseAbsoluteMergeDistance;
+  int UseRadiusInformation;
 
-  double CutoffRadiusFactor;
-  double ClipValue;
-  double PolycubeUnitLength;
   double NormalsWeighting;
-  double RadiusMergeRatio;
-  double MergeDistance;
 
 private:
-  vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.
-  void operator=(const vtkSVGroupsSegmenter&);  // Not implemented.
+  vtkSVSurfaceCenterlineAttributesPasser(const vtkSVSurfaceCenterlineAttributesPasser&);  // Not implemented.
+  void operator=(const vtkSVSurfaceCenterlineAttributesPasser&);  // Not implemented.
 };
 
 #endif
