@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
   // Default values for options
   int useRadiusInfo = 1;
   int isVasculature = 1;
-  int enforceBoundaryDirections = 1;
+  int enforceBoundaryDirections = 0;
   int boundaryEnforceFactor = 1;
 
   double normalsWeighting = 0.8;
@@ -74,6 +74,10 @@ int main(int argc, char *argv[])
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string blankingArrayName = "Blanking";
+  std::string patchIdsArrayName = "PatchIds";
+  std::string slicePointsArrayName = "SlicePoints";
+  std::string parallelTransportVectorArrayName = "ParallelTransportVector";
+  std::string transformedNormalsArrayName = "NormalsTransformedToCenterlines";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -89,8 +93,12 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-groupids")      {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
       else if(tmpstr=="-blanking")      {blankingArrayName = argv[++iarg];}
+      else if(tmpstr=="-patchids")      {patchIdsArrayName = argv[++iarg];}
+      else if(tmpstr=="-slicepoints")   {slicePointsArrayName = argv[++iarg];}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
       else if(tmpstr=="-isvasculature")                 {isVasculature = atoi(argv[++iarg]);}
+      else if(tmpstr=="-paralleltransportvector")       {parallelTransportVectorArrayName = argv[++iarg];}
+      else if(tmpstr=="-transformednormals")            {transformedNormalsArrayName = argv[++iarg];}
       else if(tmpstr=="-enforceboundarydirections")     {enforceBoundaryDirections = atoi(argv[++iarg]);}
       else if(tmpstr=="-boundaryenforcefactor")         {boundaryEnforceFactor = atoi(argv[++iarg]);}
       else if(tmpstr=="-normalsweighting")              {normalsWeighting = atof(argv[++iarg]);}
@@ -114,10 +122,14 @@ int main(int argc, char *argv[])
     cout << "  -groupids                       : Name to be used for group ids [default GroupIds]"<< endl;
     cout << "  -radius                         : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -blanking                       : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
+    cout << "  -patchids                       : Name on polycube indicating the cuboid patch id [default PatchIds]"<< endl;
+    cout << "  -slicepoints                    : Name to be placed on surface to indicate where patch divisions will occur if preparing for cuboid patching. Only used if enforcepolycubeconnectivity is turned on [default SlicePoints]"<< endl;
+    cout << "  -paralleltransportvector        : Name on centerlines for centerlines local coordinate frame. If not provided, the coordinate frame will be computed and given this name. [default ParallelTransportVector]"<< endl;
+    cout << "  -transformednormals            : Name to be placed on surface after the normals are transformed to the local coordinate system on the centerlines. [default NormalsTransformedToCenterlines]"<< endl;
     cout << "  -useradiusinfo                  : Use radius to help in clipping operation [default 1]"<< endl;
     cout << "  -normalsweighting              : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
     cout << "  -isvasculature                 : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
-    cout << "  -enforceboundarydirections     : At separating patches, enforce the boundary directions by modifying the clustering vectors [default 1]" << endl;
+    cout << "  -enforceboundarydirections     : At separating patches, enforce the boundary directions by modifying the clustering vectors [default 0]" << endl;
     cout << "  -boundaryenforcefactor         : Approximately represents the number of centerline points to enforce per branch. Typically a fairly low integer works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems. [default 1]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
@@ -164,6 +176,10 @@ int main(int argc, char *argv[])
   Passer->SetBlankingArrayName(blankingArrayName.c_str());
   Passer->SetCenterlineIdsArrayName("CenterlineIds");
   Passer->SetTractIdsArrayName("TractIds");
+  Passer->SetPatchIdsArrayName(patchIdsArrayName.c_str());
+  Passer->SetSlicePointsArrayName(slicePointsArrayName.c_str());
+  Passer->SetParallelTransportVectorArrayName(parallelTransportVectorArrayName.c_str());
+  Passer->SetTransformedNormalsArrayName(transformedNormalsArrayName.c_str());
   Passer->SetUseRadiusInformation(useRadiusInfo);
   Passer->SetIsVasculature(isVasculature);
   Passer->SetEnforceBoundaryDirections(enforceBoundaryDirections);

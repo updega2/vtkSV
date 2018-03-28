@@ -30,78 +30,35 @@
 
 #include "vtkSVSurfaceCuboidPatcher.h"
 
-#include "vtkSVCenterlineBranchSplitter.h"
-#include "vtkSVCenterlinesEdgeWeightedCVT.h"
 #include "vtkSVCleanUnstructuredGrid.h"
 #include "vtkSVEdgeWeightedCVT.h"
-#include "vtkSVEdgeWeightedSmoother.h"
 #include "vtkSVFindGeodesicPath.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkSVIOUtils.h"
 #include "vtkSVMathUtils.h"
-#include "vtkSVPolyBallLine.h"
 #include "vtkSVPolycubeGenerator.h"
-#include "vtkSVFindSeparateRegions.h"
-#include "vtkSVLoftNURBSVolume.h"
-#include "vtkSVMapInterpolator.h"
-#include "vtkSVMUPFESNURBSWriter.h"
-#include "vtkSVNURBSCollection.h"
-#include "vtkSVNURBSUtils.h"
-#include "vtkSVPassDataArray.h"
-#include "vtkSVPERIGEENURBSCollectionWriter.h"
-#include "vtkSVPlanarMapper.h"
-#include "vtkSVPointSetBoundaryMapper.h"
-#include "vtkSVSurfaceCuboidPatcher.h"
-#include "vtkSVSurfaceCenterlineAttributesPasser.h"
+#include "vtkSVSurfaceCenterlineGrouper.h"
 
-#include "vtkAppendPolyData.h"
-#include "vtkAppendFilter.h"
 #include "vtkExecutive.h"
 #include "vtkErrorCode.h"
 #include "vtkCellArray.h"
 #include "vtkCellLocator.h"
-#include "vtkConnectivityFilter.h"
-#include "vtkPolyLine.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
-#include "vtkPointLocator.h"
 #include "vtkCellData.h"
-#include "vtkDataSetSurfaceFilter.h"
-#include "vtkIdFilter.h"
 #include "vtkIntArray.h"
-#include "vtkDataSetSurfaceFilter.h"
-#include "vtkDoubleArray.h"
 #include "vtkCleanPolyData.h"
-#include "vtkClipPolyData.h"
-#include "vtkFeatureEdges.h"
-#include "vtkGenericCell.h"
-#include "vtkHexahedron.h"
-#include "vtkLine.h"
-#include "vtkLinearSubdivisionFilter.h"
 #include "vtkMath.h"
-#include "vtkMergeCells.h"
 #include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
 #include "vtkSmartPointer.h"
-#include "vtkSphere.h"
-#include "vtkSplineFilter.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
-#include "vtkPolyDataNormals.h"
 #include "vtkStructuredGridGeometryFilter.h"
-#include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
-#include "vtkThreshold.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkVersion.h"
-#include "vtkXMLPolyDataWriter.h"
-
-#include "vtkvmtkCenterlineAttributesFilter.h"
-#include "vtkvmtkMath.h"
-#include "vtkvmtkMergeCenterlines.h"
-#include "vtkvmtkPolyDataCenterlineGroupsClipper.h"
 
 #include <algorithm>
 
@@ -125,6 +82,11 @@ vtkSVSurfaceCuboidPatcher::vtkSVSurfaceCuboidPatcher()
   this->GroupIdsArrayName = NULL;
   this->BlankingArrayName = NULL;
   this->TractIdsArrayName = NULL;
+  this->PatchIdsArrayName = NULL;
+  this->SlicePointsArrayName = NULL;
+  this->ClusteringVectorArrayName = NULL;
+
+  this->EnforcePolycubeConnectivity = 0;
 }
 
 // ----------------------
@@ -182,6 +144,24 @@ vtkSVSurfaceCuboidPatcher::~vtkSVSurfaceCuboidPatcher()
   {
     delete [] this->TractIdsArrayName;
     this->TractIdsArrayName = NULL;
+  }
+
+  if (this->PatchIdsArrayName != NULL)
+  {
+    delete [] this->PatchIdsArrayName;
+    this->PatchIdsArrayName = NULL;
+  }
+
+  if (this->SlicePointsArrayName != NULL)
+  {
+    delete [] this->SlicePointsArrayName;
+    this->SlicePointsArrayName = NULL;
+  }
+
+  if (this->ClusteringVectorArrayName != NULL)
+  {
+    delete [] this->ClusteringVectorArrayName;
+    this->ClusteringVectorArrayName = NULL;
   }
 
 }
@@ -251,7 +231,7 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->CenterlineGroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "CenterlineGroupIdsArray with name specified does not exist");
-    return SV_OK;
+    return SV_ERROR;
   }
 
   if (!this->BlankingArrayName)
@@ -290,7 +270,7 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->CenterlineIdsArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "CenterlineIdsArray with name specified does not exist on centerlines");
-    return SV_OK;
+    return SV_ERROR;
   }
 
   if (!this->TractIdsArrayName)
@@ -303,7 +283,40 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->TractIdsArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "TractIdsArray with name specified does not exist on centerlines");
-    return SV_OK;
+    return SV_ERROR;
+  }
+
+  if (!this->PatchIdsArrayName)
+  {
+    vtkDebugMacro("PatchIds Array Name not given, setting to PatchIds");
+    this->PatchIdsArrayName = new char[strlen("PatchIds") + 1];
+    strcpy(this->PatchIdsArrayName, "PatchIds");
+  }
+
+  if (!this->SlicePointsArrayName)
+  {
+    vtkDebugMacro("SlicePoints Array Name not given, setting to SlicePoints");
+    this->SlicePointsArrayName = new char[strlen("SlicePoints") + 1];
+    strcpy(this->SlicePointsArrayName, "SlicePoints");
+  }
+
+  if (!this->ClusteringVectorArrayName)
+  {
+    vtkDebugMacro("ClusteringVector Array Name not given, setting to ClusteringVector");
+    this->ClusteringVectorArrayName = new char[strlen("ClusteringVector") + 1];
+    strcpy(this->ClusteringVectorArrayName, "ClusteringVector");
+  }
+
+  if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->ClusteringVectorArrayName) != SV_OK)
+  {
+    vtkErrorMacro(<< "Clustering vector array with name specified does not exist on surface");
+    return SV_ERROR;
+  }
+
+  if (this->WorkPd->GetCellData()->GetArray(this->ClusteringVectorArrayName)->GetNumberOfComponents() != 3)
+  {
+    vtkErrorMacro("Must cluster using a vector, should be 3 components, only 1 on given array");
+    return SV_ERROR;
   }
 
   if (this->PolycubePd == NULL)
@@ -321,6 +334,13 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
     vtkDebugMacro("Polycube created");
   }
 
+  if (vtkSVGeneralUtils::CheckArrayExists(this->PolycubePd, 1, this->PatchIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro("PatchIds array with name given is not on polycube surface");
+    return SV_ERROR;
+  }
+
+
   if (this->PolycubePd->GetNumberOfCells() == 0)
   {
     vtkErrorMacro("Polycube is empty");
@@ -331,6 +351,21 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
   {
     vtkErrorMacro(<< "GroupIdsArray with name specified does not exist on input surface");
     return SV_OK;
+  }
+
+  if (this->EnforcePolycubeConnectivity)
+  {
+    if (vtkSVGeneralUtils::CheckArrayExists(this->PolycubePd, 1, this->PatchIdsArrayName) != SV_OK)
+    {
+      vtkErrorMacro("PatchIds array with name given is not on polycube surface");
+      return SV_ERROR;
+    }
+
+    if (this->CheckGroupsWithPolycube() != SV_OK)
+    {
+      vtkErrorMacro("In order to enforce boundaries of the polycube on the surface, the polycube needs to match the surface. Use vtkSVSurfaceCenterlineGrouper and turn on enforcecenterlinesconnectivity and enforcepolycubeconnectivity.");
+      return SV_ERROR;
+    }
   }
 
   return SV_OK;
@@ -357,11 +392,12 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
 
   vtkIntArray *tmpPatchArray = vtkIntArray::New();
   tmpPatchArray->SetNumberOfTuples(this->WorkPd->GetNumberOfCells());
-  tmpPatchArray->SetName("PatchIds");
+  tmpPatchArray->SetName(this->PatchIdsArrayName);
   tmpPatchArray->FillComponent(0, -1);
   this->WorkPd->GetCellData()->AddArray(tmpPatchArray);
   tmpPatchArray->Delete();
 
+  vtkSVGeneralUtils::GiveIds(this->WorkPd, "TmpInternalIds");
   vtkSVGeneralUtils::GiveIds(this->PolycubePd, "TmpInternalIds");
 
   // Get all group ids
@@ -395,15 +431,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       this->GroupIdsArrayName, polyBranchPd);
     polyBranchPd->BuildLinks();
 
-    if (nlinepts > 5)
-    {
-      if (this->ClusterBranchWithCVT(branchPd, generatorsPd) != SV_OK)
-      {
-        vtkErrorMacro("Error clustering branch with cvt into patches");
-        return SV_ERROR;
-      }
-    }
-    else
+    if (nlinepts <= 5 && this->EnforcePolycubeConnectivity)
     {
       fprintf(stdout,"SMALL GROUP HERE!!\n");
       if (this->ClusterBranchWithGeodesics(branchPd, polyBranchPd) != SV_OK)
@@ -412,19 +440,27 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       return SV_ERROR;
       }
     }
+    else
+    {
+      if (this->ClusterBranchWithCVT(branchPd, generatorsPd) != SV_OK)
+      {
+        vtkErrorMacro("Error clustering branch with cvt into patches");
+        return SV_ERROR;
+      }
+    }
 
     vtkNew(vtkIdList, noEndPatches);
     noEndPatches->SetNumberOfIds(4);
     for (int j=0; j<4; j++)
       noEndPatches->SetId(j, j);
 
-    if (this->CorrectSpecificCellBoundaries(branchPd, "PatchIds", noEndPatches) != SV_OK)
+    if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
     {
       vtkErrorMacro("Could not correcto boundaries of surface");
       return SV_ERROR;
     }
 
-    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    if (this->MergedCenterlines->GetNumberOfCells() > 1 && this->EnforcePolycubeConnectivity)
     {
       if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
       {
@@ -440,10 +476,10 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
 
       // Get val
-      int cellVal = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(j);
+      int cellVal = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(j);
 
       // Set val
-      this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(realCellId, cellVal);
+      this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(realCellId, cellVal);
     }
   }
 
@@ -461,10 +497,10 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
   vtkNew(vtkIdList, patchVals);
   for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
   {
-    int patchVal = this->WorkPd->GetCellData()->GetArray("PatchIds")->GetTuple1(i);
+    int patchVal = this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(i);
     int groupVal = this->WorkPd->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(i);
     int newVal = patchVal + (addVals->GetId(groupIds->IsId(groupVal)));
-    this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(i, newVal);
+    this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(i, newVal);
     patchVals->InsertUniqueId(newVal);
   }
 
@@ -477,38 +513,33 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       targetPatches->SetId(4*i+j, 6*i+j);
   }
 
-  //// TODO: IF SOMETHIGN WRONG, LOOK HERE FIRST!!! MAY BE MOVING PATCH OFF
-  //// OF SLICE POINT
-  //if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
-  //{
-  //  vtkErrorMacro("Could not correcto boundaries of surface");
-  //  return SV_ERROR;
-  //}
-
   // For checking purposes
-  if (this->FixPatchesWithPolycube() != SV_OK)
+  if (this->EnforcePolycubeConnectivity)
   {
-    fprintf(stderr,"Couldn't fix patches\n");
-    return SV_ERROR;
+    if (this->FixPatchesWithPolycube() != SV_OK)
+    {
+      fprintf(stderr,"Couldn't fix patches\n");
+      return SV_ERROR;
+    }
   }
 
-  if (this->CorrectSpecificCellBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  if (this->CorrectSpecificCellBoundaries(this->WorkPd, this->PatchIdsArrayName, targetPatches) != SV_OK)
   {
     vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
 
-  if (this->SmoothSpecificBoundaries(this->WorkPd, "PatchIds", targetPatches) != SV_OK)
+  if (this->SmoothSpecificBoundaries(this->WorkPd, this->PatchIdsArrayName, targetPatches) != SV_OK)
   {
     vtkErrorMacro("Could not smootho boundaries of surface");
     return SV_ERROR;
   }
-  if (this->GetSpecificRegions(this->WorkPd, "PatchIds", finalRegions, targetPatches) != SV_OK)
+  if (this->GetSpecificRegions(this->WorkPd, this->PatchIdsArrayName, finalRegions, targetPatches) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
   }
-  if (this->CurveFitBoundaries(this->WorkPd, "PatchIds", finalRegions) != SV_OK)
+  if (this->CurveFitBoundaries(this->WorkPd, this->PatchIdsArrayName, finalRegions) != SV_OK)
   {
     vtkErrorMacro("Could not curve fit boundaries of surface");
     return SV_ERROR;
@@ -620,9 +651,9 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPo
       }
       edgePatchCells.push_back(firstCellId->GetId(0));
 
-      int polyPtId0 = polyPd->GetPointData()->GetArray("SlicePoints")->
+      int polyPtId0 = polyPd->GetPointData()->GetArray(this->SlicePointsArrayName)->
         LookupValue(edgePtId0);
-      int polyPtIdN = polyPd->GetPointData()->GetArray("SlicePoints")->
+      int polyPtIdN = polyPd->GetPointData()->GetArray(this->SlicePointsArrayName)->
         LookupValue(edgePtIdN);
 
       if (polyPtId0 == -1 || polyPtIdN == -1)
@@ -644,14 +675,14 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPo
         return SV_ERROR;
       }
 
-      int patchVal = polyPd->GetCellData()->GetArray("PatchIds")->
+      int patchVal = polyPd->GetCellData()->GetArray(this->PatchIdsArrayName)->
         GetTuple1(polyCellId->GetId(0));
       patchVal = patchVal%6;
 
       edgePatchValues.push_back(patchVal);
 
       vtkNew(vtkIdList, touchingPatchVals);
-      vtkSVGeneralUtils::GetPointCellsValues(polyPd, "PatchIds", polyPtId0, touchingPatchVals);
+      vtkSVGeneralUtils::GetPointCellsValues(polyPd, this->PatchIdsArrayName, polyPtId0, touchingPatchVals);
       for (int k=0; k<touchingPatchVals->GetNumberOfIds(); k++)
       {
         touchingPatchVals->SetId(k, touchingPatchVals->GetId(k)%6);
@@ -718,7 +749,6 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPo
       for (int l=0; l<finder1Ids->GetNumberOfIds(); l++)
         fprintf(stdout,"%d ", finder1Ids->GetId(l));
       fprintf(stdout,"\n");
-      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/MYTEMPER.vtp", pd);
 
       int count = 1;
       std::vector<int> tempCells;
@@ -731,7 +761,11 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPo
       {
         int tmpCellId = tempCells[k];
         cellUsed[tmpCellId] = 1;
-        pd->GetCellData()->GetArray("PatchIds")->SetTuple1(tmpCellId, patchVal0);
+        if (pd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(tmpCellId) == patchVal0)
+        {
+          continue;
+        }
+        pd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(tmpCellId, patchVal0);
 
         vtkIdType npts, *pts;
         pd->GetCellPoints(tmpCellId, npts, pts);
@@ -798,8 +832,8 @@ int vtkSVSurfaceCuboidPatcher::RunEdgeWeightedCVT(vtkPolyData *pd, vtkPolyData *
   CVT->SetEdgeWeight(1.0);
   CVT->SetUseCurvatureWeight(0);
   CVT->SetMaximumNumberOfIterations(1000);
-  CVT->SetPatchIdsArrayName("PatchIds");
-  CVT->SetCVTDataArrayName("CenterlinesBasedCellNormals");
+  CVT->SetPatchIdsArrayName(this->PatchIdsArrayName);
+  CVT->SetCVTDataArrayName(this->ClusteringVectorArrayName);
   CVT->Update();
 
   pd->DeepCopy(CVT->GetOutput());
@@ -2246,7 +2280,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
   targetRegions->SetId(1, 5);
 
   std::vector<Region> endRegions;
-  if (this->GetSpecificRegions(pd, "PatchIds", endRegions, targetRegions) != SV_OK)
+  if (this->GetSpecificRegions(pd, this->PatchIdsArrayName, endRegions, targetRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
@@ -2282,7 +2316,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
 
           for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
           {
-            int cellPatchId = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellEdgeNeighbors->GetId(k));
+            int cellPatchId = pd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(cellEdgeNeighbors->GetId(k));
 
             if (cellPatchId != endRegions[badPatch].IndexCluster)
               neighborPatchIds->InsertUniqueId(cellPatchId);
@@ -2330,11 +2364,11 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
 
       double compare = vtkMath::Dot (cellNorm, avgNorm);
       int removeCellValue = pd->GetCellData()->GetArray(
-        "PatchIds")->GetTuple1(cellId);
+        this->PatchIdsArrayName)->GetTuple1(cellId);
       if (compare <= 0.95)
       {
         vtkNew(vtkIdList, neighborValues);
-        vtkSVGeneralUtils::GetNeighborsCellsValues(pd, "PatchIds",
+        vtkSVGeneralUtils::GetNeighborsCellsValues(pd, this->PatchIdsArrayName,
                                                    cellId,
                                                    neighborValues);
         int newCellValue = -1;
@@ -2347,7 +2381,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
           }
         }
         if (newCellValue != -1)
-          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, newCellValue);
+          pd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(cellId, newCellValue);
       }
     }
   }
@@ -2366,7 +2400,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
     sideTargetRegions->SetId(3, 3);
 
     std::vector<Region> sideRegions;
-    if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, sideTargetRegions) != SV_OK)
+    if (this->GetSpecificRegions(pd, this->PatchIdsArrayName, sideRegions, sideTargetRegions) != SV_OK)
     {
       vtkErrorMacro("Couldn't get patches");
       return SV_ERROR;
@@ -2384,7 +2418,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
     if (sidePatchFix.size() == 1)
     {
       std::vector<Region> allRegions;
-      if (this->GetRegions(pd, "PatchIds", allRegions) != SV_OK)
+      if (this->GetRegions(pd, this->PatchIdsArrayName, allRegions) != SV_OK)
       {
         vtkErrorMacro("Couldn't get patches");
         return SV_ERROR;
@@ -2415,7 +2449,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
                   for (int m=0; m<cellEdgeNeighbors->GetNumberOfIds(); m++)
                   {
                     int cellId  = cellEdgeNeighbors->GetId(m);
-                    int cellVal = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+                    int cellVal = pd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(cellId);
 
                     if (cellVal == endRegions[badPatch].IndexCluster)
                       edgeTouchCount++;
@@ -2464,8 +2498,8 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
         for (int j=0; j<endRegions[badPatch].NumberOfElements; j++)
         {
           int cellId = endRegions[badPatch].Elements[j];
-          int newCellValue = workPdCopy->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
-          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, newCellValue);
+          int newCellValue = workPdCopy->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(cellId);
+          pd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(cellId, newCellValue);
         }
       }
     }
@@ -2480,7 +2514,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
         {
           int cellId = endRegions[badPatch].Elements[j];
           int newCellValue = sidePatchFix[0];
-          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, newCellValue);
+          pd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(cellId, newCellValue);
         }
       }
     }
@@ -2559,7 +2593,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
   targetRegions->SetId(3, 3);
 
   std::vector<Region> sideRegions;
-  if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, targetRegions) != SV_OK)
+  if (this->GetSpecificRegions(pd, this->PatchIdsArrayName, sideRegions, targetRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
@@ -2620,7 +2654,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
             for (int l=0; l<cellEdgeNeighbors->GetNumberOfIds(); l++)
             {
               int cellId  = cellEdgeNeighbors->GetId(l);
-              int cellVal = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+              int cellVal = pd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(cellId);
 
               if (cellVal != wholePatchFix[i])
               {
@@ -2655,7 +2689,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
               for (int l=0; l<cellEdgeNeighbors->GetNumberOfIds(); l++)
               {
                 int edgeCellId  = cellEdgeNeighbors->GetId(l);
-                int cellVal = pd->GetCellData()->GetArray("PatchIds")->GetTuple1(edgeCellId);
+                int cellVal = pd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(edgeCellId);
 
                 if (cellVal != wholePatchFix[i])
                 {
@@ -2693,13 +2727,13 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
         {
           int cellId = sideRegions[minPatch].Elements[k];
 
-          pd->GetCellData()->GetArray("PatchIds")->SetTuple1(cellId, maxPatchId);
+          pd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(cellId, maxPatchId);
         }
       }
     }
   }
 
-  if (this->GetSpecificRegions(pd, "PatchIds", sideRegions, targetRegions) != SV_OK)
+  if (this->GetSpecificRegions(pd, this->PatchIdsArrayName, sideRegions, targetRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
@@ -2709,7 +2743,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
   std::vector<int> openCornerPoints;
   std::vector<std::vector<int> > openEdges;
 
-  if (this->GetOpenBoundaryEdges(pd, sideRegions, "PatchIds",
+  if (this->GetOpenBoundaryEdges(pd, sideRegions, this->PatchIdsArrayName,
                                  openCornerPoints, openEdges) != SV_OK)
   {
     fprintf(stderr,"Error getting open boundary edges\n");
@@ -2850,7 +2884,7 @@ int vtkSVSurfaceCuboidPatcher::FixPatchesWithPolycube()
   fprintf(stdout,"GETTING SURFACE REGIONS\n");
   this->WorkPd->BuildLinks();
   std::vector<Region> surfacePatches;
-  if (this->GetRegions(this->WorkPd, "PatchIds", surfacePatches) != SV_OK)
+  if (this->GetRegions(this->WorkPd, this->PatchIdsArrayName, surfacePatches) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
@@ -2858,7 +2892,7 @@ int vtkSVSurfaceCuboidPatcher::FixPatchesWithPolycube()
 
   fprintf(stdout,"GETTING POLYCUBE REGIONS\n");
   std::vector<Region> polycubePatches;
-  if (this->GetRegions(polycubePd, "PatchIds", polycubePatches) != SV_OK)
+  if (this->GetRegions(polycubePd, this->PatchIdsArrayName, polycubePatches) != SV_OK)
   {
     vtkErrorMacro("Couldn't get patches");
     return SV_ERROR;
@@ -2915,15 +2949,21 @@ int vtkSVSurfaceCuboidPatcher::FixPatchesWithPolycube()
     {
       int ptId = surfacePatches[patchId].CornerPoints[j];
       fprintf(stdout,"PT ID: %d\n", ptId);
-      int polycubeId = polycubePd->GetPointData()->GetArray("SlicePoints")->LookupValue(ptId);
+
+      if (vtkSVGeneralUtils::CheckArrayExists(polycubePd, 0, this->SlicePointsArrayName) != SV_OK)
+      {
+        continue;
+      }
+
+      int polycubeId = polycubePd->GetPointData()->GetArray(this->SlicePointsArrayName)->LookupValue(ptId);
       fprintf(stdout,"POLY ID: %d\n", polycubeId);
       if (polycubeId != -1)
       {
         vtkNew(vtkIdList, surfacePatchVals);
-        vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, "PatchIds", ptId, surfacePatchVals);
+        vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->PatchIdsArrayName, ptId, surfacePatchVals);
 
         vtkNew(vtkIdList, polyPatchVals);
-        vtkSVGeneralUtils::GetPointCellsValues(polycubePd, "PatchIds", polycubeId, polyPatchVals);
+        vtkSVGeneralUtils::GetPointCellsValues(polycubePd, this->PatchIdsArrayName, polycubeId, polyPatchVals);
 
         vtkNew(vtkIdList, intersectList);
         intersectList->DeepCopy(polyPatchVals);
@@ -2962,7 +3002,7 @@ int vtkSVSurfaceCuboidPatcher::FixPatchesWithPolycube()
               if (ptId0 == ptId)
               {
                 vtkNew(vtkIdList, ptIdNList);
-                vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, "PatchIds", ptIdN, ptIdNList);
+                vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->PatchIdsArrayName, ptIdN, ptIdNList);
 
                 if (ptIdNList->IsId(missingVals->GetId(m)) != -1)
                 {
@@ -2976,10 +3016,10 @@ int vtkSVSurfaceCuboidPatcher::FixPatchesWithPolycube()
 
                     for (int r=0; r<pointCells->GetNumberOfIds(); r++)
                     {
-                      int cellVal = this->WorkPd->GetCellData()->GetArray("PatchIds")->GetTuple1(pointCells->GetId(r));
+                      int cellVal = this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(pointCells->GetId(r));
                       if (cellVal == surfacePatches[patchId].IndexCluster)
                       {
-                        this->WorkPd->GetCellData()->GetArray("PatchIds")->SetTuple1(pointCells->GetId(r), missingVals->GetId(m));
+                        this->WorkPd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(pointCells->GetId(r), missingVals->GetId(m));
                       }
                     }
                   }
@@ -3004,7 +3044,7 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
 {
   // Get regions
   std::vector<Region> branchRegions;
-  if (vtkSVSurfaceCuboidPatcher::GetRegions(branchPd, "PatchIds", branchRegions) != SV_OK)
+  if (vtkSVSurfaceCuboidPatcher::GetRegions(branchPd, this->PatchIdsArrayName, branchRegions) != SV_OK)
   {
     fprintf(stderr,"Could not get regions on branch\n");
     return SV_ERROR;
@@ -3016,8 +3056,6 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
     if (branchRegions[j].CornerPoints.size() != 4)
     {
       fprintf(stderr,"Number of corners on region %d is %d, needs to be 4\n", j, branchRegions[j].CornerPoints.size());
-      std::string badName = "/Users/adamupdegrove/Desktop/tmp/BADCORNERS.vtp";
-      vtkSVIOUtils::WriteVTPFile(badName, branchPd);
       return SV_ERROR;
     }
   }
@@ -3026,47 +3064,14 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
   std::vector<int> openCornerPoints;
   std::vector<std::vector<int> > ccwOpenEdges;
 
-  if (this->GetOpenBoundaryEdges(branchPd, branchRegions, "PatchIds",
+  if (this->GetOpenBoundaryEdges(branchPd, branchRegions, this->PatchIdsArrayName,
                                  openCornerPoints, ccwOpenEdges) != SV_OK)
   {
     vtkErrorMacro("Error getting open boundary edges");
     return SV_ERROR;
   }
 
-  //// Now get cw edges by just doing opposite
-  //std::vector<std::vector<int> > cwOpenEdges(openCornerPoints.size());
-  //for (int j=0; j<openCornerPoints.size()/4; j++)
-  //{
-  //  for (int k=0; k<4; k++)
-  //  {
-  //    int cwLoc = 4*j + k;
-  //    int ccwLoc = 4*j + (k+3)%4;
-  //    int ccwPointCount=ccwOpenEdges[ccwLoc].size()-1;
-  //    for (int l=0; l<ccwOpenEdges[ccwLoc].size(); l++)
-  //    {
-  //      cwOpenEdges[cwLoc].push_back(ccwOpenEdges[ccwLoc][ccwPointCount]);
-  //      ccwPointCount--;
-  //    }
-  //  }
-  //}
-
-  //fprintf(stdout,"JUST WANT TO SEE WHAT THESE EDGE THINGS LOOK LIKE\n");
-  //for (int l=0; l<ccwOpenEdges.size(); l++)
-  //{
-  //  fprintf(stdout,"CCWEDGE ");
-  //  for (int m=0; m<ccwOpenEdges[l].size(); m++)
-  //    fprintf(stdout,"%d ", ccwOpenEdges[l][m]);
-  //  fprintf(stdout,"\n");
-  //}
-  //for (int l=0; l<cwOpenEdges.size(); l++)
-  //{
-  //  fprintf(stdout,"CWEDGE ");
-  //  for (int m=0; m<cwOpenEdges[l].size(); m++)
-  //    fprintf(stdout,"%d ", cwOpenEdges[l][m]);
-  //  fprintf(stdout,"\n");
-  //}
-
-  vtkDataArray *slicePointsArray = branchPd->GetPointData()->GetArray("SlicePoints");
+  vtkDataArray *slicePointsArray = branchPd->GetPointData()->GetArray(this->SlicePointsArrayName);
   for (int j=0; j<ccwOpenEdges.size(); j++)
   {
     int edgeSize = ccwOpenEdges[j].size();
@@ -3077,7 +3082,7 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
     fprintf(stdout,"LOOKING FOR POLYCUBE FOR BRANCH: %d\n", pointId0);
 
     vtkNew(vtkIdList, pointPatchValues);
-    vtkSVGeneralUtils::GetPointCellsValues(branchPd, "PatchIds", pointId0, pointPatchValues);
+    vtkSVGeneralUtils::GetPointCellsValues(branchPd, this->PatchIdsArrayName, pointId0, pointPatchValues);
 
     if (pointPatchValues->GetNumberOfIds() != 2)
     {
@@ -3093,14 +3098,14 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
       fprintf(stderr,"Failure obtaining edge cell\n");
       return SV_ERROR;
     }
-    int ccwCellValue = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(newEdgeCell->GetId(0));
+    int ccwCellValue = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(newEdgeCell->GetId(0));
 
     fprintf(stdout,"LOOKING FOR: %d %d\n", pointPatchValues->GetId(0), pointPatchValues->GetId(1));
     fprintf(stdout,"AND CCW VALUE: %d\n", ccwCellValue);
 
     // Get polycube regions
     std::vector<Region> polyRegions;
-    if (vtkSVSurfaceCuboidPatcher::GetRegions(polyBranchPd, "PatchIds", polyRegions) != SV_OK)
+    if (vtkSVSurfaceCuboidPatcher::GetRegions(polyBranchPd, this->PatchIdsArrayName, polyRegions) != SV_OK)
     {
       fprintf(stderr,"Could not get regions on branch\n");
       return SV_ERROR;
@@ -3115,7 +3120,7 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
         int polyPtId1 = polyRegions[k].BoundaryEdges[l][1];
 
         vtkNew(vtkIdList, polyPatchValues);
-        vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, "PatchIds", polyPtId0, polyPatchValues);
+        vtkSVGeneralUtils::GetPointCellsValues(polyBranchPd, this->PatchIdsArrayName, polyPtId0, polyPatchValues);
 
         for (int m=0; m<polyPatchValues->GetNumberOfIds(); m++)
         {
@@ -3136,7 +3141,7 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
 
           if (polyEdgeCell->GetNumberOfIds() == 1)
           {
-            int ccwPolyCellValue = polyBranchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(polyEdgeCell->GetId(0));
+            int ccwPolyCellValue = polyBranchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(polyEdgeCell->GetId(0));
             ccwPolyCellValue = ccwPolyCellValue%6;
 
             fprintf(stdout,"PC POINT: %d\n", polyPtId0);
@@ -3146,7 +3151,7 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
             if (ccwPolyCellValue == ccwCellValue)
             {
               fprintf(stdout,"WE FOUND POINT IN POLYCUBE THAT MATCHES THIS POINT\n");
-              matchPointId = polyBranchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(polyPtId0);
+              matchPointId = polyBranchPd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(polyPtId0);
             }
           }
         }
@@ -3253,11 +3258,11 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
     vtkNew(vtkIdList, tmpCell);
     branchPd->GetCellEdgeNeighbors(-1, startPoint, secondPoint, tmpCell);
     int edgeCell = tmpCell->GetId(0);
-    int matchCellValue = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(edgeCell);
+    int matchCellValue = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(edgeCell);
 
     branchPd->GetCellEdgeNeighbors(-1, startPoint, opposPoint, tmpCell);
     int opposCell = tmpCell->GetId(0);
-    int newCellValue = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(opposCell);
+    int newCellValue = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(opposCell);
 
     int patchPoint = -1;
     fprintf(stdout,"STOP COUNT IS!!!: %d\n", stopCount);
@@ -3280,9 +3285,9 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
             nextPoint = vtkSVSurfaceCuboidPatcher::GetCWPoint(branchPd, tempNodes[k], cellId);
           else
             nextPoint = vtkSVSurfaceCuboidPatcher::GetCCWPoint(branchPd, tempNodes[k], cellId);
-          int isGoodEdge = vtkSVSurfaceCuboidPatcher::CheckCellValuesEdge(branchPd, "PatchIds", cellId, tempNodes[k], nextPoint);
+          int isGoodEdge = vtkSVSurfaceCuboidPatcher::CheckCellValuesEdge(branchPd, this->PatchIdsArrayName, cellId, tempNodes[k], nextPoint);
 
-          int cellValue = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+          int cellValue = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(cellId);
 
           if (isGoodEdge && cellValue == matchCellValue)
           {
@@ -3318,9 +3323,9 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
               nextPoint = vtkSVSurfaceCuboidPatcher::GetCWPoint(branchPd, tempNodes[k], cellId);
             else
               nextPoint = vtkSVSurfaceCuboidPatcher::GetCCWPoint(branchPd, tempNodes[k], cellId);
-            int isGoodEdge = vtkSVSurfaceCuboidPatcher::CheckCellValuesEdge(branchPd, "PatchIds", cellId, tempNodes[k], nextPoint);
+            int isGoodEdge = vtkSVSurfaceCuboidPatcher::CheckCellValuesEdge(branchPd, this->PatchIdsArrayName, cellId, tempNodes[k], nextPoint);
 
-            int cellValue = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(cellId);
+            int cellValue = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(cellId);
 
             if (isGoodEdge && cellValue == matchCellValue)
             {
@@ -3343,8 +3348,6 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
     if (patchPoint == -1)
     {
       fprintf(stdout,"DIDNT COMPUTE PATCH POINT\n");
-      std::string badName = "/Users/adamupdegrove/Desktop/tmp/BADPATCHPOINT.vtp";
-      vtkSVIOUtils::WriteVTPFile(badName, branchPd);
       return SV_ERROR;
     }
 
@@ -3376,7 +3379,11 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
       for (int k=0; k<count; k++)
       {
         int tmpCellId = tempCells[k];
-        branchPd->GetCellData()->GetArray("PatchIds")->SetTuple1(tmpCellId, newCellValue);
+        if (branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(tmpCellId) == newCellValue)
+        {
+          continue;
+        }
+        branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(tmpCellId, newCellValue);
         vtkIdType npts, *pts;
         branchPd->GetCellPoints(tmpCellId, npts, pts);
         for (int l=0; l<npts; l++)
@@ -3396,7 +3403,7 @@ int vtkSVSurfaceCuboidPatcher::MatchEndPatches(vtkPolyData *branchPd, vtkPolyDat
           else
           {
             int testCellId = cellEdgeNeighbors->GetId(0);
-            int cellValue = branchPd->GetCellData()->GetArray("PatchIds")->GetTuple1(testCellId);
+            int cellValue = branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->GetTuple1(testCellId);
             if (cellValue == newCellValue)
               patchEdge = 1;
 
@@ -3657,7 +3664,7 @@ int vtkSVSurfaceCuboidPatcher::ShiftEdgeList(vtkPolyData *branchPd, std::vector<
     for (int k=0; k<edgeSize-1; k++)
     {
       int edgePtId0 = openEdges[j][k];
-      int isSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(edgePtId0);
+      int isSlicePoint = branchPd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(edgePtId0);
 
       if (isSlicePoint == 1)
       {
@@ -3684,7 +3691,7 @@ int vtkSVSurfaceCuboidPatcher::SplitEdgeList(vtkPolyData *branchPd, std::vector<
                                         std::vector<std::vector<int> > &splitOpenEdges)
 {
 
-  int isFirstSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(openEdges[0]);
+  int isFirstSlicePoint = branchPd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(openEdges[0]);
 
   if (isFirstSlicePoint != 1)
   {
@@ -3699,7 +3706,7 @@ int vtkSVSurfaceCuboidPatcher::SplitEdgeList(vtkPolyData *branchPd, std::vector<
     int edgePtId = openEdges[j];
     splitEdge.push_back(edgePtId);
 
-    int isSlicePoint = branchPd->GetPointData()->GetArray("SlicePoints")->GetTuple1(edgePtId);
+    int isSlicePoint = branchPd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(edgePtId);
 
     if (isSlicePoint == 1)
     {
@@ -3713,6 +3720,348 @@ int vtkSVSurfaceCuboidPatcher::SplitEdgeList(vtkPolyData *branchPd, std::vector<
   {
     fprintf(stderr,"There should be four edges, but got %d\n", splitOpenEdges.size());
     return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// CheckGroupsWithPolycube
+// ----------------------
+int vtkSVSurfaceCuboidPatcher::CheckGroupsWithPolycube()
+{
+  int addSurfaceSlicePoints = 0;
+  if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->SlicePointsArrayName) != SV_OK)
+  {
+    addSurfaceSlicePoints = 1;
+    vtkDebugMacro("Slice points not on surface already, creating our own");
+
+    vtkNew(vtkIntArray, newSlicePointsArray);
+    newSlicePointsArray->SetNumberOfTuples(this->WorkPd->GetNumberOfPoints());
+    newSlicePointsArray->FillComponent(0, -1);
+    newSlicePointsArray->SetName(this->SlicePointsArrayName);
+    this->WorkPd->GetPointData()->AddArray(newSlicePointsArray);
+  }
+
+  int addPolycubeSlicePoints = 0;
+  if (vtkSVGeneralUtils::CheckArrayExists(this->PolycubePd, 0, this->SlicePointsArrayName) != SV_OK)
+  {
+    addPolycubeSlicePoints = 1;
+    vtkDebugMacro("Slice points not on surface already, creating our own");
+
+    vtkNew(vtkIntArray, polySlicePointsArray);
+    polySlicePointsArray->SetNumberOfTuples(this->PolycubePd->GetNumberOfPoints());
+    polySlicePointsArray->FillComponent(0, -1);
+    polySlicePointsArray->SetName(this->SlicePointsArrayName);
+    this->PolycubePd->GetPointData()->AddArray(polySlicePointsArray);
+  }
+
+  vtkDebugMacro("GETTING SURFACE GROUPS");
+  std::vector<Region> surfaceRegions;
+  if (vtkSVSurfaceCenterlineGrouper::GetRegions(this->WorkPd, this->GroupIdsArrayName, surfaceRegions) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get groups");
+    return SV_ERROR;
+  }
+
+  // Get all group ids
+  vtkNew(vtkIdList, surfaceGroupIds);
+  for (int i=0; i<surfaceRegions.size(); i++)
+  {
+    int groupVal = surfaceRegions[i].IndexCluster;
+    surfaceGroupIds->InsertUniqueId(groupVal);
+  }
+  vtkSortDataArray::Sort(surfaceGroupIds);
+  int numSurfaceGroups = surfaceGroupIds->GetNumberOfIds();
+
+  int surfaceGroupId;
+  int surfaceGroupCount = 0;
+  for (int i=0; i<numSurfaceGroups; i++)
+  {
+    surfaceGroupId = surfaceGroupIds->GetId(i);
+    surfaceGroupCount = 0;
+    for (int j=0; j<surfaceRegions.size(); j++)
+    {
+      if (surfaceRegions[j].IndexCluster == surfaceGroupId)
+      {
+        surfaceGroupCount++;
+      }
+    }
+
+    if (surfaceGroupCount > 1)
+    {
+      vtkErrorMacro("Multiple surface groups with value " <<  surfaceGroupId);
+      return SV_ERROR;
+    }
+  }
+
+  vtkDebugMacro("GETTING POLYCUBE GROUPS");
+  std::vector<Region> polycubeRegions;
+  if (vtkSVSurfaceCenterlineGrouper::GetRegions(this->PolycubePd, this->GroupIdsArrayName, polycubeRegions) != SV_OK)
+  {
+    vtkErrorMacro("Couldn't get groups");
+    return SV_ERROR;
+  }
+
+  // Get all group ids
+  vtkNew(vtkIdList, polycubeGroupIds);
+  for (int i=0; i<polycubeRegions.size(); i++)
+  {
+    int groupVal = polycubeRegions[i].IndexCluster;
+    polycubeGroupIds->InsertUniqueId(groupVal);
+  }
+  vtkSortDataArray::Sort(polycubeGroupIds);
+  int numPolycubeGroups = polycubeGroupIds->GetNumberOfIds();
+
+
+  int polycubeGroupId;
+  int polycubeGroupCount = 0;
+  for (int i=0; i<numPolycubeGroups; i++)
+  {
+    polycubeGroupId = polycubeGroupIds->GetId(i);
+    polycubeGroupCount = 0;
+    for (int j=0; j<polycubeRegions.size(); j++)
+    {
+      if (polycubeRegions[j].IndexCluster == polycubeGroupId)
+      {
+        polycubeGroupCount++;
+      }
+    }
+
+    if (polycubeGroupCount > 1)
+    {
+      vtkErrorMacro("Multiple polycube groups with value " <<  polycubeGroupId);
+      return SV_ERROR;
+    }
+  }
+
+  if (numSurfaceGroups != numPolycubeGroups)
+  {
+    vtkDebugMacro("NUMBER OF SURFACE GROUPS: " << numSurfaceGroups);
+    vtkDebugMacro("NUMBER OF POLYCUBE GROUPS: " << numPolycubeGroups);
+
+    if (numSurfaceGroups > numPolycubeGroups)
+    {
+      vtkDebugMacro("ADDITIONAL SURFACE GROUPS");
+      return SV_ERROR;
+
+    }
+    else
+    {
+      vtkDebugMacro("NOT ENOUGH SURFACE REGIONS TO MATCH POLYCUBE");
+      return SV_ERROR;
+    }
+  }
+
+  for (int i=0; i<surfaceRegions.size(); i++)
+  {
+    int numEdges = surfaceRegions[i].BoundaryEdges.size();
+
+    int polyRegionId;
+    for (int k=0; k<polycubeRegions.size(); k++)
+    {
+      if (polycubeRegions[k].IndexCluster == surfaceRegions[i].IndexCluster)
+        polyRegionId = k;
+    }
+
+    for (int j=0; j<numEdges; j++)
+    {
+      int edgeSize = surfaceRegions[i].BoundaryEdges[j].size();
+
+      int ptId0 = surfaceRegions[i].BoundaryEdges[j][0];
+      vtkNew(vtkIdList, ptId0List);
+      vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, ptId0, ptId0List);
+
+      int ptIdN = surfaceRegions[i].BoundaryEdges[j][edgeSize-1];
+      vtkNew(vtkIdList, ptIdNList);
+      vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, ptIdN, ptIdNList);
+
+      vtkDebugMacro("PT ID 0: " << ptId0);
+      vtkDebugMacro("IDS 0: ");
+      for (int f=0; f<ptId0List->GetNumberOfIds(); f++)
+        vtkDebugMacro(" " << ptId0List->GetId(f) << " ");
+      vtkDebugMacro("\n");
+      vtkDebugMacro("PT ID N: " << ptIdN);
+      vtkDebugMacro("IDS N: ");
+      for (int f=0; f<ptIdNList->GetNumberOfIds(); f++)
+        vtkDebugMacro(" " << ptIdNList->GetId(f) << " ");
+      vtkDebugMacro("\n");
+      vtkDebugMacro("\n");
+
+      vtkNew(vtkIdList, intersectList);
+      intersectList->DeepCopy(ptId0List);
+
+      intersectList->IntersectWith(ptIdNList);
+
+      std::vector<int> newSlicePoints;
+      if (addSurfaceSlicePoints)
+      {
+        if ((ptId0List->GetNumberOfIds() == 4 || ptIdNList->GetNumberOfIds() == 4) && intersectList->GetNumberOfIds() == 3)
+        {
+          // Need to add slice end points
+          newSlicePoints.push_back(ptId0);
+          this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptId0, 1);
+          newSlicePoints.push_back(ptIdN);
+          this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptIdN, 1);
+          // Split in two
+          vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 2, surfaceRegions[i].IndexCluster,
+                                              newSlicePoints, this->SlicePointsArrayName);
+        }
+        else if (intersectList->GetNumberOfIds() >= 3)
+        {
+          // Traditional between sides of groups
+          vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 3, surfaceRegions[i].IndexCluster,
+                                              newSlicePoints, this->SlicePointsArrayName);
+
+        }
+        else if (intersectList->GetNumberOfIds() == 2)
+        {
+          // Need to add slice end points
+          newSlicePoints.push_back(ptId0);
+          this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptId0, 1);
+          newSlicePoints.push_back(ptIdN);
+          this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptIdN, 1);
+        }
+        else
+        {
+          vtkErrorMacro("Not sure where this case should happen, not implemented");
+          return SV_ERROR;
+        }
+      }
+      else
+      {
+        for (int k=0; k<surfaceRegions[i].BoundaryEdges[j].size(); k++)
+        {
+          int surfacePtId = surfaceRegions[i].BoundaryEdges[j][k];
+          if (this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(surfacePtId) != -1)
+          {
+            newSlicePoints.push_back(surfacePtId);
+          }
+        }
+      }
+
+      for (int k=0; k<newSlicePoints.size(); k++)
+      {
+        int pointId = newSlicePoints[k];
+        vtkDebugMacro("TRYING TO FIND MATCHER FOR " << pointId);
+
+        vtkNew(vtkIdList, surfaceSlicePtVals);
+        vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, pointId, surfaceSlicePtVals);
+
+        vtkDebugMacro("POINT CELL VALUES ARE " << surfaceSlicePtVals->GetId(0) << " " << surfaceSlicePtVals->GetId(1));
+
+        // Now find in the polycube
+        int edgeDone = 0;
+        int numPolyEdges = polycubeRegions[polyRegionId].BoundaryEdges.size();
+        for (int l=0; l<numPolyEdges; l++)
+        {
+          int polyEdgeSize = polycubeRegions[polyRegionId].BoundaryEdges[l].size();
+
+          int polyPtId0 = polycubeRegions[polyRegionId].BoundaryEdges[l][0];
+          vtkNew(vtkIdList, polyPtId0List);
+          vtkSVGeneralUtils::GetPointCellsValues(this->PolycubePd, this->GroupIdsArrayName, polyPtId0, polyPtId0List);
+
+          int polyPtIdN = polycubeRegions[polyRegionId].BoundaryEdges[l][polyEdgeSize-1];
+          vtkNew(vtkIdList, polyPtIdNList);
+          vtkSVGeneralUtils::GetPointCellsValues(this->PolycubePd, this->GroupIdsArrayName, polyPtIdN, polyPtIdNList);
+
+          vtkDebugMacro("POLY PT ID 0: " << polyPtId0);
+          vtkDebugMacro("POLY IDS 0: ");
+          for (int f=0; f<polyPtId0List->GetNumberOfIds(); f++)
+            vtkDebugMacro(" " <<  polyPtId0List->GetId(f) << " ");
+          vtkDebugMacro("\n");
+          vtkDebugMacro("POLY PT ID N: " << polyPtIdN);
+          vtkDebugMacro("POLY IDS N: ");
+          for (int f=0; f<polyPtIdNList->GetNumberOfIds(); f++)
+            vtkDebugMacro(" " <<  polyPtIdNList->GetId(f) << " ");
+          vtkDebugMacro("\n");
+          vtkDebugMacro("\n");
+
+          vtkNew(vtkIdList, checkList0);
+          checkList0->DeepCopy(polyPtId0List);
+
+          checkList0->IntersectWith(ptId0List);
+
+          vtkNew(vtkIdList, checkList1);
+          checkList1->DeepCopy(polyPtIdNList);
+
+          checkList1->IntersectWith(ptIdNList);
+
+          if (checkList0->GetNumberOfIds() == ptId0List->GetNumberOfIds() &&
+              checkList0->GetNumberOfIds() == polyPtId0List->GetNumberOfIds() &&
+              checkList1->GetNumberOfIds() == ptIdNList->GetNumberOfIds() &&
+              checkList1->GetNumberOfIds() == polyPtIdNList->GetNumberOfIds())
+          {
+            vtkDebugMacro("OKAY, THIS IS MATCHING END POINTS");
+            vtkDebugMacro("SURFACE PTS: " << ptId0 << " " <<  ptIdN << " POLY PTS: " <<  polyPtId0 << " " << polyPtIdN);
+
+            for (int m=0; m<polyEdgeSize; m++)
+            {
+              int edgePtId = polycubeRegions[polyRegionId].BoundaryEdges[l][m];
+
+              vtkNew(vtkIdList, polyPatchPtVals);
+              vtkSVGeneralUtils::GetPointCellsValues(this->PolycubePd, this->PatchIdsArrayName, edgePtId, polyPatchPtVals);
+
+              if (polyPatchPtVals->GetNumberOfIds() > 2)
+              {
+                vtkNew(vtkIdList, polyGroupPtVals);
+                vtkSVGeneralUtils::GetPointCellsValues(this->PolycubePd, this->GroupIdsArrayName, edgePtId, polyGroupPtVals);
+
+                vtkNew(vtkIdList, valueCheckList);
+                valueCheckList->DeepCopy(polyGroupPtVals);
+
+                valueCheckList->IntersectWith(surfaceSlicePtVals);
+
+                if (valueCheckList->GetNumberOfIds() == surfaceSlicePtVals->GetNumberOfIds() &&
+                    valueCheckList->GetNumberOfIds() == polyGroupPtVals->GetNumberOfIds())
+                {
+                  vtkDebugMacro("WE FOUND OUR MATCHING POINT!");
+                  vtkDebugMacro("SURFACE PT: " <<  pointId << " POLY PT: " << edgePtId);
+                  int currValue = this->PolycubePd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(edgePtId);
+                  if (currValue != -1)
+                  {
+                    vtkDebugMacro("ALREADY SET, MAKE SURE NEW POINT " << pointId << " MATCHES " << currValue);
+                    if (pointId != currValue)
+                    {
+                      vtkErrorMacro("Already set slice point on polycube does not match point on surface");
+                    }
+                  }
+                  else
+                  {
+                    this->PolycubePd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(edgePtId, pointId);
+                    this->PolycubePd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(polyPtId0, ptId0);
+                    this->PolycubePd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(polyPtIdN, ptIdN);
+                  }
+                  k++;
+                  if (k == newSlicePoints.size())
+                  {
+                    vtkDebugMacro("EDGE DONE");
+                    vtkDebugMacro("\n");
+                    edgeDone = 1;
+                    break;
+                  }
+                  else
+                  {
+                    pointId = newSlicePoints[k];
+                    vtkNew(vtkIdList, surfaceSlicePtVals);
+                    vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, pointId, surfaceSlicePtVals);
+                  }
+                }
+              }
+            }
+          }
+          if (edgeDone)
+            break;
+        }
+        if (edgeDone)
+          break;
+        else
+        {
+          vtkErrorMacro("DIDNT FIND A MATCHING PC POINT FOR SLICE POINT " << pointId);
+          return SV_ERROR;
+        }
+      }
+    }
   }
 
   return SV_OK;

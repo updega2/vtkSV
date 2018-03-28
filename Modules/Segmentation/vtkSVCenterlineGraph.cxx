@@ -63,27 +63,12 @@ vtkSVCenterlineGraph::vtkSVCenterlineGraph()
 {
   this->NumberOfCells = 0;
   this->NumberOfNodes = 1; // The root
-  this->CubeSize = 0.0;
-  this->Root = NULL;
+  this->CubeSize = 0.5;
+  this->Root = new vtkSVCenterlineGCell(this->NumberOfCells++, 0, RIGHT);
 
-  this->Lines = vtkPolyData::New();
-}
+  this->GroupIdsArrayName = NULL;
 
-// ----------------------
-// Constructor
-// ----------------------
-vtkSVCenterlineGraph::vtkSVCenterlineGraph(int rootId,
-                 vtkPolyData *linesPd,
-                 std::string groupIdsArrayName)
-{
-  this->NumberOfCells = 0;
-  this->NumberOfNodes = 1; // The root
-  this->Root = new vtkSVCenterlineGCell(this->NumberOfCells++, rootId, RIGHT);
-
-  this->Lines = vtkPolyData::New();
-  this->Lines->DeepCopy(linesPd);
-  this->Lines->BuildLinks();
-  this->GroupIdsArrayName = groupIdsArrayName;
+  this->Lines = NULL;
 }
 
 // ----------------------
@@ -101,6 +86,13 @@ vtkSVCenterlineGraph::~vtkSVCenterlineGraph()
     this->Lines->Delete();
     this->Lines = NULL;
   }
+
+  if (this->GroupIdsArrayName != NULL)
+  {
+    delete [] this->GroupIdsArrayName;
+    this->GroupIdsArrayName = NULL;
+  }
+
 }
 
 // ----------------------
@@ -158,7 +150,7 @@ int vtkSVCenterlineGraph::GetGraphPolyData(vtkPolyData *pd)
   vtkNew(vtkPoints, newPoints);
   vtkNew(vtkCellArray, newCells);
   vtkNew(vtkIntArray, groupIds);
-  groupIds->SetName(this->GroupIdsArrayName.c_str());
+  groupIds->SetName(this->GroupIdsArrayName);
   vtkSVCenterlineGraph::Recurse(this->Root, vtkSVCenterlineGraph::InsertGCellPoints, newPoints, newCells, groupIds);
 
   pd->SetPoints(newPoints);
@@ -205,10 +197,26 @@ int vtkSVCenterlineGraph::InsertGCellPoints(vtkSVCenterlineGCell *gCell, void *a
 int vtkSVCenterlineGraph::BuildGraph()
 {
   fprintf(stdout,"Building graph!!!\n");
+  if (this->Lines == NULL)
+  {
+    vtkErrorMacro("Need to provide the centerlines");
+    return SV_ERROR;
+  }
+  if (!this->GroupIdsArrayName)
+  {
+    vtkDebugMacro("Centerline GroupIds Array Name not given, setting to GroupIds");
+    this->GroupIdsArrayName = new char[strlen("GroupIds") + 1];
+    strcpy(this->GroupIdsArrayName, "GroupIds");
+  }
+  if (vtkSVGeneralUtils::CheckArrayExists(this->Lines, 1, this->GroupIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro(<< "GroupIds Array with name specified does not exist on the lines");
+    return SV_OK;
+  }
 
   // Check to see if we need to flip the first line
   vtkIdType npts, *pts;
-  int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName.c_str())->LookupValue(this->Root->GroupId);
+  int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(this->Root->GroupId);
   this->Lines->GetCellPoints(cellId, npts, pts);
 
   vtkNew(vtkIdList, point0Cells);
@@ -263,10 +271,15 @@ int vtkSVCenterlineGraph::BuildGraph()
       return SV_ERROR;
   }
 
-  if (this->GetGraphDirections() != SV_OK)
+  if (this->UpdateBranchReferenceDirections() != SV_OK)
+  {
     return SV_ERROR;
+  }
+
   if (this->GetGraphPoints() != SV_OK)
+  {
     return SV_ERROR;
+  }
 
   return SV_OK;
 }
@@ -341,7 +354,7 @@ int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, std::vector
 {
   // Get first cell points
   vtkIdType npts, *pts;
-  int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName.c_str())->LookupValue(groupId);
+  int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
   this->Lines->GetCellPoints(cellId, npts, pts);
 
   // Get connecting
@@ -355,7 +368,7 @@ int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, std::vector
     if (pointCells0->GetId(i) != cellId)
     {
       connectingGroups.push_back(this->Lines->GetCellData()->GetArray(
-        this->GroupIdsArrayName.c_str())->GetTuple1(pointCells0->GetId(i)));
+        this->GroupIdsArrayName)->GetTuple1(pointCells0->GetId(i)));
     }
   }
   for (int i=0; i<pointCellsN->GetNumberOfIds(); i++)
@@ -363,7 +376,7 @@ int vtkSVCenterlineGraph::GetConnectingLineGroups(const int groupId, std::vector
     if (pointCellsN->GetId(i) != cellId)
     {
       connectingGroups.push_back(this->Lines->GetCellData()->GetArray(
-        this->GroupIdsArrayName.c_str())->GetTuple1(pointCellsN->GetId(i)));
+        this->GroupIdsArrayName)->GetTuple1(pointCellsN->GetId(i)));
     }
   }
 
@@ -382,7 +395,7 @@ int vtkSVCenterlineGraph::ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *pa
 {
   vtkNew(vtkThreshold, thresholder);
   thresholder->SetInputData(this->Lines);
-  thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
+  thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName);
   thresholder->ThresholdBetween(parent->GroupId, parent->GroupId);
   thresholder->Update();
   int numPts = thresholder->GetOutput()->GetNumberOfPoints();
@@ -401,7 +414,7 @@ int vtkSVCenterlineGraph::ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *pa
     for (int i=0; i<numChildren; i++)
     {
       thresholder->SetInputData(this->Lines);
-      thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
+      thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName);
       thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
       thresholder->Update();
 
@@ -484,7 +497,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   //fprintf(stdout,"Child %d of parent %d, dir: %d\n", parent->Children[1]->GroupId, parent->GroupId, parent->Children[1]->BranchDir);
   vtkNew(vtkThreshold, thresholder);
   thresholder->SetInputData(this->Lines);
-  thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
+  thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName);
   thresholder->ThresholdBetween(parent->GroupId, parent->GroupId);
   thresholder->Update();
   int numPts = thresholder->GetOutput()->GetNumberOfPoints();
@@ -505,7 +518,7 @@ int vtkSVCenterlineGraph::ComputeBranchReferenceVectors(vtkSVCenterlineGCell *pa
   for (int i=0; i<numChildren; i++)
   {
     thresholder->SetInputData(this->Lines);
-    thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName.c_str());
+    thresholder->SetInputArrayToProcess(0, 0, 0, 1, this->GroupIdsArrayName);
     thresholder->ThresholdBetween(parent->Children[i]->GroupId, parent->Children[i]->GroupId);
     thresholder->Update();
 
@@ -807,7 +820,7 @@ int vtkSVCenterlineGraph::GetGraphPoints()
 
     // cell id in the vtkPolyData
     int cellId = this->Lines->GetCellData()->GetArray(
-     this->GroupIdsArrayName.c_str())->LookupValue(gCell->GroupId);
+     this->GroupIdsArrayName)->LookupValue(gCell->GroupId);
 
     // Get Cell points
     vtkIdType npts, *pts;
@@ -1259,29 +1272,12 @@ int vtkSVCenterlineGraph::GetGraphPoints()
 }
 
 // ----------------------
-// GetGraphDirections
+// UpdateBranchReferenceDirections
 // ----------------------
-int vtkSVCenterlineGraph::GetGraphDirections()
+int vtkSVCenterlineGraph::UpdateBranchReferenceDirections()
 {
   int numSegs   = this->NumberOfCells;
   int numPoints = this->Lines->GetNumberOfPoints();
-
-  // Set up local arrays
-  vtkNew(vtkDoubleArray, localArrayX);
-  vtkNew(vtkDoubleArray, localArrayY);
-  vtkNew(vtkDoubleArray, localArrayZ);
-  localArrayX->SetNumberOfComponents(3);
-  localArrayX->SetNumberOfTuples(numPoints);
-  localArrayY->SetNumberOfComponents(3);
-  localArrayY->SetNumberOfTuples(numPoints);
-  localArrayZ->SetNumberOfComponents(3);
-  localArrayZ->SetNumberOfTuples(numPoints);
-  for (int i=0; i<3; i++)
-  {
-    localArrayX->FillComponent(i, -1);
-    localArrayY->FillComponent(i, -1);
-    localArrayZ->FillComponent(i, -1);
-  }
 
   double refVecs[3][3];
   for (int i=0; i<numSegs; i++)
@@ -1299,7 +1295,7 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
     // cell id in the vtkPolyData
     int cellId = this->Lines->GetCellData()->GetArray(
-     this->GroupIdsArrayName.c_str())->LookupValue(gCell->GroupId);
+     this->GroupIdsArrayName)->LookupValue(gCell->GroupId);
 
     // Get Cell points
     vtkIdType npts, *pts;
@@ -1334,76 +1330,10 @@ int vtkSVCenterlineGraph::GetGraphDirections()
     double tmpX[3];
     double pt0[3], pt1[3];
 
-    //// Compute our temp coordinate system
-    //fprintf(stdout,"THE FIRST VEC: %.6f %.6f %.6f\n", refVecs[1][0], refVecs[1][1], refVecs[1][2]);
-    //fprintf(stdout,"CURIOUS: %.6f\n", vtkMath::Dot(refVecs[1], refVecs[0]));
-    //this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], tmpX, refVecs[2]);
-    //for (int j=0; j<3; j++)
-    //  refVecs[1][j] = tmpX[j];
-
-    int begType, begSplitType;
-    if (gCell->GetBeginningType(begType, begSplitType) != SV_OK)
-    {
-      return SV_ERROR;
-    }
-
-    if (gCell->Parent == NULL)
-    {
-      localArrayX->SetTuple(pts[0], refVecs[1]);
-      localArrayY->SetTuple(pts[0], refVecs[2]);
-      localArrayZ->SetTuple(pts[0], refVecs[0]);
-    }
-
     for (int j=1; j<npts; j++)
     {
       this->Lines->GetPoint(pts[j-1], pt0);
       this->Lines->GetPoint(pts[j], pt1);
-
-      // TODO: SPECIALLLL!!! CLEANUP
-      //if (j == 1)
-      //{
-      //  if (begSplitType == TRI && (begType == VERT_WEDGE || begType == HORZ_WEDGE) && gCell->BranchDir%2 == 0)
-      //  {
-      //    if (gCell->Parent->Children[gCell->Parent->DivergingChild]->Id != gCell->Id &&
-      //        gCell->Parent->Children[gCell->Parent->AligningChild]->Id != gCell->Id)
-      //    {
-      //      double befCheckRefs[3][3];
-      //      for (int k=0; k<3; k++)
-      //        for (int l=0; l<3; l++)
-      //          befCheckRefs[k][l] = refVecs[k][l];
-
-
-      //      int cellId = this->Lines->GetCellData()->GetArray(
-      //       this->GroupIdsArrayName.c_str())->LookupValue(gCell->Parent->Children[gCell->Parent->DivergingChild]->GroupId);
-      //      vtkIdType ndivpts, *divpts;
-      //      this->Lines->GetCellPoints(cellId, ndivpts, divpts);
-
-      //      double tmpPt0[3], tmpPt1[3], testVec[3];
-      //      this->Lines->GetPoint(divpts[0], tmpPt0);
-      //      this->Lines->GetPoint(divpts[1], tmpPt1);
-      //      vtkMath::Subtract(tmpPt0, tmpPt1, testVec);
-      //      vtkMath::Normalize(testVec);
-
-      //      // Check to see if its in dir of local x
-      //      if (fabs(vtkMath::Dot(befCheckRefs[1], testVec)) > fabs(vtkMath::Dot(befCheckRefs[2], testVec)))
-      //      {
-      //        for (int k=0; k<3; k++)
-      //          refVecs[0][k] = testVec[k];
-
-      //        double superTmp0[3], superTmp1[3];
-      //        this->ComputeLocalCoordinateSystem(refVecs[0], refVecs[1], superTmp0, superTmp1);
-      //        for (int k=0; k<3; k++)
-      //          refVecs[1][k] = 1.0*superTmp0[k];
-
-      //        if (vtkMath::Dot(befCheckRefs[0], refVecs[0]) < 0)
-      //        {
-      //          for (int k=0; k<3; k++)
-      //            refVecs[1][k] = -1.0*refVecs[1][k];
-      //        }
-      //      }
-      //    }
-      //  }
-      //}
 
       double checkRefs[3][3];
       for (int k=0; k<3; k++)
@@ -1419,25 +1349,6 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       this->ComputeLocalCoordinateSystem(checkRefs[0], refVecs[0], refVecs[1], tmpX, refVecs[2]);
       for (int k=0; k<3; k++)
         refVecs[1][k] = tmpX[k];
-
-      //if (vtkMath::Dot(checkRefs[0], refVecs[0]) < 0)
-      //{
-      //  // TODO: Double check this
-      //  // Check to see if its in dir of local x
-      //  if (fabs(vtkMath::Dot(checkRefs[1], refVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], refVecs[0])))
-      //  {
-      //    for (int k=0; k<3; k++)
-      //    {
-      //      refVecs[1][k] = -1.0*refVecs[1][k];
-      //      refVecs[2][k] = -1.0*refVecs[2][k];
-      //    }
-      //  }
-      //}
-
-      localArrayX->SetTuple(pts[j], refVecs[1]);
-      localArrayY->SetTuple(pts[j], refVecs[2]);
-      localArrayZ->SetTuple(pts[j], refVecs[0]);
-
     }
 
     if (isTerminating == 0)
@@ -1468,21 +1379,6 @@ int vtkSVCenterlineGraph::GetGraphDirections()
 
       vtkMath::MultiplyScalar(projVec, projDot);
       vtkMath::Normalize(projVec);
-
-      vtkNew(vtkPoints, singlePoint);
-      singlePoint->InsertNextPoint(-2.4899, 2.50698, -10.0931);
-      singlePoint->InsertNextPoint(-2.4899, 2.50698, -10.0931);
-      vtkNew(vtkDoubleArray, singleArray);
-      singleArray->SetNumberOfComponents(3);
-      singleArray->SetNumberOfTuples(2);
-      singleArray->SetName("DUMMY");
-      singleArray->SetTuple(0, refVecs[1]);
-      singleArray->SetTuple(1, projVec);
-      vtkNew(vtkPolyData, singlePD);
-      singlePD->SetPoints(singlePoint);
-      singlePD->GetPointData()->AddArray(singleArray);
-      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DOMBONE.vtp", singlePD);
-
 
       double angleVec1[3];
       vtkMath::Cross(refVecs[1], projVec, angleVec1);
@@ -1545,145 +1441,31 @@ int vtkSVCenterlineGraph::GetGraphDirections()
       // update branch dirs
       this->UpdateBranchDirs(gCell, updateDir);
 
-      double updateRefVecs[3][3];
-      // The front direction of segment
+
+      // update reference directions
+      if (projDot < 0)
+      {
+        vtkMath::MultiplyScalar(endVecs[maxDir], -1.0);
+      }
+
       for (int j=0; j<3; j++)
       {
-        for (int k=0; k<3; k++)
-          updateRefVecs[j][k] = gCell->RefDirs[j][k];
+        endVecs[1][j] = endVecs[maxDir][j];
       }
 
-      //Update now
-      double locals[3][3];
-      for (int j=1; j<npts; j++)
-      {
-        this->Lines->GetPoint(pts[j-1], pt0);
-        this->Lines->GetPoint(pts[j], pt1);
+      vtkMath::Cross(endVecs[0], endVecs[1], endVecs[2]);
 
-        localArrayX->GetTuple(pts[j], locals[1]);
-        localArrayY->GetTuple(pts[j], locals[2]);
-        localArrayZ->GetTuple(pts[j], locals[0]);
-        localArrayZ->GetTuple(pts[j], updateRefVecs[0]);
-
-        double singleUpdateAngle = updateAngle * j;
-
-        double updateVecX[3], updateVecY[3];
-        this->RotateVecAroundLine(locals[1], singleUpdateAngle, locals[0], updateRefVecs[1]);
-        this->RotateVecAroundLine(locals[2], singleUpdateAngle, locals[0], updateRefVecs[2]);
-
-        // TODO: SPECIALLLL!!! CLEANUP
-        //if (j == 1)
-        //{
-        //  if (begSplitType == TRI && (begType == VERT_WEDGE || begType == HORZ_WEDGE) && gCell->BranchDir%2 == 0)
-        //  {
-        //    if (gCell->Parent->Children[gCell->Parent->DivergingChild]->Id != gCell->Id &&
-        //        gCell->Parent->Children[gCell->Parent->AligningChild]->Id != gCell->Id)
-        //    {
-        //      double befCheckRefs[3][3];
-        //      for (int k=0; k<3; k++)
-        //        for (int l=0; l<3; l++)
-        //          befCheckRefs[k][l] = updateRefVecs[k][l];
-
-
-        //      int cellId = this->Lines->GetCellData()->GetArray(
-        //       this->GroupIdsArrayName.c_str())->LookupValue(gCell->Parent->Children[gCell->Parent->DivergingChild]->GroupId);
-        //      vtkIdType ndivpts, *divpts;
-        //      this->Lines->GetCellPoints(cellId, ndivpts, divpts);
-
-        //      double tmpPt0[3], tmpPt1[3], testVec[3];
-        //      this->Lines->GetPoint(divpts[0], tmpPt0);
-        //      this->Lines->GetPoint(divpts[1], tmpPt1);
-        //      vtkMath::Subtract(tmpPt0, tmpPt1, testVec);
-        //      vtkMath::Normalize(testVec);
-
-        //      // Check to see if its in dir of local x
-        //      if (fabs(vtkMath::Dot(befCheckRefs[1], testVec)) > fabs(vtkMath::Dot(befCheckRefs[2], testVec)))
-        //      {
-        //        for (int k=0; k<3; k++)
-        //          updateRefVecs[0][k] = testVec[k];
-
-        //        double superTmp0[3], superTmp1[3];
-        //        this->ComputeLocalCoordinateSystem(updateRefVecs[0], updateRefVecs[1], superTmp0, superTmp1);
-        //        for (int k=0; k<3; k++)
-        //          updateRefVecs[1][k] = 1.0*superTmp0[k];
-
-        //        if (vtkMath::Dot(befCheckRefs[0], updateRefVecs[0]) < 0)
-        //        {
-        //          for (int k=0; k<3; k++)
-        //            updateRefVecs[1][k] = -1.0*updateRefVecs[1][k];
-        //        }
-        //      }
-        //    }
-        //  }
-        //}
-
-        //double checkRefs[3][3];
-        //for (int k=0; k<3; k++)
-        //  for (int l=0; l<3; l++)
-        //    checkRefs[k][l] = updateRefVecs[k][l];
-
-        //if (gCell->Parent == NULL)
-        //  vtkMath::Subtract(pt1, pt0, updateRefVecs[0]);
-        //else
-        //  vtkMath::Subtract(pt0, pt1, updateRefVecs[0]);
-        //vtkMath::Normalize(updateRefVecs[0]);
-
-        //// TODO: THIS IS A PRETTY MASSIVE CHANGE HERE
-        ////double thisUpdateAngle = fabs(vtkMath::Dot(checkRefs[0], updateRefVecs[0])) * updateAngle;
-        //double thisUpdateAngle = updateAngle;
-
-        //double updateVec[3];
-        //this->RotateVecAroundLine(updateRefVecs[1], thisUpdateAngle, updateRefVecs[0], updateVec);
-        //this->ComputeLocalCoordinateSystem(checkRefs[0], updateRefVecs[0], updateVec, tmpX, updateRefVecs[2]);
-        //for (int k=0; k<3; k++)
-        //  updateRefVecs[1][k] = tmpX[k];
-
-        ////if (vtkMath::Dot(checkRefs[0], updateRefVecs[0]) < 0)
-        ////{
-        ////  // TODO: Double check this
-        ////  // Check to see if its in dir of local x
-        ////  if (fabs(vtkMath::Dot(checkRefs[1], updateRefVecs[0])) > fabs(vtkMath::Dot(checkRefs[2], updateRefVecs[0])))
-        ////  {
-        ////    for (int k=0; k<3; k++)
-        ////    {
-        ////      updateRefVecs[1][k] = -1.0*updateRefVecs[1][k];
-        ////      updateRefVecs[2][k] = -1.0*updateRefVecs[2][k];
-        ////    }
-        ////  }
-        ////}
-
-        localArrayX->SetTuple(pts[j], updateRefVecs[1]);
-        localArrayY->SetTuple(pts[j], updateRefVecs[2]);
-        localArrayZ->SetTuple(pts[j], updateRefVecs[0]);
-
-      }
-
-      double finalCheck = fabs(vtkMath::Dot(updateRefVecs[1], endVecs[maxDir]));
-      fprintf(stdout,"Final check: %.4f\n", finalCheck);
-      if (finalCheck < 0.9)
-      {
-        fprintf(stderr,"ERROR: The vector for %d was not updated to correct ending vector\n", gCell->GroupId);
-        fprintf(stderr,"The checking dot is %.6f\n", finalCheck);
-        return SV_ERROR;
-      }
       for (int j=0; j<3; j++)
       {
         for (int k=0; k<3; k++)
         {
           for (int l=0; l<gCell->Children.size(); l++)
-            gCell->Children[l]->RefDirs[j][k] = updateRefVecs[j][k];
+            gCell->Children[l]->RefDirs[j][k] = endVecs[j][k];
         }
       }
-
     }
   }
 
-  localArrayX->SetName("LocalX");
-  localArrayY->SetName("LocalY");
-  localArrayZ->SetName("LocalZ");
-  this->Lines->GetPointData()->AddArray(localArrayX);
-  this->Lines->GetPointData()->AddArray(localArrayY);
-  this->Lines->GetPointData()->AddArray(localArrayZ);
   return SV_OK;
 }
 

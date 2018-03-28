@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string blankingArrayName = "Blanking";
+  std::string patchIdsArrayName = "PatchIds";
+  std::string slicePointsArrayName = "SlicePoints";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -91,6 +93,8 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-groupids")      {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
       else if(tmpstr=="-blanking")      {blankingArrayName = argv[++iarg];}
+      else if(tmpstr=="-patchids")      {patchIdsArrayName = argv[++iarg];}
+      else if(tmpstr=="-slicepoints")   {slicePointsArrayName = argv[++iarg];}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
       else if(tmpstr=="-groupsurface")  {groupSurface = atoi(argv[++iarg]);}
       else if(tmpstr=="-enforcecenterlinesconnectivity")     {enforceCenterlinesConnectivity = atoi(argv[++iarg]);}
@@ -116,6 +120,8 @@ int main(int argc, char *argv[])
     cout << "  -groupids                       : Name to be used for group ids [default GroupIds]"<< endl;
     cout << "  -radius                         : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -blanking                       : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
+    cout << "  -patchids                       : Name on polycube indicating the cuboid patch id [default PatchIds]"<< endl;
+    cout << "  -slicepoints                    : Name to be placed on surface to indicate where patch divisions will occur if preparing for cuboid patching. Only used if enforcepolycubeconnectivity is turned on [default SlicePoints]"<< endl;
     cout << "  -useradiusinfo                  : Use radius to help in clipping operation [default 1]"<< endl;
     cout << "  -enforcecenterlinesconnectivity : Enforce the connectivity of the centerlines on the surface [default 0]" << endl;
     cout << "  -enforcepolycubeconnectivity    : Enforce the connectivity of the polycube on the surface [default 0]" << endl;
@@ -202,6 +208,8 @@ int main(int argc, char *argv[])
     Grouper->SetBlankingArrayName(blankingArrayName.c_str());
     Grouper->SetCenterlineIdsArrayName("CenterlineIds");
     Grouper->SetTractIdsArrayName("TractIds");
+    Grouper->SetPatchIdsArrayName(patchIdsArrayName.c_str());
+    Grouper->SetSlicePointsArrayName(slicePointsArrayName.c_str());
     Grouper->SetUseRadiusInformation(useRadiusInfo);
     Grouper->SetEnforceCenterlinesConnectivity(enforceCenterlinesConnectivity);
     Grouper->SetEnforcePolycubeConnectivity(enforcePolycubeConnectivity);

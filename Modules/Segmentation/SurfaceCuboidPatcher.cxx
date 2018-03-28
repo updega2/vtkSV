@@ -65,10 +65,14 @@ int main(int argc, char *argv[])
 
   // Default values for options
   int useRadiusInfo = 1;
+  int enforcePolycubeConnectivity = 0;
 
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
   std::string blankingArrayName = "Blanking";
+  std::string patchIdsArrayName = "PatchIds";
+  std::string slicePointsArrayName = "SlicePoints";
+  std::string clusteringVectorArrayName = "ClusteringVector";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -84,7 +88,11 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-groupids")      {groupIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-radius")        {radiusArrayName = argv[++iarg];}
       else if(tmpstr=="-blanking")      {blankingArrayName = argv[++iarg];}
+      else if(tmpstr=="-patchids")      {patchIdsArrayName = argv[++iarg];}
+      else if(tmpstr=="-slicepoints")   {slicePointsArrayName = argv[++iarg];}
       else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
+      else if(tmpstr=="-clusteringvector")   {clusteringVectorArrayName = argv[++iarg];}
+      else if(tmpstr=="-enforcepolycubeconnectivity")     {enforcePolycubeConnectivity = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -105,7 +113,11 @@ int main(int argc, char *argv[])
     cout << "  -groupids                       : Name to be used for group ids [default GroupIds]"<< endl;
     cout << "  -radius                         : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
     cout << "  -blanking                       : Name on centerlines describing whether line is part of bifurcation region or not [default Blanking]"<< endl;
+    cout << "  -patchids                       : Name on polycube indicating the cuboid patch id [default PatchIds]"<< endl;
+    cout << "  -slicepoints                    : Name to be placed on surface to indicate where patch divisions will occur if preparing for cuboid patching. Only used if enforcepolycubeconnectivity is turned on [default SlicePoints]"<< endl;
+    cout << "  -clusteringvector               : Name to be used for clustering. Should be a vector on the surface. [default ClusteringVector]"<< endl;
     cout << "  -useradiusinfo                  : Use radius to help in clipping operation [default 1]"<< endl;
+    cout << "  -enforcepolycubeconnectivity    : Enforce the connectivity of the polycube on the surface [default 0]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -151,6 +163,10 @@ int main(int argc, char *argv[])
   Patcher->SetBlankingArrayName(blankingArrayName.c_str());
   Patcher->SetCenterlineIdsArrayName("CenterlineIds");
   Patcher->SetTractIdsArrayName("TractIds");
+  Patcher->SetPatchIdsArrayName(patchIdsArrayName.c_str());
+  Patcher->SetSlicePointsArrayName(slicePointsArrayName.c_str());
+  Patcher->SetClusteringVectorArrayName(clusteringVectorArrayName.c_str());
+  Patcher->SetEnforcePolycubeConnectivity(enforcePolycubeConnectivity);
   Patcher->DebugOn();
   Patcher->Update();
   std::cout<<"Done"<<endl;

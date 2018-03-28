@@ -89,6 +89,10 @@ public:
   vtkGetStringMacro(CenterlineIdsArrayName);
   vtkSetStringMacro(TractIdsArrayName);
   vtkGetStringMacro(TractIdsArrayName);
+  vtkSetStringMacro(PatchIdsArrayName);
+  vtkGetStringMacro(PatchIdsArrayName);
+  vtkSetStringMacro(SlicePointsArrayName);
+  vtkGetStringMacro(SlicePointsArrayName);
   //@}
 
   //@{
@@ -148,7 +152,7 @@ public:
                                 std::vector<Region> allRegions);
 
   static int SplitBoundary(vtkPolyData *pd, std::vector<int> boundary,
-                           int numDivs, int groupId, std::vector<int> &newSlicePoints);
+                           int numDivs, int groupId, std::vector<int> &newSlicePoints, std::string slicePointsArrayName);
 
   static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
   static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
@@ -233,12 +237,7 @@ protected:
                     std::vector<int> allEdges,
                     std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
-  int FixGroupsWithCenterlines(vtkPolyData *pd,
-                               vtkPolyData *centerlines,
-                               std::string pdArrayName,
-                               std::string centerlinesArrayName,
-                               std::string centerlinesRadiusArrayName,
-                               int useRadiusInformation);
+  int FixGroupsWithCenterlines();
 
   int GetCellRingNeighbors(vtkPolyData *pd,
                            vtkIdList *cellIds,
@@ -263,6 +262,8 @@ protected:
   char *GroupIdsArrayName;
   char *BlankingArrayName;
   char *TractIdsArrayName;
+  char *PatchIdsArrayName;
+  char *SlicePointsArrayName;
 
   vtkPolyData *WorkPd;
   vtkPolyData *MergedCenterlines;

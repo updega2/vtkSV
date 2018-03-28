@@ -59,7 +59,7 @@ vtkSVPolycubeGenerator::vtkSVPolycubeGenerator()
 {
   this->CenterlineGroupIdsArrayName = NULL;
   this->CenterlineRadiusArrayName   = NULL;
-  this->CenterlineGraph             = NULL;
+  this->CenterlineGraph             = vtkSVCenterlineGraph::New();
 
   this->WorkPd     = vtkPolyData::New();
   this->GraphPd    = vtkPolyData::New();
@@ -204,8 +204,8 @@ int vtkSVPolycubeGenerator::RunFilter()
     polycubeSize = this->PolycubeUnitLength*this->PolycubeDivisions;
   }
 
-  this->CenterlineGraph = new vtkSVCenterlineGraph(0, this->WorkPd,
-                                                this->CenterlineGroupIdsArrayName);
+  this->CenterlineGraph->SetLines(this->WorkPd);
+  this->CenterlineGraph->SetGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
   this->CenterlineGraph->SetCubeSize(polycubeSize);
 
   if (this->CenterlineGraph->BuildGraph() != SV_OK)

@@ -31,6 +31,7 @@
 #include "vtkSVGroupsSegmenter.h"
 
 #include "vtkSVCenterlineBranchSplitter.h"
+#include "vtkSVCenterlineParallelTransportVectors.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVPolycubeGenerator.h"
@@ -295,10 +296,6 @@ int vtkSVGroupsSegmenter::PrepFilter()
   this->GraphPd->DeepCopy(polycuber->GetGraphPd());
   this->PolycubeUnitLength = polycuber->GetPolycubeUnitLength();
   this->PolycubeDivisions  = polycuber->GetPolycubeDivisions();
-  // Need to copy lines from centerline graph because data pertaining to
-  // local coordinate systems are added onto the centerlines during processing
-  this->MergedCenterlines->DeepCopy(polycuber->GetCenterlineGraph()->Lines);
-  // TODO: Adding of local coordinates as own filter
 
   if (this->PolycubePd->GetNumberOfCells() == 0)
   {
@@ -389,6 +386,8 @@ int vtkSVGroupsSegmenter::RunFilter()
     grouper->SetCenterlineIdsArrayName("CenterlineIds");
     grouper->SetGroupIdsArrayName(this->GroupIdsArrayName);
     grouper->SetTractIdsArrayName("TractIds");
+    grouper->SetPatchIdsArrayName("PatchIds");
+    grouper->SetSlicePointsArrayName("SlicePoints");
     grouper->GroupSurfaceOn();
     grouper->EnforceCenterlinesConnectivityOn();
     grouper->EnforcePolycubeConnectivityOn();
@@ -397,6 +396,14 @@ int vtkSVGroupsSegmenter::RunFilter()
 
     this->WorkPd->DeepCopy(grouper->GetOutput());
   }
+
+  vtkNew(vtkSVCenterlineParallelTransportVectors, parallelTransport);
+  parallelTransport->SetInputData(this->MergedCenterlines);
+  parallelTransport->SetGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
+  parallelTransport->SetParallelTransportVectorArrayName("ParallelTransportVector");
+  parallelTransport->Update();
+
+  this->MergedCenterlines->DeepCopy(parallelTransport->GetOutput());
 
   vtkNew(vtkSVSurfaceCenterlineAttributesPasser, passer);
   passer->SetInputData(this->WorkPd);
@@ -408,6 +415,10 @@ int vtkSVGroupsSegmenter::RunFilter()
   passer->SetCenterlineIdsArrayName("CenterlineIds");
   passer->SetGroupIdsArrayName(this->GroupIdsArrayName);
   passer->SetTractIdsArrayName("TractIds");
+  passer->SetPatchIdsArrayName("PatchIds");
+  passer->SetSlicePointsArrayName("SlicePoints");
+  passer->SetParallelTransportVectorArrayName("ParallelTransportVector");
+  passer->SetTransformedNormalsArrayName("NormalsTransformedToCenterlines");
   passer->SetNormalsWeighting(this->NormalsWeighting);
   passer->SetIsVasculature(this->IsVasculature);
   passer->SetBoundaryEnforceFactor(this->BoundaryEnforceFactor);
@@ -425,6 +436,10 @@ int vtkSVGroupsSegmenter::RunFilter()
   patcher->SetCenterlineIdsArrayName("CenterlineIds");
   patcher->SetGroupIdsArrayName(this->GroupIdsArrayName);
   patcher->SetTractIdsArrayName("TractIds");
+  patcher->SetPatchIdsArrayName("PatchIds");
+  patcher->SetSlicePointsArrayName("SlicePoints");
+  patcher->SetClusteringVectorArrayName("NormalsTransformedToCenterlines");
+  patcher->EnforcePolycubeConnectivityOn();
   patcher->Update();
 
   this->WorkPd->DeepCopy(patcher->GetOutput());

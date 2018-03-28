@@ -89,6 +89,14 @@ public:
   vtkGetStringMacro(CenterlineIdsArrayName);
   vtkSetStringMacro(TractIdsArrayName);
   vtkGetStringMacro(TractIdsArrayName);
+  vtkSetStringMacro(PatchIdsArrayName);
+  vtkGetStringMacro(PatchIdsArrayName);
+  vtkSetStringMacro(SlicePointsArrayName);
+  vtkGetStringMacro(SlicePointsArrayName);
+  vtkSetStringMacro(TransformedNormalsArrayName);
+  vtkGetStringMacro(TransformedNormalsArrayName);
+  vtkSetStringMacro(ParallelTransportVectorArrayName);
+  vtkGetStringMacro(ParallelTransportVectorArrayName);
   //@}
 
   //@{
@@ -150,6 +158,7 @@ protected:
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
 
+  int CheckGroupsWithPolycube();
   int GetOpenBoundaryEdges(vtkPolyData *branchPd,
                            std::vector<int> &openCornerPoints,
                            std::vector<std::vector<int> > &openEdges);
@@ -168,6 +177,10 @@ protected:
   char *GroupIdsArrayName;
   char *BlankingArrayName;
   char *TractIdsArrayName;
+  char *PatchIdsArrayName;
+  char *SlicePointsArrayName;
+  char *TransformedNormalsArrayName;
+  char *ParallelTransportVectorArrayName;
 
   vtkPolyData *WorkPd;
   vtkPolyData *MergedCenterlines;

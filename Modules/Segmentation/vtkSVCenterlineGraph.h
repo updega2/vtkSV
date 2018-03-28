@@ -56,12 +56,15 @@ public:
 
   //Constructors
   vtkSVCenterlineGraph();
-  vtkSVCenterlineGraph(int rootId,
-          vtkPolyData *linesPd,
-          std::string groupIdsArrayName);
 
   //Destructor
   ~vtkSVCenterlineGraph();
+
+  //@{
+  /// \brief Get/Set macro for merged centerlines
+  vtkSetObjectMacro(Lines,vtkPolyData);
+  vtkGetObjectMacro(Lines,vtkPolyData);
+  //@}
 
   //Macros
   //@{
@@ -78,6 +81,13 @@ public:
   vtkGetMacro(CubeSize,double);
   //@}
 
+  //@{
+  /// \brief Get/Set macro for array name used by the filter. Must
+  //  be present on the centerlines.
+  vtkSetStringMacro(GroupIdsArrayName);
+  vtkGetStringMacro(GroupIdsArrayName);
+  //@}
+
   //Member functions
   vtkSVCenterlineGCell* GetCell(const int findId);
   vtkSVCenterlineGCell* GetCellByGroupId(const int findId);
@@ -86,12 +96,12 @@ public:
   int BuildGraph();
   int PrintGraph();
   int GrowGraph(vtkSVCenterlineGCell *parent);
-  int GetGraphDirections();
   int GetGraphPoints();
   int ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *parent);
   int ComputeBranchReferenceVectors(vtkSVCenterlineGCell *parent);
   int GetInitialBranchDirections(vtkSVCenterlineGCell *parent);
   int UpdateBranchDirs(vtkSVCenterlineGCell *parent, const int updateDir);
+  int UpdateBranchReferenceDirections();
   int GetGraphPolyData(vtkPolyData *pd);
   int GetConnectingLineGroups(const int groupId, std::vector<int> &connectingGroups);
 
@@ -123,7 +133,7 @@ public:
 
   //Member data needed to build
   vtkPolyData *Lines;
-  std::string GroupIdsArrayName;
+  char* GroupIdsArrayName;
   double ReferenceVecs[3][3];
 
 private:

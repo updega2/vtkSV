@@ -89,6 +89,19 @@ public:
   vtkGetStringMacro(CenterlineIdsArrayName);
   vtkSetStringMacro(TractIdsArrayName);
   vtkGetStringMacro(TractIdsArrayName);
+  vtkSetStringMacro(PatchIdsArrayName);
+  vtkGetStringMacro(PatchIdsArrayName);
+  vtkSetStringMacro(SlicePointsArrayName);
+  vtkGetStringMacro(SlicePointsArrayName);
+  vtkSetStringMacro(ClusteringVectorArrayName);
+  vtkGetStringMacro(ClusteringVectorArrayName);
+  //@}
+
+  //@{
+  /// \brief Get/Set the radius information
+  vtkSetMacro(EnforcePolycubeConnectivity, int);
+  vtkGetMacro(EnforcePolycubeConnectivity, int);
+  vtkBooleanMacro(EnforcePolycubeConnectivity, int);
   //@}
 
   /** \brief Correct cells on the boundary by updating val if they have
@@ -99,9 +112,6 @@ public:
   /** \brief Naive implementation to get most reoccuring number in list. Okay
    *  because list size is small. */
   static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
-
-  /** \brief Run basic edge weithing cvt with pd */
-  static int RunEdgeWeightedCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
 
   static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName,
                                       vtkIdList *targetRegions);
@@ -148,8 +158,12 @@ protected:
   int RunFilter(); // Run filter operations.
 
   /** \brief Cluster branch */
+  int CheckGroupsWithPolycube();
   int ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
   int ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPolyData *polyPd);
+
+  /** \brief Run basic edge weithing cvt with pd */
+  int RunEdgeWeightedCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
 
   int FixEndPatches(vtkPolyData *pd);
   int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
@@ -183,10 +197,15 @@ protected:
   char *GroupIdsArrayName;
   char *BlankingArrayName;
   char *TractIdsArrayName;
+  char *PatchIdsArrayName;
+  char *SlicePointsArrayName;
+  char *ClusteringVectorArrayName;
 
   vtkPolyData *WorkPd;
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
+
+  int EnforcePolycubeConnectivity;
 
 private:
   vtkSVSurfaceCuboidPatcher(const vtkSVSurfaceCuboidPatcher&);  // Not implemented.
