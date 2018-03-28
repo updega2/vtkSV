@@ -4649,11 +4649,12 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
         // Need to add slice end points
         newSlicePoints.push_back(ptId0);
         this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptId0, 1);
-        newSlicePoints.push_back(ptIdN);
-        this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptIdN, 1);
         // Split in two
         vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 2, surfaceRegions[i].IndexCluster,
                                             newSlicePoints, this->SlicePointsArrayName);
+
+        newSlicePoints.push_back(ptIdN);
+        this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptIdN, 1);
       }
       else if (intersectList->GetNumberOfIds() >= 3)
       {
@@ -4757,6 +4758,11 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
                   if (currValue != -1)
                   {
                     vtkDebugMacro("ALREADY SET, MAKE SURE NEW POINT " << pointId << " MATCHES " << currValue);
+                    if (currValue != pointId)
+                    {
+                      vtkErrorMacro("PREVIOUSLY SET SLICE POINT ID ON POLYCUBE DOES NOT MATCH SURFACE ID FOUND");
+                      return SV_ERROR;
+                    }
                   }
                   else
                   {
@@ -4775,8 +4781,9 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
                   else
                   {
                     pointId = newSlicePoints[k];
-                    vtkNew(vtkIdList, surfaceSlicePtVals);
+                    surfaceSlicePtVals->Reset();
                     vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, pointId, surfaceSlicePtVals);
+                    l = 0;
                   }
                 }
               }
