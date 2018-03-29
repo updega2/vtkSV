@@ -32,6 +32,7 @@
 
 #include "vtkSVCenterlineParallelTransportVectors.h"
 #include "vtkSVGeneralUtils.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVPolycubeGenerator.h"
 #include "vtkSVSurfaceCenterlineGrouper.h"
@@ -39,6 +40,7 @@
 #include "vtkExecutive.h"
 #include "vtkErrorCode.h"
 #include "vtkCellArray.h"
+#include "vtkCellDataToPointData.h"
 #include "vtkCellLocator.h"
 #include "vtkCleanPolyData.h"
 #include "vtkPointData.h"
@@ -617,6 +619,9 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         absAngle *= -1.0;
         }
 
+      absAngle += SV_PI;
+      if (absAngle < 0.0)
+        absAngle = 0.0;
       angularPCoords->SetTuple1(realCellId, absAngle);
 
       double cellLocVec[3];
@@ -688,6 +693,16 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
     }
   }
 
+  vtkNew(vtkPolyData, workPdWithData);
+  workPdWithData->DeepCopy(this->WorkPd);
+  workPdWithData->GetCellData()->AddArray(preRotationNormals);
+  workPdWithData->GetCellData()->AddArray(centerlineBasedNormals);
+  workPdWithData->GetCellData()->AddArray(centerlineLocalX);
+  workPdWithData->GetCellData()->AddArray(centerlineLocalY);
+  workPdWithData->GetCellData()->AddArray(centerlineLocalZ);
+  workPdWithData->GetCellData()->AddArray(centerlineSubPtIds);
+  workPdWithData->GetCellData()->AddArray(centerlinePCoords);
+  workPdWithData->GetCellData()->AddArray(angularPCoords);
 
   if (this->EnforceBoundaryDirections && this->MergedCenterlines->GetNumberOfCells() > 1)
   {
@@ -711,6 +726,16 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       vtkSVGeneralUtils::ThresholdPd(this->PolycubePd, groupId, groupId, 1,
         this->GroupIdsArrayName, polyBranchPd);
       polyBranchPd->BuildLinks();
+
+      vtkNew(vtkPolyData, branchPdWithData);
+      vtkSVGeneralUtils::ThresholdPd(workPdWithData, groupId, groupId, 1,
+        this->GroupIdsArrayName, branchPdWithData);
+      branchPdWithData->BuildLinks();
+
+      vtkNew(vtkCellDataToPointData, cellToPointData);
+      cellToPointData->SetInputData(branchPdWithData);
+      cellToPointData->Update();
+      branchPdWithData->DeepCopy(cellToPointData->GetOutput());
 
       int branchNumberOfCells = branchPd->GetNumberOfCells();
 
@@ -815,7 +840,10 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           }
           int realCellId0 = branchPd->GetCellData()->GetArray("TmpInternalIds")->
             GetTuple1(firstCellId->GetId(0));
-          double firstAngularVal = angularPCoords->GetTuple1(realCellId0);
+          double firstAngularVal = branchPdWithData->GetPointData()->GetArray("AngularPCoord")->
+            GetTuple1(branchPtId0);
+          //double firstAngularVal = angularPCoords->GetTuple1(realCellId0);
+          fprintf(stdout,"FIRST POINT ID: %.6f\n", firstAngularVal);
 
           vtkNew(vtkIdList, lastCellId);
           branchPd->GetCellEdgeNeighbors(-1, branchPtIdN, branchPtIdNm1, lastCellId);
@@ -826,7 +854,10 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           }
           int realCellIdN = branchPd->GetCellData()->GetArray("TmpInternalIds")->
             GetTuple1(lastCellId->GetId(0));
-          double lastAngularVal = angularPCoords->GetTuple1(realCellIdN);
+          double lastAngularVal = branchPdWithData->GetPointData()->GetArray("AngularPCoord")->
+            GetTuple1(branchPtIdN);
+          //double lastAngularVal = angularPCoords->GetTuple1(realCellIdN);
+          fprintf(stdout,"LAST POINT ID: %.6f\n", lastAngularVal);
 
           if (edgePtId0 == -1 || edgePtIdN == -1)
           {
@@ -889,7 +920,8 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
             int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
               GetTuple1(branchCellId);
-            this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(realCellId, patchVal);
+            branchPd->GetCellData()->GetArray("PatchVals")->SetTuple1(branchCellId, patchVal);
+            //this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(realCellId, patchVal);
 
             double locals[6][3];
             centerlineLocalX->GetTuple(realCellId, locals[0]);
@@ -977,6 +1009,18 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           tmpSortAngles->InsertNextTuple1(allAngleBounds[j][k][0]);
           angleIndices->InsertNextId(k);
         }
+        fprintf(stdout,"ANGLE LIST BEFORE 0: ");
+        for (int k=0; k<allAngleBounds[j].size(); k++)
+        {
+          fprintf(stdout," %.6f", allAngleBounds[j][k][0]);
+        }
+        fprintf(stdout,"\n");
+        fprintf(stdout,"ANGLE LIST BEFORE 1: ");
+        for (int k=0; k<allAngleBounds[j].size(); k++)
+        {
+          fprintf(stdout," %.6f", allAngleBounds[j][k][1]);
+        }
+        fprintf(stdout,"\n");
 
         vtkSortDataArray::Sort(tmpSortAngles, angleIndices);
         std::vector<std::vector<double> > newAngleBounds = allAngleBounds[j];
@@ -984,11 +1028,29 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         for (int k=0; k<angleIndices->GetNumberOfIds(); k++)
         {
           int listIndex = angleIndices->GetId(k);
+          //if (k == 0)
+          //{
+          //  if (allAngleBounds[j][listIndex][1] < 0.0)
+          //  {
+          //    allAngleBounds[j][listIndex][0] = SV_PI;
+          //  }
+          //  else
+          //  {
+          //    double tmp = allAngleBounds[j][listIndex][0];
+          //    allAngleBounds[j][listIndex][0] = allAngleBounds[j][listIndex][1];
+          //    allAngleBounds[j][listIndex][1] = tmp;
+          //  }
+          //}
           if (k == 0)
           {
-            if (allAngleBounds[j][listIndex][1] < 0.0)
+            int nextIndex = angleIndices->GetId(k+1);
+            if (allAngleBounds[j][listIndex][1] < allAngleBounds[j][nextIndex][1])
             {
-              allAngleBounds[j][listIndex][0] = SV_PI;
+              double tmp = allAngleBounds[j][nextIndex][0];
+              allAngleBounds[j][nextIndex][0] = allAngleBounds[j][nextIndex][1];
+              allAngleBounds[j][nextIndex][1] = tmp;
+              angleIndices->SetId(k+1, listIndex);
+              listIndex = nextIndex;
             }
             else
             {
@@ -1003,6 +1065,18 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
           newPatchValues[k] = allPatchValues[j][listIndex];
         }
+        fprintf(stdout,"ANGLE LIST AFTER 0: ");
+        for (int k=0; k<newAngleBounds.size(); k++)
+        {
+          fprintf(stdout," %.6f", newAngleBounds[k][0]);
+        }
+        fprintf(stdout,"\n");
+        fprintf(stdout,"ANGLE LIST AFTER 1: ");
+        for (int k=0; k<newAngleBounds.size(); k++)
+        {
+          fprintf(stdout," %.6f", newAngleBounds[k][1]);
+        }
+        fprintf(stdout,"\n");
 
         //for (int k=0; k<newAngleBounds.size(); k++)
         //{
@@ -1051,7 +1125,8 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
               int linePtId = centerlineSubPtIds->GetTuple1(realCellId);
 
-              int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
+              //int patchVal = this->WorkPd->GetCellData()->GetArray("PatchVals")->GetTuple1(realCellId);
+              int patchVal = branchPd->GetCellData()->GetArray("PatchVals")->GetTuple1(growCellLists[listIter][j]);
               // THIS IS WHERE WE TRY TO USE CELL ANGULAR LOCATION FOR PATCH VAL
               double angularVal = angularPCoords->GetTuple1(realCellId);
 
@@ -1062,7 +1137,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
                 if (k == 0)
                 {
                   if (angularVal >= allAngleBounds[listIter][k][0] ||
-                      angularVal <=  allAngleBounds[listIter][k][1])
+                      angularVal <  allAngleBounds[listIter][k][1])
                   {
                     patchVal = allPatchValues[listIter][k];
                     break;
@@ -1078,7 +1153,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
                 else
                 {
                   if (angularVal >= allAngleBounds[listIter][k][0] &&
-                      angularVal <=  allAngleBounds[listIter][k][1])
+                      angularVal <  allAngleBounds[listIter][k][1])
                   {
                     patchVal = allPatchValues[listIter][k];
                     break;
@@ -1139,7 +1214,8 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
                       boundarySetVec[l] = beta * currentVec[l] +  (1 - beta) * locals[patchVal][l];
 
                     preRotationNormals->SetTuple(neighborRealCellId, boundarySetVec);
-                    this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neighborRealCellId, patchVal);
+                    //this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neighborRealCellId, patchVal);
+                    branchPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neighborCellId, patchVal);
                   }
                 }
               }
@@ -1151,12 +1227,25 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         endVessel -= pCoordThr;
       }
 
+      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
+      {
+        vtkErrorMacro("Could not correct patch vals on branch");
+        return SV_ERROR;
+      }
+      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
+      {
+        vtkErrorMacro("Could not correct patch vals on branch");
+        return SV_ERROR;
+      }
+
       // Now go through and transform to local coordinate system and set
       // the new vector to use for clustering
       for (int j=0; j<branchNumberOfCells; j++)
       {
         //Get real cell id
         int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
+        int patchVal = branchPd->GetCellData()->GetArray("PatchVals")->GetTuple1(j);
+        this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(realCellId, patchVal);
 
         double locals[6][3];
         centerlineLocalX->GetTuple(realCellId, locals[0]);
@@ -1854,7 +1943,6 @@ int vtkSVSurfaceCenterlineAttributesPasser::CheckGroupsWithPolycube()
                     pointId = newSlicePoints[k];
                     surfaceSlicePtVals->Reset();
                     vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, pointId, surfaceSlicePtVals);
-                    l = 0;
                   }
                 }
               }

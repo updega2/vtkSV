@@ -36,6 +36,7 @@
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVMathUtils.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVPolycubeGenerator.h"
 #include "vtkSVSurfaceCenterlineGrouper.h"
 
@@ -465,6 +466,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
       {
         vtkErrorMacro("Error matching end patches");
+        vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/NOMATCHEND.vtp", branchPd);
         return SV_ERROR;
       }
     }
@@ -564,6 +566,7 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData
     if (this->FixEndPatches(pd) != SV_OK)
     {
       vtkErrorMacro("Error fixing end patches");
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_END.vtp", pd);
       return SV_ERROR;
     }
   //}
@@ -573,6 +576,7 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData
     if (this->FixSidePatches(pd) != SV_OK)
     {
       vtkErrorMacro("Error fixing side patches");
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_SIDE.vtp", pd);
       return SV_ERROR;
     }
   }
@@ -2647,6 +2651,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
           {
             int ptId0 = sideRegions[minPatch].BoundaryEdges[j][k];
             int ptId1 = sideRegions[minPatch].BoundaryEdges[j][k+1];
+            fprintf(stdout,"PTID 0: %d, PTID 1: %d\n", ptId0, ptId1);
 
             vtkNew(vtkIdList, cellEdgeNeighbors);
             pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, cellEdgeNeighbors);
@@ -2670,7 +2675,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
             }
           }
         }
-        if (sideRegions[minPatch].NumberOfElements == 1 ||
+        if (sideRegions[minPatch].NumberOfElements <= 10 ||
             sideRegions[minPatch].BoundaryEdges.size() == 0)
         {
           for (int j=0; j<sideRegions[minPatch].Elements.size(); j++)
@@ -2707,6 +2712,8 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
           }
         }
 
+        fprintf(stdout,"NUMS: %d\n", patchIds->GetNumberOfIds());
+        fprintf(stdout,"ELEMS: %d\n", sideRegions[minPatch].BoundaryEdges.size());
         int maxVal = -1;
         int maxPatchId = -1;
         for (int j=0; j<patchIds->GetNumberOfIds(); j++)
@@ -2719,6 +2726,7 @@ int vtkSVSurfaceCuboidPatcher::FixSidePatches(vtkPolyData *pd)
         }
         if (maxPatchId == -1)
         {
+          fprintf(stdout,"WHAH -1\n");
           fprintf(stderr,"A patch value to change bad patch to was not found\n");
           return SV_ERROR;
         }
@@ -4072,7 +4080,6 @@ int vtkSVSurfaceCuboidPatcher::CheckGroupsWithPolycube()
                     pointId = newSlicePoints[k];
                     surfaceSlicePtVals->Reset();
                     vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, pointId, surfaceSlicePtVals);
-                    l = 0;
                   }
                 }
               }

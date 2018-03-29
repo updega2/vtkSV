@@ -237,7 +237,7 @@ protected:
                     std::vector<int> allEdges,
                     std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
-  int FixGroupsWithCenterlines();
+  int FixGroupsWithCenterlines(int fixIters);
 
   int GetCellRingNeighbors(vtkPolyData *pd,
                            vtkIdList *cellIds,

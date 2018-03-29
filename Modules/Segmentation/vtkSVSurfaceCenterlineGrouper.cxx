@@ -405,7 +405,7 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
 
   if (this->EnforceCenterlinesConnectivity)
   {
-    if (this->FixGroupsWithCenterlines() != SV_OK)
+    if (this->FixGroupsWithCenterlines(10) != SV_OK)
     {
       vtkErrorMacro("Error in correcting groups with centerlines");
       return SV_ERROR;
@@ -414,18 +414,47 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
 
   if (this->EnforcePolycubeConnectivity)
   {
-    if (this->FixGroupsWithPolycube() != SV_OK)
+    int allGood = 0;
+    int maxIters = 10;
+    int iter = 0;
+
+    while (!allGood && iter < maxIters+1)
     {
-      vtkErrorMacro("Error in correcting groups");
-      return SV_ERROR;
+      allGood = 1;
+      if (this->FixGroupsWithPolycube() != SV_OK)
+      {
+        vtkErrorMacro("Error in correcting groups");
+        return SV_ERROR;
+      }
+
+      if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+      {
+        vtkErrorMacro("Could not correcto boundaries of surface");
+        return SV_ERROR;
+      }
+
+      if (this->FixGroupsWithCenterlines(0) != SV_OK)
+      {
+        vtkWarningMacro("Fixing groups with polycube painted over groups too much, trying to fix");
+        allGood = 0;
+      }
+
+      if (!allGood && iter < maxIters)
+      {
+        if (this->FixGroupsWithCenterlines(10) != SV_OK)
+        {
+          vtkErrorMacro("Error in correcting groups with centerlines");
+          return SV_ERROR;
+        }
+      }
+      iter++;
     }
 
-    if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
+    if (!allGood)
     {
-      vtkErrorMacro("Could not correcto boundaries of surface");
+      vtkErrorMacro("Enforcing of the polycube connectivity failed");
       return SV_ERROR;
     }
-
   }
 
   if (this->SmoothBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
@@ -1864,7 +1893,7 @@ int vtkSVSurfaceCenterlineGrouper::FixRegions(vtkPolyData *pd, std::string array
 // ----------------------
 // FixGroupsWithCenterlines
 // ----------------------
-int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines()
+int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(int fixIters)
 {
   int numPoints = this->MergedCenterlines->GetNumberOfPoints();
 
@@ -1920,7 +1949,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines()
   vtkPolyData *newCenterlinesPd = NULL;
 
   int allGood = 0;
-  int maxIters = 10;
+  int maxIters = fixIters;
   int iter = 0;
   while (!allGood && iter < maxIters+1)
   {
@@ -4783,7 +4812,6 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
                     pointId = newSlicePoints[k];
                     surfaceSlicePtVals->Reset();
                     vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, pointId, surfaceSlicePtVals);
-                    l = 0;
                   }
                 }
               }

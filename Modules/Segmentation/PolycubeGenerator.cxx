@@ -167,6 +167,20 @@ int main(int argc, char *argv[])
     numPolycubeCells = numEnds*5 + (inputPd->GetNumberOfCells() - numEnds) * 4;
   }
 
+  vtkNew(vtkFeatureEdges, featurer);
+  featurer->SetInputData(Polycuber->GetOutput());
+  featurer->BoundaryEdgesOn();
+  featurer->FeatureEdgesOff();
+  featurer->ManifoldEdgesOff();
+  featurer->NonManifoldEdgesOn();
+  featurer->Update();
+
+  if (featurer->GetOutput()->GetNumberOfPoints() != 0 || featurer->GetOutput()->GetNumberOfPoints() != 0)
+  {
+    std::cerr << "Open edges on surface polycube. "<< featurer->GetOutput()->GetNumberOfPoints() <<" points and " << featurer->GetOutput()->GetNumberOfCells() << " cells." <<endl;
+    return EXIT_FAILURE;
+  }
+
   if (Polycuber->GetGraphPd()->GetNumberOfCells() != inputPd->GetNumberOfCells())
   {
     std::cerr << "Incorrect number of cells on graph: "<< Polycuber->GetGraphPd()->GetNumberOfCells() <<". But should be " << inputPd->GetNumberOfCells() <<endl;
@@ -215,7 +229,6 @@ int main(int argc, char *argv[])
   surfacer->SetInputData(cleaner->GetOutput());
   surfacer->Update();
 
-  vtkNew(vtkFeatureEdges, featurer);
   featurer->SetInputData(surfacer->GetOutput());
   featurer->BoundaryEdgesOn();
   featurer->FeatureEdgesOff();

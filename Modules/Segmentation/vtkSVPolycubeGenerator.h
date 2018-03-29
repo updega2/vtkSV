@@ -174,6 +174,9 @@ protected:
                 int &nTopPts, int &nBotPts,
                 int &flatTop, int &flatBot);
 
+  int GetMinimumEdgeLength(vtkPolyData *polycubePd,
+                           double &minEdgeLength);
+
 private:
   vtkSVPolycubeGenerator(const vtkSVPolycubeGenerator&);  // Not implemented.
   void operator=(const vtkSVPolycubeGenerator&);  // Not implemented.

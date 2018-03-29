@@ -217,11 +217,15 @@ int vtkSVPolycubeGenerator::RunFilter()
   this->CenterlineGraph->GetGraphPolyData(this->GraphPd);
 
   this->GetSurfacePolycube(polycubeSize);
+  this->SurfacePolycubePd->BuildLinks();
+
+  double minLength;
+  this->GetMinimumEdgeLength(this->SurfacePolycubePd, minLength);
 
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(this->SurfacePolycubePd);
   cleaner->ToleranceIsAbsoluteOn();
-  cleaner->SetAbsoluteTolerance(1.0e-6);
+  cleaner->SetAbsoluteTolerance(0.1*minLength);
   cleaner->Update();
 
   this->SurfacePolycubePd->DeepCopy(cleaner->GetOutput());
@@ -3338,3 +3342,39 @@ int vtkSVPolycubeGenerator::CheckFace(vtkPolyData *polycubePd, int faceId,
   return SV_OK;
 }
 
+// ----------------------
+// GetMinimumEdgeLength
+// ----------------------
+int vtkSVPolycubeGenerator::GetMinimumEdgeLength(vtkPolyData *polycubePd,
+                                                 double &minEdgeLength)
+{
+  int numCells = polycubePd->GetNumberOfCells();
+
+  int ptId0, ptId1;
+  double pt0[3], pt1[3];
+  double dist;
+  minEdgeLength = VTK_SV_LARGE_DOUBLE;
+  vtkIdType npts, *pts;
+  for (int i=0; i<numCells; i++)
+  {
+    polycubePd->GetCellPoints(i, npts, pts);
+
+    for (int j=0; j<npts; j++)
+    {
+      ptId0 = pts[j];
+      ptId1 = pts[(j+1)%npts];
+
+      polycubePd->GetPoint(ptId0, pt0);
+      polycubePd->GetPoint(ptId1, pt1);
+
+      dist = vtkSVMathUtils::Distance(pt0, pt1);
+
+      if (dist < minEdgeLength)
+      {
+        minEdgeLength = dist;
+      }
+    }
+  }
+
+  return SV_OK;
+}
