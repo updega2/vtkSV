@@ -2036,6 +2036,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(int fixIters)
         needFix = 1;
       }
 
+      std::vector<int> edgeStartPoints;
       std::vector<int> pointEdgeId(this->WorkPd->GetNumberOfPoints(), 0);
       edgeCount = 0;
       for (int i=0; i<groupRegions.size(); i++)
@@ -2051,6 +2052,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(int fixIters)
         }
 
         edgeStartId = groupRegions[i].BoundaryEdges[0][0];
+        edgeStartPoints.push_back(edgeStartId);
         for (int j=0; j<groupRegions[i].BoundaryEdges.size(); j++)
         {
           edgeSize = groupRegions[i].BoundaryEdges[j].size();
@@ -2062,12 +2064,13 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithCenterlines(int fixIters)
           }
 
           ptIdN = groupRegions[i].BoundaryEdges[j][edgeSize-1];
-          if (ptIdN == edgeStartId)
+          if (ptIdN == edgeStartId || std::find(edgeStartPoints.begin(), edgeStartPoints.end(), ptIdN) != edgeStartPoints.end())
           {
             edgeCount++;
             if (j+1 < groupRegions[i].BoundaryEdges.size())
             {
               edgeStartId = groupRegions[i].BoundaryEdges[j+1][0];
+              edgeStartPoints.push_back(edgeStartId);
             }
           }
         }

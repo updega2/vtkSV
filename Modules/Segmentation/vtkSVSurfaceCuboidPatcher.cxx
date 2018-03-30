@@ -3763,6 +3763,7 @@ int vtkSVSurfaceCuboidPatcher::SplitEdgeList(vtkPolyData *branchPd, std::vector<
 // ----------------------
 int vtkSVSurfaceCuboidPatcher::CheckGroupsWithPolycube()
 {
+  this->WorkPd->BuildLinks();
   int addSurfaceSlicePoints = 0;
   if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->SlicePointsArrayName) != SV_OK)
   {

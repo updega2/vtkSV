@@ -48,9 +48,9 @@ int main(int argc, char *argv[])
   // BEGIN PROCESSING COMMAND-LINE ARGUMENTS
   // Assume no options specified at command line
   bool RequestedHelp       = false;
-  bool InputProvided       = true;
-  bool OutputProvided      = true;
-  bool CenterlinesProvided = true;
+  bool InputProvided       = false;
+  bool OutputProvided      = false;
+  bool CenterlinesProvided = false;
   bool PolycubeProvided    = false;
 
   // Variables used in processing the commandline
