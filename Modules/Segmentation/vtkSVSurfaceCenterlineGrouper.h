@@ -206,6 +206,7 @@ protected:
   int RunFilter(); // Run filter operations.
 
   int MergeCenterlines();
+  int CheckPolycubeEnforcePossible();
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);

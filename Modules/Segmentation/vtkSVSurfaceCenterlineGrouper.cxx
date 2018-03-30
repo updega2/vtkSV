@@ -302,6 +302,12 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (this->EnforcePolycubeConnectivity)
   {
     vtkDebugMacro("Need to enforce polycube");
+
+    if (this->CheckPolycubeEnforcePossible() != SV_OK)
+    {
+      vtkErrorMacro("Cannot enforce polycube connectivity for this model");
+      return SV_ERROR;
+    }
     if (this->PolycubePd == NULL)
     {
       vtkDebugMacro("Polycube not provided, generating from centerlines");
@@ -4646,6 +4652,10 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
     for (int j=0; j<numEdges; j++)
     {
       int edgeSize = surfaceRegions[i].BoundaryEdges[j].size();
+      if (edgeSize <= 5)
+      {
+        vtkWarningMacro("RIGHT HERE BAD");
+      }
 
       int ptId0 = surfaceRegions[i].BoundaryEdges[j][0];
       vtkNew(vtkIdList, ptId0List);
@@ -4679,8 +4689,12 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
         newSlicePoints.push_back(ptId0);
         this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptId0, 1);
         // Split in two
-        vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 2, surfaceRegions[i].IndexCluster,
-                                            newSlicePoints, this->SlicePointsArrayName);
+        if (vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 2, surfaceRegions[i].IndexCluster,
+                                            newSlicePoints, this->SlicePointsArrayName) != SV_OK)
+        {
+          vtkErrorMacro("Boundary on group " << surfaceRegions[i].IndexCluster << " is too small. Needs to have at least 4 edges and only has " << surfaceRegions[i].BoundaryEdges[j].size());
+          return SV_ERROR;
+        }
 
         newSlicePoints.push_back(ptIdN);
         this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptIdN, 1);
@@ -4688,8 +4702,12 @@ int vtkSVSurfaceCenterlineGrouper::MatchSurfaceToPolycube()
       else if (intersectList->GetNumberOfIds() >= 3)
       {
         // Traditional between sides of groups
-        vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 3, surfaceRegions[i].IndexCluster,
-                                            newSlicePoints, this->SlicePointsArrayName);
+        if (vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 3, surfaceRegions[i].IndexCluster,
+                                            newSlicePoints, this->SlicePointsArrayName) != SV_OK)
+        {
+          vtkErrorMacro("Boundary on group " << surfaceRegions[i].IndexCluster << " is too small. Needs to have at least 6 edges and only has " << surfaceRegions[i].BoundaryEdges[j].size());
+          return SV_ERROR;
+        }
 
       }
       else if (intersectList->GetNumberOfIds() == 2)
@@ -4844,6 +4862,11 @@ int vtkSVSurfaceCenterlineGrouper::SplitBoundary(vtkPolyData *pd,
                                          std::vector<int> &newSlicePoints,
                                          std::string slicePointsArrayName)
 {
+  if (1.0*boundary.size()/numDivs < 2)
+  {
+    return SV_ERROR;
+  }
+
   vtkIntArray *slicePoints = vtkIntArray::SafeDownCast(pd->GetPointData()->GetArray(slicePointsArrayName.c_str()));
   double fullLength=0.0;
   for (int k=0; k<boundary.size()-1; k++)
@@ -5169,6 +5192,66 @@ int vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(vtkPolyData *pd, vtkIdLi
   {
     ringNumber++;
     this->GetCellRingNeighbors(pd, cellIds, ringNumber, totNumberOfRings, neighbors);
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// CheckPolycubeEnforcePossible
+// ----------------------
+int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
+{
+  vtkIdType npts, *pts;
+
+  double avgRadius = 0.0;
+  std::vector<double> avgRadiusValues;
+  for (int i=0; i<this->MergedCenterlines->GetNumberOfCells(); i++)
+  {
+    this->MergedCenterlines->GetCellPoints(i, npts, pts);
+
+    avgRadius = 0.0;
+    for (int j=0; j<npts; j++)
+    {
+      avgRadius += this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(pts[j]);
+    }
+
+    avgRadius /= npts;
+    avgRadiusValues.push_back(avgRadius);
+  }
+
+  double radiusRatio;
+  vtkNew(vtkIdList, frontNeighbors);
+  vtkNew(vtkIdList, backNeighbors);
+  for (int i=0; i<this->MergedCenterlines->GetNumberOfCells(); i++)
+  {
+    this->MergedCenterlines->GetCellPoints(i, npts, pts);
+
+    this->MergedCenterlines->GetPointCells(pts[0], frontNeighbors);
+    this->MergedCenterlines->GetPointCells(pts[npts-1], backNeighbors);
+
+    for (int j=0; j<frontNeighbors->GetNumberOfIds(); j++)
+    {
+      if (frontNeighbors->GetId(j) == i)
+        continue;
+      radiusRatio = avgRadiusValues[i]/avgRadiusValues[frontNeighbors->GetId(j)];
+      if (radiusRatio >= 4.0)
+      {
+        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        return SV_ERROR;
+      }
+    }
+    for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
+    {
+      if (backNeighbors->GetId(j) == i)
+        continue;
+      radiusRatio = avgRadiusValues[i]/avgRadiusValues[backNeighbors->GetId(j)];
+      if (radiusRatio >= 4.0)
+      {
+        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        return SV_ERROR;
+      }
+    }
   }
 
   return SV_OK;

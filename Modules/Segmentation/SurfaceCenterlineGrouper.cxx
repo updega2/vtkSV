@@ -218,15 +218,15 @@ int main(int argc, char *argv[])
     Grouper->Update();
     std::cout<<"Done"<<endl;
 
-    //Write Files
-    std::cout<<"Writing Files..."<<endl;
-    vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetOutput(0));
-
     if (Grouper->GetErrorCode() != 0)
     {
       std::cerr << "Surface centerline grouper failed. " <<endl;
       return EXIT_FAILURE;
     }
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Grouper->GetOutput(0));
 
   }
 

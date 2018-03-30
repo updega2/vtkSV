@@ -1799,16 +1799,24 @@ int vtkSVSurfaceCenterlineAttributesPasser::CheckGroupsWithPolycube()
           newSlicePoints.push_back(ptId0);
           this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptId0, 1);
           // Split in two
-          vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 2, surfaceRegions[i].IndexCluster,
-                                              newSlicePoints, this->SlicePointsArrayName);
+          if (vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 2, surfaceRegions[i].IndexCluster,
+                                              newSlicePoints, this->SlicePointsArrayName) != SV_OK)
+          {
+            vtkErrorMacro("Boundary on group " << surfaceRegions[i].IndexCluster << " is too small. Needs to have at least 4 edges and only has " << surfaceRegions[i].BoundaryEdges[j].size());
+            return SV_ERROR;
+          }
           newSlicePoints.push_back(ptIdN);
           this->WorkPd->GetPointData()->GetArray(this->SlicePointsArrayName)->SetTuple1(ptIdN, 1);
         }
         else if (intersectList->GetNumberOfIds() >= 3)
         {
           // Traditional between sides of groups
-          vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 3, surfaceRegions[i].IndexCluster,
-                                              newSlicePoints, this->SlicePointsArrayName);
+          if (vtkSVSurfaceCenterlineGrouper::SplitBoundary(this->WorkPd, surfaceRegions[i].BoundaryEdges[j], 3, surfaceRegions[i].IndexCluster,
+                                              newSlicePoints, this->SlicePointsArrayName) != SV_OK)
+          {
+            vtkErrorMacro("Boundary on group " << surfaceRegions[i].IndexCluster << " is too small. Needs to have at least 6 edges and only has " << surfaceRegions[i].BoundaryEdges[j].size());
+            return SV_ERROR;
+          }
 
         }
         else if (intersectList->GetNumberOfIds() == 2)
