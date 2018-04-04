@@ -468,6 +468,12 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
   angularPCoords->SetNumberOfComponents(1);
   angularPCoords->SetNumberOfTuples(numberOfCells);
 
+  vtkNew(vtkDoubleArray, boundaryPCoords);
+  boundaryPCoords->SetName("BoundaryPCoord");
+  boundaryPCoords->SetNumberOfComponents(1);
+  boundaryPCoords->SetNumberOfTuples(numberOfCells);
+  boundaryPCoords->FillComponent(0, -1.0);
+
   // Get all group ids
   vtkNew(vtkIdList, groupIds);
   for (int i=0; i<this->WorkPd->GetNumberOfCells(); i++)
@@ -484,7 +490,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
   vtkDoubleArray *tmpLinePtArray = vtkDoubleArray::New();
   //tmpLinePtArray->SetNumberOfComponents(3);
   tmpLinePtArray->SetNumberOfTuples(this->WorkPd->GetNumberOfCells());
-  tmpLinePtArray->SetName("PatchVals");
+  tmpLinePtArray->SetName("BoundaryPatchIds");
   for (int j=0; j<1; j++)
     tmpLinePtArray->FillComponent(j, -1);
   this->WorkPd->GetCellData()->AddArray(tmpLinePtArray);
@@ -1014,8 +1020,9 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
 
             int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->
               GetTuple1(branchCellId);
-            branchPd->GetCellData()->GetArray("PatchVals")->SetTuple1(branchCellId, patchVal);
-            //this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(realCellId, patchVal);
+            branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(branchCellId, patchVal);
+            //this->WorkPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(realCellId, patchVal);
+            boundaryPCoords->SetTuple1(realCellId, 0.0);
 
           }
         }
@@ -1250,7 +1257,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           {
             int newCellId = growCellLists[vEnd][k];
 
-            int testPatchVal = branchPd->GetCellData()->GetArray("PatchVals")->GetTuple1(newCellId);
+            int testPatchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(newCellId);
 
             if (testPatchVal == patchVal)
             {
@@ -1299,6 +1306,16 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
               }
 
               double angularVal = angularPCoords->GetTuple1(realCellId);
+              //if (groupId == 12 && newCellId == 593)
+              //{
+              //  fprintf(stdout,"FOUND IT\n");
+              //  fprintf(stdout,"PCOORD: %.6f\n", pCoordVal);
+              //  fprintf(stdout,"CURRENT PCOORD: %.6f\n", currentPCoordVal);
+              //  fprintf(stdout,"MAX BEG PCOORD: %.6f\nn", maxBegPCoordThr);
+              //  fprintf(stdout,"ANGLE : %.6f\n", angularVal);
+              //  fprintf(stdout,"BOUNDS: %.6f %.6f\n", allAngleBounds[vEnd][j][0], allAngleBounds[vEnd][j][1]);
+              //}
+
               if (j == 0)
               {
                 if (!(angularVal >= allAngleBounds[vEnd][j][0] || angularVal <  allAngleBounds[vEnd][j][1]))
@@ -1310,10 +1327,10 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
                   continue;
               }
 
-              int currentPatchVal = branchPd->GetCellData()->GetArray("PatchVals")->GetTuple1(newCellId);
+              int currentPatchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(newCellId);
               if (currentPatchVal == -1)
               {
-                branchPd->GetCellData()->GetArray("PatchVals")->SetTuple1(newCellId, patchVal);
+                branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(newCellId, patchVal);
               }
 
               singleGrowList.push_back(newCellId);
@@ -1370,7 +1387,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
                       continue;
                   }
 
-                  branchPd->GetCellData()->GetArray("PatchVals")->SetTuple1(newCellId, patchVal);
+                  branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(newCellId, patchVal);
                   singleGrowList.push_back(newCellId);
                   lastCellId = newCellId;
 
@@ -1381,7 +1398,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
                     int neiRealCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(neiCellId);
                     double neiPCoordVal  = centerlinePCoords->GetTuple1(neiRealCellId);
 
-                    int neiPatchVal = branchPd->GetCellData()->GetArray("PatchVals")->GetTuple1(neiCellId);
+                    int neiPatchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(neiCellId);
 
                     if (vEnd == 0)
                     {
@@ -1400,7 +1417,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
                     if (neiPatchVal == patchVal)
                       continue;
 
-                    branchPd->GetCellData()->GetArray("PatchVals")->SetTuple1(neiCellId, patchVal);
+                    branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(neiCellId, patchVal);
                     singleGrowList.push_back(neiCellId);
                     lastCellId = neiCellId;
                   }
@@ -1416,7 +1433,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         }
       }
 
-      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
+      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "BoundaryPatchIds") != SV_OK)
       {
         vtkErrorMacro("Could not correct patch vals on branch");
         return SV_ERROR;
@@ -1428,8 +1445,8 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       {
         //Get real cell id
         int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(j);
-        int patchVal = branchPd->GetCellData()->GetArray("PatchVals")->GetTuple1(j);
-        this->WorkPd->GetCellData()->GetArray("PatchVals")->SetTuple1(realCellId, patchVal);
+        int patchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(j);
+        this->WorkPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(realCellId, patchVal);
 
         double locals[6][3];
         centerlineLocalX->GetTuple(realCellId, locals[0]);
@@ -1453,15 +1470,28 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         if (patchVal != -1)
         {
           double pCoordVal = centerlinePCoords->GetTuple1(realCellId);
+          double beta = boundaryPCoords->GetTuple1(realCellId);
 
-          double beta = 1.0;
-          if (pCoordVal <= maxBegPCoordThr)
+          if (beta == -1.0)
           {
-            beta = pCoordVal/maxBegPCoordThr;
-          }
-          if ((1.0 - pCoordVal) <= maxEndPCoordThr)
-          {
-            beta = (1.0 - pCoordVal)/maxEndPCoordThr;
+            if (maxBegPCoordThr > 0.0)
+            {
+              if (pCoordVal <= maxBegPCoordThr)
+              {
+                beta = pCoordVal/maxBegPCoordThr;
+              }
+            }
+            if (maxEndPCoordThr > 0.0)
+            {
+              if ((1.0 - pCoordVal) <= maxEndPCoordThr)
+              {
+                beta = (1.0 - pCoordVal)/maxEndPCoordThr;
+              }
+            }
+            if (beta < 0.0)
+              beta = 0.0;
+            if (beta > 1.0)
+              beta = 1.0;
           }
 
           for (int l=0; l<3; l++)
