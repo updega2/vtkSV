@@ -181,14 +181,12 @@ public:
                                       vtkPolyData *targetBasePd,
                                       vtkPolyData *mappedPd,
                                       std::string dataMatchingArrayName);
+  static int GetCellRingNeighbors(vtkPolyData *pd,
+                                  vtkIdList *cellIds,
+                                  int ringNumber,
+                                  int totNumberOfRings,
+                                  std::vector<std::vector<int> > &neighbors);
 
-  // NOT USED CURRENTLY
-  static int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
-
-  static int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
-                               std::vector<int> &cellBool,
-                               int &currRow, const int numRows,
-                               std::vector<int> &allCells);
 
   const static double GlobalCoords[3][3];
 
@@ -232,6 +230,16 @@ protected:
                             const Region region, const Region polyRegion,
                             std::vector<int> allEdges,
                             std::vector<int> badEdges, vtkIdList *critPts);
+  int FixFilledTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
+                            std::string arrayName,
+                            const Region region, const Region polyRegion,
+                            std::vector<int> allEdges,
+                            std::vector<int> badEdges, vtkIdList *critPts);
+  int FixSplitsTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
+                            std::string arrayName,
+                            const Region region, const Region polyRegion,
+                            std::vector<int> allEdges,
+                            std::vector<int> badEdges, vtkIdList *critPts);
   int FixCloseGroup(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
                     std::string arrayName,
                     const Region region, const Region polyRegion,
@@ -239,12 +247,6 @@ protected:
                     std::vector<int> badEdges, vtkIdList *critPts);
   int FixGroupsWithPolycube();
   int FixGroupsWithCenterlines(int fixIters);
-
-  int GetCellRingNeighbors(vtkPolyData *pd,
-                           vtkIdList *cellIds,
-                           int ringNumber,
-                           int totNumberOfRings,
-                           std::vector<std::vector<int> > &neighbors);
 
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);

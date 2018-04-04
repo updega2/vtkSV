@@ -409,7 +409,7 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
     return SV_ERROR;
   }
 
-  if (this->EnforceCenterlinesConnectivity)
+  if (this->EnforceCenterlinesConnectivity && this->MergedCenterlines->GetNumberOfCells() > 1)
   {
     if (this->FixGroupsWithCenterlines(10) != SV_OK)
     {
@@ -418,7 +418,7 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
     }
   }
 
-  if (this->EnforcePolycubeConnectivity)
+  if (this->EnforcePolycubeConnectivity && this->MergedCenterlines->GetNumberOfCells() > 1)
   {
     int allGood = 0;
     int maxIters = 10;
@@ -634,7 +634,9 @@ int vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(vtkPolyData *pd, std::s
           int cellEdgeNeighbor = cellEdgeNeighbors->GetId(k);
 
           // Check to see if equal to region val
-          if (tmpIds->GetTuple1(cellEdgeNeighbor) != tmpIds->GetTuple1(i))
+          // Important for these cases! Adding to make sure the value is not -1
+          if (tmpIds->GetTuple1(cellEdgeNeighbor) != tmpIds->GetTuple1(i) &&
+              cellIds->GetTuple1(cellEdgeNeighbor) != -1)
           {
             neiCellIds->InsertNextId(cellIds->GetTuple1(cellEdgeNeighbor));
             neiTmpIds->InsertNextId(tmpIds->GetTuple1(cellEdgeNeighbor));
@@ -3339,9 +3341,40 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
         this->GetConnectedEdges(surfaceGroups[i].BoundaryEdges, surfConnectedCornerPts);
 
         vtkDebugMacro("NUMBER OF CONNECTED EDGES: " << surfConnectedCornerPts.size());
+
+        std::vector<std::vector<int> > polycubeConnectedCornerPts;
+        this->GetConnectedEdges(polycubeGroups[j].BoundaryEdges, polycubeConnectedCornerPts);
+
+        vtkDebugMacro("NUMBER OF PC CONNECTED EDGES: " << surfConnectedCornerPts.size());
+
+        fprintf(stdout,"START END EDGE POINTS: \n");
+        for (int k=0; k<polycubeGroups[j].BoundaryEdges.size(); k++)
+        {
+          int thisSize = polycubeGroups[j].BoundaryEdges[k].size();
+          fprintf(stdout,"%d %d,   ", polycubeGroups[j].BoundaryEdges[k][0], polycubeGroups[j].BoundaryEdges[k][thisSize-1]);
+        }
+        fprintf(stdout,"\n");
+        fprintf(stdout,"ALL CORNERS: \n");
+        for (int k=0; k<polycubeGroups[j].CornerPoints.size(); k++)
+        {
+          fprintf(stdout,"%d ", polycubeGroups[j].CornerPoints[k]);
+        }
+        fprintf(stdout,"\n");
+        fprintf(stdout,"EACH CONNECT: \n");
+        for (int k=0; k<polycubeConnectedCornerPts.size(); k++)
+        {
+          for (int l=0; l<polycubeConnectedCornerPts[k].size(); l++)
+          {
+            fprintf(stdout,"%d ", polycubeConnectedCornerPts[k][l]);
+          }
+          fprintf(stdout,"\n");
+        }
+
         int edgeCount=0;
         for (int k=0; k<surfConnectedCornerPts.size(); k++)
         {
+          int hasTriConnection = 0;
+          int hasQuadConnection = 0;
           std::vector<int> badEdges;
           std::vector<int> allEdges;
           for (int l=0; l<surfConnectedCornerPts[k].size(); l++)
@@ -3351,10 +3384,41 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
             vtkNew(vtkIdList, surfaceCellList);
             vtkSVGeneralUtils::GetPointCellsValues(origPd, this->GroupIdsArrayName, cornerPtId, surfaceCellList);
 
-            int foundMatch = 0;
-            for (int m=0; m<polycubeGroups[j].CornerPoints.size(); m++)
+            int polyEdge = -1;
+            for (int m=0; m<polycubeConnectedCornerPts.size(); m++)
             {
-              int polyCornerPtId = polycubeGroups[j].CornerPoints[m];
+              for (int n=0; n<polycubeConnectedCornerPts[m].size(); n++)
+              {
+                int polyCornerPtId = polycubeConnectedCornerPts[m][n];
+
+                vtkNew(vtkIdList, polycubeCellList);
+                vtkSVGeneralUtils::GetPointCellsValues(polycubePd, this->GroupIdsArrayName, polyCornerPtId, polycubeCellList);
+
+                vtkNew(vtkIdList, intersectList);
+                intersectList->DeepCopy(polycubeCellList);
+
+                intersectList->IntersectWith(surfaceCellList);
+
+                if (intersectList->GetNumberOfIds() > 1)
+                {
+                  polyEdge = m;
+                  break;
+                }
+              }
+              if (polyEdge != -1)
+                break;
+            }
+
+            if (polyEdge == -1)
+            {
+              vtkErrorMacro("No polycube edge found to match surface edge, big problem in group connectivity");
+              return SV_ERROR;
+            }
+
+            int foundMatch = 0;
+            for (int m=0; m<polycubeConnectedCornerPts[polyEdge].size(); m++)
+            {
+              int polyCornerPtId = polycubeConnectedCornerPts[polyEdge][m];
 
               vtkNew(vtkIdList, polycubeCellList);
               vtkSVGeneralUtils::GetPointCellsValues(polycubePd, this->GroupIdsArrayName, polyCornerPtId, polycubeCellList);
@@ -3370,7 +3434,16 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
                 vtkDebugMacro("WE DID IT!, WE FOUND A MATCH!");
                 foundMatch = 1;
               }
-           }
+
+              if (polycubeCellList->GetNumberOfIds() == 3)
+              {
+                hasTriConnection = 1;
+              }
+              else if (polycubeCellList->GetNumberOfIds() == 4)
+              {
+                hasQuadConnection = 1;
+              }
+            }
 
             if (foundMatch == 0)
             {
@@ -3382,51 +3455,51 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
           }
           vtkDebugMacro("NUMBER BAD EDGES: " << badEdges.size());
           vtkDebugMacro("NUMBER ALL EDGES: " << allEdges.size());
+          vtkDebugMacro("NUMBER OF SURFACE GROUP EDGES: " << surfaceGroups[i].BoundaryEdges.size());
+          vtkDebugMacro("NUMBER OF POLYCUB GROUP EDGES: " << polycubeGroups[j].BoundaryEdges.size());
 
           if (surfaceGroups[i].BoundaryEdges.size() == polycubeGroups[j].BoundaryEdges.size() && badEdges.size() == 0)
           {
             vtkDebugMacro("WE GUCCI");
           }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 4 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
-              badEdges.size() == 4 && allEdges.size() == 4)
+          else if (hasQuadConnection && !hasTriConnection)
           {
-            this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+            // This should be a planar trifurcation, fix accordingly
+            if (badEdges.size() == 4 && allEdges.size() == 4)
+            {
+              this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+            }
+            else if (badEdges.size() == 2 && allEdges.size() == 3)
+            {
+              // One of the points already forms the correct group connectivity, even though this
+              // is a planar trifurcation, the perpendicular trifurcation is the fix we want
+              this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+            }
+            else if (badEdges.size() == 3 && allEdges.size() == 3)
+            {
+              this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
+            }
+            else
+              vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
           }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 8 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
-              badEdges.size() == 4 && allEdges.size() == 4)
+          else if (hasQuadConnection && hasTriConnection)
           {
-            this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+            // This should be a perpendicular trifurcation, fix accordingly
+            if (badEdges.size() == 4 && allEdges.size() == 4)
+            {
+              this->FixSplitsTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
+            }
+            else if (badEdges.size() == 2 && allEdges.size() == 3)
+            {
+              this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
+            }
+            else if (badEdges.size() == 2 && allEdges.size() == 4)
+            {
+              this->FixFilledTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
+            }
+            else
+              vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
           }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 6 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
-              badEdges.size() == 4 && allEdges.size() == 4)
-          {
-            this->FixPlanarTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
-          }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
-              badEdges.size() == 2 && allEdges.size() == 3)
-          {
-            this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
-          }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 5 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
-              badEdges.size() == 2 && allEdges.size() == 3)
-          {
-            this->FixPerpenTrifurcation(this->WorkPd, origPd, this->GroupIdsArrayName, surfaceGroups[i], allEdges, badEdges, critPts);
-          }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 3 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
-              badEdges.size() == 3 && allEdges.size() == 3)
-          {
-            this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
-          }
-          else if (surfaceGroups[i].BoundaryEdges.size() == 5 && polycubeGroups[j].BoundaryEdges.size() == 4 &&
-              badEdges.size() == 3 && allEdges.size() == 3)
-          {
-            this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
-          }
-          //else if (surfaceGroups[i].BoundaryEdges.size() == 4 && polycubeGroups[j].BoundaryEdges.size() == 2 &&
-          //    badEdges.size() == 2 && allEdges.size() == 4)
-          //{
-          //  this->FixCloseGroup(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
-          //}
           else
             vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
         }
@@ -4046,6 +4119,11 @@ int vtkSVSurfaceCenterlineGrouper::FixOffsetTrifurcation(vtkPolyData *pd, vtkPol
       {
         fixEdges.push_back(badEdges[j]);
       }
+
+    }
+    if (badEdges.size() == 2)
+    {
+      break;
     }
   }
 
@@ -4056,6 +4134,281 @@ int vtkSVSurfaceCenterlineGrouper::FixOffsetTrifurcation(vtkPolyData *pd, vtkPol
   vtkDebugMacro("\n");
 
   this->FixEdges(pd, origPd, arrayName, region, allEdges, fixEdges, critPts);
+
+  return SV_OK;
+}
+
+// ----------------------
+// FixSplitTrifurcation
+// ----------------------
+int vtkSVSurfaceCenterlineGrouper::FixFilledTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd, std::string arrayName,
+                                                         const Region region, const Region polyRegion, std::vector<int> allEdges,
+                                                         std::vector<int> badEdges, vtkIdList *critPts)
+{
+  vtkDebugMacro("--FIX FILLED TRIFURCATION--");
+  int patchValue = region.IndexCluster;
+  vtkDebugMacro("CLUSTER " << patchValue);
+  int numEdges = region.BoundaryEdges.size();
+  vtkDebugMacro("NUM EDGES " << numEdges);
+
+  vtkDebugMacro("NUMBER OF ALL EDGES: " << allEdges.size());
+  vtkDebugMacro("ALL EDGES: ");
+  for (int j=0; j<allEdges.size(); j++)
+    vtkDebugMacro(" " <<  allEdges[j] << " ");
+  vtkDebugMacro("\n");
+  vtkDebugMacro("NUMBER OF BAD EDGES: " << badEdges.size());
+  vtkDebugMacro("BAD EDGES: ");
+  for (int j=0; j<badEdges.size(); j++)
+    vtkDebugMacro(" " << badEdges[j] << " ");
+  vtkDebugMacro("\n");
+
+  std::vector<int> potEdges;
+  for (int j=0; j<allEdges.size(); j++)
+  {
+    int cornerPtId0 = region.CornerPoints[allEdges[j]];
+    int cornerPtId1 = region.CornerPoints[allEdges[(j+1)%allEdges.size()]];
+
+    vtkNew(vtkIdList, ptId0List);
+    vtkSVGeneralUtils::GetPointCellsValues(origPd, arrayName, cornerPtId0, ptId0List);
+
+    vtkNew(vtkIdList, ptId1List);
+    vtkSVGeneralUtils::GetPointCellsValues(origPd, arrayName, cornerPtId1, ptId1List);
+
+    int numIds = ptId0List->GetNumberOfIds();
+    ptId0List->IntersectWith(ptId1List);
+    if (ptId0List->GetNumberOfIds() != numIds)
+    {
+      potEdges.push_back(allEdges[j]);
+    }
+
+    if (allEdges.size() == 2)
+    {
+      break;
+    }
+  }
+
+  if (potEdges.size() != 2)
+  {
+    vtkErrorMacro("Incorrect fix being applied");
+    return SV_ERROR;
+  }
+
+  std::vector<int> fixEdges;
+  if (region.BoundaryEdges[potEdges[1]].size() > region.BoundaryEdges[potEdges[0]].size())
+  {
+    fixEdges.push_back(potEdges[0]);
+  }
+  else
+  {
+    fixEdges.push_back(potEdges[1]);
+  }
+
+  vtkDebugMacro("NUMBER OF FIX EDGES: " << fixEdges.size());
+  vtkDebugMacro("FIX EDGES: ");
+  for (int j=0; j<fixEdges.size(); j++)
+    vtkDebugMacro(" " <<  fixEdges[j] << " ");
+  vtkDebugMacro("\n");
+
+  this->FixEdges(pd, origPd, arrayName, region, allEdges, fixEdges, critPts);
+
+  return SV_OK;
+}
+
+// ----------------------
+// FixSplitsTrifurcation
+// ----------------------
+int vtkSVSurfaceCenterlineGrouper::FixSplitsTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd, std::string arrayName,
+                                                        const Region region, const Region polyRegion, std::vector<int> allEdges,
+                                                        std::vector<int> badEdges, vtkIdList *critPts)
+{
+  vtkDebugMacro("--FIX SPLITS TRIFURCATION--");
+  int patchValue = region.IndexCluster;
+  vtkDebugMacro("CLUSTER " << patchValue);
+  int numEdges = region.BoundaryEdges.size();
+  vtkDebugMacro("NUM EDGES " << numEdges);
+
+  vtkDebugMacro("NUMBER OF ALL EDGES: " << allEdges.size());
+  vtkDebugMacro("ALL EDGES: ");
+  for (int j=0; j<allEdges.size(); j++)
+    vtkDebugMacro(" " <<  allEdges[j] << " ");
+  vtkDebugMacro("\n");
+  vtkDebugMacro("NUMBER OF BAD EDGES: " << badEdges.size());
+  vtkDebugMacro("BAD EDGES: ");
+  for (int j=0; j<badEdges.size(); j++)
+    vtkDebugMacro(" " << badEdges[j] << " ");
+  vtkDebugMacro("\n");
+
+  std::vector<int> potEdges;
+  for (int j=0; j<badEdges.size(); j++)
+  {
+    int cornerPtId0 = region.CornerPoints[badEdges[j]];
+    int cornerPtId1 = region.CornerPoints[badEdges[(j+1)%badEdges.size()]];
+
+    vtkNew(vtkIdList, ptId0List);
+    vtkSVGeneralUtils::GetPointCellsValues(origPd, arrayName, cornerPtId0, ptId0List);
+
+    vtkNew(vtkIdList, ptId1List);
+    vtkSVGeneralUtils::GetPointCellsValues(origPd, arrayName, cornerPtId1, ptId1List);
+
+    int numIds = ptId0List->GetNumberOfIds();
+    ptId0List->IntersectWith(ptId1List);
+    if (ptId0List->GetNumberOfIds() != numIds)
+    {
+      potEdges.push_back(badEdges[j]);
+    }
+
+    if (badEdges.size() == 2)
+    {
+      break;
+    }
+  }
+
+  if (potEdges.size() != 2)
+  {
+    vtkErrorMacro("Incorrect fix being applied");
+    return SV_ERROR;
+  }
+
+  std::vector<int> fixEdges;
+  int minEdge = -1;
+  if (region.BoundaryEdges[potEdges[0]].size() > region.BoundaryEdges[potEdges[1]].size())
+  {
+    fixEdges.push_back(potEdges[0]);
+    minEdge = potEdges[1];
+  }
+  else
+  {
+    fixEdges.push_back(potEdges[1]);
+    minEdge = potEdges[0];
+  }
+
+  vtkDebugMacro("NUMBER OF FIX EDGES: " << fixEdges.size());
+  vtkDebugMacro("FIX EDGES: ");
+  for (int j=0; j<fixEdges.size(); j++)
+    vtkDebugMacro(" " <<  fixEdges[j] << " ");
+  vtkDebugMacro("\n");
+
+  this->FixEdges(pd, origPd, arrayName, region, allEdges, fixEdges, critPts);
+
+  int edgeSize = region.BoundaryEdges[minEdge].size();
+
+  int startPtId = region.BoundaryEdges[minEdge][0];
+  int secondPtId = region.BoundaryEdges[minEdge][1];
+  int finalPtId = region.BoundaryEdges[minEdge][edgeSize-1];
+
+  vtkNew(vtkIdList, centerCells);
+  vtkNew(vtkIdList, centerValues);
+  origPd->GetCellEdgeNeighbors(-1, startPtId, secondPtId, centerCells);
+  for (int l=0; l<centerCells->GetNumberOfIds(); l++)
+  {
+    int tmpCellId = centerCells->GetId(l);
+    int edgeCellValue = origPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+    centerValues->InsertUniqueId(edgeCellValue);
+  }
+
+  vtkDebugMacro("WHAT ARE CENTER VALS: ");
+  for (int f=0; f<centerValues->GetNumberOfIds(); f++)
+    vtkDebugMacro(" " << centerValues->GetId(f) << " ");
+  vtkDebugMacro("\n");
+
+  vtkNew(vtkIdList, startCellIds);
+  origPd->GetPointCells(startPtId, startCellIds);
+
+  int startCellValue = -1;
+  int startCellCount = 0;
+  for (int l=0; l<startCellIds->GetNumberOfIds(); l++)
+  {
+    int tmpCellId = startCellIds->GetId(l);
+    int edgeCellValue = origPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+    if (edgeCellValue == patchValue)
+    {
+      startCellCount++;
+    }
+
+    vtkDebugMacro("this start CEL VAL: " << edgeCellValue);
+    if (centerValues->IsId(edgeCellValue) == -1)
+    {
+      startCellValue = edgeCellValue;
+    }
+  }
+  vtkDebugMacro("FOUND START VALUE: " << startCellValue);
+
+  vtkNew(vtkIdList, finalCellIds);
+  origPd->GetPointCells(finalPtId, finalCellIds);
+
+  int finalCellValue = -1;
+  int finalCellCount = 0;
+  for (int l=0; l<finalCellIds->GetNumberOfIds(); l++)
+  {
+    int tmpCellId = finalCellIds->GetId(l);
+    int edgeCellValue = origPd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(tmpCellId);
+    if (edgeCellValue == patchValue)
+    {
+      finalCellCount++;
+    }
+
+    vtkDebugMacro("this final CEL VAL: " << edgeCellValue);
+    if (centerValues->IsId(edgeCellValue) == -1)
+    {
+      finalCellValue = edgeCellValue;
+    }
+  }
+  vtkDebugMacro("FOUND FINAL VALUE: " << finalCellValue);
+
+  if (startCellValue == -1 || finalCellValue == -1)
+  {
+    vtkErrorMacro("Error in finding new group value to use to fix split perpendicular trifurcation");
+    return SV_ERROR;
+  }
+
+  vtkNew(vtkIdList, fixEdgeCells);
+  for (int i=0; i<edgeSize-1; i++)
+  {
+    int ptId0 = region.BoundaryEdges[minEdge][i];
+
+    vtkNew(vtkIdList, pointCells);
+    origPd->GetPointCells(ptId0, pointCells);
+
+    for (int j=0; j<pointCells->GetNumberOfIds(); j++)
+    {
+      fixEdgeCells->InsertUniqueId(pointCells->GetId(j));
+    }
+  }
+
+  std::vector<std::vector<int> > ringNeighbors(fixEdgeCells->GetNumberOfIds());
+  std::vector<int> cellIdMap(origPd->GetNumberOfCells());
+  for (int i=0; i<fixEdgeCells->GetNumberOfIds(); i++)
+  {
+    ringNeighbors[i].push_back(fixEdgeCells->GetId(i));
+    cellIdMap[fixEdgeCells->GetId(i)] = i;
+  }
+
+  this->GetCellRingNeighbors(origPd, fixEdgeCells, 1, 2, ringNeighbors);
+
+  for (int i=0; i<edgeSize-1; i++)
+  {
+    int ptId0 = region.BoundaryEdges[minEdge][i];
+
+    vtkNew(vtkIdList, pointCells);
+    origPd->GetPointCells(ptId0, pointCells);
+
+    for (int j=0; j<pointCells->GetNumberOfIds(); j++)
+    {
+      int cellId = pointCells->GetId(j);
+
+      for (int k=0; k<ringNeighbors[cellIdMap[cellId]].size(); k++)
+      {
+        if (i <= edgeSize/2)
+        {
+          pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(ringNeighbors[cellIdMap[cellId]][k], startCellValue);
+        }
+        else
+        {
+          pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(ringNeighbors[cellIdMap[cellId]][k], finalCellValue);
+        }
+      }
+    }
+  }
 
   return SV_OK;
 }
@@ -4101,6 +4454,11 @@ int vtkSVSurfaceCenterlineGrouper::FixPlanarTrifurcation(vtkPolyData *pd, vtkPol
     ptId0List->IntersectWith(ptId1List);
     if (ptId0List->GetNumberOfIds() != numIds)
       fixEdges.push_back(badEdges[j]);
+
+    if (badEdges.size() == 2)
+    {
+      break;
+    }
   }
 
   vtkDebugMacro("NUMBER OF FIX EDGES: " << fixEdges.size());
@@ -4303,7 +4661,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
           }
           vtkDebugMacro("FOUND FINAL VALUE: " << finalCellValue);
 
-          if (startCellCount == 1)
+          if (startCellCount == 1 && startCellValue != -1)
           {
             for (int l=0; l<startCellIds->GetNumberOfIds(); l++)
             {
@@ -4317,7 +4675,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
               }
             }
           }
-          else
+          else if (finalCellValue != -1)
           {
             for (int l=0; l<finalCellIds->GetNumberOfIds(); l++)
             {
@@ -4431,7 +4789,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
           }
           vtkDebugMacro("FOUND FINAL VALUE: " << finalCellValue);
 
-          if (startCellCount <= 2)
+          if (startCellCount <= 2 && startCellValue != -1)
           {
             for (int l=0; l<startCellIds->GetNumberOfIds(); l++)
             {
@@ -4445,7 +4803,7 @@ int vtkSVSurfaceCenterlineGrouper::FixEdges(vtkPolyData *pd, vtkPolyData *origPd
               }
             }
           }
-          if (finalCellCount <= 2)
+          if (finalCellCount <= 2 && finalCellValue != -1)
           {
             for (int l=0; l<finalCellIds->GetNumberOfIds(); l++)
             {
@@ -4871,47 +5229,89 @@ int vtkSVSurfaceCenterlineGrouper::SplitBoundary(vtkPolyData *pd,
   }
 
   vtkIntArray *slicePoints = vtkIntArray::SafeDownCast(pd->GetPointData()->GetArray(slicePointsArrayName.c_str()));
-  double fullLength=0.0;
-  for (int k=0; k<boundary.size()-1; k++)
+
+  // Check if already split
+  for (int i=1; i<boundary.size()-1; i++)
   {
-    int ptId0 = boundary[k];
-    int ptId1 = boundary[k+1];
-
-    double pt0[3], pt1[3];
-    pd->GetPoint(ptId0, pt0);
-    pd->GetPoint(ptId1, pt1);
-
-    fullLength += vtkSVMathUtils::Distance(pt0, pt1);
-  }
-
-  double divLength =  fullLength/numDivs;
-  double currLength = 0.0;
-  int currDiv = 1;
-  for (int k=0; k<boundary.size()-1; k++)
-  {
-    int ptId0 = boundary[k];
-    int ptId1 = boundary[k+1];
-
-    double pt0[3], pt1[3];
-    pd->GetPoint(ptId0, pt0);
-    pd->GetPoint(ptId1, pt1);
-
-    currLength += vtkSVMathUtils::Distance(pt0, pt1);
-
-    if (currLength > currDiv * divLength)
+    int ptId = boundary[i];
+    if (slicePoints->GetTuple1(ptId) != -1)
     {
-      currDiv++;
-
-      if (slicePoints->GetTuple1(ptId0) == -1)
-      {
-        slicePoints->SetTuple1(ptId1, 1);
-        newSlicePoints.push_back(ptId1);
-      }
-
-      if (currDiv == numDivs)
-        break;
+      return SV_OK;
     }
   }
+
+  if (1.0*boundary.size()/numDivs <= 5)
+  {
+    // Split by equal spacing
+    int spacing = boundary.size()/numDivs;
+
+    int currDiv = 1;
+    for (int k=0; k<boundary.size()-1; k++)
+    {
+      int ptId0 = boundary[k];
+      int ptId1 = boundary[k+1];
+
+      if ((k+1)%spacing == 0)
+      {
+        currDiv++;
+
+        if (slicePoints->GetTuple1(ptId0) == -1)
+        {
+          slicePoints->SetTuple1(ptId1, 1);
+          newSlicePoints.push_back(ptId1);
+        }
+
+        if (currDiv == numDivs)
+          break;
+      }
+    }
+  }
+  else
+  {
+    // Split by chord length
+    double fullLength=0.0;
+    for (int k=0; k<boundary.size()-1; k++)
+    {
+      int ptId0 = boundary[k];
+      int ptId1 = boundary[k+1];
+
+      double pt0[3], pt1[3];
+      pd->GetPoint(ptId0, pt0);
+      pd->GetPoint(ptId1, pt1);
+
+      fullLength += vtkSVMathUtils::Distance(pt0, pt1);
+    }
+
+    double divLength =  fullLength/numDivs;
+    double currLength = 0.0;
+    int currDiv = 1;
+    for (int k=0; k<boundary.size()-1; k++)
+    {
+      int ptId0 = boundary[k];
+      int ptId1 = boundary[k+1];
+
+      double pt0[3], pt1[3];
+      pd->GetPoint(ptId0, pt0);
+      pd->GetPoint(ptId1, pt1);
+
+      currLength += vtkSVMathUtils::Distance(pt0, pt1);
+
+      if (currLength > currDiv * divLength)
+      {
+        currDiv++;
+
+        if (slicePoints->GetTuple1(ptId0) == -1)
+        {
+          slicePoints->SetTuple1(ptId1, 1);
+          newSlicePoints.push_back(ptId1);
+        }
+
+        if (currDiv == numDivs)
+          break;
+      }
+    }
+  }
+
 
   return SV_OK;
 }
@@ -4969,7 +5369,7 @@ int vtkSVSurfaceCenterlineGrouper::SplitCellsAroundPoint(vtkPolyData *pd, int pt
 
   vtkDebugMacro("SPLITTING " <<  numSplitCells << " CELLS");
 
-  // Because of poor dynamic editting of data in vtk, we need to
+  // Because of poor dyn#amic editting of data in vtk, we need to
   // create a new set of cells
   int numCurrentCells = pd->GetNumberOfCells();
   int numNewCells     = numCurrentCells + 2*numSplitCells;
@@ -5006,8 +5406,6 @@ int vtkSVSurfaceCenterlineGrouper::SplitCellsAroundPoint(vtkPolyData *pd, int pt
   }
 
   pd->SetPolys(newCells);
-  pd->BuildCells();
-  pd->BuildLinks();
 
   for (int i=0; i<splitCells.size(); i++)
   {
@@ -5016,6 +5414,9 @@ int vtkSVSurfaceCenterlineGrouper::SplitCellsAroundPoint(vtkPolyData *pd, int pt
     int newPtId = splitCells[i][2];
     pd->ReplaceCellPoint(replaceCellId, oldPtId, newPtId);
   }
+
+  pd->BuildCells();
+  pd->BuildLinks();
 
   return SV_OK;
 }
@@ -5194,7 +5595,7 @@ int vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(vtkPolyData *pd, vtkIdLi
   if (ringNumber < totNumberOfRings)
   {
     ringNumber++;
-    this->GetCellRingNeighbors(pd, cellIds, ringNumber, totNumberOfRings, neighbors);
+    vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, cellIds, ringNumber, totNumberOfRings, neighbors);
   }
 
   return SV_OK;

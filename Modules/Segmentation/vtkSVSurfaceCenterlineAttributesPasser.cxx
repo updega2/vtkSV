@@ -555,7 +555,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
       if (linePtId >= nlinepts - 1)
       {
-        fprintf(stderr,"Last point of line selected, didn't think that was possible\n");
+        vtkErrorMacro("Last point of line selected, didn't think that was possible");
         return SV_ERROR;
       }
 
@@ -578,7 +578,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
       if (absLinePtId >= nlinepts - 1)
       {
-        fprintf(stderr,"Last point of line selected, didn't think that was possible\n");
+        vtkErrorMacro("Last point of line selected, didn't think that was possible");
         return SV_ERROR;
       }
 
@@ -784,14 +784,14 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       std::vector<std::vector<int> > openEdges;
       if (this->GetOpenBoundaryEdges(branchPd, openCornerPoints, openEdges) != SV_OK)
       {
-        fprintf(stderr,"Error getting open boundary edges\n");
+        vtkErrorMacro("Error getting open boundary edges");
         return SV_ERROR;
       }
 
       std::vector<std::vector<int> > shiftedOpenEdges;
       if (this->ShiftEdgeList(branchPd, openEdges, shiftedOpenEdges) != SV_OK)
       {
-        fprintf(stderr,"Error shifting edges\n");
+        vtkErrorMacro("Error shifting edges");
         return SV_ERROR;
       }
 
@@ -807,7 +807,11 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       for (int j=0; j<shiftedOpenEdges.size(); j++)
       {
         std::vector<std::vector<int> > splitOpenEdges;
-        this->SplitEdgeList(branchPd, shiftedOpenEdges[j], splitOpenEdges);
+        if (this->SplitEdgeList(branchPd, shiftedOpenEdges[j], splitOpenEdges) != SV_OK)
+        {
+          vtkErrorMacro("Was not able to split the edge at the slice points");
+          return SV_ERROR;
+        }
 
         std::vector<std::vector<double> > edgeAngleBounds;
         std::vector<int> edgePatchValues;
@@ -815,11 +819,11 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         for (int k=0; k<splitOpenEdges.size(); k++)
         {
           int edgeSize = splitOpenEdges[k].size();
-          if (edgeSize < 3)
-          {
-            fprintf(stderr,"EDGE SIZE IS LESS THAN 3, IT IS %d!!!\n", edgeSize);
-            return SV_ERROR;
-          }
+          //if (edgeSize < 3)
+          //{
+          //  vtkErrorMacro("EDGE SIZE IS LESS THAN 3, IT IS " << edgeSize);
+          //  return SV_ERROR;
+          //}
 
           int edgePtId0 = branchPd->GetPointData()->GetArray("TmpInternalIds")->
             GetTuple1(splitOpenEdges[k][0]);
@@ -861,7 +865,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
           if (edgePtId0 == -1 || edgePtIdN == -1)
           {
-            fprintf(stdout,"Could not recover true ids\n");
+            vtkErrorMacro("Could not recover true ids");
             return SV_ERROR;
           }
           std::vector<double> angleBounds;
@@ -877,10 +881,12 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
           if (polyPtId0 == -1 || polyPtIdN == -1)
           {
-            fprintf(stdout,"Could not recover true ids from polycube\n");
+            vtkErrorMacro("Could not recover true ids from polycube");
             return SV_ERROR;
           }
 
+          fprintf(stdout,"POLY POINT ID 0: %d\n", polyPtId0);
+          fprintf(stdout,"POLY POINT ID N: %d\n", polyPtIdN);
           vtkNew(vtkIdList, polyCellId);
           vtkNew(vtkIdList, cellPointIds);
           cellPointIds->SetNumberOfIds(2);
@@ -890,7 +896,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
           if (polyCellId->GetNumberOfIds() != 1)
           {
-            fprintf(stdout,"Should have one and only one cell here\n");
+            vtkErrorMacro("Should have one and only one cell here");
             return SV_ERROR;
           }
 
@@ -952,7 +958,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       {
         if (isTerminating)
         {
-          fprintf(stderr,"Something wrong here, branch is terminating, but we found multiple open edges\n");
+          vtkErrorMacro("Something wrong here, branch is terminating, but we found multiple open edges");
           return SV_ERROR;
         }
         double allVals[2]; allVals[0] = 0.0; allVals[1] = 0.0;
@@ -995,7 +1001,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
       if (growCellLists.size() > 2)
       {
-        fprintf(stderr,"WE GOT OURSELVES A PROBLEMO\n");
+        vtkErrorMacro("WE GOT OURSELVES A PROBLEMO");
         return SV_ERROR;
       }
 
@@ -1170,7 +1176,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
               if (patchVal == -1)
               {
-                fprintf(stderr,"A PATCH VAL NOT FOUND BY ANGULAR METHOD\n");
+                vtkErrorMacro("A PATCH VAL NOT FOUND BY ANGULAR METHOD");
                 return SV_ERROR;
               }
 

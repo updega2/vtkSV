@@ -64,8 +64,12 @@ int main(int argc, char *argv[])
   std::string polycubeFilename;
 
   // Default values for options
-  int useRadiusInfo = 1;
   int enforcePolycubeConnectivity = 0;
+  int isVasculature = 1;
+  int enforceBoundaryDirections = 0;
+  int boundaryEnforceFactor = 1;
+
+  double normalsWeighting = 0.8;
 
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
@@ -73,6 +77,7 @@ int main(int argc, char *argv[])
   std::string patchIdsArrayName = "PatchIds";
   std::string slicePointsArrayName = "SlicePoints";
   std::string clusteringVectorArrayName = "ClusteringVector";
+  std::string parallelTransportVectorArrayName = "ParallelTransportVector";
 
   // argc is the number of strings on the command-line
   //  starting with the program name
@@ -90,9 +95,13 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-blanking")      {blankingArrayName = argv[++iarg];}
       else if(tmpstr=="-patchids")      {patchIdsArrayName = argv[++iarg];}
       else if(tmpstr=="-slicepoints")   {slicePointsArrayName = argv[++iarg];}
-      else if(tmpstr=="-useradiusinfo") {useRadiusInfo = atoi(argv[++iarg]);}
-      else if(tmpstr=="-clusteringvector")   {clusteringVectorArrayName = argv[++iarg];}
-      else if(tmpstr=="-enforcepolycubeconnectivity")     {enforcePolycubeConnectivity = atoi(argv[++iarg]);}
+      else if(tmpstr=="-isvasculature") {isVasculature = atoi(argv[++iarg]);}
+      else if(tmpstr=="-clusteringvector")              {clusteringVectorArrayName = argv[++iarg];}
+      else if(tmpstr=="-paralleltransportvector")       {parallelTransportVectorArrayName = argv[++iarg];}
+      else if(tmpstr=="-enforcepolycubeconnectivity")   {enforcePolycubeConnectivity = atoi(argv[++iarg]);}
+      else if(tmpstr=="-enforceboundarydirections")     {enforceBoundaryDirections = atoi(argv[++iarg]);}
+      else if(tmpstr=="-boundaryenforcefactor")         {boundaryEnforceFactor = atoi(argv[++iarg]);}
+      else if(tmpstr=="-normalsweighting")              {normalsWeighting = atof(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -116,8 +125,13 @@ int main(int argc, char *argv[])
     cout << "  -patchids                       : Name on polycube indicating the cuboid patch id [default PatchIds]"<< endl;
     cout << "  -slicepoints                    : Name to be placed on surface to indicate where patch divisions will occur if preparing for cuboid patching. Only used if enforcepolycubeconnectivity is turned on [default SlicePoints]"<< endl;
     cout << "  -clusteringvector               : Name to be used for clustering. Should be a vector on the surface. [default ClusteringVector]"<< endl;
+    cout << "  -paralleltransportvector        : Name on centerlines for centerlines local coordinate frame. If not provided, the coordinate frame will be computed and given this name. [default ParallelTransportVector]"<< endl;
     cout << "  -useradiusinfo                  : Use radius to help in clipping operation [default 1]"<< endl;
     cout << "  -enforcepolycubeconnectivity    : Enforce the connectivity of the polycube on the surface [default 0]" << endl;
+    cout << "  -normalsweighting               : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
+    cout << "  -isvasculature                  : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
+    cout << "  -enforceboundarydirections      : At separating patches, enforce the boundary directions by modifying the clustering vectors [default 0]" << endl;
+    cout << "  -boundaryenforcefactor          : Approximately represents the number of centerline points to enforce per branch. Typically a fairly low integer works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems. [default 1]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -167,6 +181,10 @@ int main(int argc, char *argv[])
   Patcher->SetSlicePointsArrayName(slicePointsArrayName.c_str());
   Patcher->SetClusteringVectorArrayName(clusteringVectorArrayName.c_str());
   Patcher->SetEnforcePolycubeConnectivity(enforcePolycubeConnectivity);
+  Patcher->SetIsVasculature(isVasculature);
+  Patcher->SetEnforceBoundaryDirections(enforceBoundaryDirections);
+  Patcher->SetNormalsWeighting(normalsWeighting);
+  Patcher->SetBoundaryEnforceFactor(boundaryEnforceFactor);
   Patcher->DebugOn();
   Patcher->Update();
   std::cout<<"Done"<<endl;
@@ -180,6 +198,7 @@ int main(int argc, char *argv[])
     std::cerr << "Surface centerline grouper failed. " <<endl;
     return EXIT_FAILURE;
   }
+
 
   //Exit the program without errors
   return EXIT_SUCCESS;

@@ -95,6 +95,38 @@ public:
   vtkGetStringMacro(SlicePointsArrayName);
   vtkSetStringMacro(ClusteringVectorArrayName);
   vtkGetStringMacro(ClusteringVectorArrayName);
+  vtkSetStringMacro(ParallelTransportVectorArrayName);
+  vtkGetStringMacro(ParallelTransportVectorArrayName);
+  //@}
+
+  //@{
+  /// \brief Get/Set the factor for enforcing of the boundary directions. Approximately represents the number of centerline points to enforce per branch. Default is 1, and typically a fairly low value works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems.
+  vtkSetMacro(BoundaryEnforceFactor,int);
+  vtkGetMacro(BoundaryEnforceFactor,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set whether the boundary at separating patches should be more
+  //  strictly enforced.
+  vtkSetMacro(EnforceBoundaryDirections,int);
+  vtkGetMacro(EnforceBoundaryDirections,int);
+  vtkBooleanMacro(EnforceBoundaryDirections,int);
+  //@}
+
+  //@{
+  /// \brief Get/Set the scalar determing how much influence to put on the normal
+  // of the cell and how much influence to put on the position of the cell for
+  // the cube patch clustering.
+  vtkSetMacro(NormalsWeighting,double);
+  vtkGetMacro(NormalsWeighting,double);
+  //@}
+
+  //@{
+  /// \brief Get/Set whether the model is a vascular model with artificial truncated
+  //  boundaries
+  vtkSetMacro(IsVasculature,int);
+  vtkGetMacro(IsVasculature,int);
+  vtkBooleanMacro(IsVasculature,int);
   //@}
 
   //@{
@@ -103,6 +135,12 @@ public:
   vtkGetMacro(EnforcePolycubeConnectivity, int);
   vtkBooleanMacro(EnforcePolycubeConnectivity, int);
   //@}
+
+  /** \brief From three vectors, compute transformation from global to local */
+  static int ComputeRotationMatrix(const double vx[3], const double vy[3],
+                                   const double vz[3], double rotMatrix[9]);
+
+  const static double GlobalCoords[3][3];
 
   /** \brief Correct cells on the boundary by updating val if they have
    *  multiple neighboring cells of the same value */
@@ -144,6 +182,14 @@ public:
   static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
+
+  static int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
+
+  static int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
+                               std::vector<int> &cellBool,
+                               int &currRow, const int numRows,
+                               std::vector<int> &allCells);
+
 
 protected:
   vtkSVSurfaceCuboidPatcher();
@@ -190,6 +236,9 @@ protected:
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
+  int GetCellDirectNeighbors(vtkPolyData *pd,
+                             std::vector<std::vector<int> > &neighbors,
+                             std::vector<int> &numNeighbors);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
@@ -200,12 +249,20 @@ protected:
   char *PatchIdsArrayName;
   char *SlicePointsArrayName;
   char *ClusteringVectorArrayName;
+  char *ParallelTransportVectorArrayName;
 
   vtkPolyData *WorkPd;
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
 
+  int EnforceBoundaryDirections;
   int EnforcePolycubeConnectivity;
+  int IsVasculature;
+  int BoundaryEnforceFactor;
+  int UseRadiusInformation;
+
+  double NormalsWeighting;
+
 
 private:
   vtkSVSurfaceCuboidPatcher(const vtkSVSurfaceCuboidPatcher&);  // Not implemented.
