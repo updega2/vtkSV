@@ -44,6 +44,7 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
+#include "vtkIdList.h"
 
 #include "vtkSVGlobals.h"
 
