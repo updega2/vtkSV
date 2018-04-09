@@ -674,19 +674,26 @@ int vtkSVCenterlineGraph::GetInitialBranchDirections(vtkSVCenterlineGCell *paren
       fprintf(stdout,"WANT TO SEE HOW IT COMPARES TO 0: %.6f\n", compare1);
 
       double dotCheck = vtkMath::Dot(parent->Children[i]->RefDirs[maxDir], parent->Children[i]->BranchVec);
-      if (maxDir == 1)
+      if (numChildren == 2)
       {
-        if (dotCheck > 0)
-          parent->Children[i]->BranchDir = RIGHT;
-        else
-          parent->Children[i]->BranchDir = LEFT;
+        parent->Children[i]->BranchDir = LEFT;
       }
-      else if (maxDir == 2)
+      else
       {
-        if (dotCheck > 0)
-          parent->Children[i]->BranchDir = BACK;
-        else
-          parent->Children[i]->BranchDir = FRONT;
+        if (maxDir == 1)
+        {
+          if (dotCheck > 0)
+            parent->Children[i]->BranchDir = RIGHT;
+          else
+            parent->Children[i]->BranchDir = LEFT;
+        }
+        else if (maxDir == 2)
+        {
+          if (dotCheck > 0)
+            parent->Children[i]->BranchDir = BACK;
+          else
+            parent->Children[i]->BranchDir = FRONT;
+        }
       }
     }
     else

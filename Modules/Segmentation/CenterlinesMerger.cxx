@@ -39,6 +39,7 @@
 #include "vtkSplineFilter.h"
 #include "vtkTriangleFilter.h"
 
+#include "vtkSVCenterlineMerger.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVCenterlines.h"
@@ -47,9 +48,6 @@
 #include "vtkSVPickPointSeedSelector.h"
 #include "vtkSVOpenProfilesSeedSelector.h"
 
-#include "vtkvmtkMergeCenterlines.h"
-#include "vtkvmtkCapPolyData.h"
-#include "vtkvmtkPolyDataCenterlines.h"
 
 int main(int argc, char *argv[])
 {
@@ -115,7 +113,7 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
 
   std::cout<<"Merging Centerlines..."<<endl;
-  vtkNew(vtkvmtkMergeCenterlines, Merger);
+  vtkNew(vtkSVCenterlineMerger, Merger);
   Merger->SetInputData(inputPd);
   Merger->SetRadiusArrayName(radiusArrayName.c_str());
   Merger->SetGroupIdsArrayName("GroupIds");

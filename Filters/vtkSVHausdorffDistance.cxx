@@ -123,7 +123,7 @@ int vtkSVHausdorffDistance::RequestData(vtkInformation *vtkNotUsed(request),
     int numPts1 = input1->GetNumberOfPoints();
 
     // Check the input to make sure it is there
-    if (numPolys0 < 1 || numPolys1 < 1)
+    if (numPts0 < 1 || numPts1 < 1)
     {
        vtkDebugMacro("No input!");
        return SV_ERROR;
@@ -181,6 +181,7 @@ int vtkSVHausdorffDistance::RunFilter()
 
   // Loop through each point in target and get distance
   double maxDistance   = 0.0;
+  double minDistance   = VTK_SV_LARGE_DOUBLE;
   double totalDistance = 0.0;
   for (int i=0; i<numPoints; i++)
   {
@@ -200,6 +201,9 @@ int vtkSVHausdorffDistance::RunFilter()
     if (distance > maxDistance)
       maxDistance = distance;
 
+    if (distance < minDistance)
+      minDistance = distance;
+
     totalDistance += distance;
   }
 
@@ -207,6 +211,7 @@ int vtkSVHausdorffDistance::RunFilter()
   this->TargetPd->GetPointData()->AddArray(distances);
   this->AverageDistance   = totalDistance/numPoints;
   this->HausdorffDistance = maxDistance;
+  this->MinimumDistance   = minDistance;
 
   return SV_OK;
 }

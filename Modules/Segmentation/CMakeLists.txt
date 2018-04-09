@@ -47,6 +47,7 @@ set(SRCS
   vtkSVCenterlineGCell.cxx
   vtkSVCenterlineBranchSplitter.cxx
   vtkSVCenterlineParallelTransportVectors.cxx
+  vtkSVCenterlineMerger.cxx
   vtkSVPolycubeGenerator.cxx
   vtkSVSurfaceCenterlineGrouper.cxx
   vtkSVSurfaceCenterlineAttributesPasser.cxx
@@ -67,6 +68,7 @@ set(HDRS
   vtkSVCenterlineGraph.h
   vtkSVCenterlineGCell.h
   vtkSVCenterlineBranchSplitter.h
+  vtkSVCenterlineMerger.h
   vtkSVCenterlineParallelTransportVectors.h
   vtkSVPolycubeGenerator.h
   vtkSVSurfaceCenterlineGrouper.h

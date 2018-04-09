@@ -36,15 +36,19 @@
 #include "vtkSVFindGeodesicPath.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVHausdorffDistance.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVPolycubeGenerator.h"
 #include "vtkSVSurfaceCenterlineGrouper.h"
 
-#include "vtkExecutive.h"
-#include "vtkErrorCode.h"
 #include "vtkCellArray.h"
 #include "vtkCellLocator.h"
+#include "vtkConnectivityFilter.h"
+#include "vtkDataSetSurfaceFilter.h"
+#include "vtkExecutive.h"
+#include "vtkErrorCode.h"
+#include "vtkFeatureEdges.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkCellData.h"
@@ -486,6 +490,11 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
   int numGroups = groupIds->GetNumberOfIds();
   fprintf(stdout,"WHAT NUM GROUPS: %d\n", numGroups);
 
+  vtkNew(vtkIntArray, regionSize);
+  regionSize->SetName("RegionSize");
+  regionSize->SetNumberOfComponents(1);
+  regionSize->SetNumberOfTuples(numGroups);
+
   //vtkIntArray *tmpLinePtArray = vtkIntArray::New();
   vtkDoubleArray *tmpLinePtArray = vtkDoubleArray::New();
   //tmpLinePtArray->SetNumberOfComponents(3);
@@ -555,6 +564,85 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
     if (backNeighbors->GetNumberOfIds() != 1 && frontNeighbors->GetNumberOfIds() != 1)
       isTerminating = 0;
 
+    // ======================= DOING SIZE ANALYSIS ==========================
+    if (this->MergedCenterlines->GetNumberOfCells() > 1)
+    {
+      vtkNew(vtkFeatureEdges, featureEdges);
+      featureEdges->SetInputData(branchPd);
+      featureEdges->FeatureEdgesOff();
+      featureEdges->ManifoldEdgesOff();
+      featureEdges->NonManifoldEdgesOff();
+      featureEdges->BoundaryEdgesOn();
+      featureEdges->Update();
+
+      vtkNew(vtkConnectivityFilter, connector);
+      connector->SetInputData(featureEdges->GetOutput());
+      connector->SetExtractionModeToAllRegions();
+      connector->ColorRegionsOn();
+      connector->Update();
+
+      vtkNew(vtkDataSetSurfaceFilter, surfacer);
+      surfacer->SetInputData(connector->GetOutput());
+      surfacer->Update();
+
+      regionSize->SetTuple1(i, 1);
+      if (connector->GetNumberOfExtractedRegions() > 2)
+      {
+        vtkErrorMacro("Should have at most two edges on group, there are " << connector->GetNumberOfExtractedRegions());
+        return SV_ERROR;
+      }
+      if (connector->GetNumberOfExtractedRegions() == 2)
+      {
+        // DOING ANALYSIS
+        double lineDist = 0.0;
+        double distPt0[3], distPt1[3];
+        double avgRadius = 0.0;
+        for (int j=1; j<nlinepts-1; j++)
+        {
+          avgRadius += this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(linepts[j]);
+
+          this->MergedCenterlines->GetPoint(linepts[j-1], distPt0);
+          this->MergedCenterlines->GetPoint(linepts[j], distPt1);
+
+          lineDist += vtkSVMathUtils::Distance(distPt0, distPt1);
+        }
+        if (nlinepts == 2)
+        {
+          avgRadius = VTK_SV_LARGE_DOUBLE;
+        }
+        else
+        {
+          avgRadius /= (nlinepts-2);
+        }
+
+        double length = branchPd->GetLength();
+
+        vtkNew(vtkPolyData, edge0Pd);
+        vtkSVGeneralUtils::ThresholdPd(surfacer->GetOutput(), 0, 0, 1, "RegionId", edge0Pd);
+        vtkNew(vtkPolyData, edge1Pd);
+        vtkSVGeneralUtils::ThresholdPd(surfacer->GetOutput(), 1, 1, 1, "RegionId", edge1Pd);
+
+        vtkNew(vtkSVHausdorffDistance, distancer);
+        distancer->SetInputData(0, edge0Pd);
+        distancer->SetInputData(1, edge1Pd);
+        distancer->Update();
+
+        double endsDist = distancer->GetMinimumDistance();
+
+        fprintf(stdout,"   AVERAGE RADIUS: %.6f\n", avgRadius);
+        fprintf(stdout,"   LEEEEEEEENGTHH: %.6f\n", length);
+        fprintf(stdout,"   LINEDDDDDISSST: %.6f\n", lineDist);
+        fprintf(stdout,"   MINDISTBETWEND: %.6f\n", endsDist);
+
+        if (endsDist < 2.0*avgRadius && lineDist < 3.0*avgRadius)
+        {
+          regionSize->SetTuple1(i, 0);
+          fprintf(stdout,"BABOOM!\n");
+        }
+      }
+    }
+
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/HSHSHS.vtp", this->MergedCenterlines);
     for (int j=0; j<branchNumberOfCells; j++)
     {
       // Get cell point coords
@@ -598,14 +686,14 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         return SV_ERROR;
       }
 
-      // Need to make sure we use local vecs from not last points
-      if (linePtId == 0)
+      // Need to make sure we use local vecs from not bifurcation points
+      if (linePtId == 0 && frontNeighbors->GetNumberOfIds() > 1)
       {
         centerlineLocalX->SetTuple(realCellId, this->MergedCenterlines->GetPointData()->GetArray(parallelXName.c_str())->GetTuple(linepts[1]));
         centerlineLocalY->SetTuple(realCellId, this->MergedCenterlines->GetPointData()->GetArray(parallelYName.c_str())->GetTuple(linepts[1]));
         centerlineLocalZ->SetTuple(realCellId, this->MergedCenterlines->GetPointData()->GetArray(parallelZName.c_str())->GetTuple(linepts[1]));
       }
-      if (linePtId == nlinepts -2)
+      if (linePtId == nlinepts-2 && backNeighbors->GetNumberOfIds() > 1)
       {
         centerlineLocalX->SetTuple(realCellId, this->MergedCenterlines->GetPointData()->GetArray(parallelXName.c_str())->GetTuple(linepts[nlinepts-2]));
         centerlineLocalY->SetTuple(realCellId, this->MergedCenterlines->GetPointData()->GetArray(parallelYName.c_str())->GetTuple(linepts[nlinepts-2]));
@@ -695,15 +783,37 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
 
       if (linePtId <= 1)
       {
-        if (!this->IsVasculature && this->MergedCenterlines->GetNumberOfCells() == 1)
-          alpha = 0.0;
-        else
+        if (this->MergedCenterlines->GetNumberOfCells() == 1)
+        {
           alpha = 1.0;
+        }
       }
-      else if (linePtId >= nlinepts-4 && !isTerminating)
-        alpha = 0.0;
-      if (this->IsVasculature && linePtId >= nlinepts-4 && isTerminating)
-        alpha = 1.0;
+      else if (linePtId >= nlinepts-3)
+      {
+        if (this->MergedCenterlines->GetNumberOfCells() == 1)
+        {
+          alpha = 1.0;
+        }
+        else
+        {
+          if (isTerminating)
+          {
+            alpha = 1.0;
+          }
+        }
+      }
+
+      //if (linePtId <= 1)
+      //{
+      //  if (!this->IsVasculature && this->MergedCenterlines->GetNumberOfCells() == 1)
+      //    alpha = 0.0;
+      //  else
+      //    alpha = 1.0;
+      //}
+      //else if (linePtId >= nlinepts-4 && !isTerminating)
+      //  alpha = 0.0;
+      //if (this->IsVasculature && linePtId >= nlinepts-4 && isTerminating)
+      //  alpha = 1.0;
 
       double cellClusterVec[3];
       for (int k=0; k<3; k++)
@@ -778,6 +888,8 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
     for (int i=0; i<numGroups; i++)
     {
       int groupId = groupIds->GetId(i);
+      if (regionSize->GetTuple1(i) == 0)
+        continue;
       fprintf(stdout,"ENFORCING BOUNDARY OF GROUP: %d\n", groupId);
 
       vtkNew(vtkPolyData, branchPd);
@@ -1220,7 +1332,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       double maxBegPCoordThr = 0.0;
       if (maxFrontRadiusRatio > 1.0)
       {
-        maxBegPCoordThr = 1.5*maxFrontRadiusRatio/nlinepts;
+        maxBegPCoordThr = 2.0*maxFrontRadiusRatio/nlinepts;
       }
       if (maxBegPCoordThr > 0.5)
       {
@@ -1229,7 +1341,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       double maxEndPCoordThr = 0.0;
       if (maxBackRadiusRatio > 1.0)
       {
-        maxEndPCoordThr = 1.5*maxBackRadiusRatio/nlinepts;
+        maxEndPCoordThr = 2.0*maxBackRadiusRatio/nlinepts;
       }
       if (maxEndPCoordThr > 0.5)
       {
@@ -1357,7 +1469,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
 
               if (!atThreshold)
               {
-                fprintf(stdout,"OUT OF CELLS BUT NOT AT END\n");
+                //fprintf(stdout,"OUT OF CELLS BUT NOT AT END: %.6f -> %.6f\n", currentPCoordVal, maxBegPCoordThr);
                 if (tmpGrowCellList.size() == 0)
                 {
                   tmpGrowCellList.push_back(lastCellId);
@@ -1493,6 +1605,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
             if (beta > 1.0)
               beta = 1.0;
           }
+          beta = 0.0;
 
           for (int l=0; l<3; l++)
             cellClusterVec[l] = beta * cellClusterVec[l] +  (1 - beta) * locals[patchVal][l];
@@ -1576,55 +1689,92 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       this->GroupIdsArrayName, polyBranchPd);
     polyBranchPd->BuildLinks();
 
-    int clusterWithGeodesics = 1;
-    if (nlinepts > 5 || isTerminating)
+    //int clusterWithGeodesics = 1;
+    //if (nlinepts > 5 || isTerminating)
+    //{
+    //  if (this->ClusterBranchWithCVT(branchPd, generatorsPd) != SV_OK)
+    //  {
+    //    vtkWarningMacro("Clustering branch with cvt into patches did not work");
+    //  }
+    //  else
+    //  {
+    //    vtkNew(vtkIdList, noEndPatches);
+    //    noEndPatches->SetNumberOfIds(4);
+    //    for (int j=0; j<4; j++)
+    //      noEndPatches->SetId(j, j);
+
+    //    if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
+    //    {
+    //      vtkWarningMacro("Could not correcto boundaries of surface");
+    //    }
+    //    else
+    //    {
+    //      if (this->MergedCenterlines->GetNumberOfCells() > 1 && this->EnforcePolycubeConnectivity)
+    //      {
+    //        if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
+    //        {
+    //          vtkWarningMacro("Matching end patches failed");
+    //          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/NOMATCHEND.vtp", branchPd);
+    //        }
+    //        else
+    //        {
+    //          clusterWithGeodesics = 0;
+    //        }
+    //      }
+    //      else
+    //      {
+    //        clusterWithGeodesics = 0;
+    //      }
+    //    }
+    //  }
+    //}
+
+    //if (clusterWithGeodesics && this->EnforcePolycubeConnectivity)
+    //{
+    //  if (isTerminating)
+    //  {
+    //    vtkErrorMacro("Failed to cluster terminating branch with cvt, can not use geodesics on terminating");
+    //    return SV_ERROR;
+    //  }
+    //  branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->FillComponent(0, -1);
+    //  vtkWarningMacro("Either the branch was too small or the traditional clustering did not work, attempting to use geodesics");
+    //  if (this->ClusterBranchWithGeodesics(branchPd, polyBranchPd) != SV_OK)
+    //  {
+    //    vtkErrorMacro("Error clustering branch with geodesics into patches");
+    //    return SV_ERROR;
+    //  }
+    //}
+
+    if (regionSize->GetTuple1(i) == 1 || isTerminating || !this->EnforcePolycubeConnectivity)
     {
       if (this->ClusterBranchWithCVT(branchPd, generatorsPd) != SV_OK)
       {
         vtkWarningMacro("Clustering branch with cvt into patches did not work");
-      }
-      else
-      {
-        vtkNew(vtkIdList, noEndPatches);
-        noEndPatches->SetNumberOfIds(4);
-        for (int j=0; j<4; j++)
-          noEndPatches->SetId(j, j);
-
-        if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
-        {
-          vtkWarningMacro("Could not correcto boundaries of surface");
-        }
-        else
-        {
-          if (this->MergedCenterlines->GetNumberOfCells() > 1 && this->EnforcePolycubeConnectivity)
-          {
-            if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
-            {
-              vtkWarningMacro("Matching end patches failed");
-              vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/NOMATCHEND.vtp", branchPd);
-            }
-            else
-            {
-              clusterWithGeodesics = 0;
-            }
-          }
-          else
-          {
-            clusterWithGeodesics = 0;
-          }
-        }
-      }
-    }
-
-    if (clusterWithGeodesics && this->EnforcePolycubeConnectivity)
-    {
-      if (isTerminating)
-      {
-        vtkErrorMacro("Failed to cluster terminating branch with cvt, can not use geodesics on terminating");
         return SV_ERROR;
       }
-      branchPd->GetCellData()->GetArray(this->PatchIdsArrayName)->FillComponent(0, -1);
-      vtkWarningMacro("Either the branch was too small or the traditional clustering did not work, attempting to use geodesics");
+
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/JUSTCHECK.vtp", branchPd);
+      //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+      //{
+      //  if (this->FixSidePatches(branchPd) != SV_OK)
+      //  {
+      //    vtkErrorMacro("Error fixing side patches");
+      //    vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_SIDE.vtp", branchPd);
+      //    return SV_ERROR;
+      //  }
+      //}
+      ////if (this->MergedCenterlines->GetNumberOfCells() > 1)
+      ////{
+      //  if (this->FixEndPatches(branchPd) != SV_OK)
+      //  {
+      //    vtkErrorMacro("Error fixing end patches");
+      //    vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_END.vtp", branchPd);
+      //    return SV_ERROR;
+      //  }
+      ////}
+    }
+    else if (this->EnforcePolycubeConnectivity)
+    {
       if (this->ClusterBranchWithGeodesics(branchPd, polyBranchPd) != SV_OK)
       {
         vtkErrorMacro("Error clustering branch with geodesics into patches");
@@ -1632,6 +1782,26 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       }
     }
 
+    vtkNew(vtkIdList, noEndPatches);
+    noEndPatches->SetNumberOfIds(4);
+    for (int j=0; j<4; j++)
+      noEndPatches->SetId(j, j);
+
+    if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
+    {
+      vtkWarningMacro("Could not correcto boundaries of surface");
+      return SV_ERROR;
+    }
+
+    if (this->MergedCenterlines->GetNumberOfCells() > 1 && this->EnforcePolycubeConnectivity)
+    {
+      if (this->MatchEndPatches(branchPd, polyBranchPd) != SV_OK)
+      {
+        vtkWarningMacro("Matching end patches failed");
+        vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/NOMATCHEND.vtp", branchPd);
+        return SV_ERROR;
+      }
+    }
 
     // Set vals on work pd
     for (int j=0; j<branchPd->GetNumberOfCells(); j++)
@@ -1682,7 +1852,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
   {
     if (this->FixPatchesWithPolycube() != SV_OK)
     {
-      fprintf(stderr,"Couldn't fix patches\n");
+      vtkErrorMacro("Couldn't fix patches");
       return SV_ERROR;
     }
   }
@@ -1709,6 +1879,8 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
     return SV_ERROR;
   }
 
+  vtkDebugMacro("AQUI");
+
   return SV_OK;
 }
 
@@ -1721,26 +1893,6 @@ int vtkSVSurfaceCuboidPatcher::ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData
   {
     vtkErrorMacro("Error in cvt");
     return SV_ERROR;
-  }
-
-  //if (this->MergedCenterlines->GetNumberOfCells() > 1)
-  //{
-    if (this->FixEndPatches(pd) != SV_OK)
-    {
-      vtkErrorMacro("Error fixing end patches");
-      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_END.vtp", pd);
-      return SV_ERROR;
-    }
-  //}
-
-  if (this->MergedCenterlines->GetNumberOfCells() > 1)
-  {
-    if (this->FixSidePatches(pd) != SV_OK)
-    {
-      vtkErrorMacro("Error fixing side patches");
-      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_SIDE.vtp", pd);
-      return SV_ERROR;
-    }
   }
 
   return SV_OK;
@@ -3771,7 +3923,7 @@ int vtkSVSurfaceCuboidPatcher::CheckEndPatches(vtkPolyData *pd,
       cellNormals->GetTuple(endRegions[i].Elements[j], cellNorm);
 
       double compare = vtkMath::Dot (cellNorm, avgNorm);
-      if (compare > 0.99)
+      if (compare > 0.95)
         numClose+=1;
     }
 

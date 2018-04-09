@@ -65,6 +65,7 @@ public:
   /// \brief Get macros for hausdorff and average distance found
   vtkGetMacro(HausdorffDistance, double);
   vtkGetMacro(AverageDistance, double);
+  vtkGetMacro(MinimumDistance, double);
   //@}
 
 protected:
@@ -86,6 +87,7 @@ protected:
 
   double AverageDistance; // The average calculated distance from target to source
   double HausdorffDistance; // The largest distance from all point distances
+  double MinimumDistance; // The smallest distance from all point distances
 
 private:
   vtkSVHausdorffDistance(const vtkSVHausdorffDistance&);  // Not implemented.

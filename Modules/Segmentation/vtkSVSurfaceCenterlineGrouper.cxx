@@ -38,6 +38,7 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVPolycubeGenerator.h"
+#include "vtkSVPolyDataEdgeSplitter.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -3464,6 +3465,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
           }
           else if (hasQuadConnection && !hasTriConnection)
           {
+            vtkDebugMacro("HAS QUAD AND DOES NOT HAVE TRI, THIS SHOULD BE A PLANAR TRIFURCATION, NEED FIX, GROUP " << surfaceGroups[i].IndexCluster);
             // This should be a planar trifurcation, fix accordingly
             if (badEdges.size() == 4 && allEdges.size() == 4)
             {
@@ -3480,10 +3482,13 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
               this->FixOffsetTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
             }
             else
-              vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
+            {
+              vtkDebugMacro("NO FIX FOR THIS IS NECESSARY!!!!");
+            }
           }
           else if (hasQuadConnection && hasTriConnection)
           {
+            vtkDebugMacro("HAS QUAD AND HAS TRI, THIS SHOULD BE A PERPENDICULAR TRIFURCATION, NEED FIX, GROUP " << surfaceGroups[i].IndexCluster);
             // This should be a perpendicular trifurcation, fix accordingly
             if (badEdges.size() == 4 && allEdges.size() == 4)
             {
@@ -3498,7 +3503,9 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
               this->FixFilledTrifurcation(this->WorkPd, origPd, polycubePd, this->GroupIdsArrayName, surfaceGroups[i], polycubeGroups[j], allEdges, badEdges, critPts);
             }
             else
-              vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
+            {
+              vtkDebugMacro("NO FIX FOR THIS IS NECESSARY!!!!");
+            }
           }
           else
             vtkDebugMacro("NO FIX FOR THIS HAS BEEN DEVISED YET!!!!");
@@ -3524,6 +3531,7 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
   }
 
   vtkDebugMacro("TOTAL NUM OF CELLS: " << this->WorkPd->GetNumberOfCells());
+  vtkNew(vtkIdList, splitPointIds);
   for (int i=0; i<critPts->GetNumberOfIds(); i++)
   {
     int halfId = critPts->GetId(i);
@@ -3532,19 +3540,37 @@ int vtkSVSurfaceCenterlineGrouper::FixGroupsWithPolycube()
     vtkSVGeneralUtils::GetPointCellsValues(this->WorkPd, this->GroupIdsArrayName, halfId, finalVals);
     if (finalVals->GetNumberOfIds() != 4)
     {
-        vtkDebugMacro("NO GOOD, FIX GROUPS AROUND POINT: " << halfId);
-      this->SplitCellsAroundPoint(this->WorkPd, halfId);
-      this->SplitCellsAroundPoint(origPd, halfId);
+      vtkDebugMacro("NO GOOD, FIX GROUPS AROUND POINT: " << halfId);
+      splitPointIds->InsertNextId(halfId);
     }
   }
 
+  if (splitPointIds->GetNumberOfIds() == 0)
+  {
+    return SV_OK;
+  }
+
+  vtkNew(vtkSVPolyDataEdgeSplitter, origEdgeSplitter);
+  origEdgeSplitter->SetInputData(origPd);
+  origEdgeSplitter->SetSplitPointIds(splitPointIds);
+  origEdgeSplitter->Update();
+
+  origPd->DeepCopy(origEdgeSplitter->GetOutput());
+
+  vtkNew(vtkSVPolyDataEdgeSplitter, edgeSplitter);
+  edgeSplitter->SetInputData(this->WorkPd);
+  edgeSplitter->SetSplitPointIds(splitPointIds);
+  edgeSplitter->Update();
+
+  // TODO: Need better fix here that also includes trifurcation fixes!
   // Get new normals
   vtkNew(vtkPolyDataNormals, normaler);
-  normaler->SetInputData(this->WorkPd);
+  normaler->SetInputData(edgeSplitter->GetOutput());
   normaler->ComputePointNormalsOff();
   normaler->ComputeCellNormalsOn();
   normaler->SplittingOff();
   normaler->Update();
+
   this->WorkPd->DeepCopy(normaler->GetOutput());
   this->WorkPd->BuildLinks();
 
@@ -5326,6 +5352,8 @@ int vtkSVSurfaceCenterlineGrouper::CheckSlicePoints()
   int numCells = this->PolycubePd->GetNumberOfPoints();
 
   vtkDebugMacro("TOTAL NUM OF CELLS: " << this->WorkPd->GetNumberOfCells());
+  vtkDebugMacro("TOTAL NUM OF POINTS: " << this->WorkPd->GetNumberOfPoints());
+  vtkNew(vtkIdList, splitPointIds);
   for (int i=0; i<numPoints; i++)
   {
     vtkNew(vtkIdList, pointCellsValues);
@@ -5337,6 +5365,11 @@ int vtkSVSurfaceCenterlineGrouper::CheckSlicePoints()
 
     if (slicePointId != -1)
     {
+      if (slicePointId > this->WorkPd->GetNumberOfPoints())
+      {
+        vtkErrorMacro("Value of slice point on polycube is greater than number of points");
+        return SV_ERROR;
+      }
       vtkNew(vtkIdList, pointCells);
       this->WorkPd->GetPointCells(slicePointId, pointCells);
 
@@ -5348,174 +5381,21 @@ int vtkSVSurfaceCenterlineGrouper::CheckSlicePoints()
       if (numVals >= (1./2)*numCells)
       {
         // Lets split these cells
-        vtkDebugMacro("SPLITTING CELLS AROUND POINT: " << slicePointId);
-        this->SplitCellsAroundPoint(this->WorkPd, slicePointId);
+        splitPointIds->InsertNextId(slicePointId);
       }
     }
   }
 
-  return SV_OK;
-}
+  vtkNew(vtkSVPolyDataEdgeSplitter, edgeSplitter);
+  edgeSplitter->SetInputData(this->WorkPd);
+  edgeSplitter->SetSplitPointIds(splitPointIds);
+  edgeSplitter->DebugOn();
+  edgeSplitter->Update();
 
-// ----------------------
-// SplitCellsAroundPoint
-// ----------------------
-int vtkSVSurfaceCenterlineGrouper::SplitCellsAroundPoint(vtkPolyData *pd, int ptId)
-{
-  vtkNew(vtkIdList, pointCells);
-  pd->GetPointCells(ptId, pointCells);
-
-  int numSplitCells = pointCells->GetNumberOfIds();
-
-  vtkDebugMacro("SPLITTING " <<  numSplitCells << " CELLS");
-
-  // Because of poor dyn#amic editting of data in vtk, we need to
-  // create a new set of cells
-  int numCurrentCells = pd->GetNumberOfCells();
-  int numNewCells     = numCurrentCells + 2*numSplitCells;
-
-  vtkNew(vtkCellArray, newCells);
-  newCells->Allocate(numNewCells);
-  vtkNew(vtkIdList, cellPtIds);
-
-  for (int i=0; i<numCurrentCells; i++)
-  {
-    pd->GetCellPoints(i, cellPtIds);
-    newCells->InsertNextCell(cellPtIds);
-  }
-
-  std::vector<std::vector<int> > splitCells;
-  for (int i=0; i<numSplitCells; i++)
-  {
-    int cellId = pointCells->GetId(i);
-    vtkDebugMacro("SPLITIING CELL: " << cellId);
-
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(cellId, npts, pts);
-    for (int j=0; j<npts; j++)
-    {
-      int ptId0 = pts[j];
-      int ptId1 = pts[(j+1)%npts];
-
-      if (ptId0 != ptId && ptId1 != ptId)
-      {
-        this->SplitEdge(pd, cellId, ptId0, ptId1, newCells, splitCells);
-        break;
-      }
-    }
-  }
-
-  pd->SetPolys(newCells);
-
-  for (int i=0; i<splitCells.size(); i++)
-  {
-    int replaceCellId = splitCells[i][0];
-    int oldPtId = splitCells[i][1];
-    int newPtId = splitCells[i][2];
-    pd->ReplaceCellPoint(replaceCellId, oldPtId, newPtId);
-  }
-
-  pd->BuildCells();
-  pd->BuildLinks();
+  this->WorkPd->DeepCopy(edgeSplitter->GetOutput());
 
   return SV_OK;
 }
-
-// ----------------------
-// SplitEdge
-// ----------------------
-int vtkSVSurfaceCenterlineGrouper::SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
-                                    vtkCellArray *newCells, std::vector<std::vector<int> > &splitCells)
-
-{
-  // Num pts
-  int numCurrentPts   = pd->GetNumberOfPoints();
-  int numNewPts       = numCurrentPts + 1;
-
-  // Now do stuff
-  vtkNew(vtkIdList, edgeCells);
-  pd->GetCellEdgeNeighbors(cellId, ptId0, ptId1, edgeCells);
-
-  if (cellId != -1)
-    edgeCells->InsertNextId(cellId);
-
-  int pointAdded = 0;
-  int newPointId = numNewPts-1;
-  for (int i=0; i<edgeCells->GetNumberOfIds(); i++)
-  {
-    int splitCellId = edgeCells->GetId(i);
-
-    vtkIdType npts, *pts;
-    pd->GetCellPoints(splitCellId, npts, pts);
-
-    for (int j=0; j<npts; j++)
-    {
-      int splitPtId0 = pts[j];
-      int splitPtId1 = pts[(j+1)%npts];
-
-      if ((splitPtId0 == ptId0 && splitPtId1 == ptId1) ||
-          (splitPtId1 == ptId0 && splitPtId0 == ptId1))
-      {
-        int thirdPtId = pts[(j+2)%npts];
-
-        double pt0[3], pt1[3], newPt[3];
-        pd->GetPoint(ptId0, pt0);
-        pd->GetPoint(ptId1, pt1);
-
-        vtkMath::Add(pt0, pt1, newPt);
-        vtkMath::MultiplyScalar(newPt, 1./2);
-
-        if (!pointAdded)
-        {
-          pd->GetPoints()->InsertNextPoint(newPt);
-          pointAdded = 1;
-
-         pd->GetPointData()->CopyData(pd->GetPointData(), ptId0, newPointId);
-
-         for (int k=0; k<pd->GetPointData()->GetNumberOfArrays(); k++)
-         {
-           double weights[2]; weights[0] = 0.5; weights[1] = 0.5;
-
-           vtkNew(vtkIdList, interpIds);
-           interpIds->SetNumberOfIds(2);
-           interpIds->SetId(0, ptId0);
-           interpIds->SetId(1, ptId1);
-
-           pd->GetPointData()->GetArray(k)->InsertNextTuple(
-             pd->GetPointData()->GetArray(k)->GetTuple(ptId0));
-           pd->GetPointData()->GetArray(k)->InterpolateTuple(newPointId,
-               interpIds, pd->GetPointData()->GetArray(k), weights);
-         }
-        }
-
-        std::vector<int> splitCellInfo(3);
-        splitCellInfo[0] = splitCellId;
-        splitCellInfo[1] = ptId1;
-        splitCellInfo[2] = newPointId;
-        splitCells.push_back(splitCellInfo);
-
-        vtkNew(vtkIdList, newCell);
-        newCell->SetNumberOfIds(3);
-        newCell->SetId(0, thirdPtId);
-        newCell->SetId(1, newPointId);
-        newCell->SetId(2, ptId1);
-
-        int newCellId = newCells->InsertNextCell(newCell);
-
-        for (int k=0; k<pd->GetCellData()->GetNumberOfArrays(); k++)
-        {
-          pd->GetCellData()->GetArray(k)->InsertNextTuple(
-            pd->GetCellData()->GetArray(k)->GetTuple(splitCellId));
-        }
-        pd->GetCellData()->CopyData(pd->GetCellData(), splitCellId, newCellId);
-      }
-    }
-  }
-
-  return SV_OK;
-}
-
-
 
 // ----------------------
 // GetCellRingNeighbors
@@ -5641,8 +5521,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
       radiusRatio = avgRadiusValues[i]/avgRadiusValues[frontNeighbors->GetId(j)];
       if (radiusRatio >= 4.0)
       {
-        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
-        return SV_ERROR;
+        vtkWarningMacro("Vessels have large of a size scale difference " << radiusRatio << ".");
+        //vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        //return SV_ERROR;
       }
     }
     for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
@@ -5652,8 +5533,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
       radiusRatio = avgRadiusValues[i]/avgRadiusValues[backNeighbors->GetId(j)];
       if (radiusRatio >= 4.0)
       {
-        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
-        return SV_ERROR;
+        vtkWarningMacro("Vessels have large of a size scale difference " << radiusRatio << ".");
+        //vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        //return SV_ERROR;
       }
     }
   }

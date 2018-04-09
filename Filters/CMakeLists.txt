@@ -51,6 +51,7 @@ set(SRCS
   vtkSVBestFitPlane.cxx
   vtkSVPolyDataSurfaceInspector.cxx
   vtkSVCellComplexThinner.cxx
+  vtkSVPolyDataEdgeSplitter.cxx
   )
 set(HDRS
   vtkSVFindGeodesicPath.h
@@ -71,6 +72,7 @@ set(HDRS
   vtkSVBestFitPlane.h
   vtkSVPolyDataSurfaceInspector.h
   vtkSVCellComplexThinner.h
+  vtkSVPolyDataEdgeSplitter.h
   )
 #------------------------------------------------------------------------------
 
