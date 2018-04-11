@@ -1260,6 +1260,23 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
             allAngleBounds[j][angleIndices0->GetId(k)][0] = avgVal;
             allAngleBounds[j][angleIndices1->GetId(k)][1] = avgVal;
           }
+
+          for (int k=0; k<allAngleBounds[j].size(); k++)
+          {
+            std::sort(allAngleBounds[j][k].begin(), allAngleBounds[j][k].end());
+          }
+          fprintf(stdout,"ANGLE LIST AFTER REGULAR AVERAGE 0: ");
+          for (int k=0; k<allAngleBounds[j].size(); k++)
+          {
+            fprintf(stdout," %.6f", allAngleBounds[j][k][0]);
+          }
+          fprintf(stdout,"\n");
+          fprintf(stdout,"ANGLE LIST AFTER REGULAR AVERAGE 1: ");
+          for (int k=0; k<allAngleBounds[j].size(); k++)
+          {
+            fprintf(stdout," %.6f", allAngleBounds[j][k][1]);
+          }
+          fprintf(stdout,"\n");
         }
 
         // Now sort so smaller one first
@@ -1267,13 +1284,13 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         {
           std::sort(allAngleBounds[j][k].begin(), allAngleBounds[j][k].end());
         }
-        fprintf(stdout,"ANGLE LIST AFTER 0: ");
+        fprintf(stdout,"ANGLE LIST AFTER SORT 0: ");
         for (int k=0; k<allAngleBounds[j].size(); k++)
         {
           fprintf(stdout," %.6f", allAngleBounds[j][k][0]);
         }
         fprintf(stdout,"\n");
-        fprintf(stdout,"ANGLE LIST AFTER 1: ");
+        fprintf(stdout,"ANGLE LIST AFTER SORT 1: ");
         for (int k=0; k<allAngleBounds[j].size(); k++)
         {
           fprintf(stdout," %.6f", allAngleBounds[j][k][1]);
@@ -1290,6 +1307,21 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
             allAngleBounds[j][angleIndices0->GetId(k+1)][0] = avgVal;
             allAngleBounds[j][angleIndices1->GetId(k)][1] = avgVal;
           }
+          allAngleBounds[j][angleIndices0->GetId(0)][0] = 0.0;
+          allAngleBounds[j][angleIndices1->GetId(3)][1] = 2*SV_PI;
+
+          fprintf(stdout,"ANGLE LIST AFTER SPECIAL AVERAGE 0: ");
+          for (int k=0; k<allAngleBounds[j].size(); k++)
+          {
+            fprintf(stdout," %.6f", allAngleBounds[j][k][0]);
+          }
+          fprintf(stdout,"\n");
+          fprintf(stdout,"ANGLE LIST AFTER SPECIAL AVERAGE 1: ");
+          for (int k=0; k<allAngleBounds[j].size(); k++)
+          {
+            fprintf(stdout," %.6f", allAngleBounds[j][k][1]);
+          }
+          fprintf(stdout,"\n");
         }
       }
 
@@ -1410,201 +1442,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         }
       }
 
-      //for (int vEnd=0; vEnd<1; vEnd++)
-      //{
-      //  for (int j=0; j<allPatchValues[vEnd].size(); j++)
-      //  {
-      //    // Get cells just part of this patch value
-      //    int patchVal = allPatchValues[vEnd][j];
 
-      //    int lastCellId = -1;
-      //    std::vector<int> singleGrowList;
-      //    std::vector<int> cellBool(branchPd->GetNumberOfCells(), 0);
-      //    for (int k=0; k<growCellLists[vEnd].size(); k++)
-      //    {
-      //      int newCellId = growCellLists[vEnd][k];
-
-      //      int testPatchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(newCellId);
-
-      //      if (testPatchVal == patchVal)
-      //      {
-      //        singleGrowList.push_back(newCellId);
-      //        cellBool[newCellId] = 1;
-      //        lastCellId = newCellId;
-      //      }
-      //    }
-
-      //    double currentPCoordVal;
-      //    if (vEnd == 0)
-      //      currentPCoordVal = 0.0;
-      //    if (vEnd == 1)
-      //      currentPCoordVal = 1.0;
-
-      //    int done = 0;
-      //    while (!done)
-      //    {
-      //      std::vector<int> tmpGrowCellList;
-      //      int startRow = 1; int numRows = 1;
-      //      this->GetNListNeighbors(branchPd, singleGrowList, cellBool, startRow, numRows, tmpGrowCellList);
-
-      //      singleGrowList.clear();
-      //      for (int k=0; k<tmpGrowCellList.size(); k++)
-      //      {
-      //        int newCellId = tmpGrowCellList[k];
-
-      //        int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(newCellId);
-      //        double pCoordVal  = centerlinePCoords->GetTuple1(realCellId);
-
-      //        if (vEnd == 0)
-      //        {
-      //          if (pCoordVal > currentPCoordVal)
-      //            currentPCoordVal = pCoordVal;
-
-      //          if (pCoordVal > maxBegPCoordThr)
-      //            continue;
-      //        }
-      //        if (vEnd == 1)
-      //        {
-      //          if (pCoordVal < currentPCoordVal)
-      //            currentPCoordVal = pCoordVal;
-
-      //          if (pCoordVal < maxEndPCoordThr)
-      //            continue;
-      //        }
-
-      //        double angularVal = angularPCoords->GetTuple1(realCellId);
-      //        //if (groupId == 12 && newCellId == 593)
-      //        //{
-      //        //  fprintf(stdout,"FOUND IT\n");
-      //        //  fprintf(stdout,"PCOORD: %.6f\n", pCoordVal);
-      //        //  fprintf(stdout,"CURRENT PCOORD: %.6f\n", currentPCoordVal);
-      //        //  fprintf(stdout,"MAX BEG PCOORD: %.6f\nn", maxBegPCoordThr);
-      //        //  fprintf(stdout,"ANGLE : %.6f\n", angularVal);
-      //        //  fprintf(stdout,"BOUNDS: %.6f %.6f\n", allAngleBounds[vEnd][j][0], allAngleBounds[vEnd][j][1]);
-      //        //}
-
-      //        if (j == angleFlipId[vEnd])
-      //        {
-      //          if (!(angularVal >= allAngleBounds[vEnd][j][0] || angularVal <  allAngleBounds[vEnd][j][1]))
-      //            continue;
-      //        }
-      //        else
-      //        {
-      //          if (!(angularVal >= allAngleBounds[vEnd][j][0] && angularVal <  allAngleBounds[vEnd][j][1]))
-      //            continue;
-      //        }
-
-      //        int currentPatchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(newCellId);
-      //        if (currentPatchVal == -1)
-      //        {
-      //          branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(newCellId, patchVal);
-      //        }
-
-      //        singleGrowList.push_back(newCellId);
-      //        lastCellId = newCellId;
-      //      }
-
-      //      if (singleGrowList.size() <= 1)
-      //      {
-      //        int atThreshold = 1;
-      //        if (vEnd == 0)
-      //        {
-      //          if (currentPCoordVal < maxBegPCoordThr)
-      //          {
-      //            atThreshold = 0;
-      //          }
-      //        }
-      //        if (vEnd == 1)
-      //        {
-      //          if (currentPCoordVal > maxEndPCoordThr)
-      //          {
-      //            atThreshold = 0;
-      //          }
-      //        }
-
-      //        if (!atThreshold)
-      //        {
-      //          //fprintf(stdout,"OUT OF CELLS BUT NOT AT END: %.6f -> %.6f\n", currentPCoordVal, maxBegPCoordThr);
-      //          if (tmpGrowCellList.size() == 0)
-      //          {
-      //            tmpGrowCellList.push_back(lastCellId);
-      //          }
-
-      //          for (int k=0; k<tmpGrowCellList.size(); k++)
-      //          {
-      //            int newCellId = tmpGrowCellList[k];
-
-      //            int realCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(newCellId);
-      //            double pCoordVal  = centerlinePCoords->GetTuple1(realCellId);
-
-      //            if (vEnd == 0)
-      //            {
-      //              if (pCoordVal > currentPCoordVal)
-      //                currentPCoordVal = pCoordVal;
-
-      //              if (pCoordVal > maxBegPCoordThr)
-      //                continue;
-      //            }
-      //            if (vEnd == 1)
-      //            {
-      //              if (pCoordVal < currentPCoordVal)
-      //                currentPCoordVal = pCoordVal;
-
-      //              if (pCoordVal < maxEndPCoordThr)
-      //                continue;
-      //            }
-
-      //            branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(newCellId, patchVal);
-      //            singleGrowList.push_back(newCellId);
-      //            lastCellId = newCellId;
-
-      //            for (int l=0; l<ringNeighbors[newCellId].size(); l++)
-      //            {
-      //              int neiCellId = ringNeighbors[newCellId][l];
-
-      //              int neiRealCellId = branchPd->GetCellData()->GetArray("TmpInternalIds")->GetTuple1(neiCellId);
-      //              double neiPCoordVal  = centerlinePCoords->GetTuple1(neiRealCellId);
-
-      //              int neiPatchVal = branchPd->GetCellData()->GetArray("BoundaryPatchIds")->GetTuple1(neiCellId);
-
-      //              if (vEnd == 0)
-      //              {
-      //                if (neiPCoordVal > maxBegPCoordThr)
-      //                  continue;
-      //              }
-      //              if (vEnd == 1)
-      //              {
-      //                if (neiPCoordVal < maxEndPCoordThr)
-      //                  continue;
-      //              }
-
-      //              if (neiPCoordVal < pCoordVal)
-      //                continue;
-
-      //              if (neiPatchVal == patchVal)
-      //                continue;
-
-      //              branchPd->GetCellData()->GetArray("BoundaryPatchIds")->SetTuple1(neiCellId, patchVal);
-      //              singleGrowList.push_back(neiCellId);
-      //              lastCellId = neiCellId;
-      //            }
-      //          }
-      //        }
-      //        else
-      //        {
-      //          done = 1;
-      //        }
-      //      }
-      //      tmpGrowCellList.clear();
-      //    }
-      //  }
-      //}
-
-      //if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "BoundaryPatchIds") != SV_OK)
-      //{
-      //  vtkErrorMacro("Could not correct patch vals on branch");
-      //  return SV_ERROR;
-      //}
       if (maxBegPCoordThr > 0.0 ||  maxEndPCoordThr > 0.0)
       {
         if (this->FixNoBoundaryRegions(branchPd, "BoundaryPatchIds") != SV_OK)
@@ -1613,16 +1451,30 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           return SV_ERROR;
         }
 
-        if (this->FixBadTouchingRegions(branchPd, "BoundaryPatchIds") != SV_OK)
-        {
-          vtkErrorMacro("Couldn't patch connectivityt");
-          return SV_ERROR;
-        }
+        int allGood = 0;
+        int maxIters = 10;
+        int iter = 0;
 
-        if (this->FixThinRegions(branchPd, "BoundaryPatchIds") != SV_OK)
+        while (!allGood && iter < maxIters)
         {
-          vtkErrorMacro("Couldn't fix the thin boundary regions");
-          return SV_ERROR;
+          allGood = 1;
+          if (this->FixBadTouchingRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
+          {
+            vtkErrorMacro("Couldn't fix the bad touching regions");
+            return SV_ERROR;
+          }
+
+          if (this->FixThinRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
+          {
+            vtkErrorMacro("Couldn't fix the thin boundary regions");
+            return SV_ERROR;
+          }
+
+          if (this->FixBadTouchingRegions(branchPd, "BoundaryPatchIds", 0) != SV_OK)
+          {
+            allGood = 0;
+          }
+          iter++;
         }
       }
 
@@ -1858,7 +1710,16 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         }
       }
 
-      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/JUSTCHECK.vtp", branchPd);
+      //if (this->MergedCenterlines->GetNumberOfCells() > 1)
+      //{
+        if (this->FixEndPatches(branchPd) != SV_OK)
+        {
+          vtkErrorMacro("Error fixing end patches");
+          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_END.vtp", branchPd);
+          return SV_ERROR;
+        }
+      //}
+
       //if (this->MergedCenterlines->GetNumberOfCells() > 1)
       //{
       //  if (this->FixSidePatches(branchPd) != SV_OK)
@@ -1868,15 +1729,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       //    return SV_ERROR;
       //  }
       //}
-      ////if (this->MergedCenterlines->GetNumberOfCells() > 1)
-      ////{
-      //  if (this->FixEndPatches(branchPd) != SV_OK)
-      //  {
-      //    vtkErrorMacro("Error fixing end patches");
-      //    vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/ERROR_WITH_END.vtp", branchPd);
-      //    return SV_ERROR;
-      //  }
-      ////}
+
     }
     else if (this->EnforcePolycubeConnectivity)
     {
@@ -1885,6 +1738,35 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       {
         vtkErrorMacro("Error clustering branch with geodesics into patches");
         return SV_ERROR;
+      }
+    }
+
+    if (this->EnforcePolycubeConnectivity)
+    {
+      int allGood = 0;
+      int maxIters = 10;
+      int iter = 0;
+
+      while (!allGood && iter < maxIters)
+      {
+        allGood = 1;
+        if (this->FixBadTouchingRegions(branchPd, this->PatchIdsArrayName, 10) != SV_OK)
+        {
+          vtkErrorMacro("Couldn't fix the bad touching regions");
+          return SV_ERROR;
+        }
+
+        if (this->FixThinRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
+        {
+          vtkErrorMacro("Couldn't fix the thin boundary regions");
+          return SV_ERROR;
+        }
+
+        if (this->FixBadTouchingRegions(branchPd, this->PatchIdsArrayName, 0) != SV_OK)
+        {
+          allGood = 0;
+        }
+        iter++;
       }
     }
 
@@ -1986,6 +1868,18 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
   }
 
   vtkDebugMacro("AQUI");
+
+  for (int i=0; i<numGroups; i++)
+  {
+    int groupId = groupIds->GetId(i);
+
+    vtkNew(vtkPolyData, branchPd);
+    vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1,
+        this->GroupIdsArrayName, branchPd);
+
+    std::string fn = "/Users/adamupdegrove/Desktop/tmp/POLYDATA_CUBOID_CLUSTERED_" + std::to_string(groupId) + ".vtp";
+    vtkSVIOUtils::WriteVTPFile(fn, branchPd);
+  }
 
   return SV_OK;
 }
@@ -5773,6 +5667,8 @@ int vtkSVSurfaceCuboidPatcher::FixNoBoundaryRegions(vtkPolyData *pd, std::string
     vtkErrorMacro("Couldn't get regions");
     return SV_ERROR;
   }
+  vtkNew(vtkPolyData, newPd);
+  newPd->DeepCopy(pd);
 
   // Get direct neighbors
   int numCells = pd->GetNumberOfCells();
@@ -5949,238 +5845,47 @@ int vtkSVSurfaceCuboidPatcher::FixRegions(vtkPolyData *pd, std::string arrayName
 // ----------------------
 // FixBadTouchingRegions
 // ----------------------
-int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName)
+int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName, int fixIters)
 {
-  std::vector<Region> allRegions;
-  if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, allRegions) != SV_OK)
-  {
-    vtkErrorMacro("Couldn't get regions");
-    return SV_ERROR;
-  }
+  int allGood = 0;
+  int maxIters = fixIters;
+  int iter = 0;
 
-  std::vector<std::vector<int> > ringNeighbors(pd->GetNumberOfCells());
-  vtkNew(vtkIdList, ringCellIds); ringCellIds->SetNumberOfIds(pd->GetNumberOfCells());
-  for (int i=0; i<pd->GetNumberOfCells(); i++)
+  while (!allGood && iter < maxIters+1)
   {
-    ringCellIds->SetId(i, i);
-    ringNeighbors[i].push_back(i);
-  }
+    vtkDebugMacro("FIXING BAD TOUCHING BOUNDARY REGIONS ITERATION " << iter);
+    allGood = 1;
 
-  vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
-
-  int edgeSize;
-  int neighborCellId;
-  int ptId0, ptId1, ptIdN;
-  int cellId0, cellId1;
-  int cellVal0, cellVal1;
-  int otherVal0, otherVal1, newVal;
-  vtkNew(vtkIdList, cellEdgeNeighbors);
-  vtkNew(vtkIdList, ptId0Values);
-  vtkNew(vtkIdList, ptIdNValues);
-  for (int i=0; i<allRegions.size(); i++)
-  {
-    for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
+    std::vector<Region> allRegions;
+    if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, allRegions) != SV_OK)
     {
-      edgeSize = allRegions[i].BoundaryEdges[j].size();
-      ptId0 = allRegions[i].BoundaryEdges[j][0];
-      ptId1 = allRegions[i].BoundaryEdges[j][1];
-      ptIdN = allRegions[i].BoundaryEdges[j][edgeSize-1];
-
-      pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, cellEdgeNeighbors);
-
-      if (cellEdgeNeighbors->GetNumberOfIds() == 2)
-      {
-        cellId0 = cellEdgeNeighbors->GetId(0);
-        cellVal0 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId0);
-
-        cellId1 = cellEdgeNeighbors->GetId(1);
-        cellVal1 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId1);
-
-        if ((cellVal0 == 0 && cellVal1 == 2) || (cellVal0 == 2 && cellVal1 == 0))
-        {
-          vtkDebugMacro("Bad, regions 0 and 2 should not touch");
-          ptId0Values->Reset();
-          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0Values);
-          ptIdNValues->Reset();
-          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
-
-          otherVal0 = -1;
-          for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
-          {
-            if (ptId0Values->GetId(k) != 0 || ptId0Values->GetId(k) != 2)
-            {
-              otherVal0 = ptId0Values->GetId(k);
-            }
-          }
-
-          otherVal1 = -1;
-          for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
-          {
-            if (ptId0Values->GetId(k) != 0 || ptId0Values->GetId(k) != 2)
-            {
-              otherVal1 = ptId0Values->GetId(k);
-            }
-          }
-        }
-
-        if ((cellVal0 == 1 && cellVal1 == 3) || (cellVal0 == 3 && cellVal1 == 1))
-        {
-          vtkDebugMacro("Bad, regions 1 and 3 should not touch");
-          ptId0Values->Reset();
-          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0Values);
-          ptIdNValues->Reset();
-          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
-
-          otherVal0 = -1;
-          for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
-          {
-            if (ptId0Values->GetId(k) != 1 || ptId0Values->GetId(k) != 3)
-            {
-              otherVal0 = ptId0Values->GetId(k);
-            }
-          }
-
-          otherVal1 = -1;
-          for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
-          {
-            if (ptId0Values->GetId(k) != 1 || ptId0Values->GetId(k) != 3)
-            {
-              otherVal1 = ptId0Values->GetId(k);
-            }
-          }
-        }
-
-        if ((cellVal0 == 4 && cellVal1 == 5) || (cellVal0 == 5 && cellVal1 == 4))
-        {
-          vtkDebugMacro("Bad, regions 4 and 5 should not touch");
-          ptId0Values->Reset();
-          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0Values);
-          ptIdNValues->Reset();
-          vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
-
-          otherVal0 = -1;
-          for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
-          {
-            if (ptId0Values->GetId(k) != 4 || ptId0Values->GetId(k) != 5)
-            {
-              otherVal0 = ptId0Values->GetId(k);
-            }
-          }
-
-          otherVal1 = -1;
-          for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
-          {
-            if (ptId0Values->GetId(k) != 4 || ptId0Values->GetId(k) != 5)
-            {
-              otherVal1 = ptId0Values->GetId(k);
-            }
-          }
-        }
-
-        newVal = -1;
-        if (otherVal0 == otherVal1 && otherVal0 != -1)
-        {
-          // Easy, just fill with this one
-          newVal = otherVal0;
-        }
-        else if (otherVal0 == -1 && otherVal1 != -1)
-        {
-          // Easy, just fill with val 1
-          newVal = otherVal1;
-        }
-        else if (otherVal1 == -1 && otherVal0 != -1)
-        {
-          // Easy, just fill with val 0
-          newVal = otherVal0;
-        }
-        else if (otherVal0 == otherVal1 && otherVal0 == -1)
-        {
-          // Both touching -1, need to figure out something
-          vtkDebugMacro("No action taken for bad touching regions");
-        }
-        else if (otherVal0 != otherVal1)
-        {
-          // Also not sure what to do in this case
-          vtkDebugMacro("No action taken for bad touching regions");
-        }
-
-        if (newVal != -1)
-        {
-          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
-          {
-            neighborCellId = cellEdgeNeighbors->GetId(k);
-            for (int l=0; l<ringNeighbors[neighborCellId].size(); l++)
-            {
-              pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(neighborCellId, newVal);
-            }
-          }
-        }
-
-      }
+      vtkErrorMacro("Couldn't get regions");
+      return SV_ERROR;
     }
-  }
+    vtkNew(vtkPolyData, newPd);
+    newPd->DeepCopy(pd);
 
-  return SV_OK;
-}
+    std::vector<std::vector<int> > ringNeighbors(pd->GetNumberOfCells());
+    vtkNew(vtkIdList, ringCellIds); ringCellIds->SetNumberOfIds(pd->GetNumberOfCells());
+    for (int i=0; i<pd->GetNumberOfCells(); i++)
+    {
+      ringCellIds->SetId(i, i);
+      ringNeighbors[i].push_back(i);
+    }
 
-// ----------------------
-// FixThinRegions
-// ----------------------
-int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string arrayName)
-{
-  std::vector<Region> allRegions;
-  if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, allRegions) != SV_OK)
-  {
-    vtkErrorMacro("Couldn't get regions");
-    return SV_ERROR;
-  }
-  vtkNew(vtkPolyData, newPd);
-  newPd->DeepCopy(pd);
+    vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
 
-  std::vector<std::vector<int> > ringNeighbors(pd->GetNumberOfCells());
-  vtkNew(vtkIdList, ringCellIds); ringCellIds->SetNumberOfIds(pd->GetNumberOfCells());
-  for (int i=0; i<pd->GetNumberOfCells(); i++)
-  {
-    ringCellIds->SetId(i, i);
-    ringNeighbors[i].push_back(i);
-  }
-
-  vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
-
-
-  int cellId;
-  int edgeSize;
-  int edgeCount;
-  int edgeStartId;
-  int cellId0, cellId1;
-  int cellVal0, cellVal1;
-  int ptId, ptId0, ptId1, ptIdN;
-  vtkIdType npts, *pts;
-  vtkNew(vtkIdList, pointCellIds);
-  vtkNew(vtkIdList, cellEdgeNeighbors);
-  for (int patchId=0; patchId<4; patchId++)
-  {
-    vtkDebugMacro("MAKING SURE PATCH " << patchId << " IS NOT 1 CELL THICK");
-
+    int edgeSize;
+    int neighborCellId;
+    int ptId0, ptId1, ptIdN;
+    int cellId0, cellId1;
+    int cellVal0, cellVal1;
+    int otherVal0, otherVal1, newVal;
+    vtkNew(vtkIdList, cellEdgeNeighbors);
+    vtkNew(vtkIdList, ptId0Values);
+    vtkNew(vtkIdList, ptIdNValues);
     for (int i=0; i<allRegions.size(); i++)
     {
-      if (allRegions[i].IndexCluster != patchId)
-      {
-        continue;
-      }
-
-      if (allRegions[i].BoundaryEdges.size() <= 0)
-      {
-        continue;
-      }
-
-      if (allRegions[i].Elements.size() == 1)
-      {
-        continue;
-      }
-
-      edgeCount = 0;
-      std::vector<int> pointEdgeId(pd->GetNumberOfPoints(), -1);
       for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
       {
         edgeSize = allRegions[i].BoundaryEdges[j].size();
@@ -6198,54 +5903,127 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
           cellId1 = cellEdgeNeighbors->GetId(1);
           cellVal1 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId1);
 
-          if (cellVal0 != -1 && cellVal1 != -1)
+          if ((cellVal0 == 0 && cellVal1 == 2) || (cellVal0 == 2 && cellVal1 == 0))
           {
+            vtkDebugMacro("Bad, regions 0 and 2 should not touch");
+            ptId0Values->Reset();
+            vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0Values);
+            ptIdNValues->Reset();
+            vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
 
-            for (int k=0; k<edgeSize; k++)
+            otherVal0 = -1;
+            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
             {
-              ptId = allRegions[i].BoundaryEdges[j][k];
-              pointEdgeId[ptId] = edgeCount;
+              if (ptId0Values->GetId(k) != 0 || ptId0Values->GetId(k) != 2)
+              {
+                otherVal0 = ptId0Values->GetId(k);
+              }
             }
 
-            edgeCount++;
-          }
-
-        }
-      }
-
-      for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
-      {
-        edgeSize = allRegions[i].BoundaryEdges[j].size();
-
-        for (int k=0; k<edgeSize; k++)
-        {
-          ptId = allRegions[i].BoundaryEdges[j][k];
-
-          if (pointEdgeId[ptId] == -1)
-          {
-            continue;
-          }
-
-          pd->GetPointCells(ptId, pointCellIds);
-          for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
-          {
-            cellId = pointCellIds->GetId(l);
-            pd->GetCellPoints(cellId, npts, pts);
-            for (int m=0; m<npts; m++)
+            otherVal1 = -1;
+            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
             {
-              if (pointEdgeId[pts[m]] != pointEdgeId[ptId] && pointEdgeId[pts[m]] != -1)
+              if (ptId0Values->GetId(k) != 0 || ptId0Values->GetId(k) != 2)
               {
-                vtkDebugMacro("Found one");
-                vtkDebugMacro("POINT " << ptId << " HAS VAL " << pointEdgeId[ptId]);
-                vtkDebugMacro("POINT " << pts[m] << " HAS VAL " << pointEdgeId[pts[m]]);
-                //pd->GetPoint(ptId, pt);
-                //newCenterlinePts->InsertNextPoint(pt);
+                otherVal1 = ptId0Values->GetId(k);
+              }
+            }
+          }
 
-                //pd->GetPoint(pts[m], pt);
-                //newCenterlinePts->InsertNextPoint(pt);
-                for (int n=0; n<ringNeighbors[cellId].size(); n++)
+          if ((cellVal0 == 1 && cellVal1 == 3) || (cellVal0 == 3 && cellVal1 == 1))
+          {
+            vtkDebugMacro("Bad, regions 1 and 3 should not touch");
+            ptId0Values->Reset();
+            vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0Values);
+            ptIdNValues->Reset();
+            vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
+
+            otherVal0 = -1;
+            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            {
+              if (ptId0Values->GetId(k) != 1 || ptId0Values->GetId(k) != 3)
+              {
+                otherVal0 = ptId0Values->GetId(k);
+              }
+            }
+
+            otherVal1 = -1;
+            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            {
+              if (ptId0Values->GetId(k) != 1 || ptId0Values->GetId(k) != 3)
+              {
+                otherVal1 = ptId0Values->GetId(k);
+              }
+            }
+          }
+
+          if ((cellVal0 == 4 && cellVal1 == 5) || (cellVal0 == 5 && cellVal1 == 4))
+          {
+            vtkDebugMacro("Bad, regions 4 and 5 should not touch");
+            ptId0Values->Reset();
+            vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptId0, ptId0Values);
+            ptIdNValues->Reset();
+            vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
+
+            otherVal0 = -1;
+            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            {
+              if (ptId0Values->GetId(k) != 4 || ptId0Values->GetId(k) != 5)
+              {
+                otherVal0 = ptId0Values->GetId(k);
+              }
+            }
+
+            otherVal1 = -1;
+            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            {
+              if (ptId0Values->GetId(k) != 4 || ptId0Values->GetId(k) != 5)
+              {
+                otherVal1 = ptId0Values->GetId(k);
+              }
+            }
+          }
+
+          newVal = -1;
+          if (otherVal0 == otherVal1 && otherVal0 != -1)
+          {
+            // Easy, just fill with this one
+            newVal = otherVal0;
+          }
+          else if (otherVal0 == -1 && otherVal1 != -1)
+          {
+            // Easy, just fill with val 1
+            newVal = otherVal1;
+          }
+          else if (otherVal1 == -1 && otherVal0 != -1)
+          {
+            // Easy, just fill with val 0
+            newVal = otherVal0;
+          }
+          else if (otherVal0 == otherVal1 && otherVal0 == -1)
+          {
+            // Both touching -1, need to figure out something
+            vtkDebugMacro("No action taken for bad touching regions");
+          }
+          else if (otherVal0 != otherVal1)
+          {
+            // Also not sure what to do in this case
+            vtkDebugMacro("No action taken for bad touching regions");
+          }
+
+          if (newVal != -1)
+          {
+            allGood = 0;
+
+            if (iter < maxIters)
+            {
+              vtkDebugMacro("TRYING TO DO FIX FOR " << newVal);
+              for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
+              {
+                neighborCellId = cellEdgeNeighbors->GetId(k);
+                for (int l=0; l<ringNeighbors[neighborCellId].size(); l++)
                 {
-                  newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(ringNeighbors[cellId][n], patchId);
+                  newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(neighborCellId, newVal);
                 }
               }
             }
@@ -6253,9 +6031,171 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
         }
       }
     }
+
+    pd->DeepCopy(newPd);
+    iter++;
   }
 
-  pd->DeepCopy(newPd);
+  if (!allGood)
+  {
+    vtkErrorMacro("Fixing of bad touching regions failed, number of cells around circumference of vessel is likely to small. Try refining.");
+    return SV_ERROR;
+  }
+
+  vtkDebugMacro("PASSED TOUCHING TEST");
+
+  return SV_OK;
+}
+
+// ----------------------
+// FixThinRegions
+// ----------------------
+int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string arrayName, int fixIters)
+{
+  int allGood = 0;
+  int maxIters = fixIters;
+  int iter = 0;
+
+  while (!allGood && iter < maxIters+1)
+  {
+    vtkDebugMacro("FIXING THIN BOUNDARY REGIONS ITERATION " << iter);
+    allGood = 1;
+    std::vector<Region> allRegions;
+    if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, allRegions) != SV_OK)
+    {
+      vtkErrorMacro("Couldn't get regions");
+      return SV_ERROR;
+    }
+    vtkNew(vtkPolyData, newPd);
+    newPd->DeepCopy(pd);
+
+    std::vector<std::vector<int> > ringNeighbors(pd->GetNumberOfCells());
+    vtkNew(vtkIdList, ringCellIds); ringCellIds->SetNumberOfIds(pd->GetNumberOfCells());
+    for (int i=0; i<pd->GetNumberOfCells(); i++)
+    {
+      ringCellIds->SetId(i, i);
+      ringNeighbors[i].push_back(i);
+    }
+
+    vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
+
+    int cellId;
+    int edgeSize;
+    int edgeCount;
+    int edgeStartId;
+    int cellId0, cellId1;
+    int cellVal0, cellVal1;
+    int ptId, ptId0, ptId1, ptIdN;
+    vtkIdType npts, *pts;
+    vtkNew(vtkIdList, pointCellIds);
+    vtkNew(vtkIdList, cellEdgeNeighbors);
+    for (int patchId=0; patchId<4; patchId++)
+    {
+      vtkDebugMacro("MAKING SURE PATCH " << patchId << " IS NOT 1 CELL THICK");
+      for (int i=0; i<allRegions.size(); i++)
+      {
+        if (allRegions[i].IndexCluster != patchId)
+        {
+          continue;
+        }
+
+        if (allRegions[i].BoundaryEdges.size() <= 0)
+        {
+          continue;
+        }
+
+        if (allRegions[i].Elements.size() == 1)
+        {
+          continue;
+        }
+
+        edgeCount = 0;
+        std::vector<int> pointEdgeId(pd->GetNumberOfPoints(), -1);
+        for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
+        {
+          edgeSize = allRegions[i].BoundaryEdges[j].size();
+          ptId0 = allRegions[i].BoundaryEdges[j][0];
+          ptId1 = allRegions[i].BoundaryEdges[j][1];
+          ptIdN = allRegions[i].BoundaryEdges[j][edgeSize-1];
+
+          pd->GetCellEdgeNeighbors(-1, ptId0, ptId1, cellEdgeNeighbors);
+
+          if (cellEdgeNeighbors->GetNumberOfIds() == 2)
+          {
+            cellId0 = cellEdgeNeighbors->GetId(0);
+            cellVal0 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId0);
+
+            cellId1 = cellEdgeNeighbors->GetId(1);
+            cellVal1 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId1);
+
+            if (cellVal0 != -1 && cellVal1 != -1)
+            {
+
+              for (int k=0; k<edgeSize; k++)
+              {
+                ptId = allRegions[i].BoundaryEdges[j][k];
+                pointEdgeId[ptId] = edgeCount;
+              }
+
+              edgeCount++;
+            }
+
+          }
+        }
+
+        for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
+        {
+          edgeSize = allRegions[i].BoundaryEdges[j].size();
+
+          for (int k=0; k<edgeSize; k++)
+          {
+            ptId = allRegions[i].BoundaryEdges[j][k];
+
+            if (pointEdgeId[ptId] == -1)
+            {
+              continue;
+            }
+
+            pd->GetPointCells(ptId, pointCellIds);
+            for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
+            {
+              cellId = pointCellIds->GetId(l);
+              pd->GetCellPoints(cellId, npts, pts);
+              for (int m=0; m<npts; m++)
+              {
+                if (pointEdgeId[pts[m]] != pointEdgeId[ptId] && pointEdgeId[pts[m]] != -1)
+                {
+                  allGood = 0;
+                  //pd->GetPoint(ptId, pt);
+                  //newCenterlinePts->InsertNextPoint(pt);
+
+                  //pd->GetPoint(pts[m], pt);
+                  //newCenterlinePts->InsertNextPoint(pt);
+                  if (iter < maxIters)
+                  {
+                    for (int n=0; n<ringNeighbors[cellId].size(); n++)
+                    {
+                      newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(ringNeighbors[cellId][n], patchId);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    pd->DeepCopy(newPd);
+    iter++;
+  }
+
+  if (!allGood)
+  {
+    vtkErrorMacro("Fixing of thin boundary regions failed, number of cells around circumference of vessel is likely to small. Try refining.");
+    return SV_ERROR;
+  }
+
+  vtkDebugMacro("PASSED THIN REGION TEST");
 
   return SV_OK;
 }

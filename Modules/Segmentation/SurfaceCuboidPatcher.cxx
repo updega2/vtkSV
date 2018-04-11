@@ -199,7 +199,6 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
-
   //Exit the program without errors
   return EXIT_SUCCESS;
 }

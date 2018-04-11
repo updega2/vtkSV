@@ -244,8 +244,8 @@ protected:
   int FixRegions(vtkPolyData *pd, std::string arrayName,
                  std::vector<Region> &allRegions,
                  std::vector<int> badRegions);
-  int FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName);
-  int FixThinRegions(vtkPolyData *pd, std::string arrayName);
+  int FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName, int fixIters);
+  int FixThinRegions(vtkPolyData *pd, std::string arrayName, int fixIters);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;

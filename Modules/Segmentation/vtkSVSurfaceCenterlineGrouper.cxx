@@ -307,7 +307,8 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
 
   if (this->EnforcePolycubeConnectivity)
   {
-    vtkDebugMacro("Need to enforce polycube");
+    this->EnforceCenterlinesConnectivity = 1;
+    vtkDebugMacro("Because enforcing polycube connectivity, enforcing of centerlines will also be turned on and enforced first");
 
     if (this->CheckPolycubeEnforcePossible() != SV_OK)
     {

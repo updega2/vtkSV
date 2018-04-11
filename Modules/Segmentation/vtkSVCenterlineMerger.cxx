@@ -43,12 +43,15 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkMath.h"
 #include "vtkSmartPointer.h"
 #include "vtkVersion.h"
 
 #include "vtkvmtkCenterlineUtilities.h"
 #include "vtkvmtkCenterlineBifurcationReferenceSystems.h"
 #include "vtkvmtkReferenceSystemUtilities.h"
+
+#include <cmath>
 
 vtkStandardNewMacro(vtkSVCenterlineMerger);
 
