@@ -240,6 +240,13 @@ protected:
                              std::vector<std::vector<int> > &neighbors,
                              std::vector<int> &numNeighbors);
 
+  int FixNoBoundaryRegions(vtkPolyData *pd, std::string arrayName);
+  int FixRegions(vtkPolyData *pd, std::string arrayName,
+                 std::vector<Region> &allRegions,
+                 std::vector<int> badRegions);
+  int FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName);
+  int FixThinRegions(vtkPolyData *pd, std::string arrayName);
+
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
   char *CenterlineIdsArrayName;

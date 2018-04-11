@@ -66,6 +66,7 @@
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointLocator.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
 #include "vtkThreshold.h"

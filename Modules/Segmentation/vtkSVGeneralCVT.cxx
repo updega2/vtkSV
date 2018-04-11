@@ -336,10 +336,12 @@ int vtkSVGeneralCVT::RunFilter()
   int iter=0;
   int eval=this->Threshold + 1;
 
+  vtkDebugMacro("GOING TO ITERATe\n");
   // iterate until threshold met
   while (eval >= this->Threshold && iter < this->MaximumNumberOfIterations)
   {
 
+    vtkDebugMacro("SOMEHOW IN HERE\n");
     // If using transferred patches
     //if (this->UseTransferredPatchesAsThreshold)
     eval = 0;

@@ -97,6 +97,7 @@ void vtkSVCenterlinesEdgeWeightedCVT::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 int vtkSVCenterlinesEdgeWeightedCVT::InitializeConnectivity()
 {
+  vtkDebugMacro("In here\n");
   //this->Superclass::InitializeConnectivity();
 
   //int numCells = this->WorkGenerators->GetNumberOfCells();
@@ -140,6 +141,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
 
     // Loop through cells
     int numCells = this->WorkPd->GetNumberOfCells();
+    vtkDebugMacro("NUMCELLS: " << numCells);
     for (int i=0; i<numCells; i++)
     {
       // Get cell point coords
@@ -174,6 +176,11 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
       }
 
       this->PatchIdsArray->SetTuple1(i, cellGenerator);
+
+      if (i%1000 == 0)
+      {
+        vtkDebugMacro("  ATT: " << i);
+      }
     }
   }
   else if (this->UsePointArray)

@@ -171,6 +171,7 @@ protected:
   double LastLocalCoordZ[3];
   double PointNormal[3];
 
+  std::vector<std::vector<int> > BifurcationPointCellsVector;
   std::vector<std::vector<int> > CellPointsVector;
   std::vector<XYZ> PointsVector;
   std::vector<double> RadiusVector;

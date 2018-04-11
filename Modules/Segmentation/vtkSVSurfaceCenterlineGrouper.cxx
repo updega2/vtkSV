@@ -185,7 +185,6 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   {
     vtkErrorMacro("Prep of filter failed");
     output->DeepCopy(input);
-    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -194,7 +193,7 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   {
     vtkErrorMacro("Filter failed");
     output->DeepCopy(this->WorkPd);
-    this->SetErrorCode(vtkErrorCode::UserError + 2);
+    this->SetErrorCode(vtkErrorCode::UserError + 4);
     return SV_ERROR;
   }
 
@@ -211,6 +210,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (!this->MergedCenterlines)
   {
     vtkErrorMacro(<< "Centerlines not set.");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -231,6 +231,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->CenterlineGroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "CenterlineGroupIdsArray with name specified does not exist on centerlines");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -244,6 +245,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->BlankingArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "BlankingArrayName with name specified does not exist on centerlines");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -257,6 +259,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 0, this->CenterlineRadiusArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist on centerlines");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -270,6 +273,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->CenterlineIdsArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "CenterlineIdsArray with name specified does not exist on centerlines");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -283,6 +287,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
   if (vtkSVGeneralUtils::CheckArrayExists(this->MergedCenterlines, 1, this->TractIdsArrayName) != SV_OK)
   {
     vtkErrorMacro(<< "TractIdsArray with name specified does not exist on centerlines");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -307,6 +312,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     if (this->CheckPolycubeEnforcePossible() != SV_OK)
     {
       vtkErrorMacro("Cannot enforce polycube connectivity for this model");
+      this->SetErrorCode(vtkErrorCode::UserError + 2);
       return SV_ERROR;
     }
     if (this->PolycubePd == NULL)
@@ -327,12 +333,14 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     if (this->PolycubePd->GetNumberOfCells() == 0)
     {
       vtkErrorMacro("Polycube is empty");
+      this->SetErrorCode(vtkErrorCode::UserError + 3);
       return SV_ERROR;
     }
 
     if (vtkSVGeneralUtils::CheckArrayExists(this->PolycubePd, 1, this->PatchIdsArrayName) != SV_OK)
     {
       vtkErrorMacro("PatchIds array with name given is not on polycube surface");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
   }
@@ -342,6 +350,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 1, this->GroupIdsArrayName) != SV_OK)
     {
       vtkErrorMacro(<< "GroupIdsArray with name specified does not exist on surface");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
   }
@@ -373,6 +382,7 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
   {
     int stopCellNumber = ceil(this->WorkPd->GetNumberOfCells()*0.0001);
 
+    vtkDebugMacro("CALLING CLUSTERER");
     vtkNew(vtkSVCenterlinesEdgeWeightedCVT, CVT);
     CVT->SetInputData(this->WorkPd);
     CVT->SetGenerators(this->MergedCenterlines);
@@ -389,6 +399,7 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
     CVT->Update();
 
     this->WorkPd->DeepCopy(CVT->GetOutput());
+    vtkDebugMacro("DONE WITH CLUSTERING");
 
   }
 
@@ -1897,6 +1908,8 @@ int vtkSVSurfaceCenterlineGrouper::FixRegions(vtkPolyData *pd, std::string array
       pd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(cellId, maxPatchId);
     }
   }
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -5495,9 +5508,19 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
     this->MergedCenterlines->GetCellPoints(i, npts, pts);
 
     avgRadius = 0.0;
-    for (int j=0; j<npts; j++)
+    if (npts > 2)
     {
-      avgRadius += this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(pts[j]);
+      for (int j=1; j<npts-1; j++)
+      {
+        avgRadius += this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(pts[j]);
+      }
+    }
+    else
+    {
+      for (int j=0; j<npts; j++)
+      {
+        avgRadius += this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(pts[j]);
+      }
     }
 
     avgRadius /= npts;
@@ -5519,11 +5542,11 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
       if (frontNeighbors->GetId(j) == i)
         continue;
       radiusRatio = avgRadiusValues[i]/avgRadiusValues[frontNeighbors->GetId(j)];
-      if (radiusRatio >= 4.0)
+      if (radiusRatio >= 5.0)
       {
-        vtkWarningMacro("Vessels have large of a size scale difference " << radiusRatio << ".");
-        //vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
-        //return SV_ERROR;
+        //vtkWarningMacro("Vessels have too large of a size scale difference " << radiusRatio << ".");
+        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        return SV_ERROR;
       }
     }
     for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
@@ -5531,11 +5554,11 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
       if (backNeighbors->GetId(j) == i)
         continue;
       radiusRatio = avgRadiusValues[i]/avgRadiusValues[backNeighbors->GetId(j)];
-      if (radiusRatio >= 4.0)
+      if (radiusRatio >= 5.0)
       {
-        vtkWarningMacro("Vessels have large of a size scale difference " << radiusRatio << ".");
-        //vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
-        //return SV_ERROR;
+        //vtkWarningMacro("Vessels have too large of a size scale difference " << radiusRatio << ".");
+        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        return SV_ERROR;
       }
     }
   }

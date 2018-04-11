@@ -181,6 +181,11 @@ void vtkSVPolyBallLine::PreprocessInputForFastEvaluate()
     this->RadiusVector[i] = polyballRadiusArray->GetComponent(i, 0);
   }
 
+  if (!this->InputCellIds && cellIds->GetNumberOfIds() > 1 && this->UseRadiusInformation)
+  {
+    this->BuildLocator();
+  }
+
   return;
 }
 
@@ -190,7 +195,51 @@ void vtkSVPolyBallLine::PreprocessInputForFastEvaluate()
 // ----------------------
 void vtkSVPolyBallLine::BuildLocator()
 {
-  this->PointLocator->SetDataSet(this->Input);
+  this->BifurcationPointCellsVector.clear();
+  vtkNew(vtkPoints, bifurcationPoints);
+
+  int ptId0, ptIdN;
+  vtkIdType npts, *pts;
+  std::vector<int> pointInserted(this->Input->GetNumberOfPoints(), 0);
+  vtkNew(vtkIdList, pointCellIds);
+  for (int i=0; i<this->Input->GetNumberOfCells(); i++)
+  {
+    this->Input->GetCellPoints(i, npts, pts);
+    ptId0 = pts[0];
+    ptIdN = pts[npts-1];
+
+    if (pointInserted[ptId0] == 0)
+    {
+      pointInserted[ptId0] = 1;
+      bifurcationPoints->InsertNextPoint(this->Input->GetPoint(ptId0));
+
+      std::vector<int> pointCells;
+      this->Input->GetPointCells(ptId0, pointCellIds);
+      for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
+      {
+        pointCells.push_back(pointCellIds->GetId(j));
+      }
+      this->BifurcationPointCellsVector.push_back(pointCells);
+    }
+    if (pointInserted[ptIdN] == 0)
+    {
+      pointInserted[ptIdN] = 1;
+      bifurcationPoints->InsertNextPoint(this->Input->GetPoint(ptIdN));
+
+      std::vector<int> pointCells;
+      this->Input->GetPointCells(ptIdN, pointCellIds);
+      for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
+      {
+        pointCells.push_back(pointCellIds->GetId(j));
+      }
+      this->BifurcationPointCellsVector.push_back(pointCells);
+    }
+  }
+
+  vtkNew(vtkPolyData, bifurcationPointsPd);
+  bifurcationPointsPd->SetPoints(bifurcationPoints);
+
+  this->PointLocator->SetDataSet(bifurcationPointsPd);
   this->PointLocator->BuildLocator();
 }
 
@@ -318,6 +367,26 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
     {
       vtkErrorMacro("Need to call PreprocessInputForFastEvaluate() prior to EvaluateFunction call if FastEvaluate turned on");
       return SV_ERROR;
+    }
+
+    if (this->UseRadiusInformation)
+    {
+      if (!this->InputCellIds && cellIds->GetNumberOfIds() > 1)
+      {
+        vtkNew(vtkIdList, closestPointIds);
+        this->PointLocator->FindClosestNPoints(10, x, closestPointIds);
+
+        int ptId;
+        cellIds->Reset();
+        for (int p=0; p<closestPointIds->GetNumberOfIds(); p++)
+        {
+          ptId = closestPointIds->GetId(p);
+          for (int b=0; b<this->BifurcationPointCellsVector[ptId].size(); b++)
+          {
+            cellIds->InsertUniqueId(this->BifurcationPointCellsVector[ptId][b]);
+          }
+        }
+      }
     }
   }
 
