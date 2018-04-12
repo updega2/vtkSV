@@ -1045,7 +1045,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           if (firstCellId->GetNumberOfIds() != 1)
           {
             fprintf(stderr,"Something went wrong here\n");
-            return SV_OK;
+            return SV_ERROR;
           }
           int realCellId0 = branchPd->GetCellData()->GetArray("TmpInternalIds")->
             GetTuple1(firstCellId->GetId(0));
@@ -1059,7 +1059,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           if (lastCellId->GetNumberOfIds() != 1)
           {
             fprintf(stderr,"Something went wrong here\n");
-            return SV_OK;
+            return SV_ERROR;
           }
           int realCellIdN = branchPd->GetCellData()->GetArray("TmpInternalIds")->
             GetTuple1(lastCellId->GetId(0));
@@ -1123,7 +1123,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
             if (splitCellId->GetNumberOfIds() != 1)
             {
               fprintf(stderr,"Something went wrong here\n");
-              return SV_OK;
+              return SV_ERROR;
             }
 
             int branchCellId = splitCellId->GetId(0);
@@ -1445,6 +1445,17 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
 
       if (maxBegPCoordThr > 0.0 ||  maxEndPCoordThr > 0.0)
       {
+        vtkNew(vtkIdList, noEndPatches);
+        noEndPatches->SetNumberOfIds(4);
+        for (int j=0; j<4; j++)
+          noEndPatches->SetId(j, j);
+
+        if (this->CorrectSpecificCellBoundaries(branchPd, "BoundaryPatchIds", noEndPatches) != SV_OK)
+        {
+          vtkWarningMacro("Could not correcto boundaries of surface");
+          return SV_ERROR;
+        }
+
         if (this->FixNoBoundaryRegions(branchPd, "BoundaryPatchIds") != SV_OK)
         {
           vtkErrorMacro("Couldn't fix boundary patches");
@@ -1460,12 +1471,14 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           allGood = 1;
           if (this->FixBadTouchingRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
           {
+            vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BOUNDARYBADTOUCH.vtp", branchPd);
             vtkErrorMacro("Couldn't fix the bad touching regions");
             return SV_ERROR;
           }
 
           if (this->FixThinRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
           {
+            vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BOUNDARYBADTHIN.vtp", branchPd);
             vtkErrorMacro("Couldn't fix the thin boundary regions");
             return SV_ERROR;
           }
@@ -1697,6 +1710,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         vtkWarningMacro("Clustering branch with cvt into patches did not work");
         return SV_ERROR;
       }
+          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/CLUSTERCVT.vtp", branchPd);
 
       // Convert all top
       if (groupId != 0 && isTerminating)
@@ -1741,8 +1755,19 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       }
     }
 
+    vtkNew(vtkIdList, noEndPatches);
+    noEndPatches->SetNumberOfIds(4);
+    for (int j=0; j<4; j++)
+      noEndPatches->SetId(j, j);
+
     if (this->EnforcePolycubeConnectivity)
     {
+      if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
+      {
+        vtkWarningMacro("Could not correcto boundaries of surface");
+        return SV_ERROR;
+      }
+
       int allGood = 0;
       int maxIters = 10;
       int iter = 0;
@@ -1753,11 +1778,17 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         if (this->FixBadTouchingRegions(branchPd, this->PatchIdsArrayName, 10) != SV_OK)
         {
           vtkErrorMacro("Couldn't fix the bad touching regions");
+          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/PATCHBADTOUCH.vtp", branchPd);
           return SV_ERROR;
         }
 
-        if (this->FixThinRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
+        if (iter == 0)
         {
+          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BEFTHIN.vtp", branchPd);
+        }
+        if (this->FixThinRegions(branchPd, this->PatchIdsArrayName, 10) != SV_OK)
+        {
+          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/PATCHBADTHIN.vtp", branchPd);
           vtkErrorMacro("Couldn't fix the thin boundary regions");
           return SV_ERROR;
         }
@@ -1769,11 +1800,6 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         iter++;
       }
     }
-
-    vtkNew(vtkIdList, noEndPatches);
-    noEndPatches->SetNumberOfIds(4);
-    for (int j=0; j<4; j++)
-      noEndPatches->SetId(j, j);
 
     if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
     {
@@ -2321,7 +2347,9 @@ int vtkSVSurfaceCuboidPatcher::CorrectSpecificCellBoundaries(vtkPolyData *pd, st
           int cellEdgeNeighbor = cellEdgeNeighbors->GetId(k);
 
           // Check to see if equal to region val
-          if (tmpIds->GetTuple1(cellEdgeNeighbor) != tmpIds->GetTuple1(i))
+          // Important for these cases! Adding to make sure the value is not -1
+          if (tmpIds->GetTuple1(cellEdgeNeighbor) != tmpIds->GetTuple1(i) &&
+              cellIds->GetTuple1(cellEdgeNeighbor) != -1)
           {
             int cellValue = cellIds->GetTuple1(cellEdgeNeighbor);
             if (targetRegions->IsId(cellValue) != -1)
@@ -2811,7 +2839,6 @@ int vtkSVSurfaceCuboidPatcher::GetRegions(vtkPolyData *pd, std::string arrayName
 
   int firstCorner;
 
-  fprintf(stdout, "Number of regions: %d\n", numberOfRegions);
   for (int i=0; i<numberOfRegions; i++)
   {
     std::vector<int> tempCornerPoints;
@@ -3156,7 +3183,6 @@ int vtkSVSurfaceCuboidPatcher::GetSpecificRegions(vtkPolyData *pd, std::string a
 
 
     allRegions[i].NumberOfCorners = tempCornerPoints.size();
-    //vtkDebugMacro("NUM CORNERS: " << allRegions[i].NumberOfCorners);
 
     vtkNew(vtkIdList, uniqueCornerPoints);
     if (allRegions[i].NumberOfCorners != 0)
@@ -3771,8 +3797,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
     std::vector<int> sidePatchFix;
     if (this->CheckSidePatches(pd, sideRegions, sidePatchFix) != SV_OK)
     {
-      vtkErrorMacro("Error checking side patches");
-      return SV_ERROR;
+      return SV_OK;
     }
 
     int fixStrategy = 0;
@@ -3864,6 +3889,7 @@ int vtkSVSurfaceCuboidPatcher::FixEndPatches(vtkPolyData *pd)
           pd->GetCellData()->GetArray(this->PatchIdsArrayName)->SetTuple1(cellId, newCellValue);
         }
       }
+      vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DMDMDNDN_2.vtp", pd);
     }
     else if (fixStrategy == 1)
     {
@@ -4160,7 +4186,6 @@ int vtkSVSurfaceCuboidPatcher::CheckSidePatches(vtkPolyData *pd,
 
   if (numRegions < 4)
   {
-    fprintf(stderr,"THIS IS REALLY BIG PROBLEM! NOT SURE WHAT TO DO ABOUT THIS\n");
     return SV_ERROR;
   }
 
@@ -5851,17 +5876,26 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
   int maxIters = fixIters;
   int iter = 0;
 
+  vtkNew(vtkIdList, targetRegions);
+  targetRegions->SetNumberOfIds(4);
+  targetRegions->SetId(0, 0);
+  targetRegions->SetId(1, 1);
+  targetRegions->SetId(2, 2);
+  targetRegions->SetId(3, 3);
+
   while (!allGood && iter < maxIters+1)
   {
-    vtkDebugMacro("FIXING BAD TOUCHING BOUNDARY REGIONS ITERATION " << iter);
+    vtkDebugMacro("FIXING BAD TOUCHING REGIONS ITERATION " << iter);
     allGood = 1;
 
+    vtkDebugMacro("BEFORE GET SPECIFIC");
     std::vector<Region> allRegions;
-    if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, allRegions) != SV_OK)
+    if (this->GetSpecificRegions(pd, arrayName, allRegions, targetRegions) != SV_OK)
     {
       vtkErrorMacro("Couldn't get regions");
       return SV_ERROR;
     }
+    vtkDebugMacro("AFTER GET SPECIFIC");
     vtkNew(vtkPolyData, newPd);
     newPd->DeepCopy(pd);
 
@@ -5875,15 +5909,43 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
 
     vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
 
+    // At this point, we are going to assume ends are good, just need to fix edges
+    int foundVal = 0;
+    int missingVal = -1;
+    for (int i=0; i<4; i++)
+    {
+      foundVal = 0;
+      for (int j=0; j<allRegions.size(); j++)
+      {
+        if (allRegions[j].IndexCluster == i)
+        {
+          foundVal = 1;
+        }
+      }
+      if (!foundVal)
+      {
+        if (missingVal != -1)
+        {
+          vtkErrorMacro("Multiple missing vals, cannot assume what fix should be!");
+          return SV_ERROR;
+        }
+        missingVal = i;
+      }
+    }
+
     int edgeSize;
+    int currVal;
+    int changeCellId;
     int neighborCellId;
     int ptId0, ptId1, ptIdN;
     int cellId0, cellId1;
     int cellVal0, cellVal1;
+    int changePtId0, changePtId1;;
     int otherVal0, otherVal1, newVal;
     vtkNew(vtkIdList, cellEdgeNeighbors);
     vtkNew(vtkIdList, ptId0Values);
     vtkNew(vtkIdList, ptIdNValues);
+    vtkNew(vtkIdList, changeCellNeighbors);
     for (int i=0; i<allRegions.size(); i++)
     {
       for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
@@ -5903,6 +5965,8 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
           cellId1 = cellEdgeNeighbors->GetId(1);
           cellVal1 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId1);
 
+          otherVal0 = -2;
+          otherVal1 = -2;
           if ((cellVal0 == 0 && cellVal1 == 2) || (cellVal0 == 2 && cellVal1 == 0))
           {
             vtkDebugMacro("Bad, regions 0 and 2 should not touch");
@@ -5911,23 +5975,25 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
             ptIdNValues->Reset();
             vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
 
-            otherVal0 = -1;
             for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
             {
-              if (ptId0Values->GetId(k) != 0 || ptId0Values->GetId(k) != 2)
+              if (ptId0Values->GetId(k) != 0 && ptId0Values->GetId(k) != 2)
               {
                 otherVal0 = ptId0Values->GetId(k);
               }
             }
+            if (otherVal0 == -2)
+              otherVal0 = -1;
 
-            otherVal1 = -1;
-            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            for (int k=0; k<ptIdNValues->GetNumberOfIds(); k++)
             {
-              if (ptId0Values->GetId(k) != 0 || ptId0Values->GetId(k) != 2)
+              if (ptIdNValues->GetId(k) != 0 && ptIdNValues->GetId(k) != 2)
               {
-                otherVal1 = ptId0Values->GetId(k);
+                otherVal1 = ptIdNValues->GetId(k);
               }
             }
+            if (otherVal1 == -2)
+              otherVal1 = -1;
           }
 
           if ((cellVal0 == 1 && cellVal1 == 3) || (cellVal0 == 3 && cellVal1 == 1))
@@ -5938,23 +6004,31 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
             ptIdNValues->Reset();
             vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
 
-            otherVal0 = -1;
+            fprintf(stdout,"POINT O VALUES: ");
             for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
             {
-              if (ptId0Values->GetId(k) != 1 || ptId0Values->GetId(k) != 3)
+              fprintf(stdout," %d" , ptId0Values->GetId(k));
+              if (ptId0Values->GetId(k) != 1 && ptId0Values->GetId(k) != 3)
               {
                 otherVal0 = ptId0Values->GetId(k);
               }
             }
+            if (otherVal0 == -2)
+              otherVal0 = -1;
+            fprintf(stdout,"\n");
 
-            otherVal1 = -1;
-            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            fprintf(stdout,"POINT N VALUES: ");
+            for (int k=0; k<ptIdNValues->GetNumberOfIds(); k++)
             {
-              if (ptId0Values->GetId(k) != 1 || ptId0Values->GetId(k) != 3)
+              fprintf(stdout," %d" , ptIdNValues->GetId(k));
+              if (ptIdNValues->GetId(k) != 1 && ptIdNValues->GetId(k) != 3)
               {
                 otherVal1 = ptId0Values->GetId(k);
               }
             }
+            if (otherVal1 == -2)
+              otherVal1 = -1;
+            fprintf(stdout,"\n");
           }
 
           if ((cellVal0 == 4 && cellVal1 == 5) || (cellVal0 == 5 && cellVal1 == 4))
@@ -5965,50 +6039,58 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
             ptIdNValues->Reset();
             vtkSVGeneralUtils::GetPointCellsValues(pd, arrayName, ptIdN, ptIdNValues);
 
-            otherVal0 = -1;
             for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
             {
-              if (ptId0Values->GetId(k) != 4 || ptId0Values->GetId(k) != 5)
+              if (ptId0Values->GetId(k) != 4 && ptId0Values->GetId(k) != 5)
               {
                 otherVal0 = ptId0Values->GetId(k);
               }
             }
+            if (otherVal0 == -2)
+              otherVal0 = -1;
 
-            otherVal1 = -1;
-            for (int k=0; k<ptId0Values->GetNumberOfIds(); k++)
+            for (int k=0; k<ptIdNValues->GetNumberOfIds(); k++)
             {
-              if (ptId0Values->GetId(k) != 4 || ptId0Values->GetId(k) != 5)
+              if (ptIdNValues->GetId(k) != 4 && ptIdNValues->GetId(k) != 5)
               {
-                otherVal1 = ptId0Values->GetId(k);
+                otherVal1 = ptIdNValues->GetId(k);
               }
             }
+            if (otherVal1 == -2)
+              otherVal1 = -1;
           }
 
+          fprintf(stdout,"OTHER VAL 0: %d\n", otherVal0);
+          fprintf(stdout,"OTHER VAL 1: %d\n", otherVal1);
           newVal = -1;
-          if (otherVal0 == otherVal1 && otherVal0 != -1)
+          if (otherVal0 == otherVal1 && otherVal0 >= 0 && otherVal0 < 4)
           {
             // Easy, just fill with this one
             newVal = otherVal0;
           }
-          else if (otherVal0 == -1 && otherVal1 != -1)
+          else if (otherVal0 < 0 && otherVal1 >= 0 && otherVal1 < 4)
           {
             // Easy, just fill with val 1
             newVal = otherVal1;
           }
-          else if (otherVal1 == -1 && otherVal0 != -1)
+          else if (otherVal1 < 0 && otherVal0 >= 0 && otherVal0 < 4)
           {
             // Easy, just fill with val 0
             newVal = otherVal0;
           }
-          else if (otherVal0 == otherVal1 && otherVal0 == -1)
+          else if (otherVal0 == -1 || otherVal0 >= 4)
           {
-            // Both touching -1, need to figure out something
-            vtkDebugMacro("No action taken for bad touching regions");
+            if (missingVal != -1)
+            {
+              newVal = missingVal;
+            }
           }
-          else if (otherVal0 != otherVal1)
+          else if (otherVal1 == -1 || otherVal1 >= 4)
           {
-            // Also not sure what to do in this case
-            vtkDebugMacro("No action taken for bad touching regions");
+            if (missingVal != -1)
+            {
+              newVal = missingVal;
+            }
           }
 
           if (newVal != -1)
@@ -6018,12 +6100,20 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
             if (iter < maxIters)
             {
               vtkDebugMacro("TRYING TO DO FIX FOR " << newVal);
-              for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
+              for (int k=0; k<edgeSize; k++)
               {
-                neighborCellId = cellEdgeNeighbors->GetId(k);
-                for (int l=0; l<ringNeighbors[neighborCellId].size(); l++)
+                changePtId0 = allRegions[i].BoundaryEdges[j][k];
+
+                pd->GetPointCells(changePtId0, changeCellNeighbors);
+
+                for (int l=0; l<changeCellNeighbors->GetNumberOfIds(); l++)
                 {
-                  newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(neighborCellId, newVal);
+                  neighborCellId = changeCellNeighbors->GetId(l);
+                  currVal = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(neighborCellId);
+                  if (currVal == cellVal0 || currVal == cellVal1)
+                  {
+                    newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(neighborCellId, newVal);
+                  }
                 }
               }
             }
@@ -6056,12 +6146,19 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
   int maxIters = fixIters;
   int iter = 0;
 
+  vtkNew(vtkIdList, targetRegions);
+  targetRegions->SetNumberOfIds(4);
+  targetRegions->SetId(0, 0);
+  targetRegions->SetId(1, 1);
+  targetRegions->SetId(2, 2);
+  targetRegions->SetId(3, 3);
+
   while (!allGood && iter < maxIters+1)
   {
-    vtkDebugMacro("FIXING THIN BOUNDARY REGIONS ITERATION " << iter);
+    vtkDebugMacro("FIXING THIN REGIONS ITERATION " << iter);
     allGood = 1;
     std::vector<Region> allRegions;
-    if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, allRegions) != SV_OK)
+    if (this->GetSpecificRegions(pd, arrayName, allRegions, targetRegions) != SV_OK)
     {
       vtkErrorMacro("Couldn't get regions");
       return SV_ERROR;
@@ -6080,8 +6177,11 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
     vtkSVSurfaceCenterlineGrouper::GetCellRingNeighbors(pd, ringCellIds, 1, 1, ringNeighbors);
 
     int cellId;
+    int currVal;
+    int cellVal;
     int edgeSize;
     int edgeCount;
+    int changeCellId;
     int edgeStartId;
     int cellId0, cellId1;
     int cellVal0, cellVal1;
@@ -6128,7 +6228,7 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
             cellId1 = cellEdgeNeighbors->GetId(1);
             cellVal1 = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId1);
 
-            if (cellVal0 != -1 && cellVal1 != -1)
+            if (cellVal0 != -1 && cellVal1 != -1 && cellVal0 < 4 && cellVal1 < 4)
             {
 
               for (int k=0; k<edgeSize; k++)
@@ -6143,6 +6243,7 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
           }
         }
 
+        fprintf(stdout,"NUM EDGES: %d\n", allRegions[i].BoundaryEdges.size());
         for (int j=0; j<allRegions[i].BoundaryEdges.size(); j++)
         {
           edgeSize = allRegions[i].BoundaryEdges[j].size();
@@ -6150,7 +6251,6 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
           for (int k=0; k<edgeSize; k++)
           {
             ptId = allRegions[i].BoundaryEdges[j][k];
-
             if (pointEdgeId[ptId] == -1)
             {
               continue;
@@ -6160,12 +6260,21 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
             for (int l=0; l<pointCellIds->GetNumberOfIds(); l++)
             {
               cellId = pointCellIds->GetId(l);
+              cellVal = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(cellId);
+
+              if (cellVal != patchId)
+              {
+                continue;
+              }
+
               pd->GetCellPoints(cellId, npts, pts);
+
               for (int m=0; m<npts; m++)
               {
                 if (pointEdgeId[pts[m]] != pointEdgeId[ptId] && pointEdgeId[pts[m]] != -1)
                 {
                   allGood = 0;
+                  vtkDebugMacro(" FOUND SINGLE CELL THICK BETWEEN POINTS: " << pts[m] << " " << ptId);
                   //pd->GetPoint(ptId, pt);
                   //newCenterlinePts->InsertNextPoint(pt);
 
@@ -6173,9 +6282,14 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
                   //newCenterlinePts->InsertNextPoint(pt);
                   if (iter < maxIters)
                   {
-                    for (int n=0; n<ringNeighbors[cellId].size(); n++)
+                    for (int n=0; n<pointCellIds->GetNumberOfIds(); n++)
                     {
-                      newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(ringNeighbors[cellId][n], patchId);
+                      changeCellId = pointCellIds->GetId(n);
+                      currVal = pd->GetCellData()->GetArray(arrayName.c_str())->GetTuple1(changeCellId);
+                      if (currVal != 4 && currVal != 5)
+                      {
+                        newPd->GetCellData()->GetArray(arrayName.c_str())->SetTuple1(changeCellId, patchId);
+                      }
                     }
                   }
                 }
@@ -6191,7 +6305,7 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
 
   if (!allGood)
   {
-    vtkErrorMacro("Fixing of thin boundary regions failed, number of cells around circumference of vessel is likely to small. Try refining.");
+    vtkErrorMacro("Fixing of thin regions failed, number of cells around circumference of vessel is likely to small. Try refining.");
     return SV_ERROR;
   }
 
