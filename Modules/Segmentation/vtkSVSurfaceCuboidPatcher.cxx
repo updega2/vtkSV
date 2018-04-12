@@ -1451,29 +1451,23 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           return SV_ERROR;
         }
 
-        int allGood = 0;
-        int maxIters = 10;
-        int iter = 0;
-
         vtkNew(vtkIdList, noEndPatches);
         noEndPatches->SetNumberOfIds(4);
         for (int j=0; j<4; j++)
           noEndPatches->SetId(j, j);
 
-        if (this->CorrectSpecificCellBoundaries(branchPd, "BoundaryPatchIds", noEndPatches) != SV_OK)
-        {
-          vtkWarningMacro("Could not correcto boundaries of surface");
-          return SV_ERROR;
-        }
-
+        int allGood = 0;
+        int maxIters = 10;
+        int iter = 0;
 
         while (!allGood && iter < maxIters)
         {
           allGood = 1;
+
           if (this->FixBadTouchingRegions(branchPd, "BoundaryPatchIds", 10) != SV_OK)
           {
             vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BOUNDARYBADTOUCH.vtp", branchPd);
-            vtkErrorMacro("Couldn't fix the bad touching regions");
+            vtkErrorMacro("Couldn't fix the bad touching boundary regions");
             return SV_ERROR;
           }
 
@@ -1725,6 +1719,16 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         }
       }
 
+      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, this->PatchIdsArrayName) != SV_OK)
+      {
+        vtkWarningMacro("Could not correcto boundaries of surface");
+        return SV_ERROR;
+      }
+
+      if (groupId == 0)
+      {
+        vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BEFFIXEND.vtp", branchPd);
+      }
       //if (this->MergedCenterlines->GetNumberOfCells() > 1)
       //{
         if (this->FixEndPatches(branchPd) != SV_OK)
@@ -1756,19 +1760,8 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       }
     }
 
-    vtkNew(vtkIdList, noEndPatches);
-    noEndPatches->SetNumberOfIds(4);
-    for (int j=0; j<4; j++)
-      noEndPatches->SetId(j, j);
-
     if (this->EnforcePolycubeConnectivity)
     {
-      if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
-      {
-        vtkWarningMacro("Could not correcto boundaries of surface");
-        return SV_ERROR;
-      }
-
       int allGood = 0;
       int maxIters = 10;
       int iter = 0;
@@ -1776,6 +1769,8 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
       while (!allGood && iter < maxIters)
       {
         allGood = 1;
+
+        vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BEFTOUCH.vtp", branchPd);
         if (this->FixBadTouchingRegions(branchPd, this->PatchIdsArrayName, 10) != SV_OK)
         {
           vtkErrorMacro("Couldn't fix the bad touching regions");
@@ -1783,14 +1778,11 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           return SV_ERROR;
         }
 
-        if (iter == 0)
-        {
-          vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BEFTHIN.vtp", branchPd);
-        }
+        vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/BEFTHIN.vtp", branchPd);
         if (this->FixThinRegions(branchPd, this->PatchIdsArrayName, 10) != SV_OK)
         {
           vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/PATCHBADTHIN.vtp", branchPd);
-          vtkErrorMacro("Couldn't fix the thin boundary regions");
+          vtkErrorMacro("Couldn't fix the thin regions");
           return SV_ERROR;
         }
 
@@ -1801,6 +1793,11 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         iter++;
       }
     }
+
+    vtkNew(vtkIdList, noEndPatches);
+    noEndPatches->SetNumberOfIds(4);
+    for (int j=0; j<4; j++)
+      noEndPatches->SetId(j, j);
 
     if (this->CorrectSpecificCellBoundaries(branchPd, this->PatchIdsArrayName, noEndPatches) != SV_OK)
     {
@@ -5889,6 +5886,12 @@ int vtkSVSurfaceCuboidPatcher::FixBadTouchingRegions(vtkPolyData *pd, std::strin
     vtkDebugMacro("FIXING BAD TOUCHING REGIONS ITERATION " << iter);
     allGood = 1;
 
+    if (this->CorrectSpecificCellBoundaries(pd, arrayName, targetRegions) != SV_OK)
+    {
+      vtkWarningMacro("Could not correcto boundaries of surface");
+      return SV_ERROR;
+    }
+
     vtkDebugMacro("BEFORE GET SPECIFIC");
     std::vector<Region> allRegions;
     if (this->GetSpecificRegions(pd, arrayName, allRegions, targetRegions) != SV_OK)
@@ -6158,6 +6161,13 @@ int vtkSVSurfaceCuboidPatcher::FixThinRegions(vtkPolyData *pd, std::string array
   {
     vtkDebugMacro("FIXING THIN REGIONS ITERATION " << iter);
     allGood = 1;
+
+    if (this->CorrectSpecificCellBoundaries(pd, arrayName, targetRegions) != SV_OK)
+    {
+      vtkWarningMacro("Could not correcto boundaries of surface");
+      return SV_ERROR;
+    }
+
     std::vector<Region> allRegions;
     if (this->GetSpecificRegions(pd, arrayName, allRegions, targetRegions) != SV_OK)
     {
