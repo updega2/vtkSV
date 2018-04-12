@@ -1445,6 +1445,16 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
 
       if (maxBegPCoordThr > 0.0 ||  maxEndPCoordThr > 0.0)
       {
+        if (this->FixNoBoundaryRegions(branchPd, "BoundaryPatchIds") != SV_OK)
+        {
+          vtkErrorMacro("Couldn't fix boundary patches");
+          return SV_ERROR;
+        }
+
+        int allGood = 0;
+        int maxIters = 10;
+        int iter = 0;
+
         vtkNew(vtkIdList, noEndPatches);
         noEndPatches->SetNumberOfIds(4);
         for (int j=0; j<4; j++)
@@ -1456,15 +1466,6 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
           return SV_ERROR;
         }
 
-        if (this->FixNoBoundaryRegions(branchPd, "BoundaryPatchIds") != SV_OK)
-        {
-          vtkErrorMacro("Couldn't fix boundary patches");
-          return SV_ERROR;
-        }
-
-        int allGood = 0;
-        int maxIters = 10;
-        int iter = 0;
 
         while (!allGood && iter < maxIters)
         {
