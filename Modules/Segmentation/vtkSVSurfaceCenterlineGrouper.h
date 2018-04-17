@@ -225,6 +225,9 @@ protected:
   int FixPerpenTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                             const Region region, std::vector<int> allEdges,
                             std::vector<int> badEdges, vtkIdList *critPts);
+  int FixCornerTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
+                            const Region region, std::vector<int> allEdges,
+                            std::vector<int> badEdges, vtkIdList *critPts);
   int FixOffsetTrifurcation(vtkPolyData *pd, vtkPolyData *origPd, vtkPolyData *polyPd,
                             std::string arrayName,
                             const Region region, const Region polyRegion,

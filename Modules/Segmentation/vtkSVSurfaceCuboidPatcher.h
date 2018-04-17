@@ -205,6 +205,7 @@ protected:
 
   /** \brief Cluster branch */
   int CheckGroupsWithPolycube();
+  int CheckCornersOfPatches();
   int ClusterBranchWithCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
   int ClusterBranchWithGeodesics(vtkPolyData *pd, vtkPolyData *polyPd);
 
@@ -212,7 +213,8 @@ protected:
   int RunEdgeWeightedCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
 
   int FixEndPatches(vtkPolyData *pd);
-  int MatchEndPatches(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
+  int MatchPatchesToPolycube(vtkPolyData *branchPd, vtkPolyData *polyBranchPd);
+  int PatchFinalCheck(vtkPolyData *branchPd, vtkPolyData *polyBranchPd, int fixIters);
   int CheckEndPatches(vtkPolyData *pd,
                       std::vector<Region> endRegions,
                       std::vector<int> &individualFix,

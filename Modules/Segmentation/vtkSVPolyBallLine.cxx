@@ -51,6 +51,7 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->LastPolyBallCenterRadius = 0.0;
   this->UseRadiusInformation = 1;
   this->UsePointNormal = 0;
+  this->PointNormalThreshold = 0.0;
   this->UseLocalCoordinates = 0;
   this->FastEvaluate = 0;
   this->PointLocator = vtkPointLocator::New();
@@ -560,7 +561,7 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
         vtkMath::Normalize(dir0);
         double align0 = vtkMath::Dot(this->PointNormal, dir0);
 
-        if (align0 <= 0.0)
+        if (align0 <= this->PointNormalThreshold)
           {
           // We found a false positive
           //polyballFunctionValue = VTK_SV_LARGE_DOUBLE/2.0;

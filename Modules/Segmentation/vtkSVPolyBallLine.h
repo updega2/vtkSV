@@ -125,6 +125,12 @@ public:
   //@}
 
   //@{
+  /// \brief Use given normal for directional help
+  vtkSetMacro(PointNormalThreshold,double);
+  vtkGetMacro(PointNormalThreshold,double);
+  //@}
+
+  //@{
   vtkSetMacro(FastEvaluate,int);
   vtkGetMacro(FastEvaluate,int);
   vtkBooleanMacro(FastEvaluate,int);
@@ -163,6 +169,7 @@ protected:
   int UseLocalCoordinates;
   int FastEvaluate;
 
+  double PointNormalThreshold;
   double LastPolyBallCellPCoord;
   double LastPolyBallCenter[3];
   double LastPolyBallCenterRadius;

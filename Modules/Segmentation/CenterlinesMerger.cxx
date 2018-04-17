@@ -48,6 +48,7 @@
 #include "vtkSVPickPointSeedSelector.h"
 #include "vtkSVOpenProfilesSeedSelector.h"
 
+#include "vtkvmtkMergeCenterlines.h"
 
 int main(int argc, char *argv[])
 {
@@ -66,6 +67,7 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
+  int useVmtk = 0;
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";
 
   // argc is the number of strings on the command-line
@@ -78,6 +80,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-input")            {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-output")           {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-radius")           {radiusArrayName = argv[++iarg];}
+      else if(tmpstr=="-usevmtk")          {useVmtk = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
       tmpstr.erase(0,arglength);
@@ -94,6 +97,7 @@ int main(int argc, char *argv[])
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -output             : Output file name"<< endl;
     cout << "  -radius             : Name on centerlines describing maximum inscribed sphere radius [default MaximumInscribedSphereRadius]"<< endl;
+    cout << "  -usevmtk            : Use the vmtk centerlines extractor rather than vtksv [default 0]"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -112,22 +116,44 @@ int main(int argc, char *argv[])
   if (vtkSVIOUtils::ReadInputFile(inputFilename,inputPd) != 1)
     return EXIT_FAILURE;
 
-  std::cout<<"Merging Centerlines..."<<endl;
-  vtkNew(vtkSVCenterlineMerger, Merger);
-  Merger->SetInputData(inputPd);
-  Merger->SetRadiusArrayName(radiusArrayName.c_str());
-  Merger->SetGroupIdsArrayName("GroupIds");
-  Merger->SetCenterlineIdsArrayName("CenterlineIds");
-  Merger->SetTractIdsArrayName("TractIds");
-  Merger->SetBlankingArrayName("Blanking");
-  Merger->SetResamplingStepLength(0.0);
-  Merger->SetMergeBlanked(1);
-  Merger->Update();
-  std::cout<<"Done"<<endl;
+  if (useVmtk)
+  {
+    std::cout<<"Merging Centerlines..."<<endl;
+    vtkNew(vtkvmtkMergeCenterlines, Merger);
+    Merger->SetInputData(inputPd);
+    Merger->SetRadiusArrayName(radiusArrayName.c_str());
+    Merger->SetGroupIdsArrayName("GroupIds");
+    Merger->SetCenterlineIdsArrayName("CenterlineIds");
+    Merger->SetTractIdsArrayName("TractIds");
+    Merger->SetBlankingArrayName("Blanking");
+    Merger->SetResamplingStepLength(0.0);
+    Merger->SetMergeBlanked(1);
+    Merger->Update();
+    std::cout<<"Done"<<endl;
 
-  //Write Files
-  std::cout<<"Writing Files..."<<endl;
-  vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0));
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0));
+  }
+  else
+  {
+    std::cout<<"Merging Centerlines..."<<endl;
+    vtkNew(vtkSVCenterlineMerger, Merger);
+    Merger->SetInputData(inputPd);
+    Merger->SetRadiusArrayName(radiusArrayName.c_str());
+    Merger->SetGroupIdsArrayName("GroupIds");
+    Merger->SetCenterlineIdsArrayName("CenterlineIds");
+    Merger->SetTractIdsArrayName("TractIds");
+    Merger->SetBlankingArrayName("Blanking");
+    Merger->SetResamplingStepLength(0.0);
+    Merger->SetMergeBlanked(1);
+    Merger->Update();
+    std::cout<<"Done"<<endl;
+
+    //Write Files
+    std::cout<<"Writing Files..."<<endl;
+    vtkSVIOUtils::WriteVTPFile(outputFilename, Merger->GetOutput(0));
+  }
 
   //Exit the program without errors
   return EXIT_SUCCESS;

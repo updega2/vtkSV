@@ -401,8 +401,16 @@ int vtkSVCenterlineGraph::ComputeGlobalReferenceVectors(vtkSVCenterlineGCell *pa
   int numPts = thresholder->GetOutput()->GetNumberOfPoints();
 
   double endPt0[3], endPt1[3];
-  thresholder->GetOutput()->GetPoint(numPts-2, endPt0);
-  thresholder->GetOutput()->GetPoint(numPts-1, endPt1);
+  if (parent->Parent == NULL && parent->Children.size() == 0)
+  {
+    thresholder->GetOutput()->GetPoint(1, endPt0);
+    thresholder->GetOutput()->GetPoint(0, endPt1);
+  }
+  else
+  {
+    thresholder->GetOutput()->GetPoint(numPts-2, endPt0);
+    thresholder->GetOutput()->GetPoint(numPts-1, endPt1);
+  }
   fprintf(stdout,"End pt 0 is: %.4f %.4f %.4f\n", endPt0[0], endPt0[1], endPt0[2]);
   fprintf(stdout,"End pt 1 is: %.4f %.4f %.4f\n", endPt1[0], endPt1[1], endPt1[2]);
   vtkMath::Subtract(endPt0, endPt1, this->ReferenceVecs[0]);
