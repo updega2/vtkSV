@@ -133,7 +133,7 @@ endif()
 
 #------------------------------------------------------------------------------
 # Create additional executables
-if(VTKSV_BUILD_FILTER_EXES)
+if(VTKSV_BUILD_EXES)
   set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
     GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger PolycubeGenerator SurfaceCenterlineGrouper SurfaceCenterlineAttributesPasser SurfaceCuboidPatcher)
   foreach(exe ${EXE_LIST})

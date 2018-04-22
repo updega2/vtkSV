@@ -1,6 +1,6 @@
 /*=========================================================================
  *
- * Copyright (c) 2014 The Regents of the University of California.
+ * Copyright (c) 2014-2015 The Regents of the University of California.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,9 +29,9 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVPlacePointsOnS2
- *  \brief Place points of an arbitrary surface on the unit sphere by
- *  translating, rotating, scaling, and projecting the points.
+ *  \class vtkSVFindSeparateRegions
+ *  \brief This is a filter to locate points that form the boundaries in
+ *  between values of a given cell data array
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -39,63 +39,59 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVPlacePointsOnS2_h
-#define vtkSVPlacePointsOnS2_h
+#ifndef vtkSVFindSeparateRegions_h
+#define vtkSVFindSeparateRegions_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVMiscModule.h" // For export
+#include "vtkIdList.h"
 
-#include "vtkPolyData.h"
-
-class VTKSVFILTERS_EXPORT vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVFindSeparateRegions : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkSVPlacePointsOnS2* New();
+  static vtkSVFindSeparateRegions* New();
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
-  // \brief Macro to set/get the axis that the object aligns with in order to orient
-  // the object with a unit cube.
-  vtkSetVector3Macro(ZAxis, double);
-  vtkGetVector3Macro(ZAxis, double);
-  vtkSetVector3Macro(XAxis, double);
-  vtkGetVector3Macro(XAxis, double);
+  /// \brief Get/Set macro for array names used by filter
+  vtkGetStringMacro(CellArrayName);
+  vtkSetStringMacro(CellArrayName);
+  vtkGetStringMacro(OutPointArrayName);
+  vtkSetStringMacro(OutPointArrayName);
   //@}
 
   //@{
-  // \brief Specify whether to use custom axis alignment.
-  vtkSetMacro(UseCustomAxisAlign, int);
-  vtkGetMacro(UseCustomAxisAlign, int);
-  vtkBooleanMacro(UseCustomAxisAlign, int);
+  /// \brief Set macro for target cell values
+  vtkSetObjectMacro(TargetCellIds, vtkIdList);
   //@}
 
 protected:
-  vtkSVPlacePointsOnS2();
-  ~vtkSVPlacePointsOnS2();
+  vtkSVFindSeparateRegions();
+  ~vtkSVFindSeparateRegions();
 
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
 		  vtkInformationVector *outputVector);
 
+  int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
-  int MoveToOrigin();
-  int RotateToCubeCenterAxis();
-  int ScaleToUnitCube();
-  int DumbMapToSphere();
-  int TextureMap();
-  int ConvertTextureFieldToPolyData();
+
+  char* CellArrayName;
+  char* OutPointArrayName;
+
+  vtkPolyData *WorkPd;
+  vtkIntArray *IntCellScalars;
+  vtkIdList *TargetCellIds;
+
+  int GetCellArray(vtkPolyData *object);
+  int SetAllCellIds();
 
 private:
-  vtkSVPlacePointsOnS2(const vtkSVPlacePointsOnS2&);  // Not implemented.
-  void operator=(const vtkSVPlacePointsOnS2&);  // Not implemented.
-
-  vtkPolyData *InitialPd;
-  vtkPolyData *WorkPd;
-
-  int UseCustomAxisAlign;
-  double ZAxis[3];
-  double XAxis[3];
+  vtkSVFindSeparateRegions(const vtkSVFindSeparateRegions&);  // Not implemented.
+  void operator=(const vtkSVFindSeparateRegions&);  // Not implemented.
 };
 
 #endif
+
+

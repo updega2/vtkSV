@@ -24,17 +24,10 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A module containing old code.")
+set(DOCUMENTATION "A variety of filters performing geometric operations, data operations, and prep operations.")
 
 #------------------------------------------------------------------------------
-# NURBS addition
-set(EXTRA_DEPENDS "")
-if(VTKSV_BUILD_FILTERS)
-  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVFilters)
-  if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION)
-    set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVNURBS vtkSVParameterization)
-  endif()
-endif()
+# Extra depends
 set(EXTRA_TEST_DEPENDS "")
 if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
   set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
@@ -43,17 +36,20 @@ endif()
 
 #------------------------------------------------------------------------------
 # Module depends
-vtk_module(vtkSVArchive
+vtk_module(vtkSVMisc
   DESCRIPTION
   "${DOCUMENTATION}"
   DEPENDS
+  vtkCommonComputationalGeometry
   vtkCommonDataModel
   vtkCommonExecutionModel
   vtkFiltersCore
   vtkFiltersGeometry
   vtkFiltersModeling
+  vtkFiltersTexture
+  vtkIOCore
   vtkSVCommon
-  ${EXTRA_DEPENDS}
+  vtkRenderingCore
   TEST_DEPENDS
   vtkSVCommon
   vtkFiltersExtraction
@@ -63,10 +59,8 @@ vtk_module(vtkSVArchive
   vtkRenderingLabel
   vtkTestingCore
   vtkTestingRendering
-  vtkIOGeometry
-  vtkIOXML
   ${EXTRA_TEST_DEPENDS}
   TCL_NAME
-  vtkSVSegmentation
+  vtkSVMisc
   )
 #------------------------------------------------------------------------------

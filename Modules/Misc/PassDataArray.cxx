@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  FindSeparateRegions -source [Source Filename] -target [Target Filename] -output [Output Filename] -passarray [Pass Array Name] ..." << endl;
+    cout << "  PassDataArray -source [Source Filename] -target [Target Filename] -output [Output Filename] -passarray [Pass Array Name] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;

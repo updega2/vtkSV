@@ -144,15 +144,15 @@ else()
 endif()
 #------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------
-# Executables
-if(VTKSV_BUILD_FILTER_EXES)
-  set(EXE_LIST )
-  foreach(exe ${EXE_LIST})
-    add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES})
-    install(TARGETS ${exe}
-      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
-  endforeach()
-endif()
-#------------------------------------------------------------------------------
+##------------------------------------------------------------------------------
+## Executables
+#if(VTKSV_BUILD_EXES)
+#  set(EXE_LIST )
+#  foreach(exe ${EXE_LIST})
+#    add_executable(${exe} ${exe}.cxx)
+#    target_link_libraries(${exe} ${VTK_LIBRARIES})
+#    install(TARGETS ${exe}
+#      RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
+#  endforeach()
+#endif()
+##------------------------------------------------------------------------------

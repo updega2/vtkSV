@@ -29,8 +29,8 @@ set(DOCUMENTATION "A module containing code to parameterize and arbitrary input 
 #------------------------------------------------------------------------------
 # NURBS addition
 set(EXTRA_DEPENDS "")
-if(VTKSV_BUILD_FILTERS)
-  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVFilters)
+if(VTKSV_BUILD_MISC)
+  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVMisc)
   if(VTKSV_BUILD_MODULE_NURBS)
     set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVNURBS)
   endif()

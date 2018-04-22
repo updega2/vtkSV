@@ -16,9 +16,9 @@
 #define vtkSVPolyDataSurfaceInspector_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVMiscModule.h" // For export
 
-class VTKSVFILTERS_EXPORT vtkSVPolyDataSurfaceInspector : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVPolyDataSurfaceInspector : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPolyDataSurfaceInspector *New();

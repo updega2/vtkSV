@@ -40,12 +40,12 @@
 #define vtkSVIntegrateFlowThroughSurface_h
 
 #include "vtkUnstructuredGridAlgorithm.h"
-#include "vtkSVFiltersModule.h"
+#include "vtkSVMiscModule.h"
 
 class vtkIdList;
 class vtkDataSetAttributes;
 
-class VTKSVFILTERS_EXPORT vtkSVIntegrateFlowThroughSurface : public vtkUnstructuredGridAlgorithm
+class VTKSVMISC_EXPORT vtkSVIntegrateFlowThroughSurface : public vtkUnstructuredGridAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVIntegrateFlowThroughSurface,vtkUnstructuredGridAlgorithm);

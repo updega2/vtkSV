@@ -40,12 +40,12 @@
 #define vtkSVSurfaceVectors_h
 
 #include "vtkDataSetAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For exports
+#include "vtkSVMiscModule.h" // For exports
 
 class vtkFloatArray;
 class vtkIdList;
 
-class VTKSVFILTERS_EXPORT vtkSVSurfaceVectors : public vtkDataSetAlgorithm
+class VTKSVMISC_EXPORT vtkSVSurfaceVectors : public vtkDataSetAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVSurfaceVectors,vtkDataSetAlgorithm);

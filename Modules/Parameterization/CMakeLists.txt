@@ -56,8 +56,8 @@ set(HDRS
 #------------------------------------------------------------------------------
 # Filters addition
 set(EXTRA_LIBRARIES "")
-if(VTKSV_BUILD_FILTERS)
-  set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME})
+if(VTKSV_BUILD_MISC)
+  set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVMISC_NAME})
   set(SRCS ${SRCS} vtkSVSphericalMapper.cxx)
   set(HDRS ${HDRS} vtkSVSphericalMapper.h)
 endif()
@@ -119,9 +119,9 @@ endif()
 
 #------------------------------------------------------------------------------
 # Create additional executables
-if(VTKSV_BUILD_FILTER_EXES)
+if(VTKSV_BUILD_EXES)
   set(EXE_LIST PlanarMapper SuperSquarePlanarMapper)
-  if(VTKSV_BUILD_FILTERS)
+  if(VTKSV_BUILD_MISC)
     set(EXE_LIST ${EXE_LIST} SphericalMapper)
   endif()
   foreach(exe ${EXE_LIST})

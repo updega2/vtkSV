@@ -29,9 +29,9 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVFindSeparateRegions
- *  \brief This is a filter to locate points that form the boundaries in
- *  between values of a given cell data array
+ *  \class vtkSVPolyDataEdgeSplitter
+ *  \brief Using a polydata centerlines, separate the polydata into regions
+ *  based on the centerlines
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -39,59 +39,70 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVFindSeparateRegions_h
-#define vtkSVFindSeparateRegions_h
+#ifndef vtkSVPolyDataEdgeSplitter_h
+#define vtkSVPolyDataEdgeSplitter_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class VTKSVFILTERS_EXPORT vtkSVFindSeparateRegions : public vtkPolyDataAlgorithm
+#include "vtkSVGlobals.h"
+
+#include "vtkSVMiscModule.h" // For export
+
+class VTKSVMISC_EXPORT vtkSVPolyDataEdgeSplitter : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkSVFindSeparateRegions* New();
+  vtkTypeMacro(vtkSVPolyDataEdgeSplitter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  static vtkSVPolyDataEdgeSplitter *New();
+
   //@{
-  /// \brief Get/Set macro for array names used by filter
-  vtkGetStringMacro(CellArrayName);
-  vtkSetStringMacro(CellArrayName);
-  vtkGetStringMacro(OutPointArrayName);
-  vtkSetStringMacro(OutPointArrayName);
+  /// \brief Get/Set macro for merged centerlines
+  vtkSetObjectMacro(SplitPointIds,vtkIdList);
+  vtkGetObjectMacro(SplitPointIds,vtkIdList);
   //@}
 
   //@{
-  /// \brief Set macro for target cell values
-  vtkSetObjectMacro(TargetCellIds, vtkIdList);
+  /// \brief Get/Set macro for array name used by the filter. Must
+  //  be present on the centerlines.
+  vtkSetStringMacro(SplitPointsArrayName);
+  vtkGetStringMacro(SplitPointsArrayName);
   //@}
 
 protected:
-  vtkSVFindSeparateRegions();
-  ~vtkSVFindSeparateRegions();
+  vtkSVPolyDataEdgeSplitter();
+  ~vtkSVPolyDataEdgeSplitter();
 
   // Usual data generation method
-  int RequestData(vtkInformation *vtkNotUsed(request),
-		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+  virtual int RequestData(vtkInformation *,
+                          vtkInformationVector **,
+                          vtkInformationVector *);
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
 
-  char* CellArrayName;
-  char* OutPointArrayName;
+  int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
+  int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1);
+
+  char *SplitPointsArrayName;
 
   vtkPolyData *WorkPd;
-  vtkIntArray *IntCellScalars;
-  vtkIdList *TargetCellIds;
 
-  int GetCellArray(vtkPolyData *object);
-  int SetAllCellIds();
+  vtkIdList *SplitPointIds;
+
+  vtkCellArray *NewCells;
+
+  vtkPoints *NewPoints;
+
+  int SplitPointsArrayAdded;
+  std::vector<int> CellBool;
+  std::vector<std::vector<int> > SplitCellsInfo;
 
 private:
-  vtkSVFindSeparateRegions(const vtkSVFindSeparateRegions&);  // Not implemented.
-  void operator=(const vtkSVFindSeparateRegions&);  // Not implemented.
+  vtkSVPolyDataEdgeSplitter(const vtkSVPolyDataEdgeSplitter&);  // Not implemented.
+  void operator=(const vtkSVPolyDataEdgeSplitter&);  // Not implemented.
 };
 
 #endif
-
-

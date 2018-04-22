@@ -43,9 +43,9 @@
 #define vtkSVLoftPolyDataSolid_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h"
+#include "vtkSVMiscModule.h"
 
-class VTKSVFILTERS_EXPORT vtkSVLoftPolyDataSolid : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVLoftPolyDataSolid : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVLoftPolyDataSolid *New();

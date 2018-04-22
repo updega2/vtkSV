@@ -26,8 +26,8 @@
 
 #------------------------------------------------------------------------------
 # Lib/module name
-set(lib ${SV_LIB_VTKSVFILTERS_NAME})
-set(module vtkSVFilters)
+set(lib ${SV_LIB_VTKSVMISC_NAME})
+set(module vtkSVMisc)
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
     message(FATAL_ERROR "Error: lib and module name should be equal; Lib is ${lib} and Module is ${module}")
   endif()
 
-  # Filters vtk module
+  # Misc vtk module
   vtksv_add_module(${lib}
     SRCS ${SRCS}
     HDRS ${HDRS}
@@ -132,7 +132,7 @@ endif()
 
 #------------------------------------------------------------------------------
 # Executables
-if(VTKSV_BUILD_FILTER_EXES)
+if(VTKSV_BUILD_EXES)
   set(EXE_LIST FindGeodesicPath
     FindSeparateRegions
     GetBoundaryFaces
@@ -146,7 +146,7 @@ if(VTKSV_BUILD_FILTER_EXES)
     )
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME} ${SV_LIB_VTKSVCOMMON_NAME})
+    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVMISC_NAME} ${SV_LIB_VTKSVCOMMON_NAME})
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()

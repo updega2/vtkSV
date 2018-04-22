@@ -1,6 +1,6 @@
 /*=========================================================================
  *
- * Copyright (c) 2014-2015 The Regents of the University of California.
+ * Copyright (c) 2014 The Regents of the University of California.
  * All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,10 +28,12 @@
  *
  *=========================================================================*/
 
+
 /**
- *  \class vtkSVPolyDataEdgeSplitter
- *  \brief Using a polydata centerlines, separate the polydata into regions
- *  based on the centerlines
+ *  \class vtkSVCheckRotation
+ *  \brief This is a class to rotate a polydata to another polydata in space
+ *  of the same number of points and cells and do a point-wise comparison
+ *  arther the rotation.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -39,70 +41,57 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVPolyDataEdgeSplitter_h
-#define vtkSVPolyDataEdgeSplitter_h
+#ifndef vtkSVCheckRotation_h
+#define vtkSVCheckRotation_h
 
 #include "vtkPolyDataAlgorithm.h"
+#include "vtkSVMiscModule.h" // For export
+
 #include "vtkPolyData.h"
-#include "vtkIdList.h"
 
-#include "vtkSVGlobals.h"
-
-#include "vtkSVFiltersModule.h" // For export
-
-class VTKSVFILTERS_EXPORT vtkSVPolyDataEdgeSplitter : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVCheckRotation : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVPolyDataEdgeSplitter,vtkPolyDataAlgorithm);
+  static vtkSVCheckRotation* New();
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static vtkSVPolyDataEdgeSplitter *New();
-
   //@{
-  /// \brief Get/Set macro for merged centerlines
-  vtkSetObjectMacro(SplitPointIds,vtkIdList);
-  vtkGetObjectMacro(SplitPointIds,vtkIdList);
+  /// \brief Set macro for a third polydata to compare angles to
+  vtkSetObjectMacro(OriginalPd, vtkPolyData);
   //@}
 
   //@{
-  /// \brief Get/Set macro for array name used by the filter. Must
-  //  be present on the centerlines.
-  vtkSetStringMacro(SplitPointsArrayName);
-  vtkGetStringMacro(SplitPointsArrayName);
+  /// \brief Set macro for the cell id to match between the two polydatas
+  vtkSetMacro(CellId, int);
   //@}
 
 protected:
-  vtkSVPolyDataEdgeSplitter();
-  ~vtkSVPolyDataEdgeSplitter();
+  vtkSVCheckRotation();
+  ~vtkSVCheckRotation();
 
   // Usual data generation method
-  virtual int RequestData(vtkInformation *,
-                          vtkInformationVector **,
-                          vtkInformationVector *);
+  int RequestData(vtkInformation *vtkNotUsed(request),
+		  vtkInformationVector **inputVector,
+		  vtkInformationVector *outputVector);
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
-
-  int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
-  int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1);
-
-  char *SplitPointsArrayName;
-
-  vtkPolyData *WorkPd;
-
-  vtkIdList *SplitPointIds;
-
-  vtkCellArray *NewCells;
-
-  vtkPoints *NewPoints;
-
-  int SplitPointsArrayAdded;
-  std::vector<int> CellBool;
-  std::vector<std::vector<int> > SplitCellsInfo;
+  int MoveCenters(); /**< \brief Function to move centers to same location. */
+  int FindAndCheckRotation(); /**< \brief Function to rotate and check points. */
+  int CheckAnglesWithOriginal(); /**< \brief Checks angles if OriginalPd provided. */
+  int MatchPointOrder(); /**< \brief Changes original pd cells to match mapped cells. */
 
 private:
-  vtkSVPolyDataEdgeSplitter(const vtkSVPolyDataEdgeSplitter&);  // Not implemented.
-  void operator=(const vtkSVPolyDataEdgeSplitter&);  // Not implemented.
+  vtkSVCheckRotation(const vtkSVCheckRotation&);  // Not implemented.
+  void operator=(const vtkSVCheckRotation&);  // Not implemented.
+
+  int CellId;
+
+  vtkPolyData *SourcePd;
+  vtkPolyData *TargetPd;
+  vtkPolyData *MappedPd;
+
+  vtkPolyData *OriginalPd;
 };
 
 #endif

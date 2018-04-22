@@ -29,7 +29,9 @@
  *=========================================================================*/
 
 /**
- *  \brief a node of Graphs
+ *  \class vtkSVPlacePointsOnS2
+ *  \brief Place points of an arbitrary surface on the unit sphere by
+ *  translating, rotating, scaling, and projecting the points.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -37,37 +39,63 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef svGCell_h
-#define svGCell_h
+#ifndef vtkSVPlacePointsOnS2_h
+#define vtkSVPlacePointsOnS2_h
+
+#include "vtkPolyDataAlgorithm.h"
+#include "vtkSVMiscModule.h" // For export
 
 #include "vtkPolyData.h"
-#include "vtkSVParameterizationModule.h" // For exports
 
-class VTKSVPARAMETERIZATION_EXPORT svGCell
+class VTKSVMISC_EXPORT vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
 {
 public:
-  //Constructors
-  svGCell();
+  static vtkSVPlacePointsOnS2* New();
+  void PrintSelf(ostream& os, vtkIndent indent);
 
-  //Destructor
-  ~svGCell();
+  //@{
+  // \brief Macro to set/get the axis that the object aligns with in order to orient
+  // the object with a unit cube.
+  vtkSetVector3Macro(ZAxis, double);
+  vtkGetVector3Macro(ZAxis, double);
+  vtkSetVector3Macro(XAxis, double);
+  vtkGetVector3Macro(XAxis, double);
+  //@}
 
-  //Member data
-  svGCell *Parent;
-  svGCell *Children[2];
-  int Id;
-  int GroupId;
-  int Dir;
-  double RefAngle;
-  double StartPt[3];
-  double EndPt[3];
-  double FrontDir[3];
-  double XVec[3];
-  double ZVec[3];
-  int CornerPtIds[8];
-  int DivergingChild;
-  int AligningChild;
-  int IsAlign;
+  //@{
+  // \brief Specify whether to use custom axis alignment.
+  vtkSetMacro(UseCustomAxisAlign, int);
+  vtkGetMacro(UseCustomAxisAlign, int);
+  vtkBooleanMacro(UseCustomAxisAlign, int);
+  //@}
+
+protected:
+  vtkSVPlacePointsOnS2();
+  ~vtkSVPlacePointsOnS2();
+
+  // Usual data generation method
+  int RequestData(vtkInformation *vtkNotUsed(request),
+		  vtkInformationVector **inputVector,
+		  vtkInformationVector *outputVector);
+
+  int RunFilter(); // Run filter operations.
+  int MoveToOrigin();
+  int RotateToCubeCenterAxis();
+  int ScaleToUnitCube();
+  int DumbMapToSphere();
+  int TextureMap();
+  int ConvertTextureFieldToPolyData();
+
+private:
+  vtkSVPlacePointsOnS2(const vtkSVPlacePointsOnS2&);  // Not implemented.
+  void operator=(const vtkSVPlacePointsOnS2&);  // Not implemented.
+
+  vtkPolyData *InitialPd;
+  vtkPolyData *WorkPd;
+
+  int UseCustomAxisAlign;
+  double ZAxis[3];
+  double XAxis[3];
 };
 
 #endif

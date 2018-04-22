@@ -116,11 +116,11 @@ endif()
 
 #------------------------------------------------------------------------------
 # Executables
-if(VTKSV_BUILD_FILTER_EXES)
+if(VTKSV_BUILD_EXES)
   set(EXE_LIST )
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVFILTERS_NAME} ${SV_LIB_VTKSVCOMMON_NAME} ${SV_LIB_VTKSVNURBS_NAME})
+    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVMISC_NAME} ${SV_LIB_VTKSVCOMMON_NAME} ${SV_LIB_VTKSVNURBS_NAME})
     install(TARGETS ${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()

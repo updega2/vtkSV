@@ -44,7 +44,7 @@
 #define vtkSVIntegrateAttributes_h
 
 #include "vtkUnstructuredGridAlgorithm.h"
-#include "vtkSVFiltersModule.h"
+#include "vtkSVMiscModule.h"
 
 class vtkDataSet;
 class vtkIdList;
@@ -53,7 +53,7 @@ class vtkInformationVector;
 class vtkDataSetAttributes;
 class vtkMultiProcessController;
 
-class VTKSVFILTERS_EXPORT vtkSVIntegrateAttributes : public vtkUnstructuredGridAlgorithm
+class VTKSVMISC_EXPORT vtkSVIntegrateAttributes : public vtkUnstructuredGridAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVIntegrateAttributes,vtkUnstructuredGridAlgorithm);

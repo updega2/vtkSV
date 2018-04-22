@@ -16,9 +16,9 @@
 #define vtkSVCellComplexThinner_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVMiscModule.h" // For export
 
-class VTKSVFILTERS_EXPORT vtkSVCellComplexThinner : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVCellComplexThinner : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVCellComplexThinner *New();

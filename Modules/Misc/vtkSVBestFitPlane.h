@@ -20,9 +20,9 @@
 #define vtkSVBestFitPlane_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVMiscModule.h" // For export
 
-class VTKSVFILTERS_EXPORT vtkSVBestFitPlane : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVBestFitPlane : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVBestFitPlane *New();

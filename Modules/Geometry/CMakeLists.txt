@@ -112,7 +112,7 @@ endif()
 
 #------------------------------------------------------------------------------
 # Executables
-if(VTKSV_BUILD_FILTER_EXES)
+if(VTKSV_BUILD_EXES)
   set(EXE_LIST SmoothVolume)
   foreach(exe ${EXE_LIST})
     add_executable(${exe} ${exe}.cxx)

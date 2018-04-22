@@ -43,11 +43,11 @@
 #define vtkSVFillHolesFilterWithIds_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVMiscModule.h" // For export
 
 class vtkAbstractTransform;
 
-class VTKSVFILTERS_EXPORT vtkSVFillHolesFilterWithIds : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVFillHolesFilterWithIds : public vtkPolyDataAlgorithm
 {
 public:
   // Standard methods for instantiation, type information and printing.

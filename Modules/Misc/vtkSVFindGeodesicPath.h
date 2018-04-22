@@ -43,12 +43,12 @@
 #define vtkSVFindGeodesicPath_h
 
 #include "vtkPolyDataAlgorithm.h"
-#include "vtkSVFiltersModule.h" // For export
+#include "vtkSVMiscModule.h" // For export
 
 #include "vtkPolyData.h"
 #include "vtkIdList.h"
 
-class VTKSVFILTERS_EXPORT vtkSVFindGeodesicPath : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVFindGeodesicPath* New();

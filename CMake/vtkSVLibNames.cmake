@@ -30,7 +30,7 @@ set(VTKSV_LIBS
   vtkSVVMTK
   vtkSVBoolean
   vtkSVCommon
-  vtkSVFilters
+  vtkSVMisc
   vtkSVGeometry
   vtkSVNURBS
   vtkSVParameterization
