@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVLoftPolyDataSolid
+ *  \class vtkSVLoftSplineSurface
  *  \brief This is the filter to perform the intersection between multiple
  *  vessels
  *
@@ -39,18 +39,18 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVLoftPolyDataSolid_h
-#define vtkSVLoftPolyDataSolid_h
+#ifndef vtkSVLoftSplineSurface_h
+#define vtkSVLoftSplineSurface_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h"
 
-class VTKSVMISC_EXPORT vtkSVLoftPolyDataSolid : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVLoftSplineSurface : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkSVLoftPolyDataSolid *New();
+  static vtkSVLoftSplineSurface *New();
 
-  vtkTypeMacro(vtkSVLoftPolyDataSolid,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVLoftSplineSurface,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   // Description:
@@ -133,8 +133,8 @@ public:
 
 //ETX
 protected:
-  vtkSVLoftPolyDataSolid();
-  ~vtkSVLoftPolyDataSolid();
+  vtkSVLoftSplineSurface();
+  ~vtkSVLoftSplineSurface();
 
   // Flag for selecting parallel streaming behavior
   int ParallelStreaming;
@@ -186,8 +186,8 @@ protected:
   double Tension;
 
 private:
-  vtkSVLoftPolyDataSolid(const vtkSVLoftPolyDataSolid&);  // Not implemented.
-  void operator=(const vtkSVLoftPolyDataSolid&);  // Not implemented.
+  vtkSVLoftSplineSurface(const vtkSVLoftSplineSurface&);  // Not implemented.
+  void operator=(const vtkSVLoftSplineSurface&);  // Not implemented.
 };
 
 #endif

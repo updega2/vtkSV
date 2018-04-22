@@ -96,6 +96,7 @@ include(vtkSVFindVTK)
 #-----------------------------------------------------------------------------
 # Set build dirs
 set(VTKSV_BUILD_DIRS "Common")
+set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "IO")
 if(VTKSV_BUILD_THIRDPARTY_VMTK)
   set(VTKSV_BUILD_DIRS ${VTKSV_BUILD_DIRS} "ThirdParty/VMTK")
 endif()

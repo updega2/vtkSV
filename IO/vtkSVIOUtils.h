@@ -42,7 +42,7 @@
 #define vtkSVIOUtils_h
 
 #include "vtkObject.h"
-#include "vtkSVCommonModule.h" // For export
+#include "vtkSVIOModule.h" // For export
 
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
@@ -53,7 +53,7 @@
 #include <sstream>
 #include <iostream>
 
-class VTKSVCOMMON_EXPORT vtkSVIOUtils : public vtkObject
+class VTKSVIO_EXPORT vtkSVIOUtils : public vtkObject
 {
 public:
   vtkTypeMacro(vtkSVIOUtils,vtkObject);

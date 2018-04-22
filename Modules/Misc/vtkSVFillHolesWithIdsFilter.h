@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVFillHolesFilterWithIds
+ *  \class vtkSVFillHolesWithIdsFilter
  *  \brief This is a filter to be able to apply ids to the surfaces that
  *  fill the holes
  *
@@ -39,20 +39,20 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVFillHolesFilterWithIds_h
-#define vtkSVFillHolesFilterWithIds_h
+#ifndef vtkSVFillHolesWithIdsFilter_h
+#define vtkSVFillHolesWithIdsFilter_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
 
 class vtkAbstractTransform;
 
-class VTKSVMISC_EXPORT vtkSVFillHolesFilterWithIds : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVFillHolesWithIdsFilter : public vtkPolyDataAlgorithm
 {
 public:
   // Standard methods for instantiation, type information and printing.
-  static vtkSVFillHolesFilterWithIds *New();
-  vtkTypeMacro(vtkSVFillHolesFilterWithIds,vtkPolyDataAlgorithm);
+  static vtkSVFillHolesWithIdsFilter *New();
+  vtkTypeMacro(vtkSVFillHolesWithIdsFilter,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
@@ -69,7 +69,7 @@ public:
 
   //@{
   /// \brief If CapFillType set to VTK_FILL_ID, this value is used
-  /// to set the falue at all caps. Default is -1.
+  /// to set the value at all caps. Default is -1.
   vtkGetMacro(FillId, int);
   vtkSetMacro(FillId, int);
   //@}
@@ -88,8 +88,8 @@ public:
     VTK_INCREASING_START
   };
 protected:
-  vtkSVFillHolesFilterWithIds();
-  ~vtkSVFillHolesFilterWithIds();
+  vtkSVFillHolesWithIdsFilter();
+  ~vtkSVFillHolesWithIdsFilter();
 
   int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
@@ -101,8 +101,8 @@ protected:
   vtkIntArray *capIdArray;
 
 private:
-  vtkSVFillHolesFilterWithIds(const vtkSVFillHolesFilterWithIds&);  // Not implemented.
-  void operator=(const vtkSVFillHolesFilterWithIds&);  // Not implemented.
+  vtkSVFillHolesWithIdsFilter(const vtkSVFillHolesWithIdsFilter&);  // Not implemented.
+  void operator=(const vtkSVFillHolesWithIdsFilter&);  // Not implemented.
 };
 
 #endif

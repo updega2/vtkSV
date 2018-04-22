@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include "vtkSVMapInterpolator.h"
+#include "vtkSVSurfaceMapper.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -59,13 +59,13 @@
 // ----------------------
 // StandardNewMacro
 // ----------------------
-vtkStandardNewMacro(vtkSVMapInterpolator);
+vtkStandardNewMacro(vtkSVSurfaceMapper);
 
 
 // ----------------------
 // Constructor
 // ----------------------
-vtkSVMapInterpolator::vtkSVMapInterpolator()
+vtkSVSurfaceMapper::vtkSVSurfaceMapper()
 {
   // Three input ports
   this->SetNumberOfInputPorts(3);
@@ -90,7 +90,7 @@ vtkSVMapInterpolator::vtkSVMapInterpolator()
 // ----------------------
 // Destructor
 // ----------------------
-vtkSVMapInterpolator::~vtkSVMapInterpolator()
+vtkSVSurfaceMapper::~vtkSVSurfaceMapper()
 {
   if (this->SourceBaseDomainPd != NULL)
   {
@@ -138,7 +138,7 @@ vtkSVMapInterpolator::~vtkSVMapInterpolator()
 // ----------------------
 // PrintSelf
 // ----------------------
-void vtkSVMapInterpolator::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVSurfaceMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
   if (this->InternalIdsArrayName != NULL)
@@ -153,7 +153,7 @@ void vtkSVMapInterpolator::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVMapInterpolator::RequestData(vtkInformation *vtkNotUsed(request),
+int vtkSVSurfaceMapper::RequestData(vtkInformation *vtkNotUsed(request),
                                       vtkInformationVector **inputVector,
                                       vtkInformationVector *outputVector)
 {
@@ -205,7 +205,7 @@ int vtkSVMapInterpolator::RequestData(vtkInformation *vtkNotUsed(request),
 // ----------------------
 // RunFilter
 // ----------------------
-int vtkSVMapInterpolator::RunFilter()
+int vtkSVSurfaceMapper::RunFilter()
 {
   // set up temporary polydata to pass to filter
   vtkNew(vtkPolyData, tmpPd);
@@ -237,7 +237,7 @@ int vtkSVMapInterpolator::RunFilter()
 // ----------------------
 // PrepFilter
 // ----------------------
-int vtkSVMapInterpolator::PrepFilter()
+int vtkSVSurfaceMapper::PrepFilter()
 {
   vtkIdType numSourcePolys = this->SourceBaseDomainPd->GetNumberOfPolys();
   //Check the input to make sure it is there
@@ -300,7 +300,7 @@ int vtkSVMapInterpolator::PrepFilter()
 // ----------------------
 // MapSourceToTarget
 // ----------------------
-int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
+int vtkSVSurfaceMapper::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
                                             vtkPolyData *targetBaseDomainPd,
                                             vtkPolyData *originalTargetPd,
                                             vtkPolyData *sourceOnTargetPd)
@@ -373,7 +373,7 @@ int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
             // We found a bad cell delete this guy and try again
             int iter=0;
             int newCellId = -1;
-            vtkSVMapInterpolator::DeleteCellAndRefind(targetBaseDomainPd,
+            vtkSVSurfaceMapper::DeleteCellAndRefind(targetBaseDomainPd,
                                                       pt,
                                                       closestCell,
                                                       newCellId,
@@ -418,7 +418,7 @@ int vtkSVMapInterpolator::MapSourceToTarget(vtkPolyData *sourceBaseDomainPd,
 // ----------------------
 // DeleteCellAndRefind
 // ----------------------
-int vtkSVMapInterpolator::DeleteCellAndRefind(vtkPolyData *targetBaseDomainPd,
+int vtkSVSurfaceMapper::DeleteCellAndRefind(vtkPolyData *targetBaseDomainPd,
                                               double findPt[3],
                                               const int closeCellId,
                                               int &newCellId,
@@ -468,7 +468,7 @@ int vtkSVMapInterpolator::DeleteCellAndRefind(vtkPolyData *targetBaseDomainPd,
   {
     // We found a bad cell delete this guy and try again
     iter++;
-    vtkSVMapInterpolator::DeleteCellAndRefind(tmpPd,
+    vtkSVSurfaceMapper::DeleteCellAndRefind(tmpPd,
                                               findPt,
                                               closestCell,
                                               newCellId,
@@ -487,7 +487,7 @@ int vtkSVMapInterpolator::DeleteCellAndRefind(vtkPolyData *targetBaseDomainPd,
 // ----------------------
 // MatchBoundaries
 // ----------------------
-int vtkSVMapInterpolator::MatchBoundaries()
+int vtkSVSurfaceMapper::MatchBoundaries()
 {
   // Find boundary of target base domain
   int targetHasBoundary=0;
@@ -515,7 +515,7 @@ int vtkSVMapInterpolator::MatchBoundaries()
 // ----------------------
 // FindBoundary
 // ----------------------
-int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary, int &hasBoundary)
+int vtkSVSurfaceMapper::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary, int &hasBoundary)
 {
   // Set has boundary to 0
   hasBoundary = 0;
@@ -562,7 +562,7 @@ int vtkSVMapInterpolator::FindBoundary(vtkPolyData *pd, vtkIntArray *isBoundary,
 // ----------------------
 // MoveBoundaryPoints
 // ----------------------
-int vtkSVMapInterpolator::MoveBoundaryPoints()
+int vtkSVSurfaceMapper::MoveBoundaryPoints()
 {
   // Get number of points
   int numPoints = this->SourceBaseDomainPd->GetNumberOfPoints();
@@ -604,7 +604,7 @@ int vtkSVMapInterpolator::MoveBoundaryPoints()
 // ----------------------
 // GetPointOnTargetBoundary
 // ----------------------
-int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, double returnPt[3])
+int vtkSVSurfaceMapper::GetPointOnTargetBoundary(int srcPtId, int targCellId, double returnPt[3])
 {
   // Get the source point
   double srcPt[3];
@@ -666,7 +666,7 @@ int vtkSVMapInterpolator::GetPointOnTargetBoundary(int srcPtId, int targCellId, 
 // ----------------------
 // BoundaryPointsOnCell
 // ----------------------
-int vtkSVMapInterpolator::BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary)
+int vtkSVSurfaceMapper::BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, vtkIdList *boundaryPts, vtkIntArray *isBoundary)
 {
   // Initialize the number of boundaries
   int numBounds = 0;
@@ -715,7 +715,7 @@ int vtkSVMapInterpolator::BoundaryPointsOnCell(vtkPolyData *pd, int targCellId, 
  * @param *pd
  * @return
  */
-int vtkSVMapInterpolator::GetProjectedPoint(double pt0[3], double pt1[3], double projPt[3], double returnPt[3])
+int vtkSVSurfaceMapper::GetProjectedPoint(double pt0[3], double pt1[3], double projPt[3], double returnPt[3])
 {
   double vec0[3];
   double vec1[3];
@@ -741,7 +741,7 @@ int vtkSVMapInterpolator::GetProjectedPoint(double pt0[3], double pt1[3], double
  * @param *pd
  * @return
  */
-int vtkSVMapInterpolator::GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1)
+int vtkSVSurfaceMapper::GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1)
 {
   double dist[3];
   for (int i=0; i<3; i++)

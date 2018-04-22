@@ -30,6 +30,7 @@ set(VTKSV_LIBS
   vtkSVVMTK
   vtkSVBoolean
   vtkSVCommon
+  vtkSVIO
   vtkSVMisc
   vtkSVGeometry
   vtkSVNURBS

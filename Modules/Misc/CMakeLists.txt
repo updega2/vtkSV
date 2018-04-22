@@ -37,18 +37,15 @@ set(SRCS
   vtkSVFindSeparateRegions.cxx
   vtkSVGetBoundaryFaces.cxx
   vtkSVHausdorffDistance.cxx
-  vtkSVMapInterpolator.cxx
+  vtkSVSurfaceMapper.cxx
   vtkSVPassDataArray.cxx
-  vtkSVPullApartPolyData.cxx
   vtkSVPlacePointsOnS2.cxx
-  vtkSVCheckRotation.cxx
   vtkSVGetSphereRegions.cxx
-  vtkSVFillHolesFilterWithIds.cxx
+  vtkSVFillHolesWithIdsFilter.cxx
   vtkSVIntegrateFlowThroughSurface.cxx
-  vtkSVLoftPolyDataSolid.cxx
+  vtkSVLoftSplineSurface.cxx
   vtkSVIntegrateAttributes.cxx
   vtkSVSurfaceVectors.cxx
-  vtkSVBestFitPlane.cxx
   vtkSVPolyDataSurfaceInspector.cxx
   vtkSVCellComplexThinner.cxx
   vtkSVPolyDataEdgeSplitter.cxx
@@ -58,18 +55,15 @@ set(HDRS
   vtkSVFindSeparateRegions.h
   vtkSVGetBoundaryFaces.h
   vtkSVHausdorffDistance.h
-  vtkSVMapInterpolator.h
+  vtkSVSurfaceMapper.h
   vtkSVPassDataArray.cxx
-  vtkSVPullApartPolyData.h
   vtkSVPlacePointsOnS2.h
-  vtkSVCheckRotation.h
   vtkSVGetSphereRegions.h
-  vtkSVFillHolesFilterWithIds.h
+  vtkSVFillHolesWithIdsFilter.h
   vtkSVIntegrateFlowThroughSurface.h
-  vtkSVLoftPolyDataSolid.h
+  vtkSVLoftSplineSurface.h
   vtkSVIntegrateAttributes.h
   vtkSVSurfaceVectors.h
-  vtkSVBestFitPlane.h
   vtkSVPolyDataSurfaceInspector.h
   vtkSVCellComplexThinner.h
   vtkSVPolyDataEdgeSplitter.h

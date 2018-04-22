@@ -36,7 +36,7 @@
 #ifndef vtkSVPolyDataRawReader_h
 #define vtkSVPolyDataRawReader_h
 
-#include "vtkSVCommonModule.h" // For export macro
+#include "vtkSVIOModule.h" // For export macro
 #include "vtkPolyDataAlgorithm.h"
 
 class vtkCellArray;
@@ -44,7 +44,7 @@ class vtkFloatArray;
 class vtkIncrementalPointLocator;
 class vtkPoints;
 
-class VTKSVCOMMON_EXPORT vtkSVPolyDataRawReader : public vtkPolyDataAlgorithm
+class VTKSVIO_EXPORT vtkSVPolyDataRawReader : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVPolyDataRawReader,vtkPolyDataAlgorithm);

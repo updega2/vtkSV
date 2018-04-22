@@ -32,7 +32,7 @@
 
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkSVMapInterpolator.h"
+#include "vtkSVSurfaceMapper.h"
 #include "vtkSVPlanarMapper.h"
 #include "vtkSVPointSetBoundaryMapper.h"
 
@@ -888,7 +888,7 @@ int vtkSVParameterizeSurfaceOnPolycube::InterpolateMapOntoTarget(vtkPolyData *so
                                                          vtkPolyData *mappedPd,
                                                          std::string dataMatchingArrayName)
 {
-  vtkNew(vtkSVMapInterpolator, interpolator);
+  vtkNew(vtkSVSurfaceMapper, interpolator);
   interpolator->SetInputData(0, sourceBasePd);
   interpolator->SetInputData(1, targetPd);
   interpolator->SetInputData(2, targetBasePd);

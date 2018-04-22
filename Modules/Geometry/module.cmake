@@ -47,11 +47,13 @@ vtk_module(vtkSVGeometry
   vtkFiltersGeometry
   vtkFiltersModeling
   vtkSVCommon
+  vtkSVIO
   TEST_DEPENDS
   vtkInteractionStyle
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
   vtkSVCommon
+  vtkSVIO
   vtkTestingCore
   vtkTestingRendering
   ${EXTRA_TEST_DEPENDS}

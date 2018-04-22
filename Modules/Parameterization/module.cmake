@@ -53,6 +53,7 @@ vtk_module(vtkSVParameterization
   vtkFiltersGeometry
   vtkFiltersModeling
   vtkSVCommon
+  vtkSVIO
   ${EXTRA_DEPENDS}
   TEST_DEPENDS
   vtkFiltersExtraction
@@ -60,6 +61,7 @@ vtk_module(vtkSVParameterization
   vtkIOGeometry
   vtkIOXML
   vtkSVCommon
+  vtkSVIO
   ${EXTRA_TEST_DEPENDS}
   TCL_NAME
   vtkSVParameterization

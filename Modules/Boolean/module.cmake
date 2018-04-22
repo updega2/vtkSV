@@ -46,6 +46,7 @@ vtk_module(vtkSVBoolean
   vtkFiltersGeometry
   vtkFiltersModeling
   vtkSVCommon
+  vtkSVIO
   TEST_DEPENDS
   vtkInteractionStyle
   vtkRendering${VTK_RENDERING_BACKEND}

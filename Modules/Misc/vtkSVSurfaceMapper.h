@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVMapInterpolator
+ *  \class vtkSVSurfaceMapper
  *  \brief This is a filter to map a polydata to a target polydata given
  *  a paramterization of the target polydata is given and on the same base domain
  *  of the source polydata.
@@ -49,8 +49,8 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVMapInterpolator_h
-#define vtkSVMapInterpolator_h
+#ifndef vtkSVSurfaceMapper_h
+#define vtkSVSurfaceMapper_h
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
@@ -60,11 +60,11 @@
 #include <complex>
 #include <vector>
 
-class VTKSVMISC_EXPORT vtkSVMapInterpolator : public vtkPolyDataAlgorithm
+class VTKSVMISC_EXPORT vtkSVSurfaceMapper : public vtkPolyDataAlgorithm
 {
 public:
-  static vtkSVMapInterpolator* New();
-  //vtkTypeRevisionMacro(vtkSVMapInterpolator, vtkPolyDataAlgorithm);
+  static vtkSVSurfaceMapper* New();
+  //vtkTypeRevisionMacro(vtkSVSurfaceMapper, vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
   //@{
@@ -113,8 +113,8 @@ public:
 
   // Setup and Check Functions
 protected:
-  vtkSVMapInterpolator();
-  ~vtkSVMapInterpolator();
+  vtkSVSurfaceMapper();
+  ~vtkSVSurfaceMapper();
 
   // Usual data generation method
   /** \details Three inputs for this filter:
@@ -168,8 +168,8 @@ protected:
   int GetClosestTwoPoints(vtkPolyData *pd, double projPt[], vtkIdList *boundaryPts, int &ptId0, int &ptId1);
 
 private:
-  vtkSVMapInterpolator(const vtkSVMapInterpolator&);  // Not implemented.
-  void operator=(const vtkSVMapInterpolator&);  // Not implemented.
+  vtkSVSurfaceMapper(const vtkSVSurfaceMapper&);  // Not implemented.
+  void operator=(const vtkSVSurfaceMapper&);  // Not implemented.
 
   vtkPolyData *SourceBaseDomainPd;
   vtkPolyData *TargetPd;

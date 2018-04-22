@@ -29,74 +29,63 @@
  *=========================================================================*/
 
 /**
- * \class   vtkSVUnstructuredGridRawReader
- * \brief   read ASCII raw file
+ * \class   vtkSVRawWriter
+ * \brief   write ASCII raw file
 */
 
-#ifndef vtkSVUnstructuredGridRawReader_h
-#define vtkSVUnstructuredGridRawReader_h
+#ifndef vtkSVRawWriter_h
+#define vtkSVRawWriter_h
 
-#include "vtkSVCommonModule.h" // For export macro
-#include "vtkUnstructuredGridAlgorithm.h"
+#include "vtkSVIOModule.h" // For export macro
+#include "vtkWriter.h"
 
 class vtkCellArray;
-class vtkFloatArray;
-class vtkIncrementalPointLocator;
 class vtkPoints;
+class vtkPolyData;
 
-class VTKSVCOMMON_EXPORT vtkSVUnstructuredGridRawReader : public vtkUnstructuredGridAlgorithm
+class VTKSVIO_EXPORT vtkSVRawWriter : public vtkWriter
 {
 public:
-  vtkTypeMacro(vtkSVUnstructuredGridRawReader,vtkUnstructuredGridAlgorithm);
+  static vtkSVRawWriter *New();
+  vtkTypeMacro(vtkSVRawWriter,vtkWriter);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  //@{
   /**
-   * Construct object with merging set to true.
+   * Get the input to this writer.
    */
-  static vtkSVUnstructuredGridRawReader *New();
+  vtkPolyData* GetInput();
+  vtkPolyData* GetInput(int port);
+  //@}
 
   //@{
-  /** \brief Set/Get FileName. */
+  /**
+   * Specify file name of vtk polygon data file to write.
+   */
   vtkSetStringMacro(FileName);
   vtkGetStringMacro(FileName);
   //@}
 
-  //@{
-  /**
-   * Turn on/off merging of points/triangles.
-   */
-  vtkSetMacro(Merging,int);
-  vtkGetMacro(Merging,int);
-  vtkBooleanMacro(Merging,int);
-  //@}
-
-  //@{
-  /**
-   * Specify a spatial locator for merging points. By
-   * default an instance of vtkMergePoints is used.
-   */
-  void SetLocator(vtkIncrementalPointLocator *locator);
-  vtkGetObjectMacro(Locator,vtkIncrementalPointLocator);
-  //@}
-
 protected:
-  vtkSVUnstructuredGridRawReader();
-  ~vtkSVUnstructuredGridRawReader();
+  vtkSVRawWriter();
+  ~vtkSVRawWriter()
+  {
+    delete[] this->FileName;
+  }
 
-  /**
-   * Create default locator. Used to create one when none is specified.
-   */
-  vtkIncrementalPointLocator* NewDefaultLocator();
+  void WriteData();
 
-  char *FileName;
-  int Merging;
-  vtkIncrementalPointLocator *Locator;
+  void WriteRawFile(
+    vtkPoints *pts, vtkCellArray *cells);
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  int ReadRawFile(FILE *fp, vtkPoints*, vtkCellArray*);
+  char* FileName;
+
+  int FillInputPortInformation(int port, vtkInformation *info);
+
 private:
-  vtkSVUnstructuredGridRawReader(const vtkSVUnstructuredGridRawReader&);
-  void operator=(const vtkSVUnstructuredGridRawReader&);
+  vtkSVRawWriter(const vtkSVRawWriter&);
+  void operator=(const vtkSVRawWriter&);
 };
 
 #endif
+

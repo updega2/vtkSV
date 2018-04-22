@@ -53,9 +53,11 @@ vtk_module(vtkSVSegmentation
   vtkFiltersGeometry
   vtkFiltersModeling
   vtkSVCommon
+  vtkSVIO
   ${EXTRA_DEPENDS}
   TEST_DEPENDS
   vtkSVCommon
+  vtkSVIO
   vtkFiltersExtraction
   vtkIOXML
   vtkInteractionStyle

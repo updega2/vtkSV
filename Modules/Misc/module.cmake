@@ -49,9 +49,11 @@ vtk_module(vtkSVMisc
   vtkFiltersTexture
   vtkIOCore
   vtkSVCommon
+  vtkSVIO
   vtkRenderingCore
   TEST_DEPENDS
   vtkSVCommon
+  vtkSVIO
   vtkFiltersExtraction
   vtkIOXML
   vtkInteractionStyle

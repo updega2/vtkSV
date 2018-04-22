@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVFillHolesFilterWithIds.cxx
+/** @file vtkSVFillHolesWithIdsFilter.cxx
  *  @brief This is a filter to be able to apply ids to the surfaces that
  *  @brief fill the holes
  *
@@ -38,7 +38,7 @@
  *  @author shaddenlab.berkeley.edu
  */
 
-#include "vtkSVFillHolesFilterWithIds.h"
+#include "vtkSVFillHolesWithIdsFilter.h"
 
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -57,12 +57,12 @@
 // ----------------------
 // StandardNewMacro
 // ----------------------
-vtkStandardNewMacro(vtkSVFillHolesFilterWithIds);
+vtkStandardNewMacro(vtkSVFillHolesWithIdsFilter);
 
 // ----------------------
 // Constructor
 // ----------------------
-vtkSVFillHolesFilterWithIds::vtkSVFillHolesFilterWithIds()
+vtkSVFillHolesWithIdsFilter::vtkSVFillHolesWithIdsFilter()
 {
   this->FillType = VTK_NUM_FILLED;
   this->HoleSize = 1.0;
@@ -75,7 +75,7 @@ vtkSVFillHolesFilterWithIds::vtkSVFillHolesFilterWithIds()
 // ----------------------
 // Destructor
 // ----------------------
-vtkSVFillHolesFilterWithIds::~vtkSVFillHolesFilterWithIds()
+vtkSVFillHolesWithIdsFilter::~vtkSVFillHolesWithIdsFilter()
 {
   if (this->capIdArray)
   {
@@ -86,7 +86,7 @@ vtkSVFillHolesFilterWithIds::~vtkSVFillHolesFilterWithIds()
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVFillHolesFilterWithIds::RequestData(
+int vtkSVFillHolesWithIdsFilter::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
@@ -314,7 +314,7 @@ int vtkSVFillHolesFilterWithIds::RequestData(
 // ----------------------
 // PrintSelf
 // ----------------------
-void vtkSVFillHolesFilterWithIds::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVFillHolesWithIdsFilter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 
