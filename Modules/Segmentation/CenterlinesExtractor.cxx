@@ -179,22 +179,22 @@ int main(int argc, char *argv[])
     int allGood = 1;
     if (numOpenEdges > 0)
     {
-      fprintf(stderr,"The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile\n");
+      std::cerr << "The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile" << endl;
       allGood = 0;
     }
     if (numNonTriangleCells > 0)
     {
-      fprintf(stderr,"Surface contains non-triangle cells. Number of non-triangle cells: %d\n", numNonTriangleCells);
+      std::cerr << "Surface contains non-triangle cells. Number of non-triangle cells: " << numNonTriangleCells << endl;
       allGood = 0;
     }
     if (numNonManifoldEdges > 0)
     {
-      fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
+      std::cerr << "Surface contains non-manifold edges. Number of non-manifold edges: " << numNonManifoldEdges << endl;
       allGood = 0;
     }
     if (surfaceGenus > 0)
     {
-      fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
+      std::cerr <<  "Surface genus is greater than 0. Surface genus is: " << surfaceGenus << endl;
       allGood = 0;
     }
 
@@ -209,17 +209,17 @@ int main(int argc, char *argv[])
     int numSourceSeeds = pointPicker->GetSourceSeedIds()->GetNumberOfIds();
     int numTargetSeeds = pointPicker->GetTargetSeedIds()->GetNumberOfIds();
 
-    fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
-    fprintf(stdout,"  Source Seeds Ids: ");
+    std::cout <<"Number of Source Seeds: " << numSourceSeeds << endl;
+    std::cout <<"  Source Seeds Ids: " << endl;
     for (int i=0; i<numSourceSeeds; i++)
-      fprintf(stdout,"%d ", pointPicker->GetSourceSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
+      std::cout <<" " << pointPicker->GetSourceSeedIds()->GetId(i) << endl;
+    std::cout << endl;
 
-    fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
-    fprintf(stdout,"  Target Seeds Ids: ");
+    std::cout <<"Number of Target Seeds: " << numTargetSeeds << endl;
+    std::cout <<"  Target Seeds Ids: " << endl;
     for (int i=0; i<numTargetSeeds; i++)
-      fprintf(stdout,"%d ", pointPicker->GetTargetSeedIds()->GetId(i));
-    fprintf(stdout,"\n");
+      std::cout <<" " << pointPicker->GetTargetSeedIds()->GetId(i) << endl;
+    std::cout << endl;
 
     seedPointPicker = pointPicker;
   }
@@ -291,22 +291,22 @@ int main(int argc, char *argv[])
     int allGood = 1;
     if (numOpenEdges > 0)
     {
-      fprintf(stderr,"The surface has free edges, which means the capper did not work correctly, something must be wrong with the surface\n");
+      std::cerr << "The surface has free edges, which means the capper did not work correctly, something must be wrong with the surface" << endl;
       allGood = 0;
     }
     if (numNonTriangleCells > 0)
     {
-      fprintf(stderr,"Surface contains non-triangle cells. Number of non-triangle cells: %d\n", numNonTriangleCells);
+      std::cerr << "Surface contains non-triangle cells. Number of non-triangle cells: " << numNonTriangleCells << endl;
       allGood = 0;
     }
     if (numNonManifoldEdges > 0)
     {
-      fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
+      std::cerr << "Surface contains non-manifold edges. Number of non-manifold edges: " << numNonManifoldEdges << endl;
       allGood = 0;
     }
     if (surfaceGenus > 0)
     {
-      fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
+      std::cerr <<  "Surface genus is greater than 0. Surface genus is: " << surfaceGenus << endl;
       allGood = 0;
     }
 
@@ -324,17 +324,17 @@ int main(int argc, char *argv[])
       int numSourceSeeds = openProfilesPicker->GetSourceSeedIds()->GetNumberOfIds();
       int numTargetSeeds = openProfilesPicker->GetTargetSeedIds()->GetNumberOfIds();
 
-      fprintf(stdout,"Number of Source Seeds: %d\n", numSourceSeeds);
-      fprintf(stdout,"  Source Seeds Ids: ");
+      std::cout << "Number of Source Seeds: " << numSourceSeeds << endl;
+      std::cout << "  Source Seeds Ids: " << endl;
       for (int i=0; i<numSourceSeeds; i++)
-        fprintf(stdout,"%d ", openProfilesPicker->GetSourceSeedIds()->GetId(i));
-      fprintf(stdout,"\n");
+        std::cout << " " << openProfilesPicker->GetSourceSeedIds()->GetId(i) << endl;
+      std::cout << endl;
 
-      fprintf(stdout,"Number of Target Seeds: %d\n", numTargetSeeds);
-      fprintf(stdout,"  Target Seeds Ids: ");
+      std::cout << "Number of Target Seeds: " << numTargetSeeds << endl;
+      std::cout << "  Target Seeds Ids: " << endl;
       for (int i=0; i<numTargetSeeds; i++)
-        fprintf(stdout,"%d ", openProfilesPicker->GetTargetSeedIds()->GetId(i));
-      fprintf(stdout,"\n");
+        std::cout << " " << openProfilesPicker->GetTargetSeedIds()->GetId(i) << endl;
+      std::cout << endl;
 
       seedPointPicker = openProfilesPicker;
     }
@@ -356,22 +356,22 @@ int main(int argc, char *argv[])
 
     if (numOpenEdges > 0)
     {
-      fprintf(stderr,"The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile\n");
+      std::cerr << "The surface has free edges, which means the seedselector needs to be either openprofiles or maxradiusprofile " << endl;
       allGood = 0;
     }
     if (numNonTriangleCells > 0)
     {
-      fprintf(stderr,"Surface contains non-triangle cells. Number of non-triangle cells: %d\n", numNonTriangleCells);
+      std::cerr << "Surface contains non-triangle cells. Number of non-triangle cells: " << numNonTriangleCells << endl;
       allGood = 0;
     }
     if (numNonManifoldEdges > 0)
     {
-      fprintf(stderr,"Surface contains non-manifold edges. Number of non-manifold edges: %d\n", numNonManifoldEdges);
+      std::cerr << "Surface contains non-manifold edges. Number of non-manifold edges: " << numNonManifoldEdges << endl;
       allGood = 0;
     }
     if (surfaceGenus > 0)
     {
-      fprintf(stderr, "Surface genus is greater than 0. Surface genus is: %d\n", surfaceGenus);
+      std::cerr <<  "Surface genus is greater than 0. Surface genus is: " << surfaceGenus << endl;
       allGood = 0;
     }
 

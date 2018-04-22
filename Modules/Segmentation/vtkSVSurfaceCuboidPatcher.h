@@ -142,11 +142,6 @@ public:
 
   const static double GlobalCoords[3][3];
 
-  /** \brief Correct cells on the boundary by updating val if they have
-   *  multiple neighboring cells of the same value */
-  static int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
-                                           vtkIdList *targetRegions);
-
   /** \brief Naive implementation to get most reoccuring number in list. Okay
    *  because list size is small. */
   static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
@@ -183,12 +178,6 @@ public:
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
 
-  static int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
-
-  static int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
-                               std::vector<int> &cellBool,
-                               int &currRow, const int numRows,
-                               std::vector<int> &allCells);
 
 
 protected:
@@ -248,6 +237,18 @@ protected:
                  std::vector<int> badRegions);
   int FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName, int fixIters);
   int FixThinRegions(vtkPolyData *pd, std::string arrayName, int fixIters);
+
+  /** \brief Correct cells on the boundary by updating val if they have
+   *  multiple neighboring cells of the same value */
+  int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
+                                    vtkIdList *targetRegions);
+
+  int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
+
+  int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
+                               std::vector<int> &cellBool,
+                               int &currRow, const int numRows,
+                               std::vector<int> &allCells);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;

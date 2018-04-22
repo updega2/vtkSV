@@ -31,9 +31,11 @@
 #include "vtkSVGroupsSegmenter.h"
 
 #include "vtkSVCenterlineBranchSplitter.h"
+#include "vtkSVCenterlineMerger.h"
 #include "vtkSVCenterlineParallelTransportVectors.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVPolycubeGenerator.h"
 #include "vtkSVParameterizeSurfaceOnPolycube.h"
 #include "vtkSVParameterizeVolumeOnPolycube.h"
@@ -102,7 +104,7 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
   this->PolycubeDivisions = 5;
   this->PolycubeUnitLength = 0.0;
 
-  this->NormalsWeighting = 0.8;
+  this->NormalsWeighting = 0.6;
   this->IsVasculature = 1;
   this->NumberOfCenterlineRemovePts = 3;
   this->BoundaryEnforceFactor = 1;
@@ -405,28 +407,6 @@ int vtkSVGroupsSegmenter::RunFilter()
 
   this->MergedCenterlines->DeepCopy(parallelTransport->GetOutput());
 
-  vtkNew(vtkSVSurfaceCenterlineAttributesPasser, passer);
-  passer->SetInputData(this->WorkPd);
-  passer->SetPolycubePd(this->PolycubePd);
-  passer->SetMergedCenterlines(this->MergedCenterlines);
-  passer->SetUseRadiusInformation(this->UseRadiusInformation);
-  passer->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
-  passer->SetCenterlineGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
-  passer->SetCenterlineIdsArrayName("CenterlineIds");
-  passer->SetGroupIdsArrayName(this->GroupIdsArrayName);
-  passer->SetTractIdsArrayName("TractIds");
-  passer->SetPatchIdsArrayName("PatchIds");
-  passer->SetSlicePointsArrayName("SlicePoints");
-  passer->SetParallelTransportVectorArrayName("ParallelTransportVector");
-  passer->SetTransformedNormalsArrayName("NormalsTransformedToCenterlines");
-  passer->SetNormalsWeighting(this->NormalsWeighting);
-  passer->SetIsVasculature(this->IsVasculature);
-  passer->SetBoundaryEnforceFactor(this->BoundaryEnforceFactor);
-  passer->SetEnforceBoundaryDirections(this->EnforceBoundaryDirections);
-  passer->Update();
-
-  this->WorkPd->DeepCopy(passer->GetOutput());
-
   vtkNew(vtkSVSurfaceCuboidPatcher, patcher);
   patcher->SetInputData(this->WorkPd);
   patcher->SetPolycubePd(this->PolycubePd);
@@ -439,6 +419,11 @@ int vtkSVGroupsSegmenter::RunFilter()
   patcher->SetPatchIdsArrayName("PatchIds");
   patcher->SetSlicePointsArrayName("SlicePoints");
   patcher->SetClusteringVectorArrayName("NormalsTransformedToCenterlines");
+  patcher->SetParallelTransportVectorArrayName("ParallelTransportVector");
+  patcher->SetIsVasculature(this->IsVasculature);
+  patcher->SetNormalsWeighting(this->NormalsWeighting);
+  patcher->SetBoundaryEnforceFactor(this->BoundaryEnforceFactor);
+  patcher->EnforceBoundaryDirectionsOn();
   patcher->EnforcePolycubeConnectivityOn();
   patcher->Update();
 
@@ -486,109 +471,135 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
     this->Centerlines->DeepCopy(branchSplitter->GetOutput());
   }
 
-  fprintf(stdout,"Merging centerlines...\n");
-  vtkNew(vtkvmtkMergeCenterlines, merger);
-  merger->SetInputData(this->Centerlines);
-  merger->SetRadiusArrayName(this->CenterlineRadiusArrayName);
-  merger->SetGroupIdsArrayName(this->GroupIdsArrayName);
-  merger->SetCenterlineIdsArrayName("CenterlineIds");
-  merger->SetTractIdsArrayName("TractIds");
-  merger->SetBlankingArrayName(this->BlankingArrayName);
-  merger->SetResamplingStepLength(0.0);
-  merger->SetMergeBlanked(1);
-  merger->Update();
-
-  int numFullPts = merger->GetOutput()->GetNumberOfPoints();
-
-  vtkNew(vtkCleanPolyData, lineCleaner);
-  lineCleaner->SetInputData(merger->GetOutput());
-  lineCleaner->Update();
-
-  this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
-  this->MergedCenterlines->BuildLinks();
-
-  if (!this->IsVasculature)
+  vtkDebugMacro("Merging centerlines...");
+  int numFullPts;
+  if (this->UseVmtkClipping)
   {
-    int numRemove = this->NumberOfCenterlineRemovePts;
-    vtkNew(vtkPoints, newPoints);
-    vtkNew(vtkPointData, newPointData);
-    newPointData->CopyAllocate(this->MergedCenterlines->GetPointData(),
-                               numFullPts);
+    vtkNew(vtkvmtkMergeCenterlines, merger);
+    merger->SetInputData(this->Centerlines);
+    merger->SetRadiusArrayName(this->CenterlineRadiusArrayName);
+    merger->SetGroupIdsArrayName(this->GroupIdsArrayName);
+    merger->SetCenterlineIdsArrayName("CenterlineIds");
+    merger->SetTractIdsArrayName("TractIds");
+    merger->SetBlankingArrayName(this->BlankingArrayName);
+    merger->SetResamplingStepLength(0.0);
+    merger->SetMergeBlanked(1);
+    merger->Update();
 
-    vtkNew(vtkCellArray, newCells);
-    vtkNew(vtkCellData, newCellData);
-    newCellData->CopyAllocate(this->MergedCenterlines->GetCellData());
+    numFullPts = merger->GetOutput()->GetNumberOfPoints();
 
-    for (int i=0; i<this->MergedCenterlines->GetNumberOfCells(); i++)
-    {
-      vtkIdType npts, *pts;
-      this->MergedCenterlines->GetCellPoints(i, npts, pts);
+    vtkNew(vtkCleanPolyData, lineCleaner);
+    lineCleaner->SetInputData(merger->GetOutput());
+    lineCleaner->Update();
 
-      vtkNew(vtkIdList, point0CellIds);
-      this->MergedCenterlines->GetPointCells(pts[0], point0CellIds);
+    this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
+    this->MergedCenterlines->BuildLinks();
+  }
+  else
+  {
+    vtkNew(vtkSVCenterlineMerger, merger);
+    merger->SetInputData(this->Centerlines);
+    merger->SetRadiusArrayName(this->CenterlineRadiusArrayName);
+    merger->SetGroupIdsArrayName(this->GroupIdsArrayName);
+    merger->SetCenterlineIdsArrayName("CenterlineIds");
+    merger->SetTractIdsArrayName("TractIds");
+    merger->SetBlankingArrayName(this->BlankingArrayName);
+    merger->SetResamplingStepLength(0.0);
+    merger->SetMergeBlanked(1);
+    merger->Update();
 
-      vtkNew(vtkIdList, pointNCellIds);
-      this->MergedCenterlines->GetPointCells(pts[npts-1], pointNCellIds);
+    numFullPts = merger->GetOutput()->GetNumberOfPoints();
 
-      vtkNew(vtkPolyLine, newLine);
-      if (point0CellIds->GetNumberOfIds() > 1)
-      {
-        for (int j=0; j<numRemove; j++)
-        {
-          int newPointId = newPoints->InsertNextPoint(
-            this->MergedCenterlines->GetPoint(pts[j]));
+    vtkNew(vtkCleanPolyData, lineCleaner);
+    lineCleaner->SetInputData(merger->GetOutput());
+    lineCleaner->Update();
 
-          newLine->GetPointIds()->InsertNextId(newPointId);
-
-          newPointData->CopyData(this->MergedCenterlines->GetPointData(),
-            pts[j], newPointId);
-        }
-      }
-
-      for (int j=numRemove; j<npts-numRemove; j++)
-      {
-        int newPointId = newPoints->InsertNextPoint(
-          this->MergedCenterlines->GetPoint(pts[j]));
-        newLine->GetPointIds()->InsertNextId(newPointId);
-
-        newPointData->CopyData(this->MergedCenterlines->GetPointData(),
-          pts[j], newPointId);
-      }
-
-      if (pointNCellIds->GetNumberOfIds() > 1)
-      {
-        for (int j=numRemove; j>0; j--)
-        {
-          int newPointId = newPoints->InsertNextPoint(
-            this->MergedCenterlines->GetPoint(pts[npts-j]));
-          newLine->GetPointIds()->InsertNextId(newPointId);
-
-          newPointData->CopyData(this->MergedCenterlines->GetPointData(),
-            pts[npts-j], newPointId);
-        }
-      }
-
-      newCells->InsertNextCell(newLine);
-      newCellData->CopyData(this->MergedCenterlines->GetCellData(), i, i);
-    }
-
-    this->MergedCenterlines->Reset();
-    this->MergedCenterlines->SetPoints(newPoints);
-    this->MergedCenterlines->SetLines(newCells);
-
-    newPointData->Squeeze();
-    this->MergedCenterlines->GetPointData()->PassData(newPointData);
-    this->MergedCenterlines->GetCellData()->PassData(newCellData);
-
-    vtkNew(vtkCleanPolyData, cleaner);
-    cleaner->SetInputData(this->MergedCenterlines);
-    cleaner->Update();
-
-    this->MergedCenterlines->DeepCopy(cleaner->GetOutput());
+    this->MergedCenterlines->DeepCopy(lineCleaner->GetOutput());
     this->MergedCenterlines->BuildLinks();
   }
 
-  fprintf(stdout,"Merged\n");
+  //if (!this->IsVasculature)
+  //{
+  //  int numRemove = this->NumberOfCenterlineRemovePts;
+  //  vtkNew(vtkPoints, newPoints);
+  //  vtkNew(vtkPointData, newPointData);
+  //  newPointData->CopyAllocate(this->MergedCenterlines->GetPointData(),
+  //                             numFullPts);
+
+  //  vtkNew(vtkCellArray, newCells);
+  //  vtkNew(vtkCellData, newCellData);
+  //  newCellData->CopyAllocate(this->MergedCenterlines->GetCellData());
+
+  //  for (int i=0; i<this->MergedCenterlines->GetNumberOfCells(); i++)
+  //  {
+  //    vtkIdType npts, *pts;
+  //    this->MergedCenterlines->GetCellPoints(i, npts, pts);
+
+  //    vtkNew(vtkIdList, point0CellIds);
+  //    this->MergedCenterlines->GetPointCells(pts[0], point0CellIds);
+
+  //    vtkNew(vtkIdList, pointNCellIds);
+  //    this->MergedCenterlines->GetPointCells(pts[npts-1], pointNCellIds);
+
+  //    vtkNew(vtkPolyLine, newLine);
+  //    if (point0CellIds->GetNumberOfIds() > 1)
+  //    {
+  //      for (int j=0; j<numRemove; j++)
+  //      {
+  //        int newPointId = newPoints->InsertNextPoint(
+  //          this->MergedCenterlines->GetPoint(pts[j]));
+
+  //        newLine->GetPointIds()->InsertNextId(newPointId);
+
+  //        newPointData->CopyData(this->MergedCenterlines->GetPointData(),
+  //          pts[j], newPointId);
+  //      }
+  //    }
+
+  //    for (int j=numRemove; j<npts-numRemove; j++)
+  //    {
+  //      int newPointId = newPoints->InsertNextPoint(
+  //        this->MergedCenterlines->GetPoint(pts[j]));
+  //      newLine->GetPointIds()->InsertNextId(newPointId);
+
+  //      newPointData->CopyData(this->MergedCenterlines->GetPointData(),
+  //        pts[j], newPointId);
+  //    }
+
+  //    if (pointNCellIds->GetNumberOfIds() > 1)
+  //    {
+  //      for (int j=numRemove; j>0; j--)
+  //      {
+  //        int newPointId = newPoints->InsertNextPoint(
+  //          this->MergedCenterlines->GetPoint(pts[npts-j]));
+  //        newLine->GetPointIds()->InsertNextId(newPointId);
+
+  //        newPointData->CopyData(this->MergedCenterlines->GetPointData(),
+  //          pts[npts-j], newPointId);
+  //      }
+  //    }
+
+  //    newCells->InsertNextCell(newLine);
+  //    newCellData->CopyData(this->MergedCenterlines->GetCellData(), i, i);
+  //  }
+
+  //  this->MergedCenterlines->Reset();
+  //  this->MergedCenterlines->SetPoints(newPoints);
+  //  this->MergedCenterlines->SetLines(newCells);
+
+  //  newPointData->Squeeze();
+  //  this->MergedCenterlines->GetPointData()->PassData(newPointData);
+  //  this->MergedCenterlines->GetCellData()->PassData(newCellData);
+
+  //  vtkNew(vtkCleanPolyData, cleaner);
+  //  cleaner->SetInputData(this->MergedCenterlines);
+  //  cleaner->Update();
+
+  //  this->MergedCenterlines->DeepCopy(cleaner->GetOutput());
+  //  this->MergedCenterlines->BuildLinks();
+  //}
+
+  vtkDebugMacro("Merged");
 
   return SV_OK;
 }

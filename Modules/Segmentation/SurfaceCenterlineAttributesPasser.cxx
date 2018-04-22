@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   int enforceBoundaryDirections = 0;
   int boundaryEnforceFactor = 1;
 
-  double normalsWeighting = 0.8;
+  double normalsWeighting = 0.6;
 
   std::string groupIdsArrayName = "GroupIds";
   std::string radiusArrayName   = "MaximumInscribedSphereRadius";

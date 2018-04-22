@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
   int useAbsoluteMergeDistance = 0;
 
   double polycubeUnitLength = 0.0;
-  double normalsWeighting = 0.8;
+  double normalsWeighting = 0.6;
   double clipValue = 0.0;
   double cutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   double mergeDistance = 0.1;

@@ -105,7 +105,7 @@ vtkSVSurfaceCenterlineAttributesPasser::vtkSVSurfaceCenterlineAttributesPasser()
   this->EnforceBoundaryDirections = 0;
   this->UseRadiusInformation = 1;
 
-  this->NormalsWeighting = 0.8;
+  this->NormalsWeighting = 0.6;
   this->IsVasculature = 1;
   this->BoundaryEnforceFactor = 1;
 }
@@ -505,7 +505,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
     int branchNumberOfCells = branchPd->GetNumberOfCells();
     // Loop through points to evaluate function at each point
-    fprintf(stdout,"Computing closest centerline points per cell of group %d...\n", groupId);
+    vtkDebugMacro("Computing closest centerline points per cell of group " << groupId);
 
     vtkIdType nlinepts, *linepts;
     int centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
@@ -710,7 +710,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
     for (int i=0; i<numGroups; i++)
     {
       int groupId = groupIds->GetId(i);
-      fprintf(stdout,"ENFORCING BOUNDARY OF GROUP: %d\n", groupId);
+      vtkDebugMacro("ENFORCING BOUNDARY OF GROUP: " << groupId);
 
       vtkNew(vtkPolyData, branchPd);
       vtkSVGeneralUtils::ThresholdPd(this->WorkPd, groupId, groupId, 1,
@@ -740,7 +740,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       int branchNumberOfCells = branchPd->GetNumberOfCells();
 
       // Loop through points to evaluate function at each point
-      fprintf(stdout,"Computing boundary vectors of group %d...\n", groupId);
+      vtkDebugMacro("Computing boundary vectors of group " << groupId);
 
       vtkIdType nlinepts, *linepts;
       int centerlineId = this->MergedCenterlines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(groupId);
@@ -777,7 +777,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         centerlinePCoords->SetTuple1(realCellId, newPCoord);
       }
 
-      fprintf(stdout,"MAX: %.6f MIN: %.6f\n", maxPCoord, minPCoord);
+      vtkDebugMacro("MAX: " << maxPCoord << " MIN:" << minPCoord);
       // Do boundary cell stuffs
       // Get open boundary edges
       std::vector<int> openCornerPoints;
@@ -839,7 +839,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           branchPd->GetCellEdgeNeighbors(-1, branchPtId0, branchPtId1, firstCellId);
           if (firstCellId->GetNumberOfIds() != 1)
           {
-            fprintf(stderr,"Something went wrong here\n");
+            vtkErrorMacro("Something went wrong here");
             return SV_OK;
           }
           int realCellId0 = branchPd->GetCellData()->GetArray("TmpInternalIds")->
@@ -847,13 +847,13 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           double firstAngularVal = branchPdWithData->GetPointData()->GetArray("AngularPCoord")->
             GetTuple1(branchPtId0);
           //double firstAngularVal = angularPCoords->GetTuple1(realCellId0);
-          fprintf(stdout,"FIRST POINT ID: %.6f\n", firstAngularVal);
+          vtkDebugMacro("FIRST POINT ID: " <<  firstAngularVal);
 
           vtkNew(vtkIdList, lastCellId);
           branchPd->GetCellEdgeNeighbors(-1, branchPtIdN, branchPtIdNm1, lastCellId);
           if (lastCellId->GetNumberOfIds() != 1)
           {
-            fprintf(stderr,"Something went wrong here\n");
+            vtkErrorMacro("Something went wrong here");
             return SV_OK;
           }
           int realCellIdN = branchPd->GetCellData()->GetArray("TmpInternalIds")->
@@ -861,7 +861,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           double lastAngularVal = branchPdWithData->GetPointData()->GetArray("AngularPCoord")->
             GetTuple1(branchPtIdN);
           //double lastAngularVal = angularPCoords->GetTuple1(realCellIdN);
-          fprintf(stdout,"LAST POINT ID: %.6f\n", lastAngularVal);
+          vtkDebugMacro("LAST POINT ID: " << lastAngularVal);
 
           if (edgePtId0 == -1 || edgePtIdN == -1)
           {
@@ -885,8 +885,8 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
             return SV_ERROR;
           }
 
-          fprintf(stdout,"POLY POINT ID 0: %d\n", polyPtId0);
-          fprintf(stdout,"POLY POINT ID N: %d\n", polyPtIdN);
+          vtkDebugMacro("POLY POINT ID 0: " << polyPtId0);
+          vtkDebugMacro("POLY POINT ID N: " << polyPtIdN);
           vtkNew(vtkIdList, polyCellId);
           vtkNew(vtkIdList, cellPointIds);
           cellPointIds->SetNumberOfIds(2);
@@ -916,7 +916,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
             if (splitCellId->GetNumberOfIds() != 1)
             {
-              fprintf(stderr,"Something went wrong here\n");
+              vtkErrorMacro("Something went wrong here");
               return SV_OK;
             }
 
@@ -1015,18 +1015,18 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
           tmpSortAngles->InsertNextTuple1(allAngleBounds[j][k][0]);
           angleIndices->InsertNextId(k);
         }
-        fprintf(stdout,"ANGLE LIST BEFORE 0: ");
+        vtkDebugMacro("ANGLE LIST BEFORE 0: ");
         for (int k=0; k<allAngleBounds[j].size(); k++)
         {
-          fprintf(stdout," %.6f", allAngleBounds[j][k][0]);
+          vtkDebugMacro(" " <<  allAngleBounds[j][k][0]);
         }
-        fprintf(stdout,"\n");
-        fprintf(stdout,"ANGLE LIST BEFORE 1: ");
+        vtkDebugMacro("\n");
+        vtkDebugMacro("ANGLE LIST BEFORE 1: ");
         for (int k=0; k<allAngleBounds[j].size(); k++)
         {
-          fprintf(stdout," %.6f", allAngleBounds[j][k][1]);
+          vtkDebugMacro(" " <<  allAngleBounds[j][k][1]);
         }
-        fprintf(stdout,"\n");
+        vtkDebugMacro("\n");
 
         vtkSortDataArray::Sort(tmpSortAngles, angleIndices);
         std::vector<std::vector<double> > newAngleBounds = allAngleBounds[j];
@@ -1071,18 +1071,18 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
 
           newPatchValues[k] = allPatchValues[j][listIndex];
         }
-        fprintf(stdout,"ANGLE LIST AFTER 0: ");
+        vtkDebugMacro("ANGLE LIST AFTER 0: ");
         for (int k=0; k<newAngleBounds.size(); k++)
         {
-          fprintf(stdout," %.6f", newAngleBounds[k][0]);
+          vtkDebugMacro(" " <<  newAngleBounds[k][0]);
         }
-        fprintf(stdout,"\n");
-        fprintf(stdout,"ANGLE LIST AFTER 1: ");
+        vtkDebugMacro("\n");
+        vtkDebugMacro("ANGLE LIST AFTER 1: ");
         for (int k=0; k<newAngleBounds.size(); k++)
         {
-          fprintf(stdout," %.6f", newAngleBounds[k][1]);
+          vtkDebugMacro(" " <<  newAngleBounds[k][1]);
         }
-        fprintf(stdout,"\n");
+        vtkDebugMacro("\n");
 
         //for (int k=0; k<newAngleBounds.size(); k++)
         //{
@@ -1110,7 +1110,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       this->GetCellDirectNeighbors(branchPd, cellNeighbors, numCellNeighbors);
 
       double maxPCoordThr = 1.0*this->BoundaryEnforceFactor/nlinepts;
-      fprintf(stdout,"BOUNDARY ENFORCE FACTOR: %.6f\n", maxPCoordThr);
+      vtkDebugMacro("BOUNDARY ENFORCE FACTOR: " <<  maxPCoordThr);
       double pCoordThr = 0.01;
       double begVessel = 0.0;
       double endVessel = 1.0;
@@ -1148,13 +1148,6 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
                     patchVal = allPatchValues[listIter][k];
                     break;
                   }
-                  //else if (angularVal > allAngleBounds[listIter][k][1] &&
-                  //         angularVal < allAngleBounds[listIter][(k+1)%thisSize][0])
-                  //{
-                  //  fprintf(stdout,"NEED TO PICK ONE!!\n");
-                  //  patchVal = allPatchValues[listIter][k];
-                  //  break;
-                  //}
                 }
                 else
                 {
@@ -1164,13 +1157,6 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
                     patchVal = allPatchValues[listIter][k];
                     break;
                   }
-                  //else if (angularVal > allAngleBounds[listIter][k][1] &&
-                  //         angularVal < allAngleBounds[listIter][(k+1)%thisSize][0])
-                  //{
-                  //  fprintf(stdout,"NEED TO PICK ONE!!\n");
-                  //  patchVal = allPatchValues[listIter][k];
-                  //  break;
-                  //}
                 }
               }
 
@@ -1525,7 +1511,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::SplitEdgeList(vtkPolyData *branchPd,
   int isFirstSlicePoint = branchPd->GetPointData()->GetArray(this->SlicePointsArrayName)->GetTuple1(openEdges[0]);
   if (isFirstSlicePoint != 1)
   {
-    fprintf(stderr,"First point is not a slice point for edge split\n");
+    vtkErrorMacro("First point is not a slice point for edge split");
     return SV_ERROR;
   }
 
@@ -1573,7 +1559,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::SplitEdgeList(vtkPolyData *branchPd,
 
   if (splitOpenEdges.size() != 4)
   {
-    fprintf(stderr,"There should be four edges, but got %d\n", splitOpenEdges.size());
+    vtkErrorMacro("There should be four edges, but got " << splitOpenEdges.size());
     return SV_ERROR;
   }
 
