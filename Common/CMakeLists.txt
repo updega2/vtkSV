@@ -36,24 +36,14 @@ set(SRCS
   vtkSVGeneralUtils.cxx
   vtkSVSparseMatrix.cxx
   vtkSVMathUtils.cxx
-  vtkSVCleanUnstructuredGrid.cxx
   vtkSVRenderer.cxx
-  vtkSVSeedSelector.cxx
-  vtkSVPickPointSeedSelector.cxx
-  vtkSVOpenProfilesSeedSelector.cxx
-  vtkSVIdListSeedSelector.cxx
   )
 set(HDRS
   vtkSVGeneralUtils.h
   vtkSVSparseMatrix.h
   vtkSVMathUtils.h
   vtkSVGlobals.h
-  vtkSVCleanUnstructuredGrid.h
   vtkSVRenderer.h
-  vtkSVSeedSelector.cxx
-  vtkSVPickPointSeedSelector.h
-  vtkSVOpenProfilesSeedSelector.h
-  vtkSVIdListSeedSelector.h
   )
 #------------------------------------------------------------------------------
 

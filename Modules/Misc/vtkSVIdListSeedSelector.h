@@ -36,7 +36,7 @@
 
 //#include "vtkvmtkComputationalGeometryWin32Header.h"
 #include "vtkvmtkWin32Header.h"
-#include "vtkSVCommonModule.h" // For exports
+#include "vtkSVMiscModule.h" // For exports
 
 #include "vtkUnstructuredGrid.h"
 
@@ -45,7 +45,7 @@ class vtkPoints;
 class vtkIdList;
 class vtkDataArray;
 
-class VTKSVCOMMON_EXPORT vtkSVIdListSeedSelector : public vtkSVSeedSelector
+class VTKSVMISC_EXPORT vtkSVIdListSeedSelector : public vtkSVSeedSelector
 {
   public:
   vtkTypeMacro(vtkSVIdListSeedSelector,vtkPolyDataAlgorithm);

@@ -28,8 +28,8 @@
  *
  *=========================================================================*/
 
-#ifndef vtkSVPickPointSeedSelector_h
-#define vtkSVPickPointSeedSelector_h
+#ifndef vtkSVOpenProfilesSeedSelector_h
+#define vtkSVOpenProfilesSeedSelector_h
 
 #include "vtkSVSeedSelector.h"
 #include "vtkIdList.h"
@@ -37,7 +37,7 @@
 
 //#include "vtkvmtkComputationalGeometryWin32Header.h"
 #include "vtkvmtkWin32Header.h"
-#include "vtkSVCommonModule.h" // For exports
+#include "vtkSVMiscModule.h" // For exports
 
 #include "vtkUnstructuredGrid.h"
 
@@ -46,38 +46,30 @@ class vtkPoints;
 class vtkIdList;
 class vtkDataArray;
 
-class VTKSVCOMMON_EXPORT vtkSVPickPointSeedSelector : public vtkSVSeedSelector
+class VTKSVMISC_EXPORT vtkSVOpenProfilesSeedSelector : public vtkSVSeedSelector
 {
   public:
-  vtkTypeMacro(vtkSVPickPointSeedSelector,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVOpenProfilesSeedSelector,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  static vtkSVPickPointSeedSelector *New();
+  vtkSetObjectMacro(SeedIds, vtkIdList);
+  vtkGetObjectMacro(SeedIds, vtkIdList);
 
-  void InitializeSeeds();
-
-  static void PickCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) );
-
-  static void UndoCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) );
+  static vtkSVOpenProfilesSeedSelector *New();
 
   protected:
-  vtkSVPickPointSeedSelector();
-  ~vtkSVPickPointSeedSelector();
+  vtkSVOpenProfilesSeedSelector();
+  ~vtkSVOpenProfilesSeedSelector();
 
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
 
-  vtkPolyData *PickedSeeds;
-
-  vtkIdList* PickedSeedIds;
+  vtkIdList* SeedIds;
 
   vtkSVRenderer *SVRenderer;
 
-  vtkCallbackCommand *UndoCallbackCommand;
-  vtkCallbackCommand *PickCallbackCommand;
-
   private:
-  vtkSVPickPointSeedSelector(const vtkSVPickPointSeedSelector&);  // Not implemented.
-  void operator=(const vtkSVPickPointSeedSelector&);  // Not implemented.
+  vtkSVOpenProfilesSeedSelector(const vtkSVOpenProfilesSeedSelector&);  // Not implemented.
+  void operator=(const vtkSVOpenProfilesSeedSelector&);  // Not implemented.
 };
 
 #endif

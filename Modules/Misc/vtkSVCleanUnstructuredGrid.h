@@ -30,11 +30,11 @@
 #ifndef vtkSVCleanUnstructuredGrid_h
 #define vtkSVCleanUnstructuredGrid_h
 
-#include "vtkSVCommonModule.h" //needed for exports
+#include "vtkSVMiscModule.h" //needed for exports
 #include "vtkUnstructuredGridAlgorithm.h"
 #include "vtkIncrementalPointLocator.h"
 
-class VTKSVCOMMON_EXPORT vtkSVCleanUnstructuredGrid
+class VTKSVMISC_EXPORT vtkSVCleanUnstructuredGrid
   : public vtkUnstructuredGridAlgorithm
 {
 public:

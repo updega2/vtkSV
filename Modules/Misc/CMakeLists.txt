@@ -33,6 +33,7 @@ set(module vtkSVMisc)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
+  vtkSVCleanUnstructuredGrid.cxx
   vtkSVFindGeodesicPath.cxx
   vtkSVFindSeparateRegions.cxx
   vtkSVGetBoundaryFaces.cxx
@@ -49,8 +50,13 @@ set(SRCS
   vtkSVPolyDataSurfaceInspector.cxx
   vtkSVCellComplexThinner.cxx
   vtkSVPolyDataEdgeSplitter.cxx
+  vtkSVSeedSelector.cxx
+  vtkSVPickPointSeedSelector.cxx
+  vtkSVOpenProfilesSeedSelector.cxx
+  vtkSVIdListSeedSelector.cxx
   )
 set(HDRS
+  vtkSVCleanUnstructuredGrid.h
   vtkSVFindGeodesicPath.h
   vtkSVFindSeparateRegions.h
   vtkSVGetBoundaryFaces.h
@@ -67,6 +73,10 @@ set(HDRS
   vtkSVPolyDataSurfaceInspector.h
   vtkSVCellComplexThinner.h
   vtkSVPolyDataEdgeSplitter.h
+  vtkSVSeedSelector.cxx
+  vtkSVPickPointSeedSelector.h
+  vtkSVOpenProfilesSeedSelector.h
+  vtkSVIdListSeedSelector.h
   )
 #------------------------------------------------------------------------------
 
