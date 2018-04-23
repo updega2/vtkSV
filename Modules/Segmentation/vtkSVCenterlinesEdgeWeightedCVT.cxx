@@ -59,6 +59,7 @@ vtkSVCenterlinesEdgeWeightedCVT::vtkSVCenterlinesEdgeWeightedCVT()
   this->UseRadiusInformation = 1;
   this->UseCurvatureWeight = 1;
   this->UsePointNormal = 1;
+  this->CellSearchRadius = 0.0;
 }
 
 // ----------------------
@@ -97,7 +98,6 @@ void vtkSVCenterlinesEdgeWeightedCVT::PrintSelf(ostream& os, vtkIndent indent)
 // ----------------------
 int vtkSVCenterlinesEdgeWeightedCVT::InitializeConnectivity()
 {
-  vtkDebugMacro("In here\n");
   //this->Superclass::InitializeConnectivity();
 
   //int numCells = this->WorkGenerators->GetNumberOfCells();
@@ -126,6 +126,7 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
     this->DistanceFunction->SetPolyBallRadiusArrayName(this->CenterlineRadiusArrayName);
     this->DistanceFunction->SetUseRadiusInformation(this->UseRadiusInformation);
     this->DistanceFunction->SetUsePointNormal(this->UsePointNormal);
+    this->DistanceFunction->SetCellSearchRadius(this->CellSearchRadius);
     this->DistanceFunction->FastEvaluateOn();
     this->DistanceFunction->PreprocessInputForFastEvaluate();
     //this->DistanceFunction->SetUseProjectionVector(1);
@@ -168,19 +169,37 @@ int vtkSVCenterlinesEdgeWeightedCVT::InitializeGenerators()
       vtkNew(vtkIdList, groupId);
       groupId->SetNumberOfIds(1);
 
-      double dist = this->DistanceFunction->EvaluateFunction(center);
-      int lastCellId = this->DistanceFunction->GetLastPolyBallCellId();
-      if (lastCellId != -1)
+      int lastCellId;
+
+      int maxIters = 10;
+      int iter = 0;
+      int allGood = 0;
+
+      while (!allGood && iter < maxIters + 1)
       {
-        cellGenerator = this->WorkGenerators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(lastCellId);
+        allGood = 1;
+
+        double normalThreshold = -0.1* (double) iter;
+        this->DistanceFunction->SetPointNormalThreshold(normalThreshold);
+        this->DistanceFunction->EvaluateFunction(center);
+        lastCellId = this->DistanceFunction->GetLastPolyBallCellId();
+        if (lastCellId == -1)
+        {
+          allGood = 0;
+          vtkWarningMacro("Could not find close point with normal threshold of " << normalThreshold);
+        }
+        iter++;
       }
+
+      if (!allGood)
+      {
+        vtkErrorMacro("Could not find a centerline point close to cell " << i);
+        return SV_ERROR;
+      }
+
+      cellGenerator = this->WorkGenerators->GetCellData()->GetArray(this->GroupIdsArrayName)->GetTuple1(lastCellId);
 
       this->PatchIdsArray->SetTuple1(i, cellGenerator);
-
-      if (i%1000 == 0)
-      {
-        vtkDebugMacro("  ATT: " << i);
-      }
     }
   }
   else if (this->UsePointArray)

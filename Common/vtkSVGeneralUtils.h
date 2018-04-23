@@ -27,11 +27,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVGeneralUtils
- *  \brief This is a class of purely static functions and no member data.
- *  It is essentially a compilation of useful and simple functions to be called
+ *  \brief This is a class of purely static functions.
+ *  It is a compilation of useful and simple functions to be called
  *  anywhere in code base.
  *
  *  \author Adam Updegrove
@@ -422,23 +421,6 @@ public:
    *  It has three components as there are three angles per cell.
    *  return SV_OK */
   static int GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles);
-
-  //@{
-  /** \brief Convenience functions for multimaps. Not sure how long I'll keep
-   *  these.
-   *  return SV_OK */
-  static int GetAllMapKeys(std::multimap<int, int> &map, std::list<int> &list);
-  static int GetAllMapValues(std::multimap<int, int> &map, std::list<int> &list);
-  static int GetValuesFromMap(std::multimap<int, int> &map, const int key, std::list<int> &list);
-  static int GetKeysFromMap(std::multimap<int, int> &map, const int value, std::list<int> &list);
-  static int GetCommonValues(std::multimap<int, int> &map, const int keyA,
-                             const int keyB, std::list<int> &returnList);
-  static int GetUniqueNeighbors(std::multimap<int, int> &map, const int key, std::list<int> &keyVals,
-                                std::list<int> &uniqueKeys);
-  static int ListIntersection(std::list<int> &listA,
-                              std::list<int> &listB,
-                              std::list<int> &returnList);
-  //@}
 
 protected:
   vtkSVGeneralUtils();

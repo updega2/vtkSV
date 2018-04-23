@@ -383,6 +383,17 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
   {
     int stopCellNumber = ceil(this->WorkPd->GetNumberOfCells()*0.0001);
 
+    double maxRadius = -1.0;
+    for (int j=0; j<this->MergedCenterlines->GetNumberOfPoints(); j++)
+    {
+      double radVal = this->MergedCenterlines->GetPointData()->GetArray(this->CenterlineRadiusArrayName)->GetTuple1(j);
+
+      if (radVal > maxRadius)
+      {
+        maxRadius = radVal;
+      }
+    }
+
     vtkDebugMacro("CALLING CLUSTERER");
     vtkNew(vtkSVCenterlinesEdgeWeightedCVT, CVT);
     CVT->SetInputData(this->WorkPd);
@@ -397,25 +408,35 @@ int vtkSVSurfaceCenterlineGrouper::RunFilter()
     CVT->SetUseRadiusInformation(this->UseRadiusInformation);
     CVT->SetUsePointNormal(1);
     CVT->SetMaximumNumberOfIterations(0);
+    CVT->SetCellSearchRadius(maxRadius);
     CVT->Update();
+
+    if (CVT->GetErrorCode() != 0)
+    {
+      vtkErrorMacro("Error in getting cluster regions. Make sure centerlines are correct for model");
+      return SV_ERROR;
+    }
 
     this->WorkPd->DeepCopy(CVT->GetOutput());
     vtkDebugMacro("DONE WITH CLUSTERING");
 
   }
 
+  vtkDebugMacro("CORRECTING CELL BOUNDARIES");
   if (this->CorrectCellBoundaries(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro("Could not correcto boundaries of surface");
     return SV_ERROR;
   }
 
+  vtkDebugMacro("REMOVING POSSIBLE NEGATIVE GROUPS");
   if (vtkSVSurfaceCenterlineGrouper::RemoveNegativeGroups(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro("Couldn't remove negative group regions");
     return SV_ERROR;
   }
 
+  vtkDebugMacro("REMOVING DUPLICATE GROUPS");
   if (vtkSVSurfaceCenterlineGrouper::RemoveDuplicateGroups(this->WorkPd, this->GroupIdsArrayName) != SV_OK)
   {
     vtkErrorMacro("Couldn't remove duplicate group regions");
@@ -1161,7 +1182,6 @@ int vtkSVSurfaceCenterlineGrouper::GetRegions(vtkPolyData *pd, std::string array
     allRegions[i].NumberOfCorners = tempCornerPoints.size();
     //vtkDebugMacro("NUM CORNS: " << allRegions[i].NumberOfCorners << " OF GROUP " <<  allRegions[i].IndexCluster);
 
-
     vtkNew(vtkIdList, uniqueCornerPoints);
     if (allRegions[i].NumberOfCorners != 0)
     {
@@ -1251,7 +1271,7 @@ int vtkSVSurfaceCenterlineGrouper::GetRegions(vtkPolyData *pd, std::string array
               count = 1;
               j = -1;
 
-              // Need to cellId to be first in the odd case where the corner point is a two-time corner point
+              // Need the cellId to be first in the odd case where the corner point is a two-time corner point
               vtkNew(vtkIdList, addCells);
               addCells->InsertNextId(cellId);
               vtkSVSurfaceCenterlineGrouper::GetPointEdgeCells(pd, arrayName, cellId, pointCCWId, addCells);
@@ -1690,12 +1710,14 @@ int vtkSVSurfaceCenterlineGrouper::CheckGroups(vtkPolyData *pd)
 // ----------------------
 int vtkSVSurfaceCenterlineGrouper::RemoveNegativeGroups(vtkPolyData *pd, std::string arrayName)
 {
+  vtkDebugMacro("BEF");
   std::vector<Region> groupRegions;
   if (vtkSVSurfaceCenterlineGrouper::GetRegions(pd, arrayName, groupRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get group regions");
     return SV_ERROR;
   }
+  vtkDebugMacro("AFT");
 
   std::vector<int> badPatches;
   vtkNew(vtkIdList, checkGroupValues);
@@ -4810,9 +4832,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
       radiusRatio = avgRadiusValues[i]/avgRadiusValues[frontNeighbors->GetId(j)];
       if (radiusRatio >= 5.0)
       {
-        vtkWarningMacro("Vessels have too large of a size scale difference " << radiusRatio << ".");
-        //vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
-        //return SV_ERROR;
+        //vtkWarningMacro("Vessels have too large of a size scale difference " << radiusRatio << ".");
+        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        return SV_ERROR;
       }
     }
     for (int j=0; j<backNeighbors->GetNumberOfIds(); j++)
@@ -4822,9 +4844,9 @@ int vtkSVSurfaceCenterlineGrouper::CheckPolycubeEnforcePossible()
       radiusRatio = avgRadiusValues[i]/avgRadiusValues[backNeighbors->GetId(j)];
       if (radiusRatio >= 5.0)
       {
-        vtkWarningMacro("Vessels have too large of a size scale difference " << radiusRatio << ".");
-        //vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
-        //return SV_ERROR;
+        //vtkWarningMacro("Vessels have too large of a size scale difference " << radiusRatio << ".");
+        vtkErrorMacro("Vessels have too large of a size scale difference " << radiusRatio << ". Model will not be processed");
+        return SV_ERROR;
       }
     }
   }

@@ -61,6 +61,7 @@ public:
   vtkGetMacro(NumberOfRings, int);
   vtkSetMacro(NumberOfRings, int);
   //@}
+
   //@{
   /// \brief Set a threshold criteria. Default is 2 transferred groups.
   vtkGetMacro(EdgeWeight, double);

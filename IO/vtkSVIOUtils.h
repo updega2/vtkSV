@@ -58,7 +58,6 @@ class VTKSVIO_EXPORT vtkSVIOUtils : public vtkObject
 public:
   vtkTypeMacro(vtkSVIOUtils,vtkObject);
 
-
   /// \brief Check directory exists
   static int CheckDirectoryExists(std::string dirname);
 
@@ -70,7 +69,6 @@ public:
   static std::string GetPath(std::string fullName); /**< \brief Gets filename path. */
   static std::string GetRawName(std::string fullName); /**< \brief Gets filename raw name without extension. */
   static std::string GetExt(std::string fullName); /**< \brief Gets filename extension (e.g. vtp). */
-
 
   //Read Write functions for stl, vtp
   /** \brief read an stl file. */

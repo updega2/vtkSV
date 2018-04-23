@@ -82,6 +82,12 @@ public:
   vtkGetMacro(UsePointNormal,int);
   vtkBooleanMacro(UsePointNormal,int);
   //@}
+
+  //@{
+  vtkGetMacro(CellSearchRadius, double);
+  vtkSetMacro(CellSearchRadius, double);
+  //@}
+
 protected:
   vtkSVCenterlinesEdgeWeightedCVT();
   ~vtkSVCenterlinesEdgeWeightedCVT();
@@ -104,6 +110,7 @@ private:
   int UseRadiusInformation;
   int UseCurvatureWeight;
   int UsePointNormal;
+  double CellSearchRadius;
 
   char *GroupIdsArrayName;
   char *BlankingArrayName;

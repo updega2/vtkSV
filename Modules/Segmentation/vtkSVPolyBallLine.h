@@ -29,6 +29,7 @@ Version:   $Revision: 1.4 $
 #include "vtkImplicitFunction.h"
 #include "vtkPolyData.h"
 #include "vtkPointLocator.h"
+#include "vtkCellLocator.h"
 #include "vtkIdList.h"
 
 #include "vtkSVGlobals.h"
@@ -125,9 +126,15 @@ public:
   //@}
 
   //@{
-  /// \brief Use given normal for directional help
+  /// \brief
   vtkSetMacro(PointNormalThreshold,double);
   vtkGetMacro(PointNormalThreshold,double);
+  //@}
+
+  //@{
+  /// \brief
+  vtkSetMacro(CellSearchRadius,double);
+  vtkGetMacro(CellSearchRadius,double);
   //@}
 
   //@{
@@ -160,6 +167,7 @@ protected:
   vtkIdType InputCellId;
 
   vtkPointLocator *PointLocator;
+  vtkCellLocator  *CellLocator;
 
   vtkIdType LastPolyBallCellId;
   vtkIdType LastPolyBallCellSubId;
@@ -177,6 +185,7 @@ protected:
   double LastLocalCoordY[3];
   double LastLocalCoordZ[3];
   double PointNormal[3];
+  double CellSearchRadius;
 
   std::vector<std::vector<int> > BifurcationPointCellsVector;
   std::vector<std::vector<int> > CellPointsVector;

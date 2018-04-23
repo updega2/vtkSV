@@ -55,6 +55,8 @@ vtkSVPolyBallLine::vtkSVPolyBallLine()
   this->UseLocalCoordinates = 0;
   this->FastEvaluate = 0;
   this->PointLocator = vtkPointLocator::New();
+  this->CellLocator = vtkCellLocator::New();
+  this->CellSearchRadius = 0.0;
 
   for (int i=0; i<3; i++)
   {
@@ -242,6 +244,12 @@ void vtkSVPolyBallLine::BuildLocator()
 
   this->PointLocator->SetDataSet(bifurcationPointsPd);
   this->PointLocator->BuildLocator();
+
+  if (this->CellSearchRadius > 0.0)
+  {
+    this->CellLocator->SetDataSet(this->Input);
+    this->CellLocator->BuildLocator();
+  }
 }
 
 // ----------------------
@@ -385,6 +393,29 @@ double vtkSVPolyBallLine::EvaluateFunction(double x[3])
           for (int b=0; b<this->BifurcationPointCellsVector[ptId].size(); b++)
           {
             cellIds->InsertUniqueId(this->BifurcationPointCellsVector[ptId][b]);
+          }
+        }
+
+        if (this->CellSearchRadius > 0.0)
+        {
+          if (this->CellLocator->GetDataSet()->GetNumberOfCells() == 0)
+          {
+            vtkErrorMacro("Need to set the cell search radius prior to the call to PreprocessInputForFastEvaluate()");
+            return SV_ERROR;
+          }
+          double bounds[6];
+          bounds[0] = x[0] - this->CellSearchRadius;
+          bounds[1] = x[0] + this->CellSearchRadius;
+          bounds[2] = x[1] - this->CellSearchRadius;
+          bounds[3] = x[1] + this->CellSearchRadius;
+          bounds[4] = x[2] - this->CellSearchRadius;
+          bounds[5] = x[2] + this->CellSearchRadius;
+          vtkNew(vtkIdList, inRadiusCellIds);
+          this->CellLocator->FindCellsWithinBounds(bounds, inRadiusCellIds);
+
+          for (int p=0; p<inRadiusCellIds->GetNumberOfIds(); p++)
+          {
+            cellIds->InsertUniqueId(inRadiusCellIds->GetId(p));
           }
         }
       }

@@ -44,7 +44,8 @@ set(SRCS vtkSVNURBSUtils.cxx
   vtkSVNURBSCollection.cxx
   vtkSVMUPFESNURBSWriter.cxx
   vtkSVPERIGEENURBSWriter.cxx
-  vtkSVPERIGEENURBSCollectionWriter.cxx)
+  vtkSVPERIGEENURBSCollectionWriter.cxx
+  )
 set(HDRS vtkSVNURBSUtils.h
   vtkSVControlGrid.h
   vtkSVNURBSObject.h
@@ -57,7 +58,8 @@ set(HDRS vtkSVNURBSUtils.h
   vtkSVNURBSCollection.h
   vtkSVMUPFESNURBSWriter.h
   vtkSVPERIGEENURBSWriter.h
-  vtkSVPERIGEENURBSCollectionWriter.h)
+  vtkSVPERIGEENURBSCollectionWriter.h
+  )
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------

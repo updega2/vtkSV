@@ -64,6 +64,7 @@ double vtkSVMathUtils::InnerProduct(const double a[], const double b[], int n, d
   product = 0.0;
   for (int c = 0; c < n; c++)
     product += a[c] * b[c];
+  return product;
 }
 
 // ----------------------

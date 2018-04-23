@@ -48,7 +48,7 @@ class VTKSVIO_EXPORT vtkSVRawWriter : public vtkWriter
 public:
   static vtkSVRawWriter *New();
   vtkTypeMacro(vtkSVRawWriter,vtkWriter);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /**
@@ -73,14 +73,14 @@ protected:
     delete[] this->FileName;
   }
 
-  void WriteData();
+  void WriteData() override;
 
   void WriteRawFile(
     vtkPoints *pts, vtkCellArray *cells);
 
   char* FileName;
 
-  int FillInputPortInformation(int port, vtkInformation *info);
+  int FillInputPortInformation(int port, vtkInformation *info) override;
 
 private:
   vtkSVRawWriter(const vtkSVRawWriter&);

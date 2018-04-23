@@ -30,7 +30,7 @@
  *=========================================================================*/
 /**
  *  \class  vtkSVMathUtils
- *  \brief This is class of useful functions for doing specialized math operation.
+ *  \brief This is class of useful functions for doing specialized math operations.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com

@@ -50,12 +50,19 @@
 #include <stdexcept>
 #include <string>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVUnstructuredGridRawReader);
 
+// ----------------------
+// SetObjectMacro
+// ----------------------
 vtkCxxSetObjectMacro(vtkSVUnstructuredGridRawReader, Locator, vtkIncrementalPointLocator);
 
-//------------------------------------------------------------------------------
-// Construct object with merging set to true.
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVUnstructuredGridRawReader::vtkSVUnstructuredGridRawReader()
 {
   this->FileName = NULL;
@@ -65,14 +72,18 @@ vtkSVUnstructuredGridRawReader::vtkSVUnstructuredGridRawReader()
   this->SetNumberOfInputPorts(0);
 }
 
-//------------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVUnstructuredGridRawReader::~vtkSVUnstructuredGridRawReader()
 {
   this->SetFileName(0);
   this->SetLocator(0);
 }
 
-//------------------------------------------------------------------------------
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVUnstructuredGridRawReader::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **vtkNotUsed(inputVector),
@@ -184,7 +195,9 @@ int vtkSVUnstructuredGridRawReader::RequestData(
   return 1;
 }
 
-//------------------------------------------------------------------------------
+// ----------------------
+// ReadRawFile
+// ----------------------
 int vtkSVUnstructuredGridRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
                                 vtkCellArray *newCells)
 {
@@ -257,15 +270,19 @@ int vtkSVUnstructuredGridRawReader::ReadRawFile(FILE *fp, vtkPoints *newPts,
   return true;
 }
 
-//------------------------------------------------------------------------------
-// Specify a spatial locator for merging points. By
-// default an instance of vtkMergePoints is used.
+// ----------------------
+// NewDefaultLocator
+// ----------------------
+/** \brief Specify a spatial locator for merging points. By
+ * default an instance of vtkMergePoints is used. */
 vtkIncrementalPointLocator* vtkSVUnstructuredGridRawReader::NewDefaultLocator()
 {
   return vtkMergePoints::New();
 }
 
-//------------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVUnstructuredGridRawReader::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);

@@ -47,15 +47,24 @@
 # include <io.h> /* unlink */
 #endif
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVRawWriter);
 
 static char header[]="Visualization Toolkit generated SLA File                                        ";
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVRawWriter::vtkSVRawWriter()
 {
   this->FileName = NULL;
 }
 
+// ----------------------
+// WriteData
+// ----------------------
 void vtkSVRawWriter::WriteData()
 {
   vtkPoints *pts;
@@ -100,6 +109,9 @@ void vtkSVRawWriter::WriteData()
   }
 }
 
+// ----------------------
+// WriteRawFile
+// ----------------------
 void vtkSVRawWriter::WriteRawFile(
   vtkPoints *pts, vtkCellArray *cells)
 {
@@ -165,7 +177,9 @@ void vtkSVRawWriter::WriteRawFile(
   fclose (fp);
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVRawWriter::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
@@ -176,19 +190,25 @@ void vtkSVRawWriter::PrintSelf(ostream& os, vtkIndent indent)
   os << indent << "Input: " << this->GetInput() << std::endl;
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// GetInput
+// ----------------------
 vtkPolyData* vtkSVRawWriter::GetInput()
 {
   return vtkPolyData::SafeDownCast(this->GetInput(0));
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// GetInput
+// ----------------------
 vtkPolyData* vtkSVRawWriter::GetInput(int port)
 {
   return vtkPolyData::SafeDownCast(this->Superclass::GetInput(port));
 }
 
-//----------------------------------------------------------------------------
+// ----------------------
+// FillInputPortInformation
+// ----------------------
 int vtkSVRawWriter::FillInputPortInformation(int, vtkInformation *info)
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");

@@ -48,7 +48,7 @@ class VTKSVIO_EXPORT vtkSVUnstructuredGridRawReader : public vtkUnstructuredGrid
 {
 public:
   vtkTypeMacro(vtkSVUnstructuredGridRawReader,vtkUnstructuredGridAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /**
    * Construct object with merging set to true.
@@ -92,7 +92,7 @@ protected:
   int Merging;
   vtkIncrementalPointLocator *Locator;
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
   int ReadRawFile(FILE *fp, vtkPoints*, vtkCellArray*);
 private:
   vtkSVUnstructuredGridRawReader(const vtkSVUnstructuredGridRawReader&);

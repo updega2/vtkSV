@@ -47,7 +47,7 @@ class VTKSVNURBS_EXPORT vtkSVPERIGEENURBSCollectionWriter : public vtkAlgorithm
 public:
   static vtkSVPERIGEENURBSCollectionWriter *New();
   vtkTypeMacro(vtkSVPERIGEENURBSCollectionWriter,vtkAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /**

@@ -31,6 +31,7 @@
 #include "vtkSVGeneralCVT.h"
 
 #include "vtkCellData.h"
+#include "vtkErrorCode.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
@@ -148,12 +149,14 @@ int vtkSVGeneralCVT::RequestData(vtkInformation *vtkNotUsed(request),
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Error in preprocessing the polydata\n");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Error when running main operation\n");
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 

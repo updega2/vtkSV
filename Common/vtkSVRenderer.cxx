@@ -42,8 +42,14 @@
 
 #include <algorithm>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVRenderer);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVRenderer::vtkSVRenderer()
 {
   this->WindowSize[0] = 1600; this->WindowSize[1] = 1600;
@@ -109,6 +115,9 @@ vtkSVRenderer::vtkSVRenderer()
   this->CurrentTextInput = NULL;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVRenderer::~vtkSVRenderer()
 {
   if (this->Renderer != NULL)
@@ -158,6 +167,9 @@ vtkSVRenderer::~vtkSVRenderer()
   }
 }
 
+// ----------------------
+// Render
+// ----------------------
 int vtkSVRenderer::Render(int interactive)
 {
   if (interactive)
@@ -184,6 +196,9 @@ int vtkSVRenderer::Render(int interactive)
   return SV_OK;
 }
 
+// ----------------------
+// AddKeyBinding
+// ----------------------
 int vtkSVRenderer::AddKeyBinding(std::string key, std::string text,
                                  vtkCallbackCommand *callback, std::string group)
 {
@@ -198,6 +213,9 @@ int vtkSVRenderer::AddKeyBinding(std::string key, std::string text,
   return SV_OK;
 }
 
+// ----------------------
+// RemovKeyBinding
+// ----------------------
 int vtkSVRenderer::RemoveKeyBinding(std::string key)
 {
   std::vector<int> deleteList;
@@ -218,6 +236,9 @@ int vtkSVRenderer::RemoveKeyBinding(std::string key)
   return SV_OK;
 }
 
+// ----------------------
+// PromptAsync
+// ----------------------
 int vtkSVRenderer::PromptAsync(std::string queryText, vtkCallbackCommand *callback)
 {
   this->SetTextInputQuery(queryText.c_str());
@@ -228,6 +249,9 @@ int vtkSVRenderer::PromptAsync(std::string queryText, vtkCallbackCommand *callba
   return SV_OK;
 }
 
+// ----------------------
+// EnterTextInputMode
+// ----------------------
 int vtkSVRenderer::EnterTextInputMode(int interactive)
 {
   this->SetCurrentTextInput("");
@@ -240,6 +264,9 @@ int vtkSVRenderer::EnterTextInputMode(int interactive)
   return SV_OK;
 }
 
+// ----------------------
+// ExitTextInputMode
+// ----------------------
 int vtkSVRenderer::ExitTextInputMode()
 {
   this->Renderer->RemoveActor(this->TextInputActor);
@@ -256,11 +283,18 @@ int vtkSVRenderer::ExitTextInputMode()
   return SV_OK;
 }
 
+// ----------------------
+// Close
+// ----------------------
 int vtkSVRenderer::Close()
 {
   this->RenderWindowInteractor->TerminateApp();
+  return SV_OK;
 }
 
+// ----------------------
+// ResetCameraCallback
+// ----------------------
 void vtkSVRenderer::ResetCameraCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
 {
    vtkSVRenderer* parent =
@@ -270,6 +304,9 @@ void vtkSVRenderer::ResetCameraCallback( vtkObject* caller, long unsigned int vt
   parent->RenderWindow->Render();
 }
 
+// ----------------------
+// QuitRendererCallback
+// ----------------------
 void vtkSVRenderer::QuitRendererCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
 {
    vtkSVRenderer* parent =
@@ -280,6 +317,9 @@ void vtkSVRenderer::QuitRendererCallback( vtkObject* caller, long unsigned int v
   parent->RenderWindowInteractor->ExitCallback();
 }
 
+// ----------------------
+// KeyPressCallback
+// ----------------------
 void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int eventId, void* clientData, void* callData )
 {
   std::cout << "Keypress callback" << std::endl;
@@ -367,6 +407,9 @@ void vtkSVRenderer::KeyPressCallback( vtkObject* caller, long unsigned int event
   }
 }
 
+// ----------------------
+// UpdateTextInput
+// ----------------------
 void vtkSVRenderer::UpdateTextInput()
 {
   if (this->TextInputQuery != NULL)
@@ -392,11 +435,17 @@ void vtkSVRenderer::UpdateTextInput()
   this->RenderWindow->Render();
 }
 
+// ----------------------
+// CharCallback
+// ----------------------
 void vtkSVRenderer::CharCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* vtkNotUsed(clientData), void* vtkNotUsed(callData) )
 {
   return;
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVRenderer::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);

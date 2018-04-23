@@ -49,7 +49,7 @@ class VTKSVNURBS_EXPORT vtkSVMUPFESNURBSWriter : public vtkWriter
 public:
   static vtkSVMUPFESNURBSWriter *New();
   vtkTypeMacro(vtkSVMUPFESNURBSWriter,vtkWriter);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /**
