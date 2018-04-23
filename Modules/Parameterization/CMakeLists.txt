@@ -40,6 +40,7 @@ set(SRCS
   vtkSVPointSetBoundaryMapper.cxx
   vtkSVParameterizeSurfaceOnPolycube.cxx
   vtkSVParameterizeVolumeOnPolycube.cxx
+  vtkSVSphericalMapper.cxx
   )
 
 set(HDRS
@@ -50,17 +51,8 @@ set(HDRS
   vtkSVPointSetBoundaryMapper.h
   vtkSVParameterizeSurfaceOnPolycube.h
   vtkSVParameterizeVolumeOnPolycube.h
+  vtkSVSphericalMapper.h
   )
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# Filters addition
-set(EXTRA_LIBRARIES "")
-if(VTKSV_BUILD_MISC)
-  set(EXTRA_LIBRARIES ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVMISC_NAME})
-  set(SRCS ${SRCS} vtkSVSphericalMapper.cxx)
-  set(HDRS ${HDRS} vtkSVSphericalMapper.h)
-endif()
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -125,9 +117,9 @@ if(VTKSV_BUILD_EXES)
     set(EXE_LIST ${EXE_LIST} SphericalMapper)
   endif()
   foreach(exe ${EXE_LIST})
-    add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVPARAMETERIZATION_NAME} ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVCOMMON_NAME})
-    install(TARGETS ${exe}
+    add_executable(vtkSV${exe} ${exe}.cxx)
+    target_link_libraries(vtkSV${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVPARAMETERIZATION_NAME} ${EXTRA_LIBRARIES} ${SV_LIB_VTKSVCOMMON_NAME})
+    install(TARGETS vtkSV${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()
 endif()

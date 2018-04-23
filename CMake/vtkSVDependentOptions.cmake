@@ -24,41 +24,26 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-set(DOCUMENTATION "A module containing code to parameterize and arbitrary input vasular surface.")
-
-#------------------------------------------------------------------------------
-# NURBS addition
-set(EXTRA_TEST_DEPENDS "")
-if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
-  set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
+if(VTKSV_BUILD_MODULE_SEGMENTATION)
+  message(STATUS "Forcing Module ThirdParty VMTK to be built because Segmentation module is being built")
+  set(VTKSV_BUILD_THIRDPARTY_VMTK ON CACHE BOOL "Force VMTK ON" FORCE)
+  message(STATUS "Forcing Module Misc to be built because Segmentation module is being built")
+  set(VTKSV_BUILD_MODULE_MISC ON CACHE BOOL "Force Misc ON" FORCE)
+  message(STATUS "Forcing Module NURBS to be built because Segmentation module is being built")
+  set(VTKSV_BUILD_MODULE_NURBS ON CACHE BOOL "Force NURBS ON" FORCE)
+  message(STATUS "Forcing Module Parameterization to be built because Segmentation module is being built")
+  set(VTKSV_BUILD_MODULE_PARAMETERIZATION ON CACHE BOOL "Force NURBS ON" FORCE)
 endif()
-#------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------
-# Module depends
-vtk_module(vtkSVParameterization
-  DESCRIPTION
-  "${DOCUMENTATION}"
-  DEPENDS
-  vtkCommonDataModel
-  vtkCommonExecutionModel
-  vtkFiltersCore
-  vtkFiltersGeometry
-  vtkFiltersModeling
-  vtkSVCommon
-  vtkSVIO
-  vtkSVMisc
-  vtkSVNURBS
-  ${EXTRA_DEPENDS}
-  TEST_DEPENDS
-  vtkFiltersExtraction
-  vtkTestingCore
-  vtkIOGeometry
-  vtkIOXML
-  vtkSVCommon
-  vtkSVIO
-  ${EXTRA_TEST_DEPENDS}
-  TCL_NAME
-  vtkSVParameterization
-  )
-#------------------------------------------------------------------------------
+if(VTKSV_BUILD_MODULE_PARAMETERIZATION)
+  message(STATUS "Forcing Module Misc to be built because Parameterization module is being built")
+  set(VTKSV_BUILD_MODULE_MISC ON CACHE BOOL "Force Misc ON" FORCE)
+  message(STATUS "Forcing Module NURBS to be built because Parameterization module is being built")
+  set(VTKSV_BUILD_MODULE_NURBS ON CACHE BOOL "Force NURBS ON" FORCE)
+endif()
+
+if(VTKSV_BUILD_MODULE_NURBS)
+  message(STATUS "Forcing Module Misc to be built because NURBS module is being built")
+  set(VTKSV_BUILD_MODULE_MISC ON CACHE BOOL "Force Misc ON" FORCE)
+endif()
+

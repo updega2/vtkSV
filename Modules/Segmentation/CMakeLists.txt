@@ -137,10 +137,15 @@ if(VTKSV_BUILD_EXES)
   set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
     GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger PolycubeGenerator SurfaceCenterlineGrouper SurfaceCenterlineAttributesPasser SurfaceCuboidPatcher)
   foreach(exe ${EXE_LIST})
-    add_executable(${exe} ${exe}.cxx)
-    target_link_libraries(${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}
-      ${SV_LIB_VTKSVCOMMON_NAME})
-    install(TARGETS ${exe}
+    add_executable(vtkSV${exe} ${exe}.cxx)
+    target_link_libraries(vtkSV${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}
+      ${SV_LIB_VTKSVCOMMON_NAME}
+      ${SV_LIB_VTKSVMISC_NAME}
+      ${SV_LIB_VTKSVVMTK_NAME}
+      ${SV_LIB_VTKSVPARAMETERIZATION_NAME}
+      ${SV_LIB_VTKSVNURBS_NAME}
+      )
+    install(TARGETS vtkSV${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)
   endforeach()
 endif()

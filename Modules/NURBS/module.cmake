@@ -52,6 +52,7 @@ vtk_module(vtkSVNURBS
   vtkInteractionStyle
   vtkRendering${VTK_RENDERING_BACKEND}
   vtkRenderingLabel
+  vtkSVMisc
   vtkTestingCore
   vtkTestingRendering
   ${EXTRA_TEST_DEPENDS}

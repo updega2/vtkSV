@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \file Boolean.cxx
+ *  \file PolyDataBoolean.cxx
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -96,12 +96,12 @@ int main(int argc, char *argv[])
   {
     cout << endl;
     cout << "usage:" <<endl;
-    cout << "  SliceAndDice -input [Input Filename] -centerlines [Centerlines Filename] -output [Output Filename] ..." << endl;
+    cout << "  PolyDataBoolean -input0 [Input 0 Filename] -input1 [Input 1 Filename] -operation [Operation to perform] -output [Output Filename] ..." << endl;
     cout << endl;
     cout << "COMMAND-LINE ARGUMENT SUMMARY" << endl;
     cout << "  -h                  : Display usage and command-line argument summary"<< endl;
     cout << "  -input0             : First surface input file name (.vtp or .stl)"<< endl;
-    cout << "  -input1             : Second surface input file name (.vtp)"<< endl;
+    cout << "  -input1             : Second surface input file name (.vtp or .stl)"<< endl;
     cout << "  -output             : Output file name"<< endl;
     cout << "  -operation          : Operation to perform: 0 - Union, 1 - Intersection, 2 - Difference."<< endl;
     cout << "  -tolerance          : Tolerance for the boolean operation [default 1.0e-6]"<< endl;

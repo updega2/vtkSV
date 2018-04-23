@@ -45,7 +45,6 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
-#include "vtkSVPolyBallLine.h"
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkIdList.h"

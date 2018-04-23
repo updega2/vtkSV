@@ -38,8 +38,6 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkInteractorStyleTrackballCamera.h"
 #include "vtkTextActor.h"
-//#include "vtkvmtkComputationalGeometryWin32Header.h"
-#include "vtkvmtkWin32Header.h"
 #include "vtkSVCommonModule.h" // For exports
 
 #include <vector>

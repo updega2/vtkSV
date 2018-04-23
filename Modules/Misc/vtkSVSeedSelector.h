@@ -35,8 +35,6 @@
 #include "vtkSVRenderer.h"
 #include "vtkIdList.h"
 
-//#include "vtkvmtkComputationalGeometryWin32Header.h"
-#include "vtkvmtkWin32Header.h"
 #include "vtkSVMiscModule.h" // For exports
 
 #include "vtkUnstructuredGrid.h"

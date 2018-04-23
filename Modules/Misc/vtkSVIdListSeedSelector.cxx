@@ -29,8 +29,6 @@
  *=========================================================================*/
 
 #include "vtkSVIdListSeedSelector.h"
-#include "vtkvmtkCenterlineSphereDistance.h"
-#include "vtkvmtkPolyBallLine.h"
 #include "vtkCellPicker.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkInformation.h"
