@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVGetSphereRegions
  *  \brief This filter is intended purely for geometries with a branching
@@ -35,7 +34,7 @@
  *  geometry. It will find the boundary between these regions, find a centroid
  *  of the branching region, create a sphere around the branching region,
  *  and set the value to 1 in an output data array within this sphere region.
- *  Cells with the different data is given with CellArrayName.
+ *  CellArrayName holds the array that indicates whether a cell is in the sphere region..
  *  Points defining a boundary should be indicated with the PointArrayName. This
  *  can be easily found using the vtkSVFindSeparateRegionsFilter.
  *
@@ -48,15 +47,16 @@
 #ifndef vtkSVGetSphereRegions_h
 #define vtkSVGetSphereRegions_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
+
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVGetSphereRegions : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVGetSphereRegions* New();
   vtkTypeMacro(vtkSVGetSphereRegions, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Array name defining the separate branches.
@@ -87,7 +87,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   /** \brief Sets the arrays using the given CellArrayName and PointArrayName. */
   int GetArrays(vtkPolyData *object,int type);

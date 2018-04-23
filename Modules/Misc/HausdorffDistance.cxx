@@ -130,6 +130,12 @@ int main(int argc, char *argv[])
   Distancer->SetDistanceArrayName("Distance");
   Distancer->Update();
 
+  if (Distancer->GetErrorCode() != 0)
+  {
+    std::cerr << "Error in filter" << endl;
+    return EXIT_FAILURE;
+  }
+
   std::cout<<"Hausdorff Distance: "<<Distancer->GetHausdorffDistance()<<endl;
   std::cout<<"Average Distance:   "<<Distancer->GetAverageDistance()<<endl;
   //Write Files

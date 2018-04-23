@@ -4,6 +4,7 @@
 #include "vtkDataObject.h"
 #include "vtkDoubleArray.h"
 #include "vtkEdgeTable.h"
+#include "vtkErrorCode.h"
 #include "vtkFeatureEdges.h"
 #include "vtkIdList.h"
 #include "vtkObjectFactory.h"
@@ -42,9 +43,11 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
 
   input->BuildLinks();
 
+  // get number of points
   int numPts = input->GetNumberOfPoints();
   this->NumberOfPoints = input->GetNumberOfPoints();
 
+  // get number of cells
   int numPolys = input->GetNumberOfCells();
   this->NumberOfElements = input->GetNumberOfCells();
 
@@ -52,11 +55,13 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
   vtkNew(vtkEdgeTable, surfaceEdgeTable);
   surfaceEdgeTable->InitEdgeInsertion(numPts, 1);
 
+  // Loop through polys to get edge stats
   this->NumberOfOpenEdges = 0;
   this->NumberOfNonTriangularElements = 0;
   this->NumberOfNonManifoldEdges = 0;
   for (int i=0; i<numPolys; i++)
   {
+    // get cell points
     vtkIdType npts, *pts;
     input->GetCellPoints(i, npts, pts);
     if (npts != 3)
@@ -72,10 +77,12 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
       vtkNew(vtkIdList, edgeNeighbor);
       input->GetCellEdgeNeighbors(i, p0, p1, edgeNeighbor);
 
+      // if there isn't a neighbor, we have an open edge
       if (edgeNeighbor->GetNumberOfIds() == 0)
       {
         this->NumberOfOpenEdges++;
       }
+      // if there is more than one neighbor, we have a non-manifold edge
       if (edgeNeighbor->GetNumberOfIds() > 1)
       {
         this->NumberOfNonManifoldEdges++;
@@ -91,6 +98,7 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
     }
   }
 
+  // Now that we have edge table, calculate other surface stats
   int ne = surfaceEdgeTable->GetNumberOfEdges();
   int nv = numPts;
   int nf = numPolys;
@@ -122,6 +130,7 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
         vtkWarningMacro("Feature edges and manual processing detected different number of open edges");
       }
 
+      // Use Euler characteristic modified by the number of open boundaries to get genus of surface
       nv = nv + numHoles;
       nf = nf + numBoundaryLines;
       ne = ne + numBoundaryLines;
@@ -135,6 +144,7 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
   }
   else
   {
+    // If water-tight surface, use Euler characteristic to get genus
     if (this->NumberOfNonManifoldEdges == 0)
     {
       this->SurfaceGenus = ((ne - nv - nf)/2) + 1;
@@ -145,6 +155,7 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
     }
   }
 
+  // Check the number of connected regions
   if (this->CheckNumberOfConnectedRegions)
   {
     vtkNew(vtkConnectivityFilter, connector);
@@ -155,6 +166,7 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
     this->NumberOfConnectedRegions = connector->GetNumberOfExtractedRegions();
   }
 
+  // Check the number of holes
   if (this->CheckNumberOfHoles)
   {
     vtkNew(vtkFeatureEdges, featureEdges);
@@ -174,4 +186,28 @@ int vtkSVPolyDataSurfaceInspector::RequestData(
   }
 
   return SV_OK;
+}
+
+// ----------------------
+// PrintSelf
+// ----------------------
+void vtkSVPolyDataSurfaceInspector::PrintSelf(ostream& os, vtkIndent indent)
+{
+  this->Superclass::PrintSelf(os,indent);
+
+  os << indent << "Number of elements                : " << this->NumberOfElements << endl;
+  os << indent << "Number of points                  :   " << this->NumberOfPoints << endl;
+  os << indent << "Number of edges                   : " << this->NumberOfEdges << endl;
+
+  os << indent << "Number of open edges              : " << this->NumberOfOpenEdges << endl;
+  os << indent << "Number of non-triangular elements : " << this->NumberOfNonTriangularElements << endl;
+  os << indent << "Number of non-manifold elements   : " << this->NumberOfNonManifoldEdges << endl;
+
+  os << indent << "Surface genus                     : " << this->SurfaceGenus << endl;
+  os << indent << "Number of connected regions       : " << this->NumberOfConnectedRegions << endl;
+  os << indent << "Number of holes                   : " << this->NumberOfHoles << endl;
+
+  os << indent << "Check number of connected regions : " << this->CheckNumberOfConnectedRegions << endl;
+  os << indent << "Check number of holes             : " << this->CheckNumberOfHoles << endl;
+
 }

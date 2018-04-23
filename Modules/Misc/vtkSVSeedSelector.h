@@ -27,28 +27,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
+/**
+ * \class vtkSVOpenProfilesSeedSelector
+ *
+ * \brief This is a c++ replication of the python code for seed selecting
+ * in vmtk. The more specific seed selectors derive from this class.
+ *
+ * \author Adam Updegrove
+ * \author updega2@gmail.com
+ * \author UC Berkeley
+ * \author shaddenlab.berkeley.edu
+ */
 #ifndef vtkSVSeedSelector_h
 #define vtkSVSeedSelector_h
 
-#include "vtkPolyDataAlgorithm.h"
-#include "vtkSVRenderer.h"
-#include "vtkIdList.h"
-
 #include "vtkSVMiscModule.h" // For exports
 
+#include "vtkDataArray.h"
+#include "vtkIdList.h"
+#include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
+#include "vtkPoints.h"
 #include "vtkUnstructuredGrid.h"
 
-class vtkPolyData;
-class vtkPoints;
-class vtkIdList;
-class vtkDataArray;
+#include "vtkSVRenderer.h"
+#include "vtkSVSeedSelector.h"
 
 class VTKSVMISC_EXPORT vtkSVSeedSelector : public vtkPolyDataAlgorithm
 {
   public:
   vtkTypeMacro(vtkSVSeedSelector,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVSeedSelector *New();
 
@@ -76,7 +85,7 @@ class VTKSVMISC_EXPORT vtkSVSeedSelector : public vtkPolyDataAlgorithm
   vtkSVSeedSelector();
   ~vtkSVSeedSelector();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) {;}
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override {return 1;}
 
   vtkPolyData *SurfacePd;
 

@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  * \class vtkSVHausdorffDistance
  *
@@ -46,14 +45,15 @@
 #ifndef vtkSVHausdorffDistance_h
 #define vtkSVHausdorffDistance_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
+
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVHausdorffDistance : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVHausdorffDistance* New();
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Set/Get name for data array to be used to determine the in between sections
@@ -75,7 +75,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int PrepFilter(); // Prep work
   int RunFilter(); // Run filter operations

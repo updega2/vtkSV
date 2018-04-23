@@ -32,6 +32,7 @@
 
 #include "vtkCellLocator.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
 #include "vtkGenericCell.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -39,6 +40,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVGlobals.h"
@@ -111,40 +113,43 @@ int vtkSVHausdorffDistance::RequestData(vtkInformation *vtkNotUsed(request),
                                         vtkInformationVector **inputVector,
                                         vtkInformationVector *outputVector)
 {
-    // Tet the input and output
-    vtkPolyData *input0 = vtkPolyData::GetData(inputVector[0]);
-    vtkPolyData *input1 = vtkPolyData::GetData(inputVector[1]);
-    vtkPolyData *output = vtkPolyData::GetData(outputVector);
+  // Get the input and output
+  vtkPolyData *input0 = vtkPolyData::GetData(inputVector[0]);
+  vtkPolyData *input1 = vtkPolyData::GetData(inputVector[1]);
+  vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
-    // Get the number of Polys for scalar  allocation
-    int numPolys0 = input0->GetNumberOfPolys();
-    int numPolys1 = input1->GetNumberOfPolys();
-    int numPts0 = input0->GetNumberOfPoints();
-    int numPts1 = input1->GetNumberOfPoints();
+  // Get the number of Polys for scalar  allocation
+  int numPolys0 = input0->GetNumberOfPolys();
+  int numPolys1 = input1->GetNumberOfPolys();
+  int numPts0 = input0->GetNumberOfPoints();
+  int numPts1 = input1->GetNumberOfPoints();
 
-    // Check the input to make sure it is there
-    if (numPts0 < 1 || numPts1 < 1)
-    {
-       vtkDebugMacro("No input!");
-       return SV_ERROR;
-    }
-    this->SourcePd->DeepCopy(input0);
-    this->TargetPd->DeepCopy(input1);
+  // Check the input to make sure it is there
+  if (numPts0 < 1 || numPts1 < 1)
+  {
+    vtkDebugMacro("No input!");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
+  }
+  this->SourcePd->DeepCopy(input0);
+  this->TargetPd->DeepCopy(input1);
 
-    if (this->PrepFilter() != SV_OK)
-    {
-      vtkErrorMacro("Error in prepping filter\n");
-      return SV_ERROR;
-    }
+  if (this->PrepFilter() != SV_OK)
+  {
+    vtkErrorMacro("Error in prepping filter\n");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
+  }
 
-    if (this->RunFilter() != SV_OK)
-    {
-      vtkErrorMacro("Error in running filter\n");
-      return SV_ERROR;
-    }
+  if (this->RunFilter() != SV_OK)
+  {
+    vtkErrorMacro("Error in running filter\n");
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
+    return SV_ERROR;
+  }
 
-    output->DeepCopy(this->TargetPd);
-    return SV_OK;
+  output->DeepCopy(this->TargetPd);
+  return SV_OK;
 }
 
 // ----------------------

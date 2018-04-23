@@ -32,6 +32,7 @@
 
 #include "vtkCellData.h"
 #include "vtkCellLocator.h"
+#include "vtkErrorCode.h"
 #include "vtkGenericCell.h"
 #include "vtkIdTypeArray.h"
 #include "vtkInformation.h"
@@ -42,9 +43,10 @@
 #include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkSmartPointer.h"
+#include "vtkUnstructuredGrid.h"
+
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkUnstructuredGrid.h"
 
 #include <iostream>
 
@@ -135,7 +137,7 @@ int vtkSVPassDataArray::RequestData(vtkInformation *vtkNotUsed(request),
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input0);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -143,7 +145,7 @@ int vtkSVPassDataArray::RequestData(vtkInformation *vtkNotUsed(request),
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Could not pass information\n");
-    output->DeepCopy(input0);
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 

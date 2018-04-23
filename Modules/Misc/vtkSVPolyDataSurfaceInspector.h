@@ -23,13 +23,17 @@ class VTKSVMISC_EXPORT vtkSVPolyDataSurfaceInspector : public vtkPolyDataAlgorit
 public:
   static vtkSVPolyDataSurfaceInspector *New();
   vtkTypeMacro(vtkSVPolyDataSurfaceInspector,vtkPolyDataAlgorithm);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
-  //
+  /// \brief Get and set whether to calculate the number of connected regions
   vtkGetMacro(CheckNumberOfConnectedRegions, int);
   vtkSetMacro(CheckNumberOfConnectedRegions, int);
   vtkBooleanMacro(CheckNumberOfConnectedRegions, int);
+  //@}
 
+  //@{
+  /// \brief Get and set whether to check for the number of holes
   vtkGetMacro(CheckNumberOfHoles, int);
   vtkSetMacro(CheckNumberOfHoles, int);
   vtkBooleanMacro(CheckNumberOfHoles, int);
@@ -56,7 +60,7 @@ protected:
 
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
 private:
 

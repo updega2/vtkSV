@@ -27,28 +27,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
+/**
+ * \class vtkSVOpenProfilesSeedSelector
+ *
+ * \brief This is a c++ replication of the python code for an open profiles seed selector
+ * in vmtk. It finds open profiles and renders points in the open profiles with ids
+ * for the user to select.
+ *
+ * \author Adam Updegrove
+ * \author updega2@gmail.com
+ * \author UC Berkeley
+ * \author shaddenlab.berkeley.edu
+ */
 #ifndef vtkSVOpenProfilesSeedSelector_h
 #define vtkSVOpenProfilesSeedSelector_h
 
-#include "vtkSVSeedSelector.h"
-#include "vtkIdList.h"
-#include "vtkSVRenderer.h"
-
 #include "vtkSVMiscModule.h" // For exports
 
+#include "vtkDataArray.h"
+#include "vtkIdList.h"
+#include "vtkPolyData.h"
+#include "vtkPoints.h"
 #include "vtkUnstructuredGrid.h"
 
-class vtkPolyData;
-class vtkPoints;
-class vtkIdList;
-class vtkDataArray;
+#include "vtkSVRenderer.h"
+#include "vtkSVSeedSelector.h"
 
 class VTKSVMISC_EXPORT vtkSVOpenProfilesSeedSelector : public vtkSVSeedSelector
 {
   public:
   vtkTypeMacro(vtkSVOpenProfilesSeedSelector,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   vtkSetObjectMacro(SeedIds, vtkIdList);
   vtkGetObjectMacro(SeedIds, vtkIdList);
@@ -59,7 +68,7 @@ class VTKSVMISC_EXPORT vtkSVOpenProfilesSeedSelector : public vtkSVSeedSelector
   vtkSVOpenProfilesSeedSelector();
   ~vtkSVOpenProfilesSeedSelector();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   vtkIdList* SeedIds;
 

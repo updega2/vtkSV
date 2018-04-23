@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVFillHolesWithIdsFilter
  *  \brief This is a filter to be able to apply ids to the surfaces that
@@ -42,8 +41,9 @@
 #ifndef vtkSVFillHolesWithIdsFilter_h
 #define vtkSVFillHolesWithIdsFilter_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
+
+#include "vtkPolyDataAlgorithm.h"
 
 class vtkAbstractTransform;
 
@@ -53,7 +53,7 @@ public:
   // Standard methods for instantiation, type information and printing.
   static vtkSVFillHolesWithIdsFilter *New();
   vtkTypeMacro(vtkSVFillHolesWithIdsFilter,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Specify the maximum hole size to fill. This is represented as a radius
@@ -91,7 +91,7 @@ protected:
   vtkSVFillHolesWithIdsFilter();
   ~vtkSVFillHolesWithIdsFilter();
 
-  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   int FillType;
   double HoleSize;

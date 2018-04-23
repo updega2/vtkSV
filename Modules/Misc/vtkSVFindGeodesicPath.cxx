@@ -32,19 +32,21 @@
 
 #include "vtkCellData.h"
 #include "vtkConnectivityFilter.h"
-#include "vtkDijkstraGraphGeodesicPath.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkDijkstraGraphGeodesicPath.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
 #include "vtkFeatureEdges.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 
 #include <iostream>
 #include <cmath>
@@ -167,7 +169,7 @@ int vtkSVFindGeodesicPath::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -175,7 +177,7 @@ int vtkSVFindGeodesicPath::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 

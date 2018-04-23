@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
   * \class vtkSVSurfaceVectors - Constrains vectors to surface.
   * \section Description
@@ -39,17 +38,17 @@
 #ifndef vtkSVSurfaceVectors_h
 #define vtkSVSurfaceVectors_h
 
-#include "vtkDataSetAlgorithm.h"
 #include "vtkSVMiscModule.h" // For exports
 
-class vtkFloatArray;
-class vtkIdList;
+#include "vtkDataSetAlgorithm.h"
+#include "vtkFloatArray.h"
+#include "vtkIdList.h"
 
 class VTKSVMISC_EXPORT vtkSVSurfaceVectors : public vtkDataSetAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVSurfaceVectors,vtkDataSetAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
   static vtkSVSurfaceVectors *New();
 
 //BTX
@@ -81,10 +80,10 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
   virtual int RequestUpdateExtent(vtkInformation*,
                                   vtkInformationVector**,
-                                  vtkInformationVector*);
+                                  vtkInformationVector*) override;
 
   int   ConstraintMode;
 

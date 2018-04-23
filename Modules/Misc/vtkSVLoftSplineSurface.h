@@ -27,11 +27,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVLoftSplineSurface
- *  \brief This is the filter to perform the intersection between multiple
- *  vessels
+ *  \brief This is the filter to take a series of point sets that have the
+ *  same number of points and use vtk splines to create a surface. This is
+ *  typically referred to as a lofting process.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -42,8 +42,9 @@
 #ifndef vtkSVLoftSplineSurface_h
 #define vtkSVLoftSplineSurface_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h"
+
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVLoftSplineSurface : public vtkPolyDataAlgorithm
 {
@@ -51,7 +52,7 @@ public:
   static vtkSVLoftSplineSurface *New();
 
   vtkTypeMacro(vtkSVLoftSplineSurface,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // UserManagedInputs allows the user to set inputs by number instead of
@@ -141,10 +142,10 @@ protected:
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
-                          vtkInformationVector **, vtkInformationVector *);
+                          vtkInformationVector **, vtkInformationVector *) override;
   virtual int RequestUpdateExtent(vtkInformation *,
-                                  vtkInformationVector **, vtkInformationVector *);
-  virtual int FillInputPortInformation(int, vtkInformation *);
+                                  vtkInformationVector **, vtkInformationVector *) override;
+  virtual int FillInputPortInformation(int, vtkInformation *) override;
 
  private:
   // hide the superclass' AddInput() from the user and the compiler

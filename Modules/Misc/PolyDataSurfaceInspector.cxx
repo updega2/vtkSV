@@ -134,6 +134,12 @@ int main(int argc, char *argv[])
   PolyDataSurfaceInspector->CheckNumberOfHolesOn();
   PolyDataSurfaceInspector->Update();
 
+  if (PolyDataSurfaceInspector->GetErrorCode() != 0)
+  {
+    std::cerr << "Error in filter" << endl;
+    return EXIT_FAILURE;
+  }
+
   int numCells  = PolyDataSurfaceInspector->GetNumberOfElements();
   int numPoints = PolyDataSurfaceInspector->GetNumberOfPoints();
   int numEdges  = PolyDataSurfaceInspector->GetNumberOfEdges();

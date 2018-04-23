@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVPlacePointsOnS2
  *  \brief Place points of an arbitrary surface on the unit sphere by
@@ -42,16 +41,16 @@
 #ifndef vtkSVPlacePointsOnS2_h
 #define vtkSVPlacePointsOnS2_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
 
 #include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVPlacePointsOnS2 : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPlacePointsOnS2* New();
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   // \brief Macro to set/get the axis that the object aligns with in order to orient
@@ -76,7 +75,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int RunFilter(); // Run filter operations.
   int MoveToOrigin();

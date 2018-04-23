@@ -30,8 +30,11 @@
 
 /**
  *  \class vtkSVPolyDataEdgeSplitter
- *  \brief Using a polydata centerlines, separate the polydata into regions
- *  based on the centerlines
+ *  \brief This filter performs edge splits around given points. The purpose
+ *  of this filter is to increase the valence of a point. It can create worse quality
+ *  triangles as the valence can then be above the ideal size connected cells. This
+ *  can be useful in clustering algorithms where multiple regions need to meet at
+ *  a single point.
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -42,19 +45,19 @@
 #ifndef vtkSVPolyDataEdgeSplitter_h
 #define vtkSVPolyDataEdgeSplitter_h
 
-#include "vtkPolyDataAlgorithm.h"
-#include "vtkPolyData.h"
+#include "vtkSVMiscModule.h" // For export
+
 #include "vtkIdList.h"
+#include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
 
 #include "vtkSVGlobals.h"
-
-#include "vtkSVMiscModule.h" // For export
 
 class VTKSVMISC_EXPORT vtkSVPolyDataEdgeSplitter : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVPolyDataEdgeSplitter,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVPolyDataEdgeSplitter *New();
 
@@ -65,8 +68,9 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set macro for array name used by the filter. Must
-  //  be present on the centerlines.
+  /// \brief Get/Set macro for array name used by the filter. If this is given,
+  /// this array must be present on the surface as point data with -1 indicating
+  /// that it should not be split and everything else indicating it should be split
   vtkSetStringMacro(SplitPointsArrayName);
   vtkGetStringMacro(SplitPointsArrayName);
   //@}
@@ -78,12 +82,14 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
 
+  /** \brief Internal function to split cells around one specific point */
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
+  /** \brief Internal function to split a single edge */
   int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1);
 
   char *SplitPointsArrayName;

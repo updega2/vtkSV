@@ -137,7 +137,8 @@ endif()
 #------------------------------------------------------------------------------
 # Executables
 if(VTKSV_BUILD_EXES)
-  set(EXE_LIST FindGeodesicPath
+  set(EXE_LIST
+    FindGeodesicPath
     FindSeparateRegions
     GetBoundaryFaces
     HausdorffDistance

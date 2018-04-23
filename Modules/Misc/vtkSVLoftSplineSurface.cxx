@@ -34,6 +34,7 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkDataSetAttributes.h"
+#include "vtkErrorCode.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
@@ -47,6 +48,8 @@
 #include "vtkKochanekSpline.h"
 #include "vtkParametricSpline.h"
 #include "vtkSpline.h"
+
+#include "vtkSVGlobals.h"
 
 #include <string>
 #include <sstream>
@@ -200,10 +203,16 @@ int vtkSVLoftSplineSurface::RequestData(
     inputs[idx] = vtkPolyData::GetData(inputVector[0],idx);
     }
 
-  this->LoftSolid(inputs,numInputs,output);
+  if (this->LoftSolid(inputs,numInputs,output) != SV_OK)
+  {
+    vtkErrorMacro("Error in lofting surface");
+    delete [] inputs;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
+  }
 
   delete [] inputs;
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -230,7 +239,7 @@ int vtkSVLoftSplineSurface::RequestUpdateExtent(
   // make sure piece is valid
   if (piece < 0 || piece >= numPieces)
     {
-    return 0;
+    return SV_ERROR;
     }
 
   int numInputs = this->GetNumberOfInputConnections(0);
@@ -274,7 +283,7 @@ int vtkSVLoftSplineSurface::RequestUpdateExtent(
       }
     }
 
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -312,10 +321,10 @@ int vtkSVLoftSplineSurface::FillInputPortInformation(
 {
   if (!this->Superclass::FillInputPortInformation(port, info))
     {
-    return 0;
+    return SV_ERROR;
     }
   info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -414,9 +423,9 @@ int vtkSVLoftSplineSurface::LoftSolid(vtkPolyData *inputs[], int numInputs,
     if ((this->linearInterpolateCurve(pts,this->NumLinearPtsAlongLength,
               0,this->NumOutPtsAlongLength,&outPts)) != 1)
       {
-      std::cout<<"error in linear interpolation"<<endl;
+      vtkDebugMacro("error in linear interpolation");
       this->deleteArray(pts,this->NumLinearPtsAlongLength,3);
-      return 0;
+      return SV_ERROR;
       }
     this->deleteArray(pts,this->NumLinearPtsAlongLength,3);
     }
@@ -448,10 +457,10 @@ int vtkSVLoftSplineSurface::LoftSolid(vtkPolyData *inputs[], int numInputs,
       if ((this->smoothCurve(bigPts,numSmoothPts,0,this->NumModes,
 	  numSmoothPts,&smoothOutPts)) != 1)
       {
-	std::cout<<"error in smoothing"<<endl;
+	vtkDebugMacro("error in smoothing");
 	this->deleteArray(outPts,numPts,3);
 	this->deleteArray(bigPts,numSmoothPts,3);
-	return 0;
+	return SV_ERROR;
       }
 
       for (int r=0;r<3;r++)
@@ -466,9 +475,9 @@ int vtkSVLoftSplineSurface::LoftSolid(vtkPolyData *inputs[], int numInputs,
       if ((this->linearInterpolateCurve(smoothOutPts,numPts,
               0,this->NumOutPtsAlongLength,&outPts)) != 1)
       {
-	std::cout<<"error in linear interpolation"<<endl;
+	vtkDebugMacro("error in linear interpolation");
         this->deleteArray(smoothOutPts,numSmoothPts,3);
-        return 0;
+        return SV_ERROR;
       }
       this->deleteArray(smoothOutPts,numSmoothPts,3);
     }
@@ -549,7 +558,7 @@ int vtkSVLoftSplineSurface::LoftSolid(vtkPolyData *inputs[], int numInputs,
   splineY->Delete();
   splineZ->Delete();
 
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -601,12 +610,12 @@ int vtkSVLoftSplineSurface::linearInterpolate(double **orgPts, int numOrgPts, do
     int i,j;
 
     if (numOrgPts <= 0 || numOutPts <= 0) {
-        return 0;
+        return SV_ERROR;
     }
 
     double **outPts = this->createArray(numOutPts,2);
     if (*outPts == NULL) {
-        return 0;
+        return SV_ERROR;
     }
 
     double t;
@@ -639,7 +648,7 @@ int vtkSVLoftSplineSurface::linearInterpolate(double **orgPts, int numOrgPts, do
       if (j == numOrgPts) {
           fprintf(stdout,"Error interpolating point %i.\n",i);
           this->deleteArray(outPts,numOutPts,2);
-          return 0;
+          return SV_ERROR;
       }
     }
 
@@ -650,7 +659,7 @@ int vtkSVLoftSplineSurface::linearInterpolate(double **orgPts, int numOrgPts, do
 
     *rtnOutPts = outPts;
 
-    return 1;
+    return SV_OK;
 
 }
 
@@ -666,7 +675,7 @@ int vtkSVLoftSplineSurface::linearInterpolateCurve(double **orgPts, int numOrgPt
     // of the 3D curve is used.
 
     if (numOrgPts <= 1 || numOutPts <= 2) {
-        return 0;
+        return SV_ERROR;
     }
 
     // find the length of the curve
@@ -712,19 +721,19 @@ int vtkSVLoftSplineSurface::linearInterpolateCurve(double **orgPts, int numOrgPt
         this->deleteArray(xin,numOrgPts+1,2); this->deleteArray(xout,numOutPts,2);
         this->deleteArray(yin,numOrgPts+1,2); this->deleteArray(yout,numOutPts,2);
         this->deleteArray(zin,numOrgPts+1,2); this->deleteArray(zout,numOutPts,2);
-        return 0;
+        return SV_ERROR;
     }
     if (linearInterpolate(yin, numPts, 0, dt, numOutPts, &yout) == 0) {
         this->deleteArray(xin,numOrgPts+1,2); this->deleteArray(xout,numOutPts,2);
         this->deleteArray(yin,numOrgPts+1,2); this->deleteArray(yout,numOutPts,2);
         this->deleteArray(zin,numOrgPts+1,2); this->deleteArray(zout,numOutPts,2);
-        return 0;
+        return SV_ERROR;
     }
     if (linearInterpolate(zin, numPts, 0, dt, numOutPts, &zout) == 0) {
         this->deleteArray(xin,numOrgPts+1,2); this->deleteArray(xout,numOutPts,2);
         this->deleteArray(yin,numOrgPts+1,2); this->deleteArray(yout,numOutPts,2);
         this->deleteArray(zin,numOrgPts+1,2); this->deleteArray(zout,numOutPts,2);
-        return 0;
+        return SV_ERROR;
     }
 
     // put it all back together
@@ -733,7 +742,7 @@ int vtkSVLoftSplineSurface::linearInterpolateCurve(double **orgPts, int numOrgPt
         this->deleteArray(xin,numOrgPts+1,2); this->deleteArray(xout,numOutPts,2);
         this->deleteArray(yin,numOrgPts+1,2); this->deleteArray(yout,numOutPts,2);
         this->deleteArray(zin,numOrgPts+1,2); this->deleteArray(zout,numOutPts,2);
-        return 0;
+        return SV_ERROR;
     }
     for (i = 0; i < numOutPts;i++) {
         outPts[i][0]=xout[i][1];
@@ -753,7 +762,7 @@ int vtkSVLoftSplineSurface::linearInterpolateCurve(double **orgPts, int numOrgPt
 
     *rtnOutPts = outPts;
 
-    return 1;
+    return SV_OK;
 
 }
 
@@ -771,7 +780,7 @@ int vtkSVLoftSplineSurface::curveLength(double **pts, int numPts, int closed, do
 
     if (numPts <= 1) {
         *length = 0;
-        return 0;
+        return SV_ERROR;
     }
 
     int numSegments;
@@ -793,7 +802,7 @@ int vtkSVLoftSplineSurface::curveLength(double **pts, int numPts, int closed, do
     }
 
     *length = result;
-    return 1;
+    return SV_OK;
 }
 
 // ----------------------
@@ -808,11 +817,11 @@ int vtkSVLoftSplineSurface::smoothCurve(double **orgPts, int numOrgPts, int clos
     // and only the requested number of modes are maintained.
 
     if (numOrgPts <= 1 || numOutPts <= 2) {
-        return 0;
+        return SV_ERROR;
     }
 
     if (keepNumModes < 1) {
-        return 0;
+        return SV_ERROR;
     }
 
     // find the length of the curve
@@ -861,21 +870,21 @@ int vtkSVLoftSplineSurface::smoothCurve(double **orgPts, int numOrgPts, int clos
         this->deleteArray(xin,numOrgPts+1,2);
         this->deleteArray(yin,numOrgPts+1,2);
         this->deleteArray(zin,numOrgPts+1,2);
-        return 0;
+        return SV_ERROR;
     }
     this->deleteArray(xin,numOrgPts+1,2);
     if (this->FFT(yin, numPts, numInterpPts, keepNumModes, &ymodes) == 0) {
         this->deleteArray(xmodes,keepNumModes,2);
         this->deleteArray(yin,numOrgPts+1,2);
         this->deleteArray(zin,numOrgPts+1,2);
-        return 0;
+        return SV_ERROR;
     }
     this->deleteArray(yin,numOrgPts+1,2);
     if (this->FFT(zin, numPts, numInterpPts, keepNumModes, &zmodes) == 0) {
         this->deleteArray(xmodes,keepNumModes,2);
         this->deleteArray(ymodes,keepNumModes,2);
         this->deleteArray(zin,numOrgPts+1,2);
-        return 0;
+        return SV_ERROR;
     }
     this->deleteArray(zin,numOrgPts+1,2);
 
@@ -892,21 +901,21 @@ int vtkSVLoftSplineSurface::smoothCurve(double **orgPts, int numOrgPts, int clos
         this->deleteArray(xmodes,keepNumModes,2);
         this->deleteArray(ymodes,keepNumModes,2);
         this->deleteArray(zmodes,keepNumModes,2);
-        return 0;
+        return SV_ERROR;
     }
     if (this->inverseFFT(ymodes, keepNumModes, t0, dt, omega,
                    numOutPts, &yout) == 0) {
         this->deleteArray(xmodes,keepNumModes,2);this->deleteArray(xout,numOutPts,2);
         this->deleteArray(ymodes,keepNumModes,2);
         this->deleteArray(zmodes,keepNumModes,2);
-        return 0;
+        return SV_ERROR;
     }
     if (this->inverseFFT(zmodes, keepNumModes, t0, dt, omega,
                    numOutPts, &zout) == 0) {
         this->deleteArray(xmodes,keepNumModes,2);this->deleteArray(xout,numOutPts,2);
         this->deleteArray(ymodes,keepNumModes,2);this->deleteArray(yout,numOutPts,2);
         this->deleteArray(zmodes,keepNumModes,2);
-        return 0;
+        return SV_ERROR;
     }
 
     // put it all back together
@@ -915,7 +924,7 @@ int vtkSVLoftSplineSurface::smoothCurve(double **orgPts, int numOrgPts, int clos
         this->deleteArray(xin,numOrgPts+1,2); this->deleteArray(xout,numOutPts,2);
         this->deleteArray(yin,numOrgPts+1,2); this->deleteArray(yout,numOutPts,2);
         this->deleteArray(zin,numOrgPts+1,2); this->deleteArray(zout,numOutPts,2);
-        return 0;
+        return SV_ERROR;
     }
     for (i = 0; i < numOutPts;i++) {
         outPts[i][0]=xout[i][1];
@@ -935,7 +944,7 @@ int vtkSVLoftSplineSurface::smoothCurve(double **orgPts, int numOrgPts, int clos
 
     *rtnOutPts = outPts;
 
-    return 1;
+    return SV_OK;
 
 }
 
@@ -950,7 +959,7 @@ int vtkSVLoftSplineSurface::inverseFFT(double **terms, int numTerms, double t0, 
 
   double **pts = this->createArray(numRtnPts,2);
   if (pts == NULL) {
-      return 0;
+      return SV_ERROR;
   }
 
   for (i=0;i<numRtnPts;i++) {
@@ -964,7 +973,7 @@ int vtkSVLoftSplineSurface::inverseFFT(double **terms, int numTerms, double t0, 
 
   *rtnPts = pts;
 
-  return 1;
+  return SV_OK;
 
 }
 
@@ -1029,13 +1038,13 @@ int vtkSVLoftSplineSurface::FFT(double **pts, int numPts, int numInterpPts, int 
     int i;
 
     if (numInterpPts <= 0 || numDesiredTerms <= 0 || numPts <= 0) {
-        return 0;
+        return SV_ERROR;
     }
 
     double **terms = this->createArray(numDesiredTerms,2);
 
     if (*terms == NULL) {
-        return 0;
+        return SV_ERROR;
     }
 
     // here we calculate dt so that our time series will go from
@@ -1046,7 +1055,7 @@ int vtkSVLoftSplineSurface::FFT(double **pts, int numPts, int numInterpPts, int 
     double **outPts = NULL;
 
     if (this->linearInterpolate(pts, numPts, t0, dt, numInterpPts, &outPts) == 0) {
-        return 0;
+        return SV_ERROR;
     }
 
     // create a real-imaginary array to do fft
@@ -1071,7 +1080,7 @@ int vtkSVLoftSplineSurface::FFT(double **pts, int numPts, int numInterpPts, int 
 
     *rtnterms = terms;
 
-    return 1;
+    return SV_OK;
 
 }
 

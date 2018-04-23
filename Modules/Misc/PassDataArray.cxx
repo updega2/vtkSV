@@ -135,6 +135,12 @@ int main(int argc, char *argv[])
   Passer->Update();
   std::cout<<"Done"<<endl;
 
+  if (Passer->GetErrorCode() != 0)
+  {
+    std::cerr << "Error in filter" << endl;
+    return EXIT_FAILURE;
+  }
+
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, Passer->GetOutput(0));

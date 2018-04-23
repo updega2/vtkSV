@@ -37,7 +37,7 @@
  *  say the surface of a sphere, or the same planar domain, but they are triangulated
  *  differently, we can compute where each point of the source polydata lies
  *  in the target polydata using barycentric coordinates. This is useful when
- *  we would like to map a point from one surface to another. If the target
+ *  we would like to map a parameterization on a base domain to a surface. If the target
  *  polydata has been parameterized in some based domain, then we can take an arbitrary
  *  representation of the same domain, and using the computed barycentric coordinates,
  *  map it to the target surface. The target polydata and the parameterization of the
@@ -65,7 +65,7 @@ class VTKSVMISC_EXPORT vtkSVSurfaceMapper : public vtkPolyDataAlgorithm
 public:
   static vtkSVSurfaceMapper* New();
   //vtkTypeRevisionMacro(vtkSVSurfaceMapper, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Number of subdivision of source polydata before mapping to
@@ -123,7 +123,7 @@ protected:
    *  3. The target domain that has been paramterized on the base domain. */
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   // Main functions in filter
   int PrepFilter(); // Prep work.

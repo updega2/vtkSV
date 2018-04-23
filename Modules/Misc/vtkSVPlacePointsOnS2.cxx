@@ -31,18 +31,20 @@
 #include "vtkSVPlacePointsOnS2.h"
 
 #include "vtkCellData.h"
+#include "vtkErrorCode.h"
 #include "vtkFloatArray.h"
 #include "vtkMath.h"
 #include "vtkMatrix4x4.h"
 #include "vtkObjectFactory.h"
-#include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkPointData.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
 #include "vtkTextureMapToSphere.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 
 #include <iostream>
 #include <cmath>
@@ -112,10 +114,9 @@ int vtkSVPlacePointsOnS2::RequestData(vtkInformation *vtkNotUsed(request),
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(input1);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
-
 
   output->DeepCopy(this->WorkPd);
   return SV_OK;

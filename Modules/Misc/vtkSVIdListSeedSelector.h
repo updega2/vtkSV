@@ -27,7 +27,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
+/**
+ * \class vtkSVIdListSeedSelector
+ *
+ * \brief This is a c++ replication of the python code for an id list seed selector
+ * in vmtk. It allows seed points to be chosen by giving an id list.
+ *
+ * \author Adam Updegrove
+ * \author updega2@gmail.com
+ * \author UC Berkeley
+ * \author shaddenlab.berkeley.edu
+ */
 #ifndef vtkSVIdListSeedSelector_h
 #define vtkSVIdListSeedSelector_h
 
@@ -47,7 +57,7 @@ class VTKSVMISC_EXPORT vtkSVIdListSeedSelector : public vtkSVSeedSelector
 {
   public:
   vtkTypeMacro(vtkSVIdListSeedSelector,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   vtkSetObjectMacro(SourceIds, vtkIdList);
   vtkGetObjectMacro(SourceIds, vtkIdList);
@@ -60,7 +70,7 @@ class VTKSVMISC_EXPORT vtkSVIdListSeedSelector : public vtkSVSeedSelector
   vtkSVIdListSeedSelector();
   ~vtkSVIdListSeedSelector();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   vtkIdList* SourceIds;
   vtkIdList* TargetIds;

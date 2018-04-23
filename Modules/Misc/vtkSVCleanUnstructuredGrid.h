@@ -1,21 +1,35 @@
 /*=========================================================================
-
-  Program:   ParaView
-  Module:    vtkSVCleanUnstructuredGrid.h
-
-  Copyright (c) Kitware, Inc.
-  All rights reserved.
-  See Copyright.txt or http://www.paraview.org/HTML/Copyright.html for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
-
+ *
+ * Copyright (c) 2014-2015 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
 /**
- * @class   vtkSVCleanUnstructuredGrid
- * @brief   merge duplicate points
+ * \class   vtkSVCleanUnstructuredGrid
+ * \brief   merge duplicate points
  *
  *
  * vtkSVCleanUnstructuredGrid is a filter that takes unstructured grid data as
@@ -23,16 +37,20 @@
  * merge duplicate points (with coincident coordinates) using the vtkMergePoints object
  * to merge points.
  *
- * @sa
- * vtkCleanPolyData
+ *  \author Adam Updegrove
+ *  \author updega2@gmail.com
+ *  \author UC Berkeley
+ *  \author shaddenlab.berkeley.edu
+ *  \sa vtkCleanPolyData
 */
 
 #ifndef vtkSVCleanUnstructuredGrid_h
 #define vtkSVCleanUnstructuredGrid_h
 
 #include "vtkSVMiscModule.h" //needed for exports
-#include "vtkUnstructuredGridAlgorithm.h"
+
 #include "vtkIncrementalPointLocator.h"
+#include "vtkUnstructuredGridAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVCleanUnstructuredGrid
   : public vtkUnstructuredGridAlgorithm
@@ -43,7 +61,7 @@ public:
   vtkTypeMacro(vtkSVCleanUnstructuredGrid, vtkUnstructuredGridAlgorithm);
   //@{
   /**
-   * Set/Get a spatial locator for speeding the search process. By
+   * \brief Set/Get a spatial locator for speeding the search process. By
    * default an instance of vtkMergePoints is used.
    */
   vtkSetObjectMacro(Locator, vtkIncrementalPointLocator);
@@ -52,7 +70,7 @@ public:
 
   //@{
   /**
-   * By default ToleranceIsAbsolute is false and Tolerance is
+   * \brief By default ToleranceIsAbsolute is false and Tolerance is
    * a fraction of Bounding box diagonal, if true, AbsoluteTolerance is
    * used when adding points to locator (merging)
    */
@@ -63,7 +81,7 @@ public:
 
   //@{
   /**
-   * Specify tolerance in terms of fraction of bounding box length.
+   * \brief Specify tolerance in terms of fraction of bounding box length.
    * Default is 0.0.
    */
   vtkSetClampMacro(Tolerance,double,0.0,1.0);
@@ -72,18 +90,18 @@ public:
 
   //@{
   /**
-   * Specify tolerance in absolute terms. Default is 1.0.
+   * \brief Specify tolerance in absolute terms. Default is 1.0.
    */
   vtkSetClampMacro(AbsoluteTolerance,double,0.0,VTK_DOUBLE_MAX);
   vtkGetMacro(AbsoluteTolerance,double);
   //@}
 
   /**
-   * Create default locator. Used to create one when none is specified.
+   * \brief Create default locator. Used to create one when none is specified.
    */
   void CreateDefaultLocator(vtkDataSet *input = 0);
 
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
 protected:
   vtkSVCleanUnstructuredGrid();
@@ -96,8 +114,8 @@ protected:
   vtkIncrementalPointLocator *Locator;
 
   virtual int RequestData(
-    vtkInformation*, vtkInformationVector**, vtkInformationVector*);
-  virtual int FillInputPortInformation(int port, vtkInformation* info);
+    vtkInformation*, vtkInformationVector**, vtkInformationVector*) override;
+  virtual int FillInputPortInformation(int port, vtkInformation* info) override;
 
 private:
   vtkSVCleanUnstructuredGrid(const vtkSVCleanUnstructuredGrid&);

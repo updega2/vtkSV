@@ -27,38 +27,29 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
-/** @file vtkSVGetSphereRegions.cxx
- *  @brief This implements the vtkSVGetSphereRegions filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVGetSphereRegions.h"
 
+#include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkCellDataToPointData.h"
+#include "vtkDataSetSurfaceFilter.h"
+#include "vtkDoubleArray.h"
+#include "vtkEdgeTable.h"
+#include "vtkErrorCode.h"
 #include "vtkFloatArray.h"
-#include "vtkMath.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkObjectFactory.h"
-#include "vtkPolyData.h"
-#include "vtkUnstructuredGrid.h"
-#include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkCellArray.h"
 #include "vtkIntArray.h"
-#include "vtkDoubleArray.h"
-#include "vtkCellData.h"
+#include "vtkMath.h"
+#include "vtkObjectFactory.h"
 #include "vtkPointData.h"
-#include "vtkCellDataToPointData.h"
-#include "vtkEdgeTable.h"
-#include "vtkXMLPolyDataWriter.h"
-#include "vtkThreshold.h"
-#include "vtkDataSetSurfaceFilter.h"
+#include "vtkPolyData.h"
 #include "vtkPolygon.h"
 #include "vtkSmartPointer.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkThreshold.h"
+#include "vtkUnstructuredGrid.h"
+
 #include "vtkSVGlobals.h"
 #include "vtkSVGeneralUtils.h"
 
@@ -148,32 +139,38 @@ int vtkSVGetSphereRegions::RequestData(vtkInformation *vtkNotUsed(request),
     if (numPolys < 1)
     {
       vtkDebugMacro("No input!");
-      return SV_OK;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
+      return SV_ERROR;
     }
 
     if (this->PointArrayName == NULL)
     {
       std::cout<<"No PointArrayName given." << endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
     if (this->CellArrayName == NULL)
     {
       std::cout<<"No CellArrayName given." << endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
     if (this->GetArrays(input,0) != 1)
     {
       std::cout<<"No Point Array Named "<<this->PointArrayName<<" on surface"<<endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
     if (this->GetArrays(input,1) != 1)
     {
       std::cout<<"No Cell Array Named "<<this->CellArrayName<<" on surface"<<endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
     if (this->OutCellArrayName == 0)
     {
       std::cout<<"Need array name for output cell data"<<endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
 

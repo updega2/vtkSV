@@ -32,6 +32,7 @@
 
 #include "vtkCellData.h"
 #include "vtkCellDataToPointData.h"
+#include "vtkErrorCode.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -39,8 +40,9 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
-#include "vtkUnstructuredGrid.h"
 #include "vtkSmartPointer.h"
+#include "vtkUnstructuredGrid.h"
+
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 
@@ -132,7 +134,7 @@ int vtkSVFindSeparateRegions::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -140,7 +142,7 @@ int vtkSVFindSeparateRegions::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 

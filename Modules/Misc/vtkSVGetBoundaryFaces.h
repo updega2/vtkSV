@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVGetBoundaryFaces
  *  \brief Get boundary faces separated by feature edges
@@ -40,28 +39,27 @@
  *
  *  \note See Also vtkExtractEdges
  *
- *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
  *  \author UC Berkeley
  *  \author shaddenlab.berkeley.edu
  */
 
-
 #ifndef vtkSVGetBoundaryFaces_h
 #define vtkSVGetBoundaryFaces_h
 
-#include "vtkFeatureEdges.h"
-#include "vtkDoubleArray.h"
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
+
+#include "vtkDoubleArray.h"
+#include "vtkFeatureEdges.h"
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVGetBoundaryFaces : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVGetBoundaryFaces* New();
   vtkTypeMacro(vtkSVGetBoundaryFaces, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   // \brief Specify the feature angle for extracting feature edges.
@@ -119,7 +117,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   /** \brief Function to flood fill region fast. */
   void FindBoundaryRegion(int reg,int start, double &area);
@@ -168,5 +166,3 @@ private:
 };
 
 #endif
-
-

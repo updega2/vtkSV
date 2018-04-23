@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVPassDataArray
  *  \brief This filter passes data information from one vtkPolyData to another.
@@ -45,14 +44,15 @@
 #ifndef vtkSVPassDataArray_h
 #define vtkSVPassDataArray_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
+
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVPassDataArray : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVPassDataArray* New();
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Set name for data array to be used to determine the in between sections
@@ -91,7 +91,7 @@ protected:
    *  2. The polydata to map the data array to. */
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

@@ -30,10 +30,6 @@
 
 #include "vtkSVPolyDataEdgeSplitter.h"
 
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVMathUtils.h"
-
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
@@ -57,6 +53,10 @@
 #include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 
 #include <algorithm>
 
@@ -120,7 +120,6 @@ int vtkSVPolyDataEdgeSplitter::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
     this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
@@ -129,13 +128,13 @@ int vtkSVPolyDataEdgeSplitter::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(this->WorkPd);
     this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 
   output->DeepCopy(this->WorkPd);
 
+  // Remove the split points array if we added it
   if (this->SplitPointsArrayAdded)
   {
     output->GetPointData()->RemoveArray(this->SplitPointsArrayName);
@@ -149,6 +148,7 @@ int vtkSVPolyDataEdgeSplitter::RequestData(
 // ----------------------
 int vtkSVPolyDataEdgeSplitter::PrepFilter()
 {
+  // Check if array name given, use default if not
   if (!this->SplitPointsArrayName)
   {
     vtkDebugMacro("SplitPoints Array Name not given, setting to SplitPoints");
@@ -156,6 +156,7 @@ int vtkSVPolyDataEdgeSplitter::PrepFilter()
     strcpy(this->SplitPointsArrayName, "SplitPoints");
   }
 
+  // Check if array on surface
   if (vtkSVGeneralUtils::CheckArrayExists(this->WorkPd, 0, this->SplitPointsArrayName) != SV_OK)
   {
     vtkWarningMacro(<< "SplitPoints Array with name specified does not exist on polydata");
@@ -166,6 +167,8 @@ int vtkSVPolyDataEdgeSplitter::PrepFilter()
       return SV_ERROR;
     }
 
+    // Array on surface not given, but point ids are. Populate our own
+    // arry on the surface with the split point ids equal to 1
     vtkNew(vtkIntArray, splitPointsArray);
     splitPointsArray->SetNumberOfTuples(this->WorkPd->GetNumberOfPoints());
     splitPointsArray->SetName(this->SplitPointsArrayName);
@@ -228,8 +231,13 @@ int vtkSVPolyDataEdgeSplitter::RunFilter()
     }
   }
 
+  // Set the new cells that includes the split cells
   this->WorkPd->SetPolys(this->NewCells);
 
+  // Now, we have a bunch of the new cells where the point still refers to
+  // the point on the old cell. Replace with the new point that is stored in
+  // the split cells info. This is a trick so that we can just make two copies
+  // of a split cell and move the old point to the new point that splits the edge
   for (int i=0; i<this->SplitCellsInfo.size(); i++)
   {
     int replaceCellId = this->SplitCellsInfo[i][0];
@@ -262,9 +270,7 @@ void vtkSVPolyDataEdgeSplitter::PrintSelf(ostream& os, vtkIndent indent)
 int vtkSVPolyDataEdgeSplitter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId)
 {
   vtkNew(vtkIdList, pointCells);
-  vtkDebugMacro("BEF\n");
   pd->GetPointCells(ptId, pointCells);
-  vtkDebugMacro("AFT\n");
 
   int numSplitCells = pointCells->GetNumberOfIds();
 
@@ -274,22 +280,28 @@ int vtkSVPolyDataEdgeSplitter::SplitCellsAroundPoint(vtkPolyData *pd, int ptId)
   // create a new set of cells
   int numCurrentCells = pd->GetNumberOfCells();
 
+  // Loop through the cells around this pointt
   vtkNew(vtkIdList, cellNeighborId);
   for (int i=0; i<numSplitCells; i++)
   {
     int cellId = pointCells->GetId(i);
 
+    // Get Cell points
     vtkIdType npts, *pts;
     pd->GetCellPoints(cellId, npts, pts);
     for (int j=0; j<npts; j++)
     {
+      // Get one edge of the cell
       int ptId0 = pts[j];
       int ptId1 = pts[(j+1)%npts];
 
+      // If the edge does not contain the original point
       if (ptId0 != ptId && ptId1 != ptId)
       {
+        // Get neighbors
         pd->GetCellEdgeNeighbors(cellId, ptId0, ptId1, cellNeighborId);
 
+        // If this edge doesn't have neighbors, then it is non-manifold
         if (cellNeighborId->GetNumberOfIds() != 1)
         {
           vtkErrorMacro("Mesh is not manifold");
@@ -331,23 +343,29 @@ int vtkSVPolyDataEdgeSplitter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0,
   if (cellId != -1)
     edgeCells->InsertNextId(cellId);
 
+  // Loop throughout the edges to split (should be two)
   int pointAdded = 0;
   int newPointId = numNewPts-1;
   for (int i=0; i<edgeCells->GetNumberOfIds(); i++)
   {
     int splitCellId = edgeCells->GetId(i);
 
+    // get cell points
     vtkIdType npts, *pts;
     pd->GetCellPoints(splitCellId, npts, pts);
 
+    // Loop through points
     for (int j=0; j<npts; j++)
     {
+      // get one edge
       int splitPtId0 = pts[j];
       int splitPtId1 = pts[(j+1)%npts];
 
+      // If edge is the one we want to split
       if ((splitPtId0 == ptId0 && splitPtId1 == ptId1) ||
           (splitPtId1 == ptId0 && splitPtId0 == ptId1))
       {
+        // Calculate midpoint of the edge
         int thirdPtId = pts[(j+2)%npts];
 
         double pt0[3], pt1[3], newPt[3];
@@ -357,6 +375,7 @@ int vtkSVPolyDataEdgeSplitter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0,
         vtkMath::Add(pt0, pt1, newPt);
         vtkMath::MultiplyScalar(newPt, 1./2);
 
+        // If point not already added, we need to add it to the point set
         if (!pointAdded)
         {
           pd->GetPoints()->InsertNextPoint(newPt);
@@ -364,6 +383,7 @@ int vtkSVPolyDataEdgeSplitter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0,
 
          pd->GetPointData()->CopyData(pd->GetPointData(), ptId0, newPointId);
 
+         // Pass the data to the new point, interpolate equally between the edge points
          for (int k=0; k<pd->GetPointData()->GetNumberOfArrays(); k++)
          {
            double weights[2]; weights[0] = 0.5; weights[1] = 0.5;
@@ -380,20 +400,24 @@ int vtkSVPolyDataEdgeSplitter::SplitEdge(vtkPolyData *pd, int cellId, int ptId0,
          }
         }
 
+        // Add cell and new point info to the split info that way we can fix later
         std::vector<int> splitCellInfo(3);
         splitCellInfo[0] = splitCellId;
         splitCellInfo[1] = ptId1;
         splitCellInfo[2] = newPointId;
         this->SplitCellsInfo.push_back(splitCellInfo);
 
+        // Add a new cell that is essentially old cell with the new point
         vtkNew(vtkIdList, newCell);
         newCell->SetNumberOfIds(3);
         newCell->SetId(0, thirdPtId);
         newCell->SetId(1, newPointId);
         newCell->SetId(2, ptId1);
 
+        // get new cell id
         int newCellId = this->NewCells->InsertNextCell(newCell);
 
+        // For the new cell, copy data from the old non-split cell
         for (int k=0; k<pd->GetCellData()->GetNumberOfArrays(); k++)
         {
           pd->GetCellData()->GetArray(k)->InsertNextTuple(

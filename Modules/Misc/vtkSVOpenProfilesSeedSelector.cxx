@@ -29,26 +29,28 @@
  *=========================================================================*/
 
 #include "vtkSVOpenProfilesSeedSelector.h"
+
+#include "vtkCellData.h"
 #include "vtkCellPicker.h"
+#include "vtkCleanPolyData.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
+#include "vtkGlyph3D.h"
+#include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkGlyph3D.h"
 #include "vtkIntArray.h"
-#include "vtkPoints.h"
-#include "vtkPolyData.h"
-#include "vtkPolyLine.h"
-#include "vtkPointData.h"
-#include "vtkPointLocator.h"
-#include "vtkPolyDataMapper.h"
-#include "vtkProperty.h"
-#include "vtkIdList.h"
-#include "vtkCellData.h"
-#include "vtkCleanPolyData.h"
-#include "vtkDoubleArray.h"
 #include "vtkLabeledDataMapper.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkPoints.h"
+#include "vtkPolyData.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkPolyLine.h"
+#include "vtkPointData.h"
+#include "vtkPointLocator.h"
+#include "vtkProperty.h"
 #include "vtkSphereSource.h"
 #include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
@@ -57,8 +59,14 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVGlobals.h"
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVOpenProfilesSeedSelector);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVOpenProfilesSeedSelector::vtkSVOpenProfilesSeedSelector()
 {
   this->SeedIds = vtkIdList::New();
@@ -66,6 +74,9 @@ vtkSVOpenProfilesSeedSelector::vtkSVOpenProfilesSeedSelector()
   this->SVRenderer = vtkSVRenderer::New();
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVOpenProfilesSeedSelector::~vtkSVOpenProfilesSeedSelector()
 {
   if (this->SeedIds != NULL)
@@ -80,6 +91,9 @@ vtkSVOpenProfilesSeedSelector::~vtkSVOpenProfilesSeedSelector()
   }
 }
 
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVOpenProfilesSeedSelector::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -139,6 +153,7 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
   if (currentText == "")
   {
     vtkErrorMacro("Must provide a source seed");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   else
@@ -203,6 +218,9 @@ int vtkSVOpenProfilesSeedSelector::RequestData(
   return SV_OK;
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVOpenProfilesSeedSelector::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);

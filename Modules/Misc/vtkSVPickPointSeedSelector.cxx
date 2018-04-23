@@ -29,25 +29,28 @@
  *=========================================================================*/
 
 #include "vtkSVPickPointSeedSelector.h"
+
+#include "vtkCellData.h"
 #include "vtkCellPicker.h"
+#include "vtkCleanPolyData.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
+#include "vtkGlyph3D.h"
+#include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkGlyph3D.h"
 #include "vtkIntArray.h"
+#include "vtkLabeledDataMapper.h"
+#include "vtkMath.h"
+#include "vtkObjectFactory.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
+#include "vtkPolyDataMapper.h"
 #include "vtkPolyLine.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
-#include "vtkPolyDataMapper.h"
 #include "vtkProperty.h"
-#include "vtkIdList.h"
-#include "vtkCellData.h"
-#include "vtkCleanPolyData.h"
-#include "vtkDoubleArray.h"
-#include "vtkMath.h"
-#include "vtkObjectFactory.h"
 #include "vtkSphereSource.h"
 #include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
@@ -56,8 +59,14 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVGlobals.h"
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVPickPointSeedSelector);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVPickPointSeedSelector::vtkSVPickPointSeedSelector()
 {
   this->PickedSeeds = vtkPolyData::New();
@@ -70,6 +79,9 @@ vtkSVPickPointSeedSelector::vtkSVPickPointSeedSelector()
   this->PickCallbackCommand = NULL;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVPickPointSeedSelector::~vtkSVPickPointSeedSelector()
 {
   if (this->PickedSeeds != NULL)
@@ -99,6 +111,9 @@ vtkSVPickPointSeedSelector::~vtkSVPickPointSeedSelector()
   }
 }
 
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVPickPointSeedSelector::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -118,6 +133,7 @@ int vtkSVPickPointSeedSelector::RequestData(
       this->SurfacePd->GetNumberOfCells() == 0)
   {
     vtkErrorMacro("Not a valid input surface, need cells and points");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -184,6 +200,9 @@ int vtkSVPickPointSeedSelector::RequestData(
   return SV_OK;
 }
 
+// ----------------------
+// InitializeSeeds
+// ----------------------
 void vtkSVPickPointSeedSelector::InitializeSeeds()
 {
   this->PickedSeedIds->Initialize();
@@ -192,6 +211,9 @@ void vtkSVPickPointSeedSelector::InitializeSeeds()
   this->PickedSeeds->SetPoints(seedPoints);
 }
 
+// ----------------------
+// PickCallback
+// ----------------------
 void vtkSVPickPointSeedSelector::PickCallback( vtkObject* caller, long unsigned int vtkNotUsed(eventId), void* clientData, void* vtkNotUsed(callData) )
 {
    vtkSVPickPointSeedSelector* parent =
@@ -241,6 +263,9 @@ void vtkSVPickPointSeedSelector::UndoCallback( vtkObject* caller, long unsigned 
   parent->SVRenderer->GetRenderWindow()->Render();
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVPickPointSeedSelector::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);

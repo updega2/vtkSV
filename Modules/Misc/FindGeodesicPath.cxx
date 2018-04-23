@@ -158,6 +158,12 @@ int main(int argc, char *argv[])
   Finder->Update();
   std::cout<<"Done"<<endl;
 
+  if (Finder->GetErrorCode() != 0)
+  {
+    std::cerr << "Error in filter" << endl;
+    return EXIT_FAILURE;
+  }
+
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, Finder->GetOutput(0));

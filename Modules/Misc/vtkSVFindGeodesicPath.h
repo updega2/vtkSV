@@ -27,8 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
-
 /**
  *  \class vtkSVFindGeodesicPath
  *  \brief This class uses vtkDijkstraGraphGeodesicPath to get path betwen points
@@ -42,18 +40,18 @@
 #ifndef vtkSVFindGeodesicPath_h
 #define vtkSVFindGeodesicPath_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVMiscModule.h" // For export
 
-#include "vtkPolyData.h"
 #include "vtkIdList.h"
+#include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVFindGeodesicPath : public vtkPolyDataAlgorithm
 {
 public:
   static vtkSVFindGeodesicPath* New();
   vtkTypeMacro(vtkSVFindGeodesicPath,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get/Set macros for point that will be close to the target boundary
@@ -84,8 +82,8 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set macro to designate whether to repel from points
-  /// that are close to the end point on the boundary
+  /// \brief Get/Set macro to designate whether to repel points that are close
+  //  to boundaries or open edges
   vtkGetMacro(RepelCloseBoundaryPoints, int);
   vtkSetMacro(RepelCloseBoundaryPoints, int);
   //@}
@@ -114,7 +112,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

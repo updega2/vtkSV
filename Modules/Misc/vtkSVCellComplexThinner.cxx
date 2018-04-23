@@ -1,30 +1,45 @@
+/*=========================================================================
+ *
+ * Copyright (c) 2014-2015 The Regents of the University of California.
+ * All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ *=========================================================================*/
+
 #include "vtkSVCellComplexThinner.h"
 
 #include "vtkCellData.h"
 #include "vtkDataObject.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 
 #include "vtkSVGlobals.h"
 #include "vtkSVGeneralUtils.h"
-
-/** @file vtkSVCellComplexThinner.cxx
- *  @brief This is a filter to take a cell complex and perform iterative
- *  @brief thinning on it and return polydatas with cell data indicating the
- *  @brief absolute and relative persistance of each cell during the
- *  @brief iterative procedure
- *  @brief For more details on the method and the cell data see:
- *  @brief Liu, L., et al. "A simple and robust thinning algorithm on cell complexes."
- *  @brief Computer Graphics Forum. Vol. 29. No. 7. Blackwell Publishing Ltd, 2010.
- *  @brief Also, the corresponding edge pd can be retrieved in OutputEdgePd
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
 
 // ----------------------
 // StandardNewMacro
@@ -82,6 +97,7 @@ int vtkSVCellComplexThinner::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -89,6 +105,7 @@ int vtkSVCellComplexThinner::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 
@@ -362,7 +379,6 @@ int vtkSVCellComplexThinner::RunFilter()
           else if (openEdges->GetNumberOfIds() == 2)
           {
             nDelTris++;
-            loc;
             for (int j=0; j<npts; j++)
             {
               if (j != openEdges->GetId(0) && j != openEdges->GetId(1))

@@ -31,6 +31,7 @@
 #include "vtkSVIdListSeedSelector.h"
 #include "vtkCellPicker.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkErrorCode.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkGlyph3D.h"
@@ -57,14 +58,23 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVGlobals.h"
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVIdListSeedSelector);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVIdListSeedSelector::vtkSVIdListSeedSelector()
 {
   this->SourceIds = vtkIdList::New();
   this->TargetIds = vtkIdList::New();
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVIdListSeedSelector::~vtkSVIdListSeedSelector()
 {
   if (this->SourceIds != NULL)
@@ -79,6 +89,9 @@ vtkSVIdListSeedSelector::~vtkSVIdListSeedSelector()
   }
 }
 
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVIdListSeedSelector::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -98,6 +111,7 @@ int vtkSVIdListSeedSelector::RequestData(
       this->SurfacePd->GetNumberOfCells() == 0)
   {
     vtkErrorMacro("Not a valid input surface, need cells and points");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -108,6 +122,7 @@ int vtkSVIdListSeedSelector::RequestData(
     if (this->SourceIds->GetId(i) > maxId)
     {
       vtkErrorMacro("Source seed is larger than number of points");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
     this->SourceSeedIds->InsertNextId(this->SourceIds->GetId(i));
@@ -117,6 +132,7 @@ int vtkSVIdListSeedSelector::RequestData(
     if (this->TargetIds->GetId(i) > maxId)
     {
       vtkErrorMacro("Target seed is larger than number of points");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
     this->TargetSeedIds->InsertNextId(this->TargetIds->GetId(i));
@@ -125,6 +141,9 @@ int vtkSVIdListSeedSelector::RequestData(
   return SV_OK;
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVIdListSeedSelector::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);

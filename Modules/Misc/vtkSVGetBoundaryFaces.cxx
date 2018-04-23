@@ -33,6 +33,7 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkErrorCode.h"
 #include "vtkFeatureEdges.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -42,13 +43,14 @@
 #include "vtkPointLocator.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVMathUtils.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleStrip.h"
 #include "vtkUnsignedCharArray.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 
 #include <iostream>
 
@@ -205,7 +207,8 @@ int vtkSVGetBoundaryFaces::RequestData(vtkInformation *vtkNotUsed(request),
     if (numPolys < 1)
     {
       vtkDebugMacro("No input!");
-	    return SV_OK;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
+	    return SV_ERROR;
     }
 
     //Set up Region scalar for each surface
@@ -272,7 +275,7 @@ int vtkSVGetBoundaryFaces::RequestData(vtkInformation *vtkNotUsed(request),
     }
     if (extraregion)
     {
-      std::cout<<"I am incrementing region"<<endl;
+      vtkDebugMacro("I am incrementing region");
       reg++;
     }
 
@@ -437,7 +440,7 @@ void vtkSVGetBoundaryFaces::FindBoundaryRegionTipToe(int reg, double &area)
         this->AddCellArea(cellId, area);
         this->checkedcarefully[cellId] = 1;
         //For each edge of the cell
-        //std::cout<<"Checking edges of cell "<<cellId<<endl;
+        vtkDebugMacro("Checking edges of cell " << cellId);
         for (i=0; i < npts; i++)
         {
           p1 = pts[i];

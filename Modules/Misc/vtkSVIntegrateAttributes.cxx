@@ -36,6 +36,7 @@
 #include "vtkCompositeDataSet.h"
 #include "vtkDataSet.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -49,6 +50,8 @@
 #include "vtkPolygon.h"
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVGlobals.h"
 
 // ----------------------
 // StandardNewMacro
@@ -368,7 +371,11 @@ int vtkSVIntegrateAttributes::RequestData(vtkInformation*,
   vtkInformation* info = outputVector->GetInformationObject(0);
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::SafeDownCast(
     info->Get(vtkDataObject::DATA_OBJECT()));
-  if (!output) {return 0;}
+  if (!output)
+  {
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
+  }
 
   vtkInformation* inInfo = inputVector[0]->GetInformationObject(0);
 
@@ -482,7 +489,8 @@ int vtkSVIntegrateAttributes::RequestData(vtkInformation*,
       vtkErrorMacro("This filter cannot handle data of type : "
                     << input->GetClassName());
       }
-    return 0;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
     }
 
   // Here is the trick:  The satellites need a point and vertex to
@@ -605,7 +613,7 @@ int vtkSVIntegrateAttributes::RequestData(vtkInformation*,
     }
 #endif
 
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------

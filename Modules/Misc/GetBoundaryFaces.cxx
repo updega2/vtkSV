@@ -136,6 +136,12 @@ int main(int argc, char *argv[])
   boundaryFaceFinder->SetExtractLargestRegion(extractLargestRegion);
   boundaryFaceFinder->Update();
 
+  if (boundaryFaceFinder->GetErrorCode() != 0)
+  {
+    std::cerr << "Error in filter" << endl;
+    return EXIT_FAILURE;
+  }
+
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTPFile(outputFilename, boundaryFaceFinder->GetOutput(0));

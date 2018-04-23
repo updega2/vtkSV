@@ -43,21 +43,21 @@
 #ifndef vtkSVIntegrateAttributes_h
 #define vtkSVIntegrateAttributes_h
 
-#include "vtkUnstructuredGridAlgorithm.h"
-#include "vtkSVMiscModule.h"
+#include "vtkSVMiscModule.h" // for exports
 
-class vtkDataSet;
-class vtkIdList;
-class vtkInformation;
-class vtkInformationVector;
-class vtkDataSetAttributes;
-class vtkMultiProcessController;
+#include "vtkDataSet.h"
+#include "vtkIdList.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
+#include "vtkDataSetAttributes.h"
+#include "vtkMultiProcessController.h"
+#include "vtkUnstructuredGridAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVIntegrateAttributes : public vtkUnstructuredGridAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVIntegrateAttributes,vtkUnstructuredGridAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
   static vtkSVIntegrateAttributes *New();
 
   void SetController(vtkMultiProcessController *controller);
@@ -71,12 +71,12 @@ protected:
 
   virtual int RequestData(vtkInformation* request,
                           vtkInformationVector** inputVector,
-                          vtkInformationVector* outputVector);
+                          vtkInformationVector* outputVector) override;
 
   // Create a default executive.
-  virtual vtkExecutive* CreateDefaultExecutive();
+  virtual vtkExecutive* CreateDefaultExecutive() override;
 
-  virtual int FillInputPortInformation(int, vtkInformation*);
+  virtual int FillInputPortInformation(int, vtkInformation*) override;
 
 
   int CompareIntegrationDimension(vtkDataSet* output, int dim);

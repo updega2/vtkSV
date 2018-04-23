@@ -27,31 +27,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
-/** @file vtkSVFillHolesWithIdsFilter.cxx
- *  @brief This is a filter to be able to apply ids to the surfaces that
- *  @brief fill the holes
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVFillHolesWithIdsFilter.h"
 
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
-#include "vtkTriangleStrip.h"
 #include "vtkPolygon.h"
 #include "vtkSphere.h"
-#include "vtkMath.h"
+#include "vtkTriangleStrip.h"
+
 #include "vtkSVGlobals.h"
 
 // ----------------------
@@ -114,7 +105,8 @@ int vtkSVFillHolesWithIdsFilter::RequestData(
        (numPolys < 1 && numStrips < 1) )
     {
     vtkDebugMacro(<<"No input data!");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
     }
 
   vtkPolyData *Mesh = vtkPolyData::New();
@@ -308,7 +300,7 @@ int vtkSVFillHolesWithIdsFilter::RequestData(
 
   Mesh->Delete();
   newLines->Delete();
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------

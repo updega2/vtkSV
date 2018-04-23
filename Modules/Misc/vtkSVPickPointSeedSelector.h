@@ -27,28 +27,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
+/**
+ * \class vtkSVPickPointsSeedSelector
+ *
+ * \brief This is a c++ replication of the python code for picking seed points on a surface
+ * in vmtk.
+ *
+ * \author Adam Updegrove
+ * \author updega2@gmail.com
+ * \author UC Berkeley
+ * \author shaddenlab.berkeley.edu
+ */
 
 #ifndef vtkSVPickPointSeedSelector_h
 #define vtkSVPickPointSeedSelector_h
 
-#include "vtkSVSeedSelector.h"
+#include "vtkDataArray.h"
 #include "vtkIdList.h"
-#include "vtkSVRenderer.h"
-
-#include "vtkSVMiscModule.h" // For exports
-
+#include "vtkPolyData.h"
+#include "vtkPoints.h"
 #include "vtkUnstructuredGrid.h"
 
-class vtkPolyData;
-class vtkPoints;
-class vtkIdList;
-class vtkDataArray;
+#include "vtkSVRenderer.h"
+#include "vtkSVSeedSelector.h"
+
+#include "vtkSVMiscModule.h" // For exports
 
 class VTKSVMISC_EXPORT vtkSVPickPointSeedSelector : public vtkSVSeedSelector
 {
   public:
   vtkTypeMacro(vtkSVPickPointSeedSelector,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVPickPointSeedSelector *New();
 
@@ -62,7 +71,7 @@ class VTKSVMISC_EXPORT vtkSVPickPointSeedSelector : public vtkSVSeedSelector
   vtkSVPickPointSeedSelector();
   ~vtkSVPickPointSeedSelector();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   vtkPolyData *PickedSeeds;
 

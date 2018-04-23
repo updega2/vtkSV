@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
   * \class vtkSVIntegrateFlowThroughSurface - Integrates vector dot normal.
   * \brief First this filter finds point normals for a surface.  It
@@ -39,17 +38,17 @@
 #ifndef vtkSVIntegrateFlowThroughSurface_h
 #define vtkSVIntegrateFlowThroughSurface_h
 
-#include "vtkUnstructuredGridAlgorithm.h"
-#include "vtkSVMiscModule.h"
+#include "vtkSVMiscModule.h" // for exports
 
-class vtkIdList;
-class vtkDataSetAttributes;
+#include "vtkIdList.h"
+#include "vtkDataSetAttributes.h"
+#include "vtkUnstructuredGridAlgorithm.h"
 
 class VTKSVMISC_EXPORT vtkSVIntegrateFlowThroughSurface : public vtkUnstructuredGridAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVIntegrateFlowThroughSurface,vtkUnstructuredGridAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
   static vtkSVIntegrateFlowThroughSurface *New();
 
 protected:
@@ -60,15 +59,15 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
   virtual int RequestUpdateExtent(vtkInformation*,
                                   vtkInformationVector**,
-                                  vtkInformationVector*);
+                                  vtkInformationVector*) override;
 
-  virtual int FillInputPortInformation(int port, vtkInformation* info);
+  virtual int FillInputPortInformation(int port, vtkInformation* info) override;
 
   // Create a default executive.
-  virtual vtkExecutive* CreateDefaultExecutive();
+  virtual vtkExecutive* CreateDefaultExecutive() override;
 
   vtkDataSet* GenerateSurfaceVectors(vtkDataSet* input);
 
