@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-centerlines")        {CenterlinesProvided = true; centerlinesFilename = argv[++iarg];}
       else if(tmpstr=="-output")             {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-patchids")           {patchIdsArrayName = argv[++iarg];}
-      else if(tmpstr=="-cvtdata")            {CVTDataArrayNameProvided; cvtDataArrayName = argv[++iarg];}
+      else if(tmpstr=="-cvtdata")            {CVTDataArrayNameProvided = true; cvtDataArrayName = argv[++iarg];}
       else if(tmpstr=="-numberofrings")      {numberOfRings = atoi(argv[++iarg]);}
       else if(tmpstr=="-maximumnumberofiterations")        {maximumNumberOfIterations = atoi(argv[++iarg]);}
       else if(tmpstr=="-threshold")          {threshold = atof(argv[++iarg]);}

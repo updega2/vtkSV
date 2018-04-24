@@ -252,6 +252,7 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
       if (this->FindPointMatchingValues(rotPolycube, "PatchIds", patchVals, paraPtId) != SV_OK)
       {
         vtkErrorMacro("Could not find corresponding polycube point id");
+        vtkErrorMacro("Make sure that the polycube and the model match");
         vtkErrorMacro("COULD NOT FIND: ");
         for (int r=0; r<patchVals->GetNumberOfIds(); r++)
           vtkDebugMacro(" " <<  patchVals->GetId(r));

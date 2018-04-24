@@ -56,7 +56,7 @@ public:
   //@{
   /// \brief Evaluate polyball.
   double EvaluateFunction(double x[3]) override;
-  double EvaluateFunction(double x, double y, double z) override
+  double EvaluateFunction(double x, double y, double z)
   {return this->vtkImplicitFunction::EvaluateFunction(x, y, z); } ;
   //@}
 

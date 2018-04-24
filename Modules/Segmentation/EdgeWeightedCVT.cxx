@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-generators")         {GeneratorsProvided = true; generatorsFilename = argv[++iarg];}
       else if(tmpstr=="-output")             {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-patchids")           {patchIdsArrayName = argv[++iarg];}
-      else if(tmpstr=="-cvtdata")            {CVTDataArrayNameProvided; cvtDataArrayName = argv[++iarg];}
+      else if(tmpstr=="-cvtdata")            {CVTDataArrayNameProvided = true; cvtDataArrayName = argv[++iarg];}
       else if(tmpstr=="-numberofrings")      {numberOfRings = atoi(argv[++iarg]);}
       else if(tmpstr=="-usetransferredpatchesasthreshold") {useTransferredPatchesAsThreshold = atoi(argv[++iarg]);}
       else if(tmpstr=="-maximumnumberofiterations")        {maximumNumberOfIterations = atoi(argv[++iarg]);}

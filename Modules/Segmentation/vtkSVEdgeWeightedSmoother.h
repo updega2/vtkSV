@@ -61,21 +61,15 @@ public:
   vtkGetObjectMacro(StaticIds, vtkIdList);
   //@}
 
-  //@{
-  /// \brief Get/Set the radius information
-  vtkSetMacro(UseCurvatureWeight,int);
-  vtkGetMacro(UseCurvatureWeight,int);
-  vtkBooleanMacro(UseCurvatureWeight,int);
-  //@}
 protected:
   vtkSVEdgeWeightedSmoother();
   ~vtkSVEdgeWeightedSmoother();
 
   // Derived functions
-  int InitializeGenerators();
-  int UpdateGenerators();
-  int GetClosestGenerator(const int evalId, int &newGenerator);
-  double GetEdgeWeightedDistance(const int generatorId, const int evalId);
+  int InitializeGenerators() override;
+  int UpdateGenerators() override;
+  int GetClosestGenerator(const int evalId, int &newGenerator) override;
+  double GetEdgeWeightedDistance(const int generatorId, const int evalId) override;
 
 private:
   vtkSVEdgeWeightedSmoother(const vtkSVEdgeWeightedSmoother&);  // Not implemented.
