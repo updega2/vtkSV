@@ -58,10 +58,10 @@ public:
 
 
   /// \brief Copy the geometric and topological structure of an input poly data object.
-  void CopyStructure(vtkDataSet *ds);
+  void CopyStructure(vtkDataSet *ds) override;
 
   /// \brief Initialize to empty structured grid
-  void Initialize();
+  void Initialize() override;
 
   /** \brief Set the number of control points, needs to be called before
    *  and SetControlPoint(. */
@@ -142,8 +142,8 @@ public:
 
   //@{
   /// \brief Get dimensions of this structured points dataset.
-  virtual int *GetDimensions () {return vtkStructuredGrid::GetDimensions();}
-  virtual void GetDimensions (int dim[3]) {vtkStructuredGrid::GetDimensions(dim);}
+  virtual int *GetDimensions () override {return vtkStructuredGrid::GetDimensions();}
+  virtual void GetDimensions (int dim[3]) override {vtkStructuredGrid::GetDimensions(dim);}
   //@}
 
   //@{
@@ -156,7 +156,7 @@ protected:
   vtkSVControlGrid();
   virtual ~vtkSVControlGrid();
 
-  virtual void ComputeScalarRange() {vtkStructuredGrid::GetScalarRange();}
+  virtual void ComputeScalarRange() override {vtkStructuredGrid::GetScalarRange();}
 
 private:
   vtkSVControlGrid(const vtkSVControlGrid&);  // Not implemented.

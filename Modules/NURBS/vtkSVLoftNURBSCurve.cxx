@@ -31,16 +31,18 @@
 #include "vtkSVLoftNURBSCurve.h"
 
 #include "vtkCellData.h"
+#include "vtkErrorCode.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
-#include "vtkSVNURBSCurve.h"
-#include "vtkSVNURBSUtils.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+
 #include "vtkSVGlobals.h"
+#include "vtkSVNURBSCurve.h"
+#include "vtkSVNURBSUtils.h"
 
 #include <string>
 #include <sstream>
@@ -101,18 +103,21 @@ int vtkSVLoftNURBSCurve::RequestData(
   if (this->KnotSpanType == NULL)
   {
     vtkErrorMacro("Need to provide knot span type");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
   if (this->ParametricSpanType == NULL)
   {
     vtkErrorMacro("Need to provide parametric span type");
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 
   if (this->LoftNURBS(input, output) != SV_OK)
   {
     vtkErrorMacro("Lofting failed!");
+    this->SetErrorCode(vtkErrorCode::UserError + 3);
     return SV_ERROR;
   }
 

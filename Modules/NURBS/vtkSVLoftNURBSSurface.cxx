@@ -32,18 +32,20 @@
 
 #include "vtkAlgorithmOutput.h"
 #include "vtkCellData.h"
+#include "vtkErrorCode.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVNURBSUtils.h"
-#include "vtkSVMathUtils.h"
 #include "vtkTrivialProducer.h"
+
+#include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
+#include "vtkSVNURBSUtils.h"
 
 #include <string>
 #include <sstream>
@@ -250,6 +252,7 @@ int vtkSVLoftNURBSSurface::RequestData(
       this->VKnotSpanType == NULL)
   {
     vtkErrorMacro("Need to provide knot span types for u, v directions");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -257,6 +260,7 @@ int vtkSVLoftNURBSSurface::RequestData(
       this->VParametricSpanType == NULL)
   {
     vtkErrorMacro("Need to provide parametric span types for u, v directions");
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 
@@ -264,6 +268,7 @@ int vtkSVLoftNURBSSurface::RequestData(
   if (this->LoftNURBS(inputs,numInputs,output) != SV_OK)
   {
     vtkErrorMacro("Could not loft surface");
+    this->SetErrorCode(vtkErrorCode::UserError + 3);
     delete [] inputs;
     return SV_ERROR;
   }

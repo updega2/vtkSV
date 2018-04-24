@@ -43,13 +43,14 @@
 #ifndef vtkSVPlanarMapper_h
 #define vtkSVPlanarMapper_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVParameterizationModule.h" // For exports
 
-#include "vtkSVBoundaryMapper.h"
 #include "vtkEdgeTable.h"
 #include "vtkFloatArray.h"
 #include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
+
+#include "vtkSVBoundaryMapper.h"
 #include "vtkSVSparseMatrix.h"
 
 class VTKSVPARAMETERIZATION_EXPORT vtkSVPlanarMapper : public vtkPolyDataAlgorithm
@@ -57,7 +58,7 @@ class VTKSVPARAMETERIZATION_EXPORT vtkSVPlanarMapper : public vtkPolyDataAlgorit
 public:
   static vtkSVPlanarMapper* New();
   vtkTypeMacro(vtkSVPlanarMapper, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get/Set for the boundary mapper object
@@ -103,7 +104,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   // Main functions in filter
   int PrepFilter(); // Prep work

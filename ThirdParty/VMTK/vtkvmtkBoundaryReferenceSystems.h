@@ -38,7 +38,7 @@ class VTKSVVMTK_EXPORT vtkvmtkBoundaryReferenceSystems : public vtkPolyDataAlgor
 {
   public:
   vtkTypeMacro(vtkvmtkBoundaryReferenceSystems,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkBoundaryReferenceSystems *New();
 
@@ -72,7 +72,7 @@ class VTKSVVMTK_EXPORT vtkvmtkBoundaryReferenceSystems : public vtkPolyDataAlgor
   vtkvmtkBoundaryReferenceSystems();
   ~vtkvmtkBoundaryReferenceSystems();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   char* BoundaryRadiusArrayName;
   char* BoundaryNormalsArrayName;

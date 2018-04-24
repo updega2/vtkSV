@@ -35,6 +35,7 @@
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkIdFilter.h"
 #include "vtkObjectFactory.h"
@@ -132,6 +133,7 @@ int vtkSVPolycubeGenerator::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -139,6 +141,7 @@ int vtkSVPolycubeGenerator::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -308,8 +311,8 @@ int vtkSVPolycubeGenerator::GetSurfacePolycube(const double cubeSize)
 
   polycube->GetCellData()->AddArray(groupIds);
   polycube->GetCellData()->AddArray(patchIds);
-  fprintf(stdout,"NUM CELLS: %d\n", allCells->GetNumberOfCells());
-  fprintf(stdout,"NUM POINTS: %d\n", allPoints->GetNumberOfPoints());
+  vtkDebugMacro("NUM CELLS: " << allCells->GetNumberOfCells());
+  vtkDebugMacro("NUM POINTS: " << allPoints->GetNumberOfPoints());
 
   vtkNew(vtkDataSetSurfaceFilter, surfacer);
   surfacer->SetInputData(polycube);
@@ -383,12 +386,12 @@ int vtkSVPolycubeGenerator::GetVolumePolycube()
 
     branchPolycube->BuildLinks();
 
-    fprintf(stdout,"FORMING PARA VOLUME FOR GROUP %d\n", groupId);
+    vtkDebugMacro("FORMING PARA VOLUME FOR GROUP " << groupId);
     vtkNew(vtkStructuredGrid, paraHexMesh);
     if (this->FormParametricHexMesh(gCell, branchPolycube, paraHexMesh, whl_divs[i][1],
                                     whl_divs[i][2], whl_divs[i][3]) != SV_OK)
     {
-      fprintf(stderr,"Couldn't do the dirt\n");
+      vtkErrorMacro("Couldn't do the dirt");
       return SV_ERROR;
     }
 
@@ -427,7 +430,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
                                           vtkIntArray *groupIds,
                                           vtkIntArray *patchIds)
 {
-  fprintf(stdout,"CUBE GROUP ID: %d\n", gCell->GroupId);
+  vtkDebugMacro("CUBE GROUP ID: " << gCell->GroupId);
 
   int groupId = gCell->GroupId;
 
@@ -465,8 +468,8 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   {
     return SV_ERROR;
   }
-  fprintf(stdout,"BEG SPLIT TYPE: %d\n", begSplitType);
-  fprintf(stdout,"BEG ORIEN TYPE: %d\n", begType);
+  vtkDebugMacro("BEG SPLIT TYPE: " << begSplitType);
+  vtkDebugMacro("BEG ORIEN TYPE: " << begType);
 
   // Do beginning
   double begVec[3];
@@ -476,7 +479,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
   if (begSplitType == ZERO)
   {
-    fprintf(stdout,"BEG NONE\n");
+    vtkDebugMacro("BEG NONE");
     // Get top square from start pt
     vtkMath::Cross(gCell->RefDirs[1], gCell->RefDirs[0], begVec);
     vtkMath::Normalize(begVec);
@@ -489,7 +492,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   {
     if (begType >= C_TET_0 && begType <= C_TET_3)
     {
-      fprintf(stdout,"BEG BI CORNER TET\n");
+      vtkDebugMacro("BEG BI CORNER TET");
       // Get ending bifurcation points
       this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
                            parent->StartPt, parent->EndPt,
@@ -558,7 +561,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     }
     else
     {
-      fprintf(stdout,"BEG BI WEDGE\n");
+      vtkDebugMacro("BEG BI WEDGE");
 
       // Get ending bifurcation points
       this->FormBifurcation(gCell, gCell->EndPt, gCell->StartPt,
@@ -593,7 +596,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   {
     if (begType >= C_TET_0 && begType <= C_TET_3)
     {
-      fprintf(stdout,"BEG TRI CORNER TET\n");
+      vtkDebugMacro("BEG TRI CORNER TET");
 
       if ((parent->Children[myLoc]->BranchDir + parent->Children[(myLoc+1)%3]->BranchDir)%2 == 0)
         brother = parent->Children[(myLoc+1)%3];
@@ -681,7 +684,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     }
     else if (begType >= S_TET_0 && begType <= S_TET_3)
     {
-      fprintf(stdout,"BEG TRI SIDE TET\n");
+      vtkDebugMacro("BEG TRI SIDE TET");
 
       brother = parent->Children[parent->AligningChild];
 
@@ -807,7 +810,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     }
     else
     {
-      fprintf(stdout,"BEG TRI WEDGE\n");
+      vtkDebugMacro("BEG TRI WEDGE");
 
       diver = parent->Children[parent->DivergingChild];
       if (myLoc == 0)
@@ -847,19 +850,19 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
       // get vector towards top of cube
       double diverVec[3], parentVec[3];
-      fprintf(stdout,"DIVER IS %d\n", diver->GroupId);
-      fprintf(stdout,"DIVER START %.6f %.6f %.6f\n", diver->StartPt[0], diver->StartPt[1], diver->StartPt[2]);
-      fprintf(stdout,"DIVER END %.6f %.6f %.6f\n", diver->EndPt[0], diver->EndPt[1], diver->EndPt[2]);
+      vtkDebugMacro("DIVER IS " <<  diver->GroupId);
+      vtkDebugMacro("DIVER START " <<  diver->StartPt[0] << " " <<  diver->StartPt[1] << " " << diver->StartPt[2]);
+      vtkDebugMacro("DIVER END " << diver->EndPt[0] << " " <<  diver->EndPt[1] << " " <<  diver->EndPt[2]);
       vtkMath::Subtract(diver->EndPt, diver->StartPt, diverVec);
       vtkMath::Normalize(diverVec);
       vtkMath::Subtract(parent->StartPt, parent->EndPt, parentVec);
       vtkMath::Normalize(parentVec);
 
-      fprintf(stdout,"DIVER: %.6f %.6f %.6f\n", diverVec[0], diverVec[1], diverVec[2]);
-      fprintf(stdout,"PARENT: %.6f %.6f %.6f\n", parentVec[0], parentVec[1], parentVec[2]);
+      vtkDebugMacro("DIVER: " << diverVec[0] << " " <<  diverVec[1] << " " <<  diverVec[2]);
+      vtkDebugMacro("PARENT: " << parentVec[0] << " " <<  parentVec[1] << " " <<  parentVec[2]);
       vtkMath::Cross(diverVec, parentVec, begVec);
       vtkMath::Normalize(begVec);
-      fprintf(stdout,"BEG: %.6f %.6f %.6f\n", begVec[0], begVec[1], begVec[2]);
+      vtkDebugMacro("BEG: " <<  begVec[0] << " " <<  begVec[1] << " " <<  begVec[2]);
 
       if (diver->BranchDir == LEFT || diver->BranchDir == FRONT)
       {
@@ -891,7 +894,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   }
   else
   {
-    fprintf(stdout,"BEG NOT_HANDLED\n");
+    vtkDebugMacro("BEG NOT_HANDLED");
   }
 
   // Get end type
@@ -900,8 +903,8 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   {
     return SV_ERROR;
   }
-  fprintf(stdout,"END SPLIT TYPE: %d\n", endSplitType);
-  fprintf(stdout,"END ORIEN TYPE: %d\n", endType);
+  vtkDebugMacro("END SPLIT TYPE: " <<  endSplitType);
+  vtkDebugMacro("END ORIEN TYPE: " <<  endType);
 
 
   // Do end
@@ -909,7 +912,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
 
   if (endSplitType == ZERO)
   {
-    fprintf(stdout,"END NONE\n");
+    vtkDebugMacro("END NONE");
 
     // Get square from end pt
     if (begSplitType == ZERO)
@@ -920,9 +923,9 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
       double endVec[3];
       if ((gCell->BranchDir)%2 == 0)
       {
-        fprintf(stdout,"WHAT BEG: %.6f %.6f %.6f\n", begVec[0], begVec[1], begVec[2]);
-        fprintf(stdout,"WHAT VEC0: %.6f %.6f %.6f\n", vecs[0], vecs[1], vecs[2]);
-        fprintf(stdout,"WHAT END: %.6f %.6f %.6f\n", endVec[0], endVec[1], endVec[2]);
+        vtkDebugMacro("WHAT BEG:" << begVec[0] << " " <<  begVec[1] << " " <<  begVec[2]);
+        vtkDebugMacro("WHAT VEC0: " << vecs[0] << " " <<  vecs[1] << " " <<  vecs[2]);
+        vtkDebugMacro("WHAT END: " << endVec[0] << " " <<  endVec[1] << " " <<  endVec[2]);
         vtkMath::Cross(begVec, vecs[0], endVec);
         vtkMath::Normalize(endVec);
         this->GetSquare(gCell->EndPt, endVec, begVec,
@@ -941,7 +944,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   {
     if (endType >= C_TET_0 && endType <= S_TET_3)
     {
-      fprintf(stdout,"END BI TET\n");
+      vtkDebugMacro("END BI TET");
       // Get square from end pt
       if (begSplitType == ZERO)
         this->GetSquare(gCell->EndPt, gCell->RefDirs[1], begVec,
@@ -986,7 +989,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     }
     else
     {
-      fprintf(stdout,"END BI WEDGE\n");
+      vtkDebugMacro("END BI WEDGE");
 
       this->FormBifurcation(gCell, gCell->StartPt, gCell->EndPt,
                             cDiver->EndPt, cDiver->StartPt,
@@ -1015,7 +1018,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   {
     if (endType >= C_TET_0 && endType <= C_TET_3)
     {
-      fprintf(stdout,"END TRI CORNER TET\n");
+      vtkDebugMacro("END TRI CORNER TET");
       // Get square from end pt
       if (begSplitType == ZERO)
         this->GetSquare(gCell->EndPt, gCell->RefDirs[1], begVec,
@@ -1072,7 +1075,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
     }
     else
     {
-      fprintf(stdout,"END TRI WEDGE\n");
+      vtkDebugMacro("END TRI WEDGE");
 
       vtkSVCenterlineGCell *cross = gCell->Children[2];
       diver = gCell->Children[gCell->DivergingChild];
@@ -1083,10 +1086,10 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
                             cross->EndPt, cross->StartPt,
                             gCell->EndPt,
                             width/2., vecs, endPts);
-      fprintf(stdout,"DIVER: %d\n", diver->GroupId);
-      fprintf(stdout,"CROSS: %d\n", cross->GroupId);
-      fprintf(stdout,"CROSS START: %.9f %.9f %.9f\n", cross->StartPt[0], cross->StartPt[1], cross->StartPt[2]);
-      fprintf(stdout,"END START: %.9f %.9f %.9f\n", cross->EndPt[0], cross->EndPt[1], cross->EndPt[2]);
+      vtkDebugMacro("DIVER: " << diver->GroupId);
+      vtkDebugMacro("CROSS: " << cross->GroupId);
+      vtkDebugMacro("CROSS START: " <<  cross->StartPt[0] << " " << cross->StartPt[1] << " " << cross->StartPt[2]);
+      vtkDebugMacro("END START: " <<  cross->EndPt[0] << " " << cross->EndPt[1] << " " << cross->EndPt[2]);
 
       // TEMPORARYRYRY
       if (diver->BranchDir == RIGHT || diver->BranchDir == BACK)
@@ -1111,13 +1114,13 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
       }
       else
       {
-        fprintf(stderr,"NEED TO ADD RULE!!\n");
+        vtkErrorMacro("NEED TO ADD RULE!!");
       }
     }
   }
   else
   {
-    fprintf(stderr,"END NOT_HANDLED\n");
+    vtkErrorMacro("END NOT_HANDLED");
   }
 
   // NOW THAT WE HAVE ALL THE POINTS, WE CAN NOW ADD THEM TO THEIR
@@ -1474,7 +1477,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   // LocalPtIds
   // -----------------------------------------------------------------------
   int numPoints = facesPtIds[3].size() + facesPtIds[1].size() + endInterPtIds.size() + begInterPtIds.size();
-  fprintf(stdout,"NUMBER OF POINTS: %d\n", numPoints);
+  vtkDebugMacro("NUMBER OF POINTS: " << numPoints);
   // -----------------------------------------------------------------------
 
   // -----------------------------------------------------------------------
@@ -1496,7 +1499,7 @@ int vtkSVPolycubeGenerator::GetCubePoints(vtkSVCenterlineGCell *gCell,
   }
   // -----------------------------------------------------------------------
 
-  fprintf(stdout,"\n");
+  vtkDebugMacro(" ");
   return SV_OK;
 }
 
@@ -1521,8 +1524,8 @@ int vtkSVPolycubeGenerator::FormBifurcation(vtkSVCenterlineGCell *gCell,
   // Get ending bifurcation points
   this->GetBifurcationPoint(centerPt, vecs[0], vecs[1], vecs[2], factor, returnPts[0]);
   this->GetBifurcationPoint(centerPt, vecs[0], vecs[2], vecs[1], factor, returnPts[1]);
-  fprintf(stdout,"WHAT ARE THEY: %.6f %.6f %.6f\n", returnPts[0][0], returnPts[0][1], returnPts[0][2]);
-  fprintf(stdout,"WHAT ARE THEY: %.6f %.6f %.6f\n", returnPts[1][0], returnPts[1][1], returnPts[1][2]);
+  vtkDebugMacro("WHAT ARE THEY: " << returnPts[0][0] << " " <<  returnPts[0][1] << " " <<  returnPts[0][2]);
+  vtkDebugMacro("WHAT ARE THEY: " << returnPts[1][0] << " " <<  returnPts[1][1] << " " <<  returnPts[1][2]);
 
   // Need to check to make sure they are on the right sides of the line
   double tmpVec0[3], tmpVec1[3];
@@ -1546,15 +1549,15 @@ int vtkSVPolycubeGenerator::FormBifurcation(vtkSVCenterlineGCell *gCell,
   vtkMath::Subtract(tmpVec0, projVec0, dotVec0);
   vtkMath::Subtract(tmpVec1, projVec1, dotVec1);
 
-  fprintf(stdout,"AND DOT VECS: %.6f %.6f %.6f\n", dotVec0[0], dotVec0[1], dotVec0[2]);
-  fprintf(stdout,"AND DOT VECS: %.6f %.6f %.6f\n", dotVec1[0], dotVec1[1], dotVec1[2]);
+  vtkDebugMacro("AND DOT VECS: " << dotVec0[0] << " " <<  dotVec0[1] << " " <<  dotVec0[2]);
+  vtkDebugMacro("AND DOT VECS: " << dotVec1[0] << " " <<  dotVec1[1] << " " <<  dotVec1[2]);
 
   double dotCheck = vtkMath::Dot(dotVec0, dotVec1);
-  fprintf(stdout,"WHAT IS DOT CHECK %.6f\n", dotCheck);
+  vtkDebugMacro("WHAT IS DOT CHECK " << dotCheck);
 
   if (dotCheck > 0.0)
   {
-    fprintf(stdout,"DOESNT HAPP#NENENEN!\n");
+    vtkDebugMacro("DOESNT HAPP#NENENEN!");
     if (dot0 > dot1)
     {
       vtkMath::MultiplyScalar(tmpVec1, -1.0);
@@ -1580,8 +1583,8 @@ int vtkSVPolycubeGenerator::GetBifurcationPoint(const double startPt[3],
                                                 const double factor,
                                                 double returnPt[3])
 {
-  fprintf(stdout,"VEC0: %.9f %.9f %.9f\n", vec0[0], vec0[1], vec0[2]);
-  fprintf(stdout,"VEC1: %.9f %.9f %.9f\n", vec1[0], vec1[1], vec1[2]);
+  vtkDebugMacro("VEC0: " << vec0[0] << " " << vec0[1] << " " << vec0[2]);
+  vtkDebugMacro("VEC1: " << vec1[0] << " " << vec1[1] << " " << vec1[2]);
   // Get vector in between the two
   double midVec[3];
   vtkMath::Add(vec0, vec1, midVec);
@@ -1826,238 +1829,6 @@ int vtkSVPolycubeGenerator::GetPolycubeDivisions(vtkSVCenterlineGCell *gCell,
 int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, vtkPolyData *polycubePd, vtkStructuredGrid *paraHexMesh,
                                                   int w_div, int h_div, int l_div)
 {
-  //int nTopPts0, nBotPts0, flatTop0, flatBot0;
-  //this->CheckFace(polycubePd, 0, nTopPts0, nBotPts0, flatTop0, flatBot0);
-  //fprintf(stdout,"FACE 0\n");
-  //fprintf(stdout,"  NUM TOP PTS: %d\n", nTopPts0);
-  //fprintf(stdout,"  TOP IS FLAT: %d\n", flatTop0);
-  //fprintf(stdout,"  NUM BOT PTS: %d\n", nBotPts0);
-  //fprintf(stdout,"  BOT IS FLAT: %d\n", flatBot0);
-
-  //int nTopPts1, nBotPts1, flatTop1, flatBot1;
-  //this->CheckFace(polycubePd, 1, nTopPts1, nBotPts1, flatTop1, flatBot1);
-  //fprintf(stdout,"FACE 1\n");
-  //fprintf(stdout,"  NUM TOP PTS: %d\n", nTopPts1);
-  //fprintf(stdout,"  TOP IS FLAT: %d\n", flatTop1);
-  //fprintf(stdout,"  NUM BOT PTS: %d\n", nBotPts1);
-  //fprintf(stdout,"  BOT IS FLAT: %d\n", flatBot1);
-
-  //int nTopPts2, nBotPts2, flatTop2, flatBot2;
-  //this->CheckFace(polycubePd, 2, nTopPts2, nBotPts2, flatTop2, flatBot2);
-  //fprintf(stdout,"FACE 2\n");
-  //fprintf(stdout,"  NUM TOP PTS: %d\n", nTopPts2);
-  //fprintf(stdout,"  TOP IS FLAT: %d\n", flatTop2);
-  //fprintf(stdout,"  NUM BOT PTS: %d\n", nBotPts2);
-  //fprintf(stdout,"  BOT IS FLAT: %d\n", flatBot2);
-
-  //int nTopPts3, nBotPts3, flatTop3, flatBot3;
-  //this->CheckFace(polycubePd, 3, nTopPts3, nBotPts3, flatTop3, flatBot3);
-  //fprintf(stdout,"FACE 3\n");
-  //fprintf(stdout,"  NUM TOP PTS: %d\n", nTopPts3);
-  //fprintf(stdout,"  TOP IS FLAT: %d\n", flatTop3);
-  //fprintf(stdout,"  NUM BOT PTS: %d\n", nBotPts3);
-  //fprintf(stdout,"  BOT IS FLAT: %d\n", flatBot3);
-
-  //int topHorzWedge = 0, topVertWedge = 0;
-  //int topSTet0 = 0, topSTet1 = 0, topSTet2 = 0, topSTet3 = 0;
-  //int topCTet0 = 0, topCTet1 = 0, topCTet2 = 0, topCTet3 = 0;
-
-  //if (nTopPts0 == 3)
-  //{
-  //  if (flatTop0)
-  //    topSTet2 = 1;
-  //  else
-  //  {
-  //    if (nTopPts2 == 3)
-  //    {
-  //      if (flatTop2)
-  //        topSTet0 = 1;
-  //      else
-  //        topHorzWedge = 1;
-  //    }
-  //    else
-  //    {
-  //      fprintf(stderr,"OPPOSITE FACES NEED TO HAVE SAME NUMBER OF POINTS!!!\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-  //else if (nTopPts0 == 2)
-  //{
-  //  if (!flatTop0)
-  //  {
-  //    if (!flatTop1)
-  //      topCTet0 = 1;
-  //    else if (!flatTop3)
-  //      topCTet3 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 1\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //  if (!flatTop2)
-  //  {
-  //    if (!flatTop1)
-  //      topCTet1 = 1;
-  //    else if (!flatTop3)
-  //      topCTet2 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 2\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-
-  //if (nTopPts3 == 3)
-  //{
-  //  if (flatTop3)
-  //    topSTet1 = 1;
-  //  else
-  //  {
-  //    if (nTopPts1 == 3)
-  //    {
-  //      if (flatTop1)
-  //        topSTet3 = 1;
-  //      else
-  //        topVertWedge = 1;
-  //    }
-  //    else
-  //    {
-  //      fprintf(stderr,"OPPOSITE FACES NEED TO HAVE SAME NUMBER OF POINTS!!!\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-  //else if (nTopPts3 == 2)
-  //{
-  //  if (!flatTop3)
-  //  {
-  //    if (!flatTop2)
-  //      topCTet2 = 1;
-  //    else if (!flatTop0)
-  //      topCTet3 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 3\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //  if (!flatTop1)
-  //  {
-  //    if (!flatTop2)
-  //      topCTet1 = 1;
-  //    else if (!flatTop0)
-  //      topCTet0 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 4\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-
-  //int botHorzWedge = 0, botVertWedge = 0;
-  //int botSTet0 = 0, botSTet1 = 0, botSTet2 = 0, botSTet3 = 0;
-  //int botCTet0 = 0, botCTet1 = 0, botCTet2 = 0, botCTet3 = 0;
-
-  //if (nBotPts0 == 3)
-  //{
-  //  if (flatBot0)
-  //    botSTet0 = 1;
-  //  else
-  //  {
-  //    if (nBotPts2 == 3)
-  //    {
-  //      if (flatBot2)
-  //        botSTet2 = 1;
-  //      else
-  //        botHorzWedge = 1;
-  //    }
-  //    else
-  //    {
-  //      fprintf(stderr,"OPPOSITE FACES NEED TO HAVE SAME NUMBER OF POINTS!!!\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-  //else if (nBotPts0 == 2)
-  //{
-  //  if (!flatBot0)
-  //  {
-  //    if (!flatBot1)
-  //      botCTet0 = 1;
-  //    else if (!flatBot3)
-  //      botCTet3 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 5\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //  if (!flatBot2)
-  //  {
-  //    if (!flatBot1)
-  //      botCTet1 = 1;
-  //    else if (!flatBot3)
-  //      botCTet2 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 6\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-
-  //if (nBotPts3 == 3)
-  //{
-  //  if (flatBot3)
-  //    botSTet3 = 1;
-  //  else
-  //  {
-  //    if (nBotPts1 == 3)
-  //    {
-  //      if (flatBot1)
-  //        botSTet1 = 1;
-  //      else
-  //        botVertWedge = 1;
-  //    }
-  //    else
-  //    {
-  //      fprintf(stderr,"OPPOSITE FACES NEED TO HAVE SAME NUMBER OF POINTS!!!\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-  //else if (nBotPts3 == 2)
-  //{
-  //  if (!flatBot3)
-  //  {
-  //    if (!flatBot2)
-  //      botCTet2 = 1;
-  //    else if (!flatBot0)
-  //      botCTet3 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 7\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //  if (!flatBot1)
-  //  {
-  //    if (!flatBot2)
-  //      botCTet1 = 1;
-  //    else if (!flatBot0)
-  //      botCTet0 = 1;
-  //    else
-  //    {
-  //      fprintf(stderr,"THIS SHOULDNT REALLY HAPPEN, 8\n");
-  //      return SV_ERROR;
-  //    }
-  //  }
-  //}
-
   // GetFace 0, right side face
   vtkIdType f0npts, *f0PtIds;
   polycubePd->GetCellPoints(0, f0npts, f0PtIds);
@@ -2076,8 +1847,8 @@ int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, v
 
   if (f0npts != f2npts || f1npts != f3npts)
   {
-    fprintf(stderr,"Opposite sides of cube with group id %d must have same number of points\n", gCell->GroupId);
-    fprintf(stderr,"FO: %d, F2: %d, F1: %d, F3: %d\n", f0npts, f2npts, f1npts, f3npts);
+    vtkErrorMacro("Opposite sides of cube with group id " << gCell->GroupId << " must have same number of points" );
+    vtkErrorMacro("FO: " << f0npts << " F2: " << f2npts << " F1: " <<  f1npts << " F3: " << f3npts);
     return SV_ERROR;
   }
 
@@ -2121,22 +1892,21 @@ int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, v
   {
     return SV_ERROR;
   }
-  fprintf(stdout,"CORRESPONDINGLY, BEG TYPE: %s\n", cubeTypes[begType].c_str());
+  vtkDebugMacro("CORRESPONDINGLY, BEG TYPE: " << cubeTypes[begType].c_str());
 
   int endType, endSplitType;
   if (gCell->GetEndType(endType, endSplitType) != SV_OK)
   {
     return SV_ERROR;
   }
-  fprintf(stdout,"CORRESPONDINGLY, END TYPE: %s\n", cubeTypes[endType].c_str());
-  fprintf(stdout,"\n");
+  vtkDebugMacro("CORRESPONDINGLY, END TYPE: " << cubeTypes[endType].c_str());
+  vtkDebugMacro(" ");
 
 
   // BEG TYPE HORZ_WEDGE, S_TET_0, S_TET_2
   //if (nTopPts0 == 3)
   if (begType == HORZ_WEDGE || begType == S_TET_0 || begType == S_TET_2)
   {
-    //fprintf(stdout,"N TOP PTS 0: %d\n", nTopPts0);
     polycubePd->GetPoint(f0PtIds[3], f0Pts[2]);
     polycubePd->GetPoint(f0PtIds[4], f0Pts[3]);
   }
@@ -2145,7 +1915,6 @@ int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, v
   //if (nTopPts2 == 3)
   if (begType == HORZ_WEDGE || begType == S_TET_0 || begType == S_TET_2)
   {
-    //fprintf(stdout,"N TOP PTS 2: %d\n", nTopPts2);
     polycubePd->GetPoint(f2PtIds[4], f2Pts[0]);
     polycubePd->GetPoint(f2PtIds[3], f2Pts[1]);
   }
@@ -2154,7 +1923,6 @@ int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, v
   //if (nTopPts1 == 3)
   if (begType == VERT_WEDGE || begType == S_TET_3 || begType == S_TET_1)
   {
-    //fprintf(stdout,"N TOP PTS 1: %d\n", nTopPts1);
     polycubePd->GetPoint(f1PtIds[4], f1Pts[0]);
     polycubePd->GetPoint(f1PtIds[3], f1Pts[1]);
   }
@@ -2163,50 +1931,49 @@ int vtkSVPolycubeGenerator::FormParametricHexMesh(vtkSVCenterlineGCell *gCell, v
   //if (nTopPts3 == 3)
   if (begType == VERT_WEDGE || begType == S_TET_3 || begType == S_TET_1)
   {
-    //fprintf(stdout,"N TOP PTS 3: %d\n", nTopPts3);
     polycubePd->GetPoint(f3PtIds[3], f3Pts[2]);
     polycubePd->GetPoint(f3PtIds[4], f3Pts[3]);
   }
 
-  fprintf(stdout,"WHAT ARE POINTS\n");
-  fprintf(stdout,"FACE 0: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f0Pts[0][0], f0Pts[0][1], f0Pts[0][2],
-                                                                                             f0Pts[1][0], f0Pts[1][1], f0Pts[1][2],
-                                                                                             f0Pts[2][0], f0Pts[2][1], f0Pts[2][2],
-                                                                                             f0Pts[3][0], f0Pts[3][1], f0Pts[3][2]);
-  fprintf(stdout,"FACE 1: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f1Pts[0][0], f1Pts[0][1], f1Pts[0][2],
-                                                                                             f1Pts[1][0], f1Pts[1][1], f1Pts[1][2],
-                                                                                             f1Pts[2][0], f1Pts[2][1], f1Pts[2][2],
-                                                                                             f1Pts[3][0], f1Pts[3][1], f1Pts[3][2]);
-  fprintf(stdout,"FACE 2: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f2Pts[0][0], f2Pts[0][1], f2Pts[0][2],
-                                                                                             f2Pts[1][0], f2Pts[1][1], f2Pts[1][2],
-                                                                                             f2Pts[2][0], f2Pts[2][1], f2Pts[2][2],
-                                                                                             f2Pts[3][0], f2Pts[3][1], f2Pts[3][2]);
-  fprintf(stdout,"FACE 3: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f3Pts[0][0], f3Pts[0][1], f3Pts[0][2],
-                                                                                             f3Pts[1][0], f3Pts[1][1], f3Pts[1][2],
-                                                                                             f3Pts[2][0], f3Pts[2][1], f3Pts[2][2],
-                                                                                             f3Pts[3][0], f3Pts[3][1], f3Pts[3][2]);
+  vtkDebugMacro("WHAT ARE POINTS");
+  //vtkDebugMacro("FACE 0: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f0Pts[0][0], f0Pts[0][1], f0Pts[0][2],
+  //                                                                                           f0Pts[1][0], f0Pts[1][1], f0Pts[1][2],
+  //                                                                                           f0Pts[2][0], f0Pts[2][1], f0Pts[2][2],
+  //                                                                                           f0Pts[3][0], f0Pts[3][1], f0Pts[3][2]);
+  //vtkDebugMacro("FACE 1: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f1Pts[0][0], f1Pts[0][1], f1Pts[0][2],
+  //                                                                                           f1Pts[1][0], f1Pts[1][1], f1Pts[1][2],
+  //                                                                                           f1Pts[2][0], f1Pts[2][1], f1Pts[2][2],
+  //                                                                                           f1Pts[3][0], f1Pts[3][1], f1Pts[3][2]);
+  //vtkDebugMacro("FACE 2: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f2Pts[0][0], f2Pts[0][1], f2Pts[0][2],
+  //                                                                                           f2Pts[1][0], f2Pts[1][1], f2Pts[1][2],
+  //                                                                                           f2Pts[2][0], f2Pts[2][1], f2Pts[2][2],
+  //                                                                                           f2Pts[3][0], f2Pts[3][1], f2Pts[3][2]);
+  //vtkDebugMacro("FACE 3: %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f, %.6f %.6f %.6f\n", f3Pts[0][0], f3Pts[0][1], f3Pts[0][2],
+  //                                                                                           f3Pts[1][0], f3Pts[1][1], f3Pts[1][2],
+  //                                                                                           f3Pts[2][0], f3Pts[2][1], f3Pts[2][2],
+  //                                                                                           f3Pts[3][0], f3Pts[3][1], f3Pts[3][2]);
 
-  //fprintf(stdout,"THIS SAYS TOP VERT WEDGE: %d\n", topVertWedge);
-  //fprintf(stdout,"THIS SAYS BOT VERT WEDGE: %d\n", botVertWedge);
-  //fprintf(stdout,"THIS SAYS TOP HORZ WEDGE: %d\n", topHorzWedge);
-  //fprintf(stdout,"THIS SAYS BOT HORZ WEDGE: %d\n", botHorzWedge);
-  //fprintf(stdout,"THIS SAYS TOP SIDE TET 0: %d\n", topSTet0);
-  //fprintf(stdout,"THIS SAYS TOP SIDE TET 1: %d\n", topSTet1);
-  //fprintf(stdout,"THIS SAYS TOP SIDE TET 2: %d\n", topSTet2);
-  //fprintf(stdout,"THIS SAYS TOP SIDE TET 3: %d\n", topSTet3);
-  //fprintf(stdout,"THIS SAYS TOP CORN TET 0: %d\n", topCTet0);
-  //fprintf(stdout,"THIS SAYS TOP CORN TET 1: %d\n", topCTet1);
-  //fprintf(stdout,"THIS SAYS TOP CORN TET 2: %d\n", topCTet2);
-  //fprintf(stdout,"THIS SAYS TOP CORN TET 3: %d\n", topCTet3);
-  //fprintf(stdout,"THIS SAYS BOT SIDE TET 0: %d\n", botSTet0);
-  //fprintf(stdout,"THIS SAYS BOT SIDE TET 1: %d\n", botSTet1);
-  //fprintf(stdout,"THIS SAYS BOT SIDE TET 2: %d\n", botSTet2);
-  //fprintf(stdout,"THIS SAYS BOT SIDE TET 3: %d\n", botSTet3);
-  //fprintf(stdout,"THIS SAYS BOT CORN TET 0: %d\n", botCTet0);
-  //fprintf(stdout,"THIS SAYS BOT CORN TET 1: %d\n", botCTet1);
-  //fprintf(stdout,"THIS SAYS BOT CORN TET 2: %d\n", botCTet2);
-  //fprintf(stdout,"THIS SAYS BOT CORN TET 3: %d\n", botCTet3);
-  //fprintf(stdout,"\n");
+  //vtkDebugMacro("THIS SAYS TOP VERT WEDGE: %d\n", topVertWedge);
+  //vtkDebugMacro("THIS SAYS BOT VERT WEDGE: %d\n", botVertWedge);
+  //vtkDebugMacro("THIS SAYS TOP HORZ WEDGE: %d\n", topHorzWedge);
+  //vtkDebugMacro("THIS SAYS BOT HORZ WEDGE: %d\n", botHorzWedge);
+  //vtkDebugMacro("THIS SAYS TOP SIDE TET 0: %d\n", topSTet0);
+  //vtkDebugMacro("THIS SAYS TOP SIDE TET 1: %d\n", topSTet1);
+  //vtkDebugMacro("THIS SAYS TOP SIDE TET 2: %d\n", topSTet2);
+  //vtkDebugMacro("THIS SAYS TOP SIDE TET 3: %d\n", topSTet3);
+  //vtkDebugMacro("THIS SAYS TOP CORN TET 0: %d\n", topCTet0);
+  //vtkDebugMacro("THIS SAYS TOP CORN TET 1: %d\n", topCTet1);
+  //vtkDebugMacro("THIS SAYS TOP CORN TET 2: %d\n", topCTet2);
+  //vtkDebugMacro("THIS SAYS TOP CORN TET 3: %d\n", topCTet3);
+  //vtkDebugMacro("THIS SAYS BOT SIDE TET 0: %d\n", botSTet0);
+  //vtkDebugMacro("THIS SAYS BOT SIDE TET 1: %d\n", botSTet1);
+  //vtkDebugMacro("THIS SAYS BOT SIDE TET 2: %d\n", botSTet2);
+  //vtkDebugMacro("THIS SAYS BOT SIDE TET 3: %d\n", botSTet3);
+  //vtkDebugMacro("THIS SAYS BOT CORN TET 0: %d\n", botCTet0);
+  //vtkDebugMacro("THIS SAYS BOT CORN TET 1: %d\n", botCTet1);
+  //vtkDebugMacro("THIS SAYS BOT CORN TET 2: %d\n", botCTet2);
+  //vtkDebugMacro("THIS SAYS BOT CORN TET 3: %d\n", botCTet3);
+  //vtkDebugMacro("\n");
 
   // Sides of cube
   double face0Vec0[3], face0Vec1[3];
@@ -3268,7 +3035,7 @@ int vtkSVPolycubeGenerator::CheckFace(vtkPolyData *polycubePd, int faceId,
                                     int &flatTop, int &flatBot)
 {
   double tol = 1.0e-4;
-  fprintf(stdout,"CHECKING FACE: %d\n", faceId);
+  vtkDebugMacro("CHECKING FACE: " <<  faceId);
   vtkIdType npts, *ptIds;
   polycubePd->GetCellPoints(faceId, npts, ptIds);
 
@@ -3283,10 +3050,6 @@ int vtkSVPolycubeGenerator::CheckFace(vtkPolyData *polycubePd, int faceId,
     polycubePd->GetPoint(ptId0, pts[i]);
     polycubePd->GetPoint(ptId1, pts[(i+1)%npts]);
 
-    //fprintf(stdout,"POINT %d: %.6f %.6f %.6f\n", i, pts[i][0], pts[i][1], pts[i][2]);
-    //fprintf(stdout,"POINT %d: %.6f %.6f %.6f\n", (i+1)%npts, pts[(i+1)%npts][0], pts[(i+1)%npts][1], pts[(i+1)%npts][2]);
-    //fprintf(stdout,"MAKES VEC: %d\n", i);
-
     vtkMath::Subtract(pts[(i+1)%npts], pts[i], vecs[i]);
     vtkMath::Normalize(vecs[i]);
   }
@@ -3296,8 +3059,8 @@ int vtkSVPolycubeGenerator::CheckFace(vtkPolyData *polycubePd, int faceId,
 
   double testDot0 = vtkMath::Dot(vecs[0], vecs[1]);
   double testDot1 = vtkMath::Dot(vecs[0], vecs[2]);
-  fprintf(stdout,"TEST DOT 0: %.8f\n", testDot0);
-  fprintf(stdout,"TEST DOT 1: %.8f\n", testDot1);
+  vtkDebugMacro("TEST DOT 0: " << testDot0);
+  vtkDebugMacro("TEST DOT 1: " << testDot1);
 
   if (testDot0 < tol && testDot0 > -1.0*tol)
     flatTop = 1;
@@ -3318,8 +3081,8 @@ int vtkSVPolycubeGenerator::CheckFace(vtkPolyData *polycubePd, int faceId,
 
   double testDot2 = vtkMath::Dot(vecs[npts-1], vecs[npts-2]);
   double testDot3 = vtkMath::Dot(vecs[npts-2], vecs[0]);
-  fprintf(stdout,"TEST DOT 2: %.8f\n", testDot2);
-  fprintf(stdout,"TEST DOT 3: %.8f\n", testDot3);
+  vtkDebugMacro("TEST DOT 2: " << testDot2);
+  vtkDebugMacro("TEST DOT 3: " << testDot3);
 
   if (testDot2 <= tol && testDot2 >= -1.0*tol)
     flatBot = 1;

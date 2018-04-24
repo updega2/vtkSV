@@ -36,7 +36,7 @@ class VTKSVVMTK_EXPORT vtkvmtkPolyDataCenterlineGroupsClipper : public vtkPolyDa
 {
   public:
   vtkTypeMacro(vtkvmtkPolyDataCenterlineGroupsClipper,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkPolyDataCenterlineGroupsClipper *New();
 
@@ -82,7 +82,7 @@ class VTKSVVMTK_EXPORT vtkvmtkPolyDataCenterlineGroupsClipper : public vtkPolyDa
   vtkvmtkPolyDataCenterlineGroupsClipper();
   ~vtkvmtkPolyDataCenterlineGroupsClipper();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   vtkPolyData* Centerlines;
 

@@ -30,36 +30,36 @@
 
 #include "vtkSVParameterizeSurfaceOnPolycube.h"
 
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVSurfaceMapper.h"
-#include "vtkSVPlanarMapper.h"
-#include "vtkSVPointSetBoundaryMapper.h"
-
 #include "vtkAppendPolyData.h"
+#include "vtkCellData.h"
+#include "vtkCleanPolyData.h"
 #include "vtkExecutive.h"
 #include "vtkErrorCode.h"
 #include "vtkCellArray.h"
 #include "vtkCellLocator.h"
-#include "vtkPointData.h"
-#include "vtkPoints.h"
-#include "vtkCellData.h"
 #include "vtkIdFilter.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
 #include "vtkIntArray.h"
-#include "vtkCleanPolyData.h"
 #include "vtkLine.h"
 #include "vtkLinearSubdivisionFilter.h"
 #include "vtkMath.h"
-#include "vtkSmartPointer.h"
-#include "vtkSmartPointer.h"
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointData.h"
+#include "vtkPoints.h"
+#include "vtkSmartPointer.h"
+#include "vtkSmartPointer.h"
+#include "vtkThreshold.h"
 #include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
-#include "vtkThreshold.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkVersion.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVPlanarMapper.h"
+#include "vtkSVPointSetBoundaryMapper.h"
+#include "vtkSVSurfaceMapper.h"
 
 #include <algorithm>
 
@@ -199,7 +199,7 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
   subdivider->SetNumberOfSubdivisions(4);
   subdivider->Update();
   polycubePd->DeepCopy(subdivider->GetOutput());
-  fprintf(stdout,"JUST CHECK: %d\n", polycubePd->GetNumberOfPoints());
+  vtkDebugMacro("JUST CHECK: " <<  polycubePd->GetNumberOfPoints());
 
   int numPatches = patches.size();
 
@@ -232,13 +232,13 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
 
     vtkNew(vtkIntArray, paraBoundaryCorners);
     paraBoundaryCorners->SetNumberOfTuples(patches[i].CornerPoints.size());
-    fprintf(stdout,"PATCH: %d\n", patchId);
+    vtkDebugMacro("PATCH: " <<  patchId);
 
-    fprintf(stdout,"Corner Points: ");
+    vtkDebugMacro("Corner Points: ");
     for (int j=0; j<patches[i].CornerPoints.size(); j++)
     {
       int ptId = patches[i].CornerPoints[j];
-      fprintf(stdout,"%d ", ptId);
+      vtkDebugMacro(" " <<  ptId);
 
       // Thresholded pt id
       int thresholdPtId = thresholdPd->GetPointData()->GetArray(
@@ -252,21 +252,21 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
       if (this->FindPointMatchingValues(rotPolycube, "PatchIds", patchVals, paraPtId) != SV_OK)
       {
         vtkErrorMacro("Could not find corresponding polycube point id");
-        fprintf(stderr,"COULD NOT FIND: ");
+        vtkErrorMacro("COULD NOT FIND: ");
         for (int r=0; r<patchVals->GetNumberOfIds(); r++)
-          fprintf(stdout,"%d ", patchVals->GetId(r));
-        fprintf(stdout,"\n");
+          vtkDebugMacro(" " <<  patchVals->GetId(r));
+        vtkDebugMacro(" ");
         return SV_ERROR;
       }
 
       paraBoundaryCorners->SetTuple1(j, paraPtId);
     }
-    fprintf(stdout,"\n");
+    vtkDebugMacro(" ");
 
-    fprintf(stdout,"Poly Corner Points: ");
+    vtkDebugMacro("Poly Corner Points: ");
     for (int j=0; j<paraBoundaryCorners->GetNumberOfTuples(); j++)
-      fprintf(stdout,"%.4f ", paraBoundaryCorners->GetTuple1(j));
-    fprintf(stdout,"\n");
+      vtkDebugMacro(" " << paraBoundaryCorners->GetTuple1(j));
+    vtkDebugMacro(" ");
 
     vtkNew(vtkSVPointSetBoundaryMapper, boundaryMapper);
     boundaryMapper->SetPointSet(rotPolycube);

@@ -42,8 +42,9 @@
 #ifndef vtkSVCenterlinesBasedNormals_h
 #define vtkSVCenterlinesBasedNormals_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVSegmentationModule.h" // For exports
+
+#include "vtkPolyDataAlgorithm.h"
 
 #include "vtkPolyData.h"
 
@@ -52,7 +53,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlinesBasedNormals : public vtkPolyData
 public:
   static vtkSVCenterlinesBasedNormals* New();
   vtkTypeMacro(vtkSVCenterlinesBasedNormals,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Use of cell data
@@ -97,7 +98,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

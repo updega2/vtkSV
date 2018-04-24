@@ -42,8 +42,9 @@
 #ifndef vtkSVEdgeWeightedCVT_h
 #define vtkSVEdgeWeightedCVT_h
 
-#include "vtkSVGeneralCVT.h"
 #include "vtkSVSegmentationModule.h" // For exports
+
+#include "vtkSVGeneralCVT.h"
 
 #include "vtkPolyData.h"
 
@@ -54,7 +55,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVEdgeWeightedCVT : public vtkSVGeneralCVT
 public:
   static vtkSVEdgeWeightedCVT* New();
   vtkTypeMacro(vtkSVEdgeWeightedCVT,vtkSVGeneralCVT);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Number of elements to be considered part of the element neighborhood.
@@ -78,13 +79,13 @@ protected:
   ~vtkSVEdgeWeightedCVT();
 
   // Derived functions
-  int InitializeConnectivity();
-  int InitializeGenerators();
-  int GetClosestGenerator(const int evalId, int &newGenerator);
-  int ComputeSurfaceMetric(double &evalMetric);
-  int UpdateConnectivity(const int evalId, const int oldGenerator, const int newGenerator);
-  int UpdateGenerators();
-  int IsBoundaryCell(const int cellId);
+  int InitializeConnectivity() override;
+  int InitializeGenerators() override;
+  int GetClosestGenerator(const int evalId, int &newGenerator) override;
+  int ComputeSurfaceMetric(double &evalMetric) override;
+  int UpdateConnectivity(const int evalId, const int oldGenerator, const int newGenerator) override;
+  int UpdateGenerators() override;
+  int IsBoundaryCell(const int cellId) override;
 
   // Edge weights setup
   int GetPointCellValence();

@@ -33,7 +33,6 @@ set(module vtkSVSegmentation)
 #------------------------------------------------------------------------------
 # Core SRCS and HDRS
 set(SRCS
-  vtkSVGeneralizedPolycube.cxx
   vtkSVGeneralCVT.cxx
   vtkSVEdgeWeightedCVT.cxx
   vtkSVCenterlinesBasedNormals.cxx
@@ -41,7 +40,6 @@ set(SRCS
   vtkSVEdgeWeightedSmoother.cxx
   vtkSVCenterlines.cxx
   vtkSVPolyBallLine.cxx
-  vtkSVGroupsClipper.cxx
   vtkSVGroupsSegmenter.cxx
   vtkSVCenterlineGraph.cxx
   vtkSVCenterlineGCell.cxx
@@ -55,7 +53,6 @@ set(SRCS
   )
 
 set(HDRS
-  vtkSVGeneralizedPolycube.h
   vtkSVGeneralCVT.h
   vtkSVEdgeWeightedCVT.h
   vtkSVCenterlinesBasedNormals.h
@@ -63,7 +60,6 @@ set(HDRS
   vtkSVEdgeWeightedSmoother.h
   vtkSVPolyBallLine.h
   vtkSVCenterlines.h
-  vtkSVGroupsClipper.h
   vtkSVGroupsSegmenter.h
   vtkSVCenterlineGraph.h
   vtkSVCenterlineGCell.h
@@ -134,8 +130,19 @@ endif()
 #------------------------------------------------------------------------------
 # Create additional executables
 if(VTKSV_BUILD_EXES)
-  set(EXE_LIST EdgeWeightedCVT CenterlinesEdgeWeightedCVT CenterlinesBasedNormalsEdgeWeightedCVT
-    GroupsClipper GroupsSegmenter CenterlinesExtractor CenterlinesSplitter CenterlinesMerger PolycubeGenerator SurfaceCenterlineGrouper SurfaceCenterlineAttributesPasser SurfaceCuboidPatcher)
+  set(EXE_LIST
+    EdgeWeightedCVT
+    CenterlinesEdgeWeightedCVT
+    CenterlinesBasedNormalsEdgeWeightedCVT
+    GroupsSegmenter
+    CenterlinesExtractor
+    CenterlinesSplitter
+    CenterlinesMerger
+    PolycubeGenerator
+    SurfaceCenterlineGrouper
+    SurfaceCenterlineAttributesPasser
+    SurfaceCuboidPatcher
+    )
   foreach(exe ${EXE_LIST})
     add_executable(vtkSV${exe} ${exe}.cxx)
     target_link_libraries(vtkSV${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVSEGMENTATION_NAME}

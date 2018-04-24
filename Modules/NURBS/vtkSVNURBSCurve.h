@@ -63,7 +63,7 @@ public:
   vtkSVNURBSCurve(int m, vtkPoints *controlPoints, vtkDoubleArray *knotPoints, vtkIntArray *knotMultiplicity, int deg) {;}
 
   vtkTypeMacro(vtkSVNURBSCurve,vtkSVNURBSObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get and set the number of control points for curve
@@ -100,7 +100,7 @@ public:
   //@}
 
   // Initialize
-  void Initialize();
+  void Initialize() override;
 
   //PolyData representation functions
   /** \brief Function to generate polydata representation of nurbs curve. Stored
@@ -207,7 +207,7 @@ public:
 
   virtual void DeepCopy(vtkSVNURBSCurve *src);
 
-  virtual std::string GetType() {return "Curve";}
+  virtual std::string GetType() override {return "Curve";}
 
 protected:
   vtkSVNURBSCurve();

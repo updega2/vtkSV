@@ -42,10 +42,11 @@
 #ifndef vtkSVEdgeWeightedSmoother_h
 #define vtkSVEdgeWeightedSmoother_h
 
-#include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVSegmentationModule.h" // For exports
 
 #include "vtkPolyData.h"
+
+#include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVPolyBallLine.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVEdgeWeightedSmoother : public vtkSVEdgeWeightedCVT
@@ -53,7 +54,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVEdgeWeightedSmoother : public vtkSVEdgeWeigh
 public:
   static vtkSVEdgeWeightedSmoother* New();
   vtkTypeMacro(vtkSVEdgeWeightedSmoother,vtkSVEdgeWeightedCVT);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   vtkSetObjectMacro(StaticIds, vtkIdList);

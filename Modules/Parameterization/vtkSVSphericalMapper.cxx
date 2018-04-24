@@ -28,15 +28,6 @@
  *
  *=========================================================================*/
 
-/** @file vtkSVSphericalMapper.cxx
- *  @brief This implements the vtkSVSphericalMapper filter as a class
- *
- *  @author Adam Updegrove
- *  @author updega2@gmail.com
- *  @author UC Berkeley
- *  @author shaddenlab.berkeley.edu
- */
-
 #include "vtkSVSphericalMapper.h"
 
 #include "vtkCellArray.h"
@@ -45,25 +36,27 @@
 #include "vtkCleanPolyData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkErrorCode.h"
 #include "vtkFeatureEdges.h"
 #include "vtkFloatArray.h"
 #include "vtkGradientFilter.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
-#include "vtkSVPlacePointsOnS2.h"
 #include "vtkPointData.h"
 #include "vtkPointDataToCellData.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVMathUtils.h"
 #include "vtkTransform.h"
 #include "vtkTriangle.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkXMLPolyDataWriter.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
+#include "vtkSVPlacePointsOnS2.h"
 
 #include <iostream>
 #include <sstream>
@@ -71,10 +64,14 @@
 
 //---------------------------------------------------------------------------
 //vtkCxxRevisionMacro(vtkSVSphericalMapper, "$Revision: 0.0 $");
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVSphericalMapper);
 
-
-//---------------------------------------------------------------------------
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVSphericalMapper::vtkSVSphericalMapper()
 {
   this->Verbose                 = 1;
@@ -120,7 +117,9 @@ vtkSVSphericalMapper::vtkSVSphericalMapper()
   this->SaveIter           = 0;
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVSphericalMapper::~vtkSVSphericalMapper()
 {
   if (this->InitialPd != NULL)
@@ -168,13 +167,16 @@ vtkSVSphericalMapper::~vtkSVSphericalMapper()
   }
 }
 
-//---------------------------------------------------------------------------
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVSphericalMapper::PrintSelf(ostream& os, vtkIndent indent)
 {
 }
 
-// Generate Separated Surfaces with Region ID Numbers
-//---------------------------------------------------------------------------
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVSphericalMapper::RequestData(
                                  vtkInformation *vtkNotUsed(request),
                                  vtkInformationVector **inputVector,
@@ -192,6 +194,7 @@ int vtkSVSphericalMapper::RequestData(
   if (numPolys < 1)
   {
     vtkDebugMacro("No input!");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -199,6 +202,7 @@ int vtkSVSphericalMapper::RequestData(
   if (vtkSVGeneralUtils::CheckSurface(this->InitialPd) != SV_OK)
   {
     vtkErrorMacro("Error when checking input surface");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   //Get the number of Polys for scalar  allocation
@@ -212,32 +216,30 @@ int vtkSVSphericalMapper::RequestData(
   if (this->PerformMapping() != SV_OK)
   {
     vtkErrorMacro("Error while doing CG Solve");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
   output->DeepCopy(this->HarmonicMap[HARMONIC]);
   output->GetPointData()->PassData(input->GetPointData());
   output->GetCellData()->PassData(input->GetCellData());
-  if (this->PDCheckArrayName(output, 0 ,"Normals") == 1)
+  if (vtkSVGeneralUtils::CheckArrayExists(output, 0 ,"Normals") == 1)
   {
     output->GetPointData()->RemoveArray("Normals");
   }
-  if (this->PDCheckArrayName(output, 1,"cellNormals") == 1)
+  if (vtkSVGeneralUtils::CheckArrayExists(output, 1,"cellNormals") == 1)
   {
     output->GetCellData()->RemoveArray("cellNormals");
   }
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PerformMapping
+// ----------------------
 int vtkSVSphericalMapper::PerformMapping()
 {
-  fprintf(stdout,"CG Update Method: %d\n",this->CGUpdateMethod);
+  vtkDebugMacro("CG Update Method: " << this->CGUpdateMethod);
 
   //Compute Gauss Map (i.e. get normals off of mesh)
   //TODO Check normals exists!
@@ -255,11 +257,6 @@ int vtkSVSphericalMapper::PerformMapping()
     vtkErrorMacro("Error when setting boundaries");
     return SV_ERROR;
   }
-  //std::string filename = "/Users/adamupdegrove/Desktop/tmp/S2Placed.vtp";
-  //vtkNew(vtkXMLPolyDataWriter, writer);
-  //writer->SetInputData(this->HarmonicMap[0]);
-  //writer->SetFileName(filename.c_str());
-  //writer->Write();
 
   if (this->InitiateCGArrays() != SV_OK)
   {
@@ -286,12 +283,9 @@ int vtkSVSphericalMapper::PerformMapping()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// InitiateCGArrays
+// ----------------------
 int vtkSVSphericalMapper::InitiateCGArrays()
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -311,12 +305,9 @@ int vtkSVSphericalMapper::InitiateCGArrays()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetBoundaries
+// ----------------------
 int vtkSVSphericalMapper::SetBoundaries()
 {
   if (this->FindBoundaries() != SV_OK)
@@ -451,12 +442,9 @@ int vtkSVSphericalMapper::SetBoundaries()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// FindBoundaries
+// ----------------------
 int vtkSVSphericalMapper::FindBoundaries()
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -492,12 +480,9 @@ int vtkSVSphericalMapper::FindBoundaries()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// FirstStep
+// ----------------------
 int vtkSVSphericalMapper::FirstStep(int map)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -522,12 +507,9 @@ int vtkSVSphericalMapper::FirstStep(int map)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// WolfeLineSearch
+// ----------------------
 int vtkSVSphericalMapper::WolfeLineSearch(int map)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -557,7 +539,7 @@ int vtkSVSphericalMapper::WolfeLineSearch(int map)
   }
   if (this->Verbose == 2)
   {
-    fprintf(stdout, "New Step Size: %.5f\n", maxstep);
+    vtkDebugMacro( "New Step Size: " <<  maxstep);
   }
 
   //Backtracking
@@ -588,7 +570,7 @@ int vtkSVSphericalMapper::WolfeLineSearch(int map)
   //  {
   //    maxstep = 0.9*maxstep;
   //    EStep = E0;
-  //    fprintf(stdout,"IT HAPPPEENEEED: %.8f\n", maxstep);
+  //    vtkDebugMacro("IT HAPPPEENEEED: " <<  maxstep);
   //  }
   //  else
   //  {
@@ -600,15 +582,12 @@ int vtkSVSphericalMapper::WolfeLineSearch(int map)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SphericalTutteMapping
+// ----------------------
 int vtkSVSphericalMapper::SphericalTutteMapping()
 {
-  fprintf(stdout,"SphericalTutteMapping...\n");
+  vtkDebugMacro("SphericalTutteMapping...");
   int numPts = this->InitialPd->GetNumberOfPoints();
   int numTris = this->InitialPd->GetNumberOfCells();
 
@@ -617,10 +596,10 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
                       this->EdgeWeights, E0, TUTTE);
   double R0 = 1000.0;
 
-  fprintf(stdout,"Starting Tutte Iterations...\n");
+  vtkDebugMacro("Starting Tutte Iterations...");
   if (this->Verbose)
   {
-    fprintf(stdout,"Initial Tutte Energy: %.8f\n",E0);
+    vtkDebugMacro("Initial Tutte Energy: " << E0);
   }
   if (this->FirstStep(TUTTE) != SV_OK)
   {
@@ -636,7 +615,7 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
   double Rdiff = R0-RStep;
   if (this->Verbose)
   {
-    fprintf(stdout,"| Iter | 000000 | Tutte Energy | %16.8f | Res | %16.8f |\n", EStep, Ediff);
+    vtkDebugMacro("| Iter | 000000 | Tutte Energy | " << EStep << " | Res | " << Ediff << " |");
   }
   E0 = EStep;
   for (int iter=0; iter<this->MaxNumIterations; iter++)
@@ -667,11 +646,11 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
 
     if (this->Verbose)
     {
-      fprintf(stdout,"| Iter | %06d | Tutte Energy | %16.8f | Res | %16.8f |\n",iter+1, EStep, Ediff);
+      vtkDebugMacro("| Iter | " << iter+1 << " | Tutte Energy | " << EStep << " | Res | " << Ediff << " |");
     }
     if (fabs(Ediff) < this->TutteEnergyCriterion)
     {
-      fprintf(stdout,"Energy Criterion Met! %.5f\n",EStep);
+      vtkDebugMacro("Energy Criterion Met! " << EStep);
       break;
     }
     else
@@ -698,19 +677,16 @@ int vtkSVSphericalMapper::SphericalTutteMapping()
     }
   }
 
-  fprintf(stdout,"Done with SphericalTutteMapping...\n");
+  vtkDebugMacro("Done with SphericalTutteMapping...");
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SphericalConformalMapper
+// ----------------------
 int vtkSVSphericalMapper::SphericalConformalMapper()
 {
-  fprintf(stdout,"SphericalConformalMapper...\n");
+  vtkDebugMacro("SphericalConformalMapper...");
   int numPts = this->InitialPd->GetNumberOfPoints();
   int numTris = this->InitialPd->GetNumberOfCells();
 
@@ -719,10 +695,10 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
   this->ComputeEnergy(this->HarmonicMap[HARMONIC], this->EdgeTable,
                       this->EdgeWeights, E0, HARMONIC);
 
-  fprintf(stdout,"Starting Harmonic Iterations...\n");
+  vtkDebugMacro("Starting Harmonic Iterations...");
   if (this->Verbose)
   {
-    fprintf(stdout,"Initial Harmonic Energy: %.8f\n",E0);
+    vtkDebugMacro("Initial Harmonic Energy: " << E0);
   }
   if (this->FirstStep(HARMONIC) != SV_OK)
   {
@@ -738,7 +714,7 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
   double Rdiff = R0-RStep;
   if (this->Verbose)
   {
-    fprintf(stdout,"| Iter | 000000 | Harmonic Energy | %16.8f | Res | %16.8f |\n", EStep, Ediff);
+    vtkDebugMacro("| Iter | 000000 | Harmonic Energy | " << EStep << " | Res | " << Ediff << " |");
   }
   E0 = EStep;
   for (int iter=0; iter<this->MaxNumIterations; iter++)
@@ -779,11 +755,11 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
 
     if (this->Verbose)
     {
-      fprintf(stdout,"| Iter | %06d | Harmonic Energy | %16.8f | Res | %16.8f |\n",iter+1, EStep, Ediff);
+      vtkDebugMacro("| Iter | " << iter+1 << " | Harmonic Energy | " << EStep << " | Res | " << Ediff << " |");
     }
     if (fabs(Ediff) < this->HarmonicEnergyCriterion)
     {
-      fprintf(stdout,"Energy Criterion Met! %.5f\n",EStep);
+      vtkDebugMacro("Energy Criterion Met! " << EStep);
       break;
     }
     else
@@ -810,16 +786,13 @@ int vtkSVSphericalMapper::SphericalConformalMapper()
     }
   }
 
-  fprintf(stdout,"Done with SphericalConformalMapper...\n");
+  vtkDebugMacro("Done with SphericalConformalMapper...");
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ComputeMobiusTransformation
+// ----------------------
 int vtkSVSphericalMapper::ComputeMobiusTransformation()
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -828,7 +801,7 @@ int vtkSVSphericalMapper::ComputeMobiusTransformation()
   vtkSVGeneralUtils::ComputeMassCenter(this->HarmonicMap[HARMONIC], massCenter);
   if (this->Verbose == 2)
   {
-    fprintf(stdout,"Mass Center: %.16f, %.16f, %.16f\n",massCenter[0], massCenter[1], massCenter[2]);
+    vtkDebugMacro("Mass Center: " << massCenter[0] << " " <<  massCenter[1] << " " <<  massCenter[2]);
   }
 
   for (int i =0; i<numPts; i++)
@@ -856,12 +829,9 @@ int vtkSVSphericalMapper::ComputeMobiusTransformation()
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ComputeEnergy
+// ----------------------
 int vtkSVSphericalMapper::ComputeEnergy(vtkPolyData *pd,
                                                  vtkEdgeTable *edgeTable,
                                                  vtkFloatArray *edgeWeights,
@@ -905,12 +875,9 @@ int vtkSVSphericalMapper::ComputeEnergy(vtkPolyData *pd,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ComputeStringEnergy
+// ----------------------
 int vtkSVSphericalMapper::ComputeStringEnergy(double e0[],
                                                       double e1[],
                                                       double weight,
@@ -929,12 +896,9 @@ int vtkSVSphericalMapper::ComputeStringEnergy(double e0[],
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// ComputeResidualEnergy
+// ----------------------
 int vtkSVSphericalMapper::ComputeResidual(double &residual)
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -951,12 +915,9 @@ int vtkSVSphericalMapper::ComputeResidual(double &residual)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// UpdateMap
+// ----------------------
 int vtkSVSphericalMapper::UpdateMap(vtkFloatArray *laplacian,
                                              int map,
                                              int cg_update)
@@ -995,12 +956,9 @@ int vtkSVSphericalMapper::UpdateMap(vtkFloatArray *laplacian,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// StepForward
+// ----------------------
 int vtkSVSphericalMapper::StepForward(int map, int cg_update)
 {
 
@@ -1043,19 +1001,16 @@ int vtkSVSphericalMapper::StepForward(int map, int cg_update)
   }
   else
   {
-    fprintf(stderr,"No correct option give\n");
+    vtkErrorMacro("No correct option give");
     return SV_ERROR;
   }
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// FRUpdateMap
+// ----------------------
 int vtkSVSphericalMapper::FRUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
@@ -1076,12 +1031,9 @@ int vtkSVSphericalMapper::FRUpdateMap(int map)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// PRUpdateMap
+// ----------------------
 int vtkSVSphericalMapper::PRUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
@@ -1108,12 +1060,9 @@ int vtkSVSphericalMapper::PRUpdateMap(int map)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// HSUpdateMap
+// ----------------------
 int vtkSVSphericalMapper::HSUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
@@ -1140,12 +1089,9 @@ int vtkSVSphericalMapper::HSUpdateMap(int map)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// DYUpdateMap
+// ----------------------
 int vtkSVSphericalMapper::DYUpdateMap(int map)
 {
   int numPts = this->PrevDescent->GetNumberOfTuples();
@@ -1172,12 +1118,9 @@ int vtkSVSphericalMapper::DYUpdateMap(int map)
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// CGUpdateMap
+// ----------------------
 int vtkSVSphericalMapper::CGUpdateMap(int map, double beta[])
 {
   int numPts = this->InitialPd->GetNumberOfPoints();
@@ -1231,12 +1174,9 @@ int vtkSVSphericalMapper::CGUpdateMap(int map, double beta[])
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// CalculateCircleLength
+// ----------------------
 int vtkSVSphericalMapper::CalculateCircleLength(vtkPolyData *lines,
                                                        double &length)
 {
@@ -1261,12 +1201,9 @@ int vtkSVSphericalMapper::CalculateCircleLength(vtkPolyData *lines,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// CalculateSquareEdgeLengths
+// ----------------------
 int vtkSVSphericalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
                                                            vtkIntArray *markerPts,
                                                            double lengths[])
@@ -1286,7 +1223,6 @@ int vtkSVSphericalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
     int checkPt = -1;
     while (checkPt != lastPt)
     {
-      //fprintf(stdout,"What is: %d\n", checkPt);
       lines->GetCellPoints(currCell, npts, pts);
       double pt0[3], pt1[3];
       lines->GetPoint(pts[0], pt0);
@@ -1301,18 +1237,13 @@ int vtkSVSphericalMapper::CalculateSquareEdgeLengths(vtkPolyData *lines,
       currCell++;
     }
   }
-  //fprintf(stdout,"Curr!: %d\n", currCell);
-  //fprintf(stdout,"NumLines!: %d\n", numLines);
 
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetLoopOnUnitCircle
+// ----------------------
 int vtkSVSphericalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
                                                     double length,
                                                     double radius)
@@ -1348,12 +1279,9 @@ int vtkSVSphericalMapper::SetLoopOnUnitCircle(vtkPolyData *lines,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// SetCircleBoundary
+// ----------------------
 int vtkSVSphericalMapper::SetCircleBoundary(vtkPolyData *lines,
                                                    vtkIntArray *markerPts,
                                                    vtkIntArray *markerDirs,
@@ -1458,12 +1386,9 @@ int vtkSVSphericalMapper::SetCircleBoundary(vtkPolyData *lines,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// RotateByAngle
+// ----------------------
 int vtkSVSphericalMapper::RotateByAngle(const double pt[3], const double angle,
                                                double returnPt[3])
 {
@@ -1476,55 +1401,8 @@ int vtkSVSphericalMapper::RotateByAngle(const double pt[3], const double angle,
 }
 
 // ----------------------
-// PDCheckArrayName
+// SetCubeBoundary
 // ----------------------
-/**
- * @brief Function to check is array with name exists in cell or point data
- * @param object this is the object to check if the array exists
- * @param datatype this is point or cell. point =0,cell=1
- * @param arrayname this is the name of the array to check
- * @reutrn this returns 1 if the array exists and zero if it doesn't
- * or the function does not return properly.
- */
-
-int vtkSVSphericalMapper::PDCheckArrayName(vtkPolyData *object,int datatype,std::string arrayname )
-{
-  vtkIdType i;
-  int numArrays;
-  int exists =0;
-
-  if (datatype == 0)
-  {
-    numArrays = object->GetPointData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetPointData()->GetArrayName(i),arrayname.c_str()))
-      {
-        exists =1;
-      }
-    }
-  }
-  else
-  {
-    numArrays = object->GetCellData()->GetNumberOfArrays();
-    for (i=0;i<numArrays;i++)
-    {
-      if (!strcmp(object->GetCellData()->GetArrayName(i),arrayname.c_str()))
-      {
-        exists =1;
-      }
-    }
-  }
-
-  return exists;
-}
-
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
 int vtkSVSphericalMapper::SetCubeBoundary(vtkPolyData *lines,
                                                  vtkIntArray *markerPts,
                                                  vtkIntArray *markerDirs,
@@ -1599,12 +1477,9 @@ int vtkSVSphericalMapper::SetCubeBoundary(vtkPolyData *lines,
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// CubeBoundaryToSphere
+// ----------------------
 int vtkSVSphericalMapper::CubeBoundaryToSphere(double inCoords[], double outCoords[])
 {
   double x2 = std::pow(inCoords[0], 2.0);
@@ -1618,12 +1493,9 @@ int vtkSVSphericalMapper::CubeBoundaryToSphere(double inCoords[], double outCoor
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// DetermineBoundaryPlan
+// ----------------------
 int vtkSVSphericalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[])
 {
   int t = this->BoundaryType;
@@ -1716,12 +1588,9 @@ int vtkSVSphericalMapper::DetermineBoundaryPlan(int &numLoops, int bBool[])
   return SV_OK;
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief
- * @param *pd
- * @return
- */
+// ----------------------
+// GetCubeStartPoint
+// ----------------------
 int vtkSVSphericalMapper::GetCubeStartPoint(int id, double startCoords[])
 {
   if (id ==0)

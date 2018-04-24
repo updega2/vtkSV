@@ -32,12 +32,13 @@
 
 #include "vtkCellArray.h"
 #include "vtkCleanPolyData.h"
-#include "vtkSVNURBSUtils.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
+
 #include "vtkSVGlobals.h"
+#include "vtkSVNURBSUtils.h"
 
 // ----------------------
 // StandardNewMacro

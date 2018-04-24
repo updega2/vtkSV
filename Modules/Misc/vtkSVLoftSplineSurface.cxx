@@ -1061,7 +1061,7 @@ int vtkSVLoftSplineSurface::FFT(double **pts, int numPts, int numInterpPts, int 
       terms[i][1]=2.0*data[2*i+1]/numInterpPts;
     }
 
-    delete data;
+    delete [] data;
 
     *rtnterms = terms;
 

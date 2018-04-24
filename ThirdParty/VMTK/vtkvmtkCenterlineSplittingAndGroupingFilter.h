@@ -34,7 +34,7 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineSplittingAndGroupingFilter : public vtkP
 {
   public:
   vtkTypeMacro(vtkvmtkCenterlineSplittingAndGroupingFilter,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   vtkSetStringMacro(RadiusArrayName);
   vtkGetStringMacro(RadiusArrayName);
@@ -72,7 +72,7 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineSplittingAndGroupingFilter : public vtkP
   vtkvmtkCenterlineSplittingAndGroupingFilter();
   ~vtkvmtkCenterlineSplittingAndGroupingFilter();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId) = 0;
 

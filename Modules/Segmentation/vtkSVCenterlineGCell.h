@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \brief a node of Graphs
  *
@@ -40,9 +39,10 @@
 #ifndef vtkSVCenterlineGCell_h
 #define vtkSVCenterlineGCell_h
 
-#include "vtkPolyData.h"
-#include "vtkObject.h"
 #include "vtkSVSegmentationModule.h" // For exports
+
+#include "vtkObject.h"
+#include "vtkPolyData.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineGCell : public vtkObject
 {

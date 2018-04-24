@@ -43,22 +43,22 @@
 #ifndef vtkSVParameterizeVolumeOnPolycube_h
 #define vtkSVParameterizeVolumeOnPolycube_h
 
+#include "vtkSVParameterizationModule.h" // For exports
+
+#include "vtkIdList.h"
+#include "vtkMatrix4x4.h"
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkIdList.h"
-#include "vtkMatrix4x4.h"
 
 #include "vtkSVGlobals.h"
-
-#include "vtkSVParameterizationModule.h" // For exports
 
 class VTKSVPARAMETERIZATION_EXPORT vtkSVParameterizeVolumeOnPolycube : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVParameterizeVolumeOnPolycube,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVParameterizeVolumeOnPolycube *New();
 
@@ -121,7 +121,7 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
   int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
                            vtkPolyData *pdWithCleanInterior,

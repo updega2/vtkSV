@@ -38,6 +38,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+
 #include "vtkSVGlobals.h"
 
 #include <sstream>
@@ -140,7 +141,7 @@ int vtkSVSuperSquareBoundaryMapper::CalculateSquareEdgeLengths(vtkIntArray *actu
         if (checkPt == pointIds->LookupValue(this->BoundaryIds->GetValue(j)))
         {
           actualIds->SetValue((i+1)%numBoundaryPts, pointIds->GetTuple1(checkPt));
-          //fprintf(stdout,"Found boundary ID!: %d\n", this->BoundaryIds->GetValue(j));
+          vtkDebugMacro("Found boundary ID!: " <<  this->BoundaryIds->GetValue(j));
           done = 1;
         }
       }
@@ -196,7 +197,7 @@ int vtkSVSuperSquareBoundaryMapper::SetSquareBoundary(vtkIntArray *actualIds)
   // Loop through points
   for (int i=0; i<numBoundaryPts; i++)
   {
-    //fprintf(stdout,"Looping to next point: %d\n", i);
+    vtkDebugMacro("Looping to next point: " <<  i);
 
     // Update variables
     double currLength = 0.0;

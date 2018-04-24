@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  * \class vtkSVBoundaryMapper
  *
@@ -44,8 +43,9 @@
 #ifndef vtkSVBoundaryMapper_h
 #define vtkSVBoundaryMapper_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVParameterizationModule.h" // For exports
+
+#include "vtkPolyDataAlgorithm.h"
 
 #include "vtkEdgeTable.h"
 #include "vtkIntArray.h"
@@ -54,7 +54,7 @@ class VTKSVPARAMETERIZATION_EXPORT vtkSVBoundaryMapper : public vtkPolyDataAlgor
 {
 public:
   vtkTypeMacro(vtkSVBoundaryMapper,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get/Set for list of point ids that are corner points
@@ -93,7 +93,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int RemoveInternalIds;
 

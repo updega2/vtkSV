@@ -31,23 +31,19 @@
 #ifndef vtkSVCenterlines_h
 #define vtkSVCenterlines_h
 
-#include "vtkPolyDataAlgorithm.h"
-//#include "vtkvmtkComputationalGeometryWin32Header.h"
-#include "vtkvmtkWin32Header.h"
 #include "vtkSVSegmentationModule.h" // For exports
 
+#include "vtkIdList.h"
+#include "vtkPoints.h"
+#include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
 #include "vtkUnstructuredGrid.h"
-
-class vtkPolyData;
-class vtkPoints;
-class vtkIdList;
-class vtkDataArray;
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
 {
   public:
   vtkTypeMacro(vtkSVCenterlines,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVCenterlines *New();
 
@@ -130,7 +126,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlines : public vtkPolyDataAlgorithm
   vtkSVCenterlines();
   ~vtkSVCenterlines();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   int FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList *boundaryBaricenterIds, vtkDataArray *normals, vtkIdList *seedIds);
   void AppendEndPoints(vtkPoints* endPointPairs);

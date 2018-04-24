@@ -42,23 +42,23 @@
 #ifndef vtkSVGroupsSegmenter_h
 #define vtkSVGroupsSegmenter_h
 
+#include "vtkSVSegmentationModule.h" // For export
+
+#include "vtkIdList.h"
+#include "vtkMatrix4x4.h"
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkSVPolyBallLine.h"
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkIdList.h"
-#include "vtkMatrix4x4.h"
 
 #include "vtkSVGlobals.h"
-
-#include "vtkSVSegmentationModule.h" // For export
 
 class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVGroupsSegmenter,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVGroupsSegmenter *New();
 
@@ -214,7 +214,7 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

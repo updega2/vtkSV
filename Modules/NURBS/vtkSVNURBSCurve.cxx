@@ -31,12 +31,13 @@
 #include "vtkSVNURBSCurve.h"
 
 #include "vtkCleanPolyData.h"
-#include "vtkSVNURBSUtils.h"
-#include "vtkPointData.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointData.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
+
 #include "vtkSVGlobals.h"
+#include "vtkSVNURBSUtils.h"
 
 // ----------------------
 // StandardNewMacro
@@ -211,6 +212,8 @@ int vtkSVNURBSCurve::IncreaseDegree(const int numberOfIncreases)
   this->SetControlPointGrid(newControlPoints);
   this->SetKnotVector(newKnots);
   this->Degree = curp+numberOfIncreases;
+
+  return SV_OK;
 }
 
 // ----------------------
@@ -243,6 +246,8 @@ int vtkSVNURBSCurve::DecreaseDegree(const double tolerance)
   this->SetControlPointGrid(newControlPoints);
   this->SetKnotVector(newKnots);
   this->Degree = curp-1;
+
+  return SV_ERROR;
 }
 
 // ----------------------
@@ -557,6 +562,8 @@ int vtkSVNURBSCurve::SetWeight(const int index, const double weight)
     return SV_ERROR;
   }
   weights->SetTuple1(index, weight);
+
+  return SV_ERROR;
 }
 
 // ----------------------
@@ -571,6 +578,8 @@ int vtkSVNURBSCurve::GetWeight(const int index, double &weight)
     return SV_ERROR;
   }
   weight = weights->GetTuple1(index);
+
+  return SV_ERROR;
 }
 
 // ----------------------

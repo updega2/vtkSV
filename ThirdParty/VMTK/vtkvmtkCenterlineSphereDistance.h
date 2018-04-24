@@ -36,7 +36,7 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineSphereDistance : public vtkObject
 {
   public:
   vtkTypeMacro(vtkvmtkCenterlineSphereDistance,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
   static vtkvmtkCenterlineSphereDistance* New();
 
   static void FindTouchingSphereCenter(vtkPolyData* centerlines, const char* radiusArrayName, vtkIdType cellId, vtkIdType subId, double pcoord, vtkIdType& touchingSubId, double& touchingPCoord, bool forward=true);

@@ -31,6 +31,7 @@
 #include "vtkSVPlanarMapper.h"
 
 #include "vtkCellData.h"
+#include "vtkErrorCode.h"
 #include "vtkIdFilter.h"
 #include "vtkIdList.h"
 #include "vtkMath.h"
@@ -39,11 +40,12 @@
 #include "vtkPolyData.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkSmartPointer.h"
+#include "vtkUnstructuredGrid.h"
+
 #include "vtkSVBoundaryMapper.h"
-#include "vtkSVMathUtils.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkUnstructuredGrid.h"
+#include "vtkSVMathUtils.h"
 
 #include <iostream>
 #include <sstream>
@@ -193,14 +195,14 @@ int vtkSVPlanarMapper::RequestData(vtkInformation *vtkNotUsed(request),
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Error when mapping");
-    output->DeepCopy(this->InitialPd);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Error when mapping");
-    output->DeepCopy(this->InitialPd);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 

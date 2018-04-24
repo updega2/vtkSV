@@ -29,12 +29,11 @@
  *=========================================================================*/
 
 #include "vtkSVCenterlineMerger.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
 
 #include "vtkSplineFilter.h"
 #include "vtkCleanPolyData.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
 #include "vtkPointData.h"
 #include "vtkPolyLine.h"
 #include "vtkCellData.h"
@@ -47,14 +46,23 @@
 #include "vtkSmartPointer.h"
 #include "vtkVersion.h"
 
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+
 #include "vtkvmtkCenterlineUtilities.h"
 #include "vtkvmtkCenterlineBifurcationReferenceSystems.h"
 #include "vtkvmtkReferenceSystemUtilities.h"
 
 #include <cmath>
 
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVCenterlineMerger);
 
+// ----------------------
+// Constructor
+// ----------------------
 vtkSVCenterlineMerger::vtkSVCenterlineMerger()
 {
   this->RadiusArrayName = NULL;
@@ -66,6 +74,9 @@ vtkSVCenterlineMerger::vtkSVCenterlineMerger()
   this->MergeBlanked = 1;
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVCenterlineMerger::~vtkSVCenterlineMerger()
 {
   if (this->RadiusArrayName)
@@ -99,6 +110,9 @@ vtkSVCenterlineMerger::~vtkSVCenterlineMerger()
     }
 }
 
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkInformationVector **inputVector, vtkInformationVector *outputVector)
 {
   vtkInformation *inInfo = inputVector[0]->GetInformationObject(0);
@@ -110,7 +124,8 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
   if (!this->RadiusArrayName)
     {
     vtkErrorMacro(<<"RadiusArrayName not specified");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   vtkDataArray* radiusArray = input->GetPointData()->GetArray(this->RadiusArrayName);
@@ -118,13 +133,15 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
   if (!radiusArray)
     {
     vtkErrorMacro(<<"RadiusArray with name specified does not exist");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   if (!this->GroupIdsArrayName)
     {
     vtkErrorMacro(<<"GroupIdsArrayName not specified");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   vtkDataArray* groupIdsArray = input->GetCellData()->GetArray(this->GroupIdsArrayName);
@@ -132,13 +149,15 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
   if (!groupIdsArray)
     {
     vtkErrorMacro(<<"GroupIdsArray with name specified does not exist");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   if (!this->CenterlineIdsArrayName)
     {
     vtkErrorMacro(<<"CenterlineIdsArrayName not specified");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   vtkDataArray* centerlineIdsArray = input->GetCellData()->GetArray(this->CenterlineIdsArrayName);
@@ -146,13 +165,15 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
   if (!centerlineIdsArray)
     {
     vtkErrorMacro(<<"CenterlineIdsArray with name specified does not exist");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   if (!this->TractIdsArrayName)
     {
     vtkErrorMacro(<<"TractIdsArrayName not specified");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   vtkDataArray* tractIdsArray = input->GetCellData()->GetArray(this->TractIdsArrayName);
@@ -160,13 +181,15 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
   if (!tractIdsArray)
     {
     vtkErrorMacro(<<"TractIdsArray with name specified does not exist");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   if (!this->BlankingArrayName)
     {
     vtkErrorMacro(<<"BlankingArrayName not specified");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   vtkDataArray* blankingArray = input->GetCellData()->GetArray(this->BlankingArrayName);
@@ -174,7 +197,8 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
   if (!blankingArray)
     {
     vtkErrorMacro(<<"BlankingArray with name specified does not exist");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;;
     }
 
   vtkSmartPointer<vtkCleanPolyData> cleaner = vtkSmartPointer<vtkCleanPolyData>::New();
@@ -324,7 +348,7 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
     outputLines->Delete();
     groupIdsToMergedCells->Delete();
     cellEndPointIds->Delete();
-    return 1;
+    return SV_OK;
     }
 
   vtkvmtkCenterlineBifurcationReferenceSystems* referenceSystemsFilter = vtkvmtkCenterlineBifurcationReferenceSystems::New();
@@ -507,14 +531,20 @@ int vtkSVCenterlineMerger::RequestData(vtkInformation *vtkNotUsed(request), vtkI
 
   this->RemovePointsWithinBifurcationRadius(output);
 
-  return 1;
+  return SV_OK;
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVCenterlineMerger::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
+// ----------------------
+// RemovePointsWithinBifurcationRadius
+// ----------------------
 int vtkSVCenterlineMerger::RemovePointsWithinBifurcationRadius(vtkPolyData *pd)
 {
   pd->BuildLinks();
@@ -689,4 +719,6 @@ int vtkSVCenterlineMerger::RemovePointsWithinBifurcationRadius(vtkPolyData *pd)
   cleaner->Update();
 
   pd->DeepCopy(cleaner->GetOutput());
+
+  return SV_OK;
 }

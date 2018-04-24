@@ -38,7 +38,6 @@
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
-#include "vtkSVGroupsClipper.h"
 #include "vtkSVPolyDataSurfaceInspector.h"
 #include "vtkTriangleFilter.h"
 

@@ -38,7 +38,7 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineBifurcationReferenceSystems : public vtk
 {
   public:
   vtkTypeMacro(vtkvmtkCenterlineBifurcationReferenceSystems,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkCenterlineBifurcationReferenceSystems* New();
 
@@ -61,7 +61,7 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineBifurcationReferenceSystems : public vtk
   vtkvmtkCenterlineBifurcationReferenceSystems();
   ~vtkvmtkCenterlineBifurcationReferenceSystems();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   void ComputeGroupReferenceSystem(vtkPolyData* input, int referenceGroupId, vtkPoints* outputPoints, vtkDoubleArray* normalArray, vtkDoubleArray* upNormalArray, vtkIntArray* referenceGroupIdsArray);
 

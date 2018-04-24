@@ -40,16 +40,16 @@
 #include "vtkMath.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVMathUtils.h"
-#include "vtkSVIOUtils.h"
 #include "vtkSmartPointer.h"
 #include "vtkSortDataArray.h"
 #include "vtkThreshold.h"
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVMathUtils.h"
 
 // ----------------------
 // StandardNewMacro

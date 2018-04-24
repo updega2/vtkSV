@@ -49,7 +49,7 @@ class VTKSVNURBS_EXPORT vtkSVPERIGEENURBSWriter : public vtkWriter
 public:
   static vtkSVPERIGEENURBSWriter *New();
   vtkTypeMacro(vtkSVPERIGEENURBSWriter,vtkWriter);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /**
@@ -74,13 +74,13 @@ protected:
     delete[] this->FileName;
   }
 
-  void WriteData();
+  void WriteData() override;
 
   void WritePERIGEEFile(vtkSVNURBSObject *object);
 
   char* FileName;
 
-  int FillInputPortInformation(int port, vtkInformation *info);
+  int FillInputPortInformation(int port, vtkInformation *info) override;
 
 private:
   vtkSVPERIGEENURBSWriter(const vtkSVPERIGEENURBSWriter&);

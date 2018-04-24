@@ -25,16 +25,15 @@ Version:   $Revision: 1.5 $
 #ifndef vtkSVCenterlineBranchSplitter_h
 #define vtkSVCenterlineBranchSplitter_h
 
-#include "vtkvmtkCenterlineSplittingAndGroupingFilter.h"
-//#include "vtkvmtkComputationalGeometryWin32Header.h"
-#include "vtkvmtkWin32Header.h"
 #include "vtkSVSegmentationModule.h" // For exports
+
+#include "vtkvmtkCenterlineSplittingAndGroupingFilter.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineBranchSplitter : public vtkvmtkCenterlineSplittingAndGroupingFilter
 {
   public:
   vtkTypeMacro(vtkSVCenterlineBranchSplitter,vtkvmtkCenterlineSplittingAndGroupingFilter);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVCenterlineBranchSplitter *New();
 
@@ -61,9 +60,9 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineBranchSplitter : public vtkvmtkCen
   vtkSVCenterlineBranchSplitter();
   ~vtkSVCenterlineBranchSplitter();
 
-  virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId);
-  virtual void GroupTracts(vtkPolyData* input, vtkPolyData* centerlineTracts);
-  virtual void SplitCenterline(vtkPolyData* input, vtkIdType cellId, int numberOfSplittingPoints, const vtkIdType* subIds, const double* pcoords, const int* tractBlanking, vtkPolyData* splitCenterline);
+  virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId) override;
+  virtual void GroupTracts(vtkPolyData* input, vtkPolyData* centerlineTracts) override;
+  virtual void SplitCenterline(vtkPolyData* input, vtkIdType cellId, int numberOfSplittingPoints, const vtkIdType* subIds, const double* pcoords, const int* tractBlanking, vtkPolyData* splitCenterline) override;
 
   int UseAbsoluteMergeDistance;
   double RadiusMergeRatio;

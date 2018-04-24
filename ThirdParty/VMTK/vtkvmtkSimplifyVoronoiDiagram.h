@@ -44,7 +44,7 @@ class VTKSVVMTK_EXPORT vtkvmtkSimplifyVoronoiDiagram : public vtkPolyDataAlgorit
 {
   public:
   vtkTypeMacro(vtkvmtkSimplifyVoronoiDiagram,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkSimplifyVoronoiDiagram *New();
 
@@ -77,7 +77,7 @@ class VTKSVVMTK_EXPORT vtkvmtkSimplifyVoronoiDiagram : public vtkPolyDataAlgorit
   vtkvmtkSimplifyVoronoiDiagram();
   ~vtkvmtkSimplifyVoronoiDiagram();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
   vtkIdType IsBoundaryEdge(vtkCellLinks* links, vtkIdType* edge);
 
   vtkIdList* UnremovablePointIds;

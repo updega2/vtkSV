@@ -42,10 +42,11 @@
 #ifndef vtkSVCenterlinesEdgeWeightedCVT_h
 #define vtkSVCenterlinesEdgeWeightedCVT_h
 
-#include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVSegmentationModule.h" // For exports
 
 #include "vtkPolyData.h"
+
+#include "vtkSVEdgeWeightedCVT.h"
 #include "vtkSVPolyBallLine.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlinesEdgeWeightedCVT : public vtkSVEdgeWeightedCVT
@@ -53,7 +54,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlinesEdgeWeightedCVT : public vtkSVEdg
 public:
   static vtkSVCenterlinesEdgeWeightedCVT* New();
   vtkTypeMacro(vtkSVCenterlinesEdgeWeightedCVT,vtkSVEdgeWeightedCVT);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get/Set macro for array name used by the filter. Must
@@ -71,12 +72,6 @@ public:
   vtkBooleanMacro(UseRadiusInformation,int);
   //@}
 
-  //@{
-  /// \brief Get/Set the radius information
-  vtkSetMacro(UseCurvatureWeight,int);
-  vtkGetMacro(UseCurvatureWeight,int);
-  vtkBooleanMacro(UseCurvatureWeight,int);
-
   /// \brief Get/Set use of point normals
   vtkSetMacro(UsePointNormal,int);
   vtkGetMacro(UsePointNormal,int);
@@ -93,11 +88,11 @@ protected:
   ~vtkSVCenterlinesEdgeWeightedCVT();
 
   // Derived functions
-  int InitializeConnectivity();
-  int InitializeGenerators();
-  int UpdateGenerators();
-  int GetClosestGenerator(const int evalId, int &newGenerator);
-  double GetEdgeWeightedDistance(const int generatorId, const int evalId);
+  int InitializeConnectivity() override;
+  int InitializeGenerators() override;
+  int UpdateGenerators() override;
+  int GetClosestGenerator(const int evalId, int &newGenerator) override;
+  double GetEdgeWeightedDistance(const int generatorId, const int evalId) override;
 
 private:
   vtkSVCenterlinesEdgeWeightedCVT(const vtkSVCenterlinesEdgeWeightedCVT&);  // Not implemented.
@@ -108,7 +103,6 @@ private:
   std::vector<std::vector<int> > IsGoodNeighborCell;
 
   int UseRadiusInformation;
-  int UseCurvatureWeight;
   int UsePointNormal;
   double CellSearchRadius;
 

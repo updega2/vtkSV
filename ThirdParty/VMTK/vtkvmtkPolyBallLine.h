@@ -38,17 +38,17 @@ class VTKSVVMTK_EXPORT vtkvmtkPolyBallLine : public vtkImplicitFunction
 
   static vtkvmtkPolyBallLine *New();
   vtkTypeMacro(vtkvmtkPolyBallLine,vtkImplicitFunction);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description
   // Evaluate polyball.
-  double EvaluateFunction(double x[3]);
-  double EvaluateFunction(double x, double y, double z)
+  double EvaluateFunction(double x[3]) override;
+  double EvaluateFunction(double x, double y, double z) override
   {return this->vtkImplicitFunction::EvaluateFunction(x, y, z); } ;
 
   // Description
   // Evaluate polyball gradient.
-  void EvaluateGradient(double x[3], double n[3]);
+  void EvaluateGradient(double x[3], double n[3]) override;
 
   // Description:
   // Set / get input poly data.

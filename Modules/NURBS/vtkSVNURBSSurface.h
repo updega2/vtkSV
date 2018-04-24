@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  *  \class vtkSVNURBSSurface
  *  \brief This is a class to represent a NURBS surface
@@ -41,15 +40,16 @@
 #ifndef vtkSVNURBSSurface_h
 #define vtkSVNURBSSurface_h
 
-#include "vtkSVNURBSObject.h"
 #include "vtkSVNURBSModule.h"
 
 #include "vtkDenseArray.h"
 #include "vtkDoubleArray.h"
 #include "vtkIntArray.h"
 #include "vtkPolyData.h"
+
 #include "vtkSVControlGrid.h"
 #include "vtkSVNURBSCollection.h"
+#include "vtkSVNURBSObject.h"
 
 class VTKSVNURBS_EXPORT vtkSVNURBSSurface : public vtkSVNURBSObject
 {
@@ -61,7 +61,7 @@ public:
   vtkSVNURBSSurface(int m, vtkPoints *controlPoints, vtkDoubleArray *knotPoints, vtkIntArray *knotMultiplicity, int deg) {;}
 
   vtkTypeMacro(vtkSVNURBSSurface,vtkSVNURBSObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get and set the number of control points for curve
@@ -70,7 +70,6 @@ public:
   vtkGetMacro(NumberOfVControlPoints, int);
   vtkSetMacro(NumberOfVControlPoints, int);
   //@}
-
 
   //@{
   /// \brief Get and set the number of knot points for curve
@@ -106,7 +105,7 @@ public:
   //@}
 
   // Initialize
-  void Initialize();
+  void Initialize() override;
 
   //PolyData representation functions
   /** \brief Function to generate polydata representation of nurbs surface. Stored
@@ -190,7 +189,7 @@ public:
 
   virtual void DeepCopy(vtkSVNURBSSurface *src);
 
-  virtual std::string GetType() {return "Surface";}
+  virtual std::string GetType() override {return "Surface";}
 
 protected:
   vtkSVNURBSSurface();

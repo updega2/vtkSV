@@ -30,19 +30,6 @@
 
 #include "vtkSVSurfaceCuboidPatcher.h"
 
-#include "vtkSVCenterlineParallelTransportVectors.h"
-#include "vtkSVCleanUnstructuredGrid.h"
-#include "vtkSVEdgeWeightedCVT.h"
-#include "vtkSVFindGeodesicPath.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVHausdorffDistance.h"
-#include "vtkSVMathUtils.h"
-#include "vtkSVIOUtils.h"
-#include "vtkSVPolycubeGenerator.h"
-#include "vtkSVPolyDataEdgeSplitter.h"
-#include "vtkSVSurfaceCenterlineGrouper.h"
-
 #include "vtkCellArray.h"
 #include "vtkCellLocator.h"
 #include "vtkConnectivityFilter.h"
@@ -68,6 +55,19 @@
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkVersion.h"
+
+#include "vtkSVCenterlineParallelTransportVectors.h"
+#include "vtkSVCleanUnstructuredGrid.h"
+#include "vtkSVEdgeWeightedCVT.h"
+#include "vtkSVFindGeodesicPath.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVHausdorffDistance.h"
+#include "vtkSVMathUtils.h"
+#include "vtkSVIOUtils.h"
+#include "vtkSVPolycubeGenerator.h"
+#include "vtkSVPolyDataEdgeSplitter.h"
+#include "vtkSVSurfaceCenterlineGrouper.h"
 
 #include "vtkvmtkMath.h"
 
@@ -216,7 +216,6 @@ int vtkSVSurfaceCuboidPatcher::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
     this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
@@ -225,7 +224,6 @@ int vtkSVSurfaceCuboidPatcher::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(this->WorkPd);
     this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }

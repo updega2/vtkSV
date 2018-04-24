@@ -57,7 +57,7 @@ public:
   static vtkSVNURBSVolume *New();
 
   vtkTypeMacro(vtkSVNURBSVolume,vtkSVNURBSObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get and set the number of control points for curve
@@ -109,7 +109,7 @@ public:
   //@}
 
   // Initialize
-  void Initialize();
+  void Initialize() override;
 
   //PolyData representation functions
   /** \brief Function to generate polydata representation of nurbs surface. Stored
@@ -172,7 +172,7 @@ public:
 
   virtual void DeepCopy(vtkSVNURBSVolume *src);
 
-  virtual std::string GetType() {return "Volume";}
+  virtual std::string GetType() override {return "Volume";}
 
 protected:
   vtkSVNURBSVolume();

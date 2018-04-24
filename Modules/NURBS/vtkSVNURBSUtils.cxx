@@ -31,18 +31,19 @@
 #include "vtkSVNURBSUtils.h"
 
 #include "vtkDataArray.h"
-#include "vtkObjectFactory.h"
 #include "vtkMath.h"
+#include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkSmartPointer.h"
 #include "vtkSparseArray.h"
+#include "vtkStructuredData.h"
+
 #include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVNURBSCurve.h"
 #include "vtkSVNURBSSurface.h"
-#include "vtkSVIOUtils.h"
-#include "vtkStructuredData.h"
 
 #include <cassert>
 #include <cmath>

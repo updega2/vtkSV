@@ -43,22 +43,22 @@
 #ifndef vtkSVParameterizeSurfaceOnPolycube_h
 #define vtkSVParameterizeSurfaceOnPolycube_h
 
+#include "vtkSVParameterizationModule.h" // For exports
+
+#include "vtkIdList.h"
+#include "vtkMatrix4x4.h"
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
-#include "vtkIdList.h"
-#include "vtkMatrix4x4.h"
 
 #include "vtkSVGlobals.h"
-
-#include "vtkSVParameterizationModule.h" // For exports
 
 class VTKSVPARAMETERIZATION_EXPORT vtkSVParameterizeSurfaceOnPolycube : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVParameterizeSurfaceOnPolycube,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVParameterizeSurfaceOnPolycube *New();
 
@@ -109,7 +109,7 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
   vtkPolyData *WorkPd;
   vtkPolyData *PolycubePd;

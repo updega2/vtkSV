@@ -41,7 +41,7 @@ class VTKSVVMTK_EXPORT vtkvmtkNonManifoldSteepestDescent : public vtkPolyDataAlg
 {
   public:
   vtkTypeMacro(vtkvmtkNonManifoldSteepestDescent,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkNonManifoldSteepestDescent *New();
 
@@ -61,7 +61,7 @@ class VTKSVVMTK_EXPORT vtkvmtkNonManifoldSteepestDescent : public vtkPolyDataAlg
   vtkvmtkNonManifoldSteepestDescent();
   ~vtkvmtkNonManifoldSteepestDescent();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   // Description:
   // Compute the steepest descent point in terms of edge (point id pair) and parametric coordinate on edge. It takes in input a starting point expressed in terms of edge (point id pair) and parametric coordinate on edge. It returns the descent value.

@@ -30,6 +30,28 @@
 
 #include "vtkSVGroupsSegmenter.h"
 
+#include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkCellLocator.h"
+#include "vtkCleanPolyData.h"
+#include "vtkConnectivityFilter.h"
+#include "vtkExecutive.h"
+#include "vtkErrorCode.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
+#include "vtkPolyLine.h"
+#include "vtkPointData.h"
+#include "vtkPoints.h"
+#include "vtkPointLocator.h"
+#include "vtkSmartPointer.h"
+#include "vtkSmartPointer.h"
+#include "vtkSplineFilter.h"
+#include "vtkObjectFactory.h"
+#include "vtkPolyDataNormals.h"
+#include "vtkStructuredGridGeometryFilter.h"
+#include "vtkUnstructuredGrid.h"
+#include "vtkVersion.h"
+
 #include "vtkSVCenterlineBranchSplitter.h"
 #include "vtkSVCenterlineMerger.h"
 #include "vtkSVCenterlineParallelTransportVectors.h"
@@ -43,28 +65,6 @@
 #include "vtkSVSurfaceCenterlineAttributesPasser.h"
 #include "vtkSVSurfaceCenterlineGrouper.h"
 #include "vtkSVSurfaceCuboidPatcher.h"
-
-#include "vtkExecutive.h"
-#include "vtkErrorCode.h"
-#include "vtkCellArray.h"
-#include "vtkCellLocator.h"
-#include "vtkConnectivityFilter.h"
-#include "vtkPolyLine.h"
-#include "vtkPointData.h"
-#include "vtkPoints.h"
-#include "vtkPointLocator.h"
-#include "vtkCellData.h"
-#include "vtkCleanPolyData.h"
-#include "vtkSmartPointer.h"
-#include "vtkSmartPointer.h"
-#include "vtkSplineFilter.h"
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
-#include "vtkObjectFactory.h"
-#include "vtkPolyDataNormals.h"
-#include "vtkStructuredGridGeometryFilter.h"
-#include "vtkUnstructuredGrid.h"
-#include "vtkVersion.h"
 
 #include "vtkvmtkMergeCenterlines.h"
 #include "vtkvmtkPolyDataCenterlineGroupsClipper.h"
@@ -200,7 +200,6 @@ int vtkSVGroupsSegmenter::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
     this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
@@ -209,7 +208,6 @@ int vtkSVGroupsSegmenter::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(this->WorkPd);
     this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }

@@ -41,11 +41,13 @@
 #ifndef vtkSVPolycubeGenerator_h
 #define vtkSVPolycubeGenerator_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVSegmentationModule.h" // For exports
+
+#include "vtkPolyDataAlgorithm.h"
 
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
+
 #include "vtkSVCenterlineGraph.h"
 #include "vtkSVCenterlineGCell.h"
 
@@ -54,7 +56,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVPolycubeGenerator : public  vtkPolyDataAlgor
 public:
   static vtkSVPolycubeGenerator* New();
   vtkTypeMacro(vtkSVPolycubeGenerator, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Get/Set macro for surface polycube
@@ -108,7 +110,7 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

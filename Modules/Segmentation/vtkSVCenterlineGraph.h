@@ -40,10 +40,12 @@
 #ifndef vtkSVCenterlineGraph_h
 #define vtkSVCenterlineGraph_h
 
+#include "vtkSVSegmentationModule.h" // For exports
+
 #include "vtkPolyData.h"
 #include "vtkUnstructuredGrid.h"
+
 #include "vtkSVCenterlineGCell.h"
-#include "vtkSVSegmentationModule.h" // For exports
 
 #include <map>
 #include <list>

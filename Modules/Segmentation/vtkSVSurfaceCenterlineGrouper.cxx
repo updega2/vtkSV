@@ -30,16 +30,6 @@
 
 #include "vtkSVSurfaceCenterlineGrouper.h"
 
-#include "vtkSVCenterlineBranchSplitter.h"
-#include "vtkSVCenterlinesEdgeWeightedCVT.h"
-#include "vtkSVFindGeodesicPath.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVIOUtils.h"
-#include "vtkSVMathUtils.h"
-#include "vtkSVPolycubeGenerator.h"
-#include "vtkSVPolyDataEdgeSplitter.h"
-
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
@@ -63,6 +53,16 @@
 #include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVCenterlineBranchSplitter.h"
+#include "vtkSVCenterlinesEdgeWeightedCVT.h"
+#include "vtkSVFindGeodesicPath.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVIOUtils.h"
+#include "vtkSVMathUtils.h"
+#include "vtkSVPolycubeGenerator.h"
+#include "vtkSVPolyDataEdgeSplitter.h"
 
 #include <algorithm>
 
@@ -184,7 +184,6 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
     return SV_ERROR;
   }
 
@@ -192,7 +191,6 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(this->WorkPd);
     this->SetErrorCode(vtkErrorCode::UserError + 4);
     return SV_ERROR;
   }

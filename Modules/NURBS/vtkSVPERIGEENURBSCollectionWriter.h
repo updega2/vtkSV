@@ -75,7 +75,7 @@ protected:
 
   int ProcessRequest(vtkInformation*,
                              vtkInformationVector**,
-                             vtkInformationVector*);
+                             vtkInformationVector*) override;
 
   // convenience method
   virtual int RequestInformation(vtkInformation* request,
@@ -101,7 +101,7 @@ protected:
 
   char* FileName;
 
-  int FillInputPortInformation(int port, vtkInformation *info);
+  int FillInputPortInformation(int port, vtkInformation *info) override;
 
   vtkSVNURBSCollection *InternalCollection;
 

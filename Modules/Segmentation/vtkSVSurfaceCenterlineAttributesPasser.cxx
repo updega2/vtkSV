@@ -30,13 +30,6 @@
 
 #include "vtkSVSurfaceCenterlineAttributesPasser.h"
 
-#include "vtkSVCenterlineParallelTransportVectors.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVIOUtils.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVPolycubeGenerator.h"
-#include "vtkSVSurfaceCenterlineGrouper.h"
-
 #include "vtkExecutive.h"
 #include "vtkErrorCode.h"
 #include "vtkCellArray.h"
@@ -61,6 +54,13 @@
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
 #include "vtkVersion.h"
+
+#include "vtkSVCenterlineParallelTransportVectors.h"
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVIOUtils.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVPolycubeGenerator.h"
+#include "vtkSVSurfaceCenterlineGrouper.h"
 
 #include "vtkvmtkMath.h"
 
@@ -209,7 +209,6 @@ int vtkSVSurfaceCenterlineAttributesPasser::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
     this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
@@ -218,7 +217,6 @@ int vtkSVSurfaceCenterlineAttributesPasser::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(this->WorkPd);
     this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }

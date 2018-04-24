@@ -29,23 +29,25 @@
  *=========================================================================*/
 
 #include "vtkSVCenterlineBranchSplitter.h"
-#include "vtkvmtkCenterlineSphereDistance.h"
+
 #include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkCleanPolyData.h"
 #include "vtkDataSetSurfaceFilter.h"
+#include "vtkDoubleArray.h"
+#include "vtkIdList.h"
 #include "vtkIntArray.h"
+#include "vtkMath.h"
+#include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkPolyLine.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
-#include "vtkIdList.h"
-#include "vtkCellData.h"
-#include "vtkCleanPolyData.h"
-#include "vtkDoubleArray.h"
-#include "vtkMath.h"
-#include "vtkObjectFactory.h"
 #include "vtkThreshold.h"
 #include "vtkTriangleFilter.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkvmtkCenterlineSphereDistance.h"
 
 #include "vtkSVIOUtils.h"
 

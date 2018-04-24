@@ -31,17 +31,16 @@
 #ifndef __vtkSVCenterlineMerger_h
 #define __vtkSVCenterlineMerger_h
 
-#include "vtkPolyDataAlgorithm.h"
-#include "vtkPolyData.h"
-#include "vtkvmtkWin32Header.h"
-
 #include "vtkSVSegmentationModule.h"
+
+#include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineMerger : public vtkPolyDataAlgorithm
 {
   public:
   vtkTypeMacro(vtkSVCenterlineMerger,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVCenterlineMerger *New();
 
@@ -71,7 +70,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineMerger : public vtkPolyDataAlgorit
   vtkSVCenterlineMerger();
   ~vtkSVCenterlineMerger();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   int RemovePointsWithinBifurcationRadius(vtkPolyData *pd);
 

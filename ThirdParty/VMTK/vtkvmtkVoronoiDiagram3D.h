@@ -38,7 +38,7 @@ class VTKSVVMTK_EXPORT vtkvmtkVoronoiDiagram3D : public vtkPolyDataAlgorithm
 {
   public:
   vtkTypeMacro(vtkvmtkVoronoiDiagram3D,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkVoronoiDiagram3D *New();
 
@@ -59,9 +59,9 @@ class VTKSVVMTK_EXPORT vtkvmtkVoronoiDiagram3D : public vtkPolyDataAlgorithm
   vtkvmtkVoronoiDiagram3D();
   ~vtkvmtkVoronoiDiagram3D();
 
-  int FillInputPortInformation(int, vtkInformation *info);
+  int FillInputPortInformation(int, vtkInformation *info) override;
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   void ExtractUniqueEdges(vtkUnstructuredGrid* input, vtkCellArray* edgeArray);
   void BuildVoronoiPolys(vtkUnstructuredGrid* input, vtkCellArray* voronoiPolys);

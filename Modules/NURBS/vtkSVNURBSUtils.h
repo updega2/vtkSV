@@ -42,18 +42,19 @@
 #ifndef vtkSVNURBSUtils_h
 #define vtkSVNURBSUtils_h
 
-#include "vtkObject.h"
 #include "vtkSVNURBSModule.h"
 
 #include "vtkDenseArray.h"
-#include "vtkIntArray.h"
 #include "vtkDoubleArray.h"
+#include "vtkIntArray.h"
+#include "vtkObject.h"
 #include "vtkPoints.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
+#include "vtkTypedArray.h"
+
 #include "vtkSVControlGrid.h"
 #include "vtkSVNURBSCollection.h"
-#include "vtkTypedArray.h"
 
 #include <cassert> // assert() in inline implementations.
 
@@ -62,7 +63,7 @@ class VTKSVNURBS_EXPORT vtkSVNURBSUtils : public vtkObject
 public:
   static vtkSVNURBSUtils *New();
   vtkTypeMacro(vtkSVNURBSUtils,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   /** \brief Function to get a vector of parameter values based on
    *  given type and three d points.

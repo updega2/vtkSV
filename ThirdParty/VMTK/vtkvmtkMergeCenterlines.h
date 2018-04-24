@@ -34,7 +34,7 @@ class VTKSVVMTK_EXPORT vtkvmtkMergeCenterlines : public vtkPolyDataAlgorithm
 {
   public:
   vtkTypeMacro(vtkvmtkMergeCenterlines,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkMergeCenterlines *New();
 
@@ -64,7 +64,7 @@ class VTKSVVMTK_EXPORT vtkvmtkMergeCenterlines : public vtkPolyDataAlgorithm
   vtkvmtkMergeCenterlines();
   ~vtkvmtkMergeCenterlines();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   char* RadiusArrayName;
   char* GroupIdsArrayName;

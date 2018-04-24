@@ -41,7 +41,7 @@ class VTKSVVMTK_EXPORT vtkvmtkInternalTetrahedraExtractor : public vtkUnstructur
 {
   public:
   vtkTypeMacro(vtkvmtkInternalTetrahedraExtractor,vtkUnstructuredGridAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkInternalTetrahedraExtractor *New();
 
@@ -80,7 +80,7 @@ class VTKSVVMTK_EXPORT vtkvmtkInternalTetrahedraExtractor : public vtkUnstructur
   vtkvmtkInternalTetrahedraExtractor();
   ~vtkvmtkInternalTetrahedraExtractor();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   int UseCaps;
   vtkIdList* CapCenterIds;

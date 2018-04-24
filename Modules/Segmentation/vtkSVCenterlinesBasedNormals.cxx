@@ -32,17 +32,19 @@
 
 #include "vtkCellData.h"
 #include "vtkDoubleArray.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkIntArray.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPointLocator.h"
 #include "vtkSmartPointer.h"
+#include "vtkTriangle.h"
+
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVIOUtils.h"
-#include "vtkTriangle.h"
 
 // ----------------------
 // StandardNewMacro
@@ -161,12 +163,14 @@ int vtkSVCenterlinesBasedNormals::RequestData(vtkInformation *vtkNotUsed(request
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Error in preprocessing the polydata\n");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Error when running main operation\n");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 

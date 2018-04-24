@@ -39,6 +39,7 @@
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
+
 #include "vtkSVGlobals.h"
 
 #include <sstream>
@@ -141,7 +142,7 @@ int vtkSVPointSetBoundaryMapper::CalculateEdgeLengths(vtkIntArray *actualIds)
         if (checkPt == pointIds->LookupValue(this->BoundaryIds->GetValue(j)))
         {
           actualIds->SetValue((i+1)%numBoundaryPts, pointIds->GetTuple1(checkPt));
-          //fprintf(stdout,"Found boundary ID!: %d\n", this->BoundaryIds->GetValue(j));
+          vtkDebugMacro("Found boundary ID!: " << this->BoundaryIds->GetValue(j));
           done = 1;
         }
       }
@@ -203,7 +204,7 @@ int vtkSVPointSetBoundaryMapper::SetBoundary(vtkIntArray *actualIds)
   // Loop through points
   for (int i=0; i<numBoundaryPts; i++)
   {
-    //fprintf(stdout,"Looping to next point: %d\n", i);
+    vtkDebugMacro("Looping to next point: " << i);
     double currCoords[3], endCoords[3], newDir[3];
     this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1((i)%numBoundaryPts), currCoords);
     this->PointSet->GetPoint(this->PointSetBoundaryIds->GetTuple1((i+1)%numBoundaryPts), endCoords);

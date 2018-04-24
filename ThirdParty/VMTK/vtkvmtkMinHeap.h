@@ -43,7 +43,7 @@ class VTKSVVMTK_EXPORT vtkvmtkMinHeap : public vtkObject
 {
   public:
   vtkTypeMacro(vtkvmtkMinHeap,vtkObject);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkMinHeap *New();
 

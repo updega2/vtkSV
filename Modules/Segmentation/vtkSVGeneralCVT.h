@@ -42,12 +42,12 @@
 #ifndef vtkSVGeneralCVT_h
 #define vtkSVGeneralCVT_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVSegmentationModule.h" // For export
 
 #include "vtkDoubleArray.h"
 #include "vtkIntArray.h"
 #include "vtkIdList.h"
+#include "vtkPolyDataAlgorithm.h"
 
 #include <vector>
 
@@ -55,7 +55,7 @@ class VTKSVSEGMENTATION_EXPORT vtkSVGeneralCVT : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVGeneralCVT,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Set/get the CVT generators
@@ -131,7 +131,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

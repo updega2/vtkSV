@@ -30,8 +30,11 @@
 
 /**
  *  \class vtkSVCenterlineParallelTransportVectors
- *  \brief Using a polydata centerlines, separate the polydata into regions
- *  based on the centerlines
+ *  \brief Travers a centerline structure and define a parallel transport frame
+ *  along them. Uses the bifurcation points to orient the parallel transport frame
+ *  and updates the vectors to ensure that the vectors match at bifurcation
+ *  points. This provides a complete parallel transport frame that is consistent
+ *  throughout
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -42,19 +45,19 @@
 #ifndef vtkSVCenterlineParallelTransportVectors_h
 #define vtkSVCenterlineParallelTransportVectors_h
 
-#include "vtkPolyDataAlgorithm.h"
-#include "vtkPolyData.h"
-#include "vtkSVCenterlineGraph.h"
-
-#include "vtkSVGlobals.h"
-
 #include "vtkSVSegmentationModule.h" // For export
+
+#include "vtkPolyData.h"
+#include "vtkPolyDataAlgorithm.h"
+
+#include "vtkSVCenterlineGraph.h"
+#include "vtkSVGlobals.h"
 
 class VTKSVSEGMENTATION_EXPORT vtkSVCenterlineParallelTransportVectors : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkSVCenterlineParallelTransportVectors,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVCenterlineParallelTransportVectors *New();
 
@@ -75,7 +78,7 @@ protected:
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
-                          vtkInformationVector *);
+                          vtkInformationVector *) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

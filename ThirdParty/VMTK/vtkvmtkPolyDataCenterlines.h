@@ -41,7 +41,7 @@ class VTKSVVMTK_EXPORT vtkvmtkPolyDataCenterlines : public vtkPolyDataAlgorithm
 {
   public:
   vtkTypeMacro(vtkvmtkPolyDataCenterlines,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkPolyDataCenterlines *New();
 
@@ -110,7 +110,7 @@ class VTKSVVMTK_EXPORT vtkvmtkPolyDataCenterlines : public vtkPolyDataAlgorithm
   vtkvmtkPolyDataCenterlines();
   ~vtkvmtkPolyDataCenterlines();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   void FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList *boundaryBaricenterIds, vtkDataArray *normals, vtkIdList *seedIds);
   void AppendEndPoints(vtkPoints* endPointPairs);

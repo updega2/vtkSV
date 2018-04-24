@@ -34,7 +34,7 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineBranchExtractor : public vtkvmtkCenterli
 {
   public:
   vtkTypeMacro(vtkvmtkCenterlineBranchExtractor,vtkvmtkCenterlineSplittingAndGroupingFilter);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkCenterlineBranchExtractor *New();
 
@@ -42,8 +42,8 @@ class VTKSVVMTK_EXPORT vtkvmtkCenterlineBranchExtractor : public vtkvmtkCenterli
   vtkvmtkCenterlineBranchExtractor();
   ~vtkvmtkCenterlineBranchExtractor();
 
-  virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId);
-  virtual void GroupTracts(vtkPolyData* input, vtkPolyData* centerlineTracts);
+  virtual void ComputeCenterlineSplitting(vtkPolyData* input, vtkIdType cellId) override;
+  virtual void GroupTracts(vtkPolyData* input, vtkPolyData* centerlineTracts) override;
 
   private:
   vtkvmtkCenterlineBranchExtractor(const vtkvmtkCenterlineBranchExtractor&);  // Not implemented.

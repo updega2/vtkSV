@@ -58,7 +58,7 @@ class VTKSVVMTK_EXPORT vtkvmtkNonManifoldFastMarching : public vtkPolyDataAlgori
 {
   public:
   vtkTypeMacro(vtkvmtkNonManifoldFastMarching,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkvmtkNonManifoldFastMarching *New();
 
@@ -135,7 +135,7 @@ class VTKSVVMTK_EXPORT vtkvmtkNonManifoldFastMarching : public vtkPolyDataAlgori
   vtkvmtkNonManifoldFastMarching();
   ~vtkvmtkNonManifoldFastMarching();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   void InitPropagation(vtkPolyData* input);
 

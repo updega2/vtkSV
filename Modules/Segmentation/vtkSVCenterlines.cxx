@@ -29,35 +29,32 @@
  *=========================================================================*/
 
 #include "vtkSVCenterlines.h"
+
+#include "vtkArrayCalculator.h"
+#include "vtkAppendPolyData.h"
 #include "vtkCellData.h"
 #include "vtkCleanPolyData.h"
 #include "vtkConnectivityFilter.h"
 #include "vtkDataSetSurfaceFilter.h"
 #include "vtkDelaunay3D.h"
 #include "vtkEdgeTable.h"
-#include "vtkPolyDataNormals.h"
-#include "vtkPolyLine.h"
-#include "vtkvmtkInternalTetrahedraExtractor.h"
-#include "vtkvmtkVoronoiDiagram3D.h"
-#include "vtkvmtkSimplifyVoronoiDiagram.h"
-#include "vtkArrayCalculator.h"
-#include "vtkAppendPolyData.h"
-#include "vtkvmtkNonManifoldFastMarching.h"
-#include "vtkvmtkSteepestDescentLineTracer.h"
-#include "vtkMath.h"
-#include "vtkPolyData.h"
-#include "vtkUnstructuredGrid.h"
-#include "vtkTetra.h"
-#include "vtkTriangleFilter.h"
-#include "vtkThreshold.h"
-#include "vtkPointData.h"
-#include "vtkPointLocator.h"
-#include "vtkSmartPointer.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkIdFilter.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkMath.h"
 #include "vtkObjectFactory.h"
+#include "vtkPointData.h"
+#include "vtkPointLocator.h"
+#include "vtkPolyDataNormals.h"
+#include "vtkPolyLine.h"
+#include "vtkPolyData.h"
+#include "vtkSmartPointer.h"
+#include "vtkTetra.h"
+#include "vtkThreshold.h"
+#include "vtkTriangleFilter.h"
+#include "vtkUnstructuredGrid.h"
 #include "vtkVersion.h"
 
 #include "vtkSVCellComplexThinner.h"
@@ -66,12 +63,27 @@
 #include "vtkSVPolyDataSurfaceInspector.h"
 #include "vtkSVIOUtils.h"
 
+#include "vtkvmtkInternalTetrahedraExtractor.h"
+#include "vtkvmtkNonManifoldFastMarching.h"
+#include "vtkvmtkSimplifyVoronoiDiagram.h"
+#include "vtkvmtkSteepestDescentLineTracer.h"
+#include "vtkvmtkVoronoiDiagram3D.h"
+
+// ----------------------
+// StandardNewMacro
+// ----------------------
 vtkStandardNewMacro(vtkSVCenterlines);
 
+// ----------------------
+// SetObjectMacros
+// ----------------------
 vtkCxxSetObjectMacro(vtkSVCenterlines,SourceSeedIds,vtkIdList);
 vtkCxxSetObjectMacro(vtkSVCenterlines,TargetSeedIds,vtkIdList);
 vtkCxxSetObjectMacro(vtkSVCenterlines,CapCenterIds,vtkIdList);
 
+// ----------------------
+// Constructors
+// ----------------------
 vtkSVCenterlines::vtkSVCenterlines()
 {
   this->SourceSeedIds = NULL;
@@ -116,6 +128,9 @@ vtkSVCenterlines::vtkSVCenterlines()
   this->PoleIds = vtkIdList::New();
 }
 
+// ----------------------
+// Destructor
+// ----------------------
 vtkSVCenterlines::~vtkSVCenterlines()
 {
   if (this->SourceSeedIds)
@@ -197,6 +212,9 @@ vtkSVCenterlines::~vtkSVCenterlines()
   }
 }
 
+// ----------------------
+// RequestData
+// ----------------------
 int vtkSVCenterlines::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
@@ -219,6 +237,7 @@ int vtkSVCenterlines::RequestData(
     if (this->SourceSeedIds->GetNumberOfIds() != 1)
     {
       vtkErrorMacro("Only one source seed can be provided with this method.");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
   }
@@ -231,12 +250,14 @@ int vtkSVCenterlines::RequestData(
   if (!this->RadiusArrayName)
   {
     vtkErrorMacro(<< "No RadiusArrayName set.");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
   if (!this->GenerateDelaunayTessellation && !this->DelaunayTessellation)
   {
     vtkErrorMacro(<< "GenerateDelaunayTessellation is off but a DelaunayTessellation has not been set.");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -263,21 +284,25 @@ int vtkSVCenterlines::RequestData(
   if (numNonTriangleCells > 0)
   {
     vtkErrorMacro("Surface contains non-triangular cells. Number of non-triangular cells: " << numNonTriangleCells);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   if (numNonManifoldEdges > 0)
   {
     vtkErrorMacro("Surface contains non-manifold edges. Number of non-manifold edges: " << numNonManifoldEdges);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   if (numOpenEdges > 0)
   {
     vtkErrorMacro("Surface contains open edges. Number of open edges: " << numOpenEdges);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   if (surfaceGenus > 0)
   {
     vtkErrorMacro("Surface genus is greater than 0. Surface genus is: " << surfaceGenus);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   // ------------------------------------------------------------------------
@@ -594,6 +619,7 @@ int vtkSVCenterlines::RequestData(
   if (firstVertex == -1)
   {
     vtkErrorMacro("No first vertex found, lines must form loop");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   // ------------------------------------------------------------------------
@@ -732,6 +758,7 @@ int vtkSVCenterlines::RequestData(
     if (this->SourceSeedIds->GetNumberOfIds() != 1)
     {
       vtkErrorMacro("Only one source seed can be provided with this method");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
 
@@ -961,6 +988,7 @@ int vtkSVCenterlines::RequestData(
     linesPd->GetPointData()->AddArray(isSpecialPoint);
     output->ShallowCopy(linesPd);
 
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   // ------------------------------------------------------------------------
@@ -976,6 +1004,7 @@ int vtkSVCenterlines::RequestData(
   if (firstVertex == -1)
   {
     vtkErrorMacro("No first vertex found, lines must form loop");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   // ------------------------------------------------------------------------
@@ -987,6 +1016,7 @@ int vtkSVCenterlines::RequestData(
     if (this->SourceSeedIds->GetNumberOfIds() != 1)
     {
       vtkErrorMacro("Only one source seed can be provided with this method");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
 
@@ -1009,6 +1039,7 @@ int vtkSVCenterlines::RequestData(
   if (firstVertex == -1)
   {
     vtkErrorMacro("No first vertex found, lines cannot form loop");
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
   // ------------------------------------------------------------------------
@@ -1080,6 +1111,7 @@ int vtkSVCenterlines::RequestData(
     if (this->FindVoronoiSeeds(this->DelaunayTessellation,this->CapCenterIds,surfaceNormals->GetOutput()->GetPointData()->GetNormals(),voronoiCapIds) != SV_OK)
     {
       vtkErrorMacro("Error getting voronoi seeds from caps");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
   }
@@ -1089,6 +1121,7 @@ int vtkSVCenterlines::RequestData(
     if (this->SourceSeedIds->GetNumberOfIds() != 1)
     {
       vtkErrorMacro("Only one source seed can be provided with this method");
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
 
@@ -1401,6 +1434,9 @@ int vtkSVCenterlines::RequestData(
   return SV_OK;
 }
 
+// ----------------------
+// FindVoronoiSeeds
+// ----------------------
 int vtkSVCenterlines::FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList *boundaryBaricenterIds, vtkDataArray *normals, vtkIdList *seedIds)
 {
   vtkIdType i, j;
@@ -1505,6 +1541,9 @@ int vtkSVCenterlines::FindVoronoiSeeds(vtkUnstructuredGrid *delaunay, vtkIdList 
   return SV_OK;
 }
 
+// ----------------------
+// AppendEndPoints
+// ----------------------
 void vtkSVCenterlines::AppendEndPoints(vtkPoints* endPointPairs)
 {
   vtkIdType endPointId1, endPointId2;
@@ -1558,6 +1597,9 @@ void vtkSVCenterlines::AppendEndPoints(vtkPoints* endPointPairs)
   completeCenterlinesRadiusArray->Delete();
 }
 
+// ----------------------
+// ResampleCenterlines
+// ----------------------
 void vtkSVCenterlines::ResampleCenterlines()
 {
   vtkPolyData* output = this->GetOutput();
@@ -1646,6 +1688,9 @@ void vtkSVCenterlines::ResampleCenterlines()
   resampledCell->Delete();
 }
 
+// ----------------------
+// ReserveCenterlines
+// ----------------------
 void vtkSVCenterlines::ReverseCenterlines()
 {
   vtkPolyData* output = this->GetOutput();
@@ -1675,11 +1720,17 @@ void vtkSVCenterlines::ReverseCenterlines()
   reversedCenterlinesCellArray->Delete();
 }
 
+// ----------------------
+// PrintSelf
+// ----------------------
 void vtkSVCenterlines::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
 }
 
+// ----------------------
+// RecursiveGetPolylines
+// ----------------------
 int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
                                             std::vector<std::vector<int> > connectedEdgePts,
                                             int startVertex, std::vector<int> &pointUsed,
@@ -1842,6 +1893,9 @@ int vtkSVCenterlines::RecursiveGetPolylines(vtkPolyData *pd,
   return SV_OK;
 }
 
+// ----------------------
+// RecursiveGetFullCenterlines
+// ----------------------
 int vtkSVCenterlines::RecursiveGetFullCenterlines(std::vector<std::vector<int> > allEdges,
                                                   std::vector<std::vector<int> > &fullCenterlineEdges,
                                                   int thisEdge, int front, int back)
@@ -1904,6 +1958,9 @@ int vtkSVCenterlines::RecursiveGetFullCenterlines(std::vector<std::vector<int> >
   return SV_OK;
 }
 
+// ----------------------
+// LoopRemoveMarkedCells
+// ----------------------
 int vtkSVCenterlines::LoopRemoveMarkedCells(vtkPolyData *pd,
                                             std::vector<std::vector<int> > allEdges,
                                             std::vector<int> needToDelete,
@@ -1982,6 +2039,9 @@ int vtkSVCenterlines::LoopRemoveMarkedCells(vtkPolyData *pd,
   return SV_OK;
 }
 
+// ----------------------
+// RemoveMarkedCells
+// ----------------------
 int vtkSVCenterlines::RemoveMarkedCells(vtkPolyData *pd,
                                         std::vector<std::vector<int> > allEdges,
                                         std::vector<int> needToDelete,
@@ -2038,6 +2098,9 @@ int vtkSVCenterlines::RemoveMarkedCells(vtkPolyData *pd,
   return SV_OK;
 }
 
+// ----------------------
+// GetLinesEndPoints
+// ----------------------
 int vtkSVCenterlines::GetLinesEndPoints(vtkPolyData *pd,
                                         vtkIdList *endPointIds,
                                         vtkPoints *endPoints,

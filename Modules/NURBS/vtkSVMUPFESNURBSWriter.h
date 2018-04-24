@@ -74,13 +74,13 @@ protected:
     delete[] this->FileName;
   }
 
-  void WriteData();
+  void WriteData() override;
 
   void WriteMUPFESFile(vtkSVNURBSObject *object);
 
   char* FileName;
 
-  int FillInputPortInformation(int port, vtkInformation *info);
+  int FillInputPortInformation(int port, vtkInformation *info) override;
 
 private:
   vtkSVMUPFESNURBSWriter(const vtkSVMUPFESNURBSWriter&);

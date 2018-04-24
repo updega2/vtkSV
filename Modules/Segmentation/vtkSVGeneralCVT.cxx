@@ -35,6 +35,7 @@
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkSmartPointer.h"
+
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 

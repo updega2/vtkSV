@@ -31,7 +31,7 @@
 /**
  *  \class vtkSVLoftNURBSSurface
  *  \brief Filter to take an input set of points and loft a full nurbs
- *  curve using global interpolation techniques
+ *  surface using global interpolation techniques
  *
  *  \author Adam Updegrove
  *  \author updega2@gmail.com
@@ -42,8 +42,9 @@
 #ifndef vtkSVLoftNURBSSurface_h
 #define vtkSVLoftNURBSSurface_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVNURBSModule.h"
+
+#include "vtkPolyDataAlgorithm.h"
 
 #include "vtkSVNURBSSurface.h"
 
@@ -53,7 +54,7 @@ public:
   static vtkSVLoftNURBSSurface *New();
 
   vtkTypeMacro(vtkSVLoftNURBSSurface,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief UserManagedInputs allows the user to set inputs by number instead of
@@ -178,10 +179,10 @@ protected:
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
-                          vtkInformationVector **, vtkInformationVector *);
+                          vtkInformationVector **, vtkInformationVector *) override;
   virtual int RequestUpdateExtent(vtkInformation *,
-                                  vtkInformationVector **, vtkInformationVector *);
-  virtual int FillInputPortInformation(int, vtkInformation *);
+                                  vtkInformationVector **, vtkInformationVector *) override;
+  virtual int FillInputPortInformation(int, vtkInformation *) override;
 
  private:
   // hide the superclass' AddInput() from the user and the compiler

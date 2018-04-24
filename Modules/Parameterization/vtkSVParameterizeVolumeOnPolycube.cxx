@@ -30,12 +30,40 @@
 
 #include "vtkSVParameterizeVolumeOnPolycube.h"
 
+#include "vtkAppendPolyData.h"
+#include "vtkAppendFilter.h"
+#include "vtkCellArray.h"
+#include "vtkCellData.h"
+#include "vtkCellLocator.h"
+#include "vtkCleanPolyData.h"
+#include "vtkDataSetSurfaceFilter.h"
+#include "vtkExecutive.h"
+#include "vtkErrorCode.h"
+#include "vtkIdFilter.h"
+#include "vtkIntArray.h"
+#include "vtkInformation.h"
+#include "vtkInformationVector.h"
+#include "vtkLine.h"
+#include "vtkLinearSubdivisionFilter.h"
+#include "vtkMath.h"
+#include "vtkObjectFactory.h"
+#include "vtkPointData.h"
+#include "vtkPointLocator.h"
+#include "vtkPoints.h"
+#include "vtkSmartPointer.h"
+#include "vtkSmartPointer.h"
+#include "vtkSortDataArray.h"
+#include "vtkThreshold.h"
+#include "vtkTriangle.h"
+#include "vtkTriangleFilter.h"
+#include "vtkUnstructuredGrid.h"
+#include "vtkVersion.h"
+
 #include "vtkSVCleanUnstructuredGrid.h"
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
 #include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSVolume.h"
-#include "vtkSVSurfaceMapper.h"
 #include "vtkSVMathUtils.h"
 #include "vtkSVMUPFESNURBSWriter.h"
 #include "vtkSVNURBSCollection.h"
@@ -43,35 +71,7 @@
 #include "vtkSVPERIGEENURBSCollectionWriter.h"
 #include "vtkSVPlanarMapper.h"
 #include "vtkSVPointSetBoundaryMapper.h"
-
-#include "vtkAppendPolyData.h"
-#include "vtkAppendFilter.h"
-#include "vtkExecutive.h"
-#include "vtkErrorCode.h"
-#include "vtkCellArray.h"
-#include "vtkCellLocator.h"
-#include "vtkPointData.h"
-#include "vtkPoints.h"
-#include "vtkCellData.h"
-#include "vtkDataSetSurfaceFilter.h"
-#include "vtkIdFilter.h"
-#include "vtkIntArray.h"
-#include "vtkCleanPolyData.h"
-#include "vtkLine.h"
-#include "vtkLinearSubdivisionFilter.h"
-#include "vtkMath.h"
-#include "vtkSmartPointer.h"
-#include "vtkSmartPointer.h"
-#include "vtkSortDataArray.h"
-#include "vtkInformation.h"
-#include "vtkInformationVector.h"
-#include "vtkObjectFactory.h"
-#include "vtkPointLocator.h"
-#include "vtkTriangle.h"
-#include "vtkTriangleFilter.h"
-#include "vtkThreshold.h"
-#include "vtkUnstructuredGrid.h"
-#include "vtkVersion.h"
+#include "vtkSVSurfaceMapper.h"
 
 #include <algorithm>
 
@@ -271,9 +271,9 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     this->ConvertUGToSG(branchPolycubeUg, branchPolycubeSg, whl_divs[1],
       whl_divs[2], whl_divs[3]);
 
-    fprintf(stdout,"WDIV: %.1f\n", whl_divs[1]);
-    fprintf(stdout,"HDIV: %.1f\n", whl_divs[2]);
-    fprintf(stdout,"LDIV: %.1f\n", whl_divs[3]);
+    vtkDebugMacro("WDIV: " << whl_divs[1]);
+    vtkDebugMacro("HDIV: " << whl_divs[2]);
+    vtkDebugMacro("LDIV: " << whl_divs[3]);
     w_divs[i] = whl_divs[1];
     h_divs[i] = whl_divs[2];
     l_divs[i] = whl_divs[3];
@@ -354,7 +354,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
 
     if (this->MapInteriorBoundary(paraHexVolumes[i], mappedBranch, surfacePtMap) != SV_OK)
     {
-      fprintf(stderr,"Couldn't do the dirt\n");
+      vtkErrorMacro("Couldn't do the dirt");
       return SV_ERROR;
     }
     surfaceAppender->AddInputData(mappedBranch);
@@ -380,7 +380,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     vtkNew(vtkStructuredGrid, realHexMesh);
     if (this->MapVolume(paraHexVolumes[i], mappedBranch, realHexMesh) != SV_OK)
     {
-      fprintf(stderr,"Couldn't do the dirt\n");
+      vtkErrorMacro("Couldn't do the dirt");
       return SV_ERROR;
     }
 
@@ -418,7 +418,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
   int smoothIters = 1500;
   if (this->SmoothUnstructuredGrid(smoothVolume, smoothIters, "empty") != SV_OK)
   {
-    fprintf(stderr,"Couldn't smooth volume\n");
+    vtkErrorMacro("Couldn't smooth volume");
     return SV_ERROR;
   }
 
@@ -442,7 +442,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     vtkNew(vtkStructuredGrid, realHexMesh);
     if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_divs[i], h_divs[i], l_divs[i]) != SV_OK)
     {
-      fprintf(stderr,"Couldn't do the dirt\n");
+      vtkErrorMacro("Couldn't do the dirt");
       return SV_ERROR;
     }
 
@@ -523,7 +523,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     vtkNew(vtkDoubleArray, uKnots);
     if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
     {
-      fprintf(stderr,"Error getting knots\n");
+      vtkErrorMacro("Error getting knots");
       return SV_ERROR;
     }
     //
@@ -546,7 +546,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     vtkNew(vtkDoubleArray, vKnots);
     if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
     {
-      fprintf(stderr,"Error getting knots\n");
+      vtkErrorMacro("Error getting knots");
       return SV_ERROR;
     }
 
@@ -569,7 +569,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     vtkNew(vtkDoubleArray, wKnots);
     if (vtkSVNURBSUtils::GetKnots(W, r, kwtype, wKnots) != SV_OK)
     {
-      fprintf(stderr,"Error getting knots\n");
+      vtkErrorMacro("Error getting knots");
       return SV_ERROR;
     }
 
@@ -629,7 +629,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
   ////  writer->Write();
   ////}
 
-  //fprintf(stdout,"Writing NURBS...\n");
+  //vtkDebugMacro("Writing NURBS...");
   //std::string pername = "/Users/adamupdegrove/Desktop/tmp/perigee_nurbs.txt";
   //vtkNew(vtkSVPERIGEENURBSCollectionWriter, writer);
   //writer->SetInputData(nurbs);
@@ -1601,7 +1601,7 @@ int vtkSVParameterizeVolumeOnPolycube::SetControlMeshBoundaries(vtkUnstructuredG
       }
       else
       {
-        fprintf(stderr,"All of these boundary points should be attached to at least one cell\n");
+        vtkErrorMacro("All of these boundary points should be attached to at least one cell");
         return SV_ERROR;
       }
     }
@@ -1620,7 +1620,6 @@ int vtkSVParameterizeVolumeOnPolycube::SetControlMeshBoundaries(vtkUnstructuredG
       boundaryGroupMatchings.push_back(groupIds);
   }
 
-  //fprintf(stdout,"LET ME SEE THE MATCHINGS:\n");
   std::vector<std::vector<int> > pointsInMatching;
   std::vector<std::vector<int> > cleanPointsInMatching;
   for (int i=0; i<boundaryGroupMatchings.size(); i++)
@@ -1629,11 +1628,6 @@ int vtkSVParameterizeVolumeOnPolycube::SetControlMeshBoundaries(vtkUnstructuredG
     std::vector<int> cleanPointIds;
     if (boundaryGroupMatchings[i].size() > 1)
     {
-      //fprintf(stdout,"POINTS WITH CONNECT: ");
-      //for (int j=0; j<boundaryGroupMatchings[i].size(); j++)
-      //  fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
-      //fprintf(stdout,"\n");
-      //fprintf(stdout,"       -> ");
       for (int j=0; j<invPtMap.size(); j++)
       {
         if (invPtMap[j].size() > 1)
@@ -1642,14 +1636,12 @@ int vtkSVParameterizeVolumeOnPolycube::SetControlMeshBoundaries(vtkUnstructuredG
           {
             for (int k=0; k<invPtMap[j].size(); k++)
             {
-              //fprintf(stdout,"%d ",invPtMap[j][k]);
               pointIds.push_back(invPtMap[j][k]);
             }
             cleanPointIds.push_back(j);
           }
         }
       }
-      //fprintf(stdout,"\n");
     }
     pointsInMatching.push_back(pointIds);
     cleanPointsInMatching.push_back(cleanPointIds);
@@ -1663,24 +1655,17 @@ int vtkSVParameterizeVolumeOnPolycube::SetControlMeshBoundaries(vtkUnstructuredG
     int numGroups = boundaryGroupMatchings[i].size();
     if (numGroups == 3)
     {
-      // Set the interior ridge line first
-      //fprintf(stdout,"POINTS WITH CONNECT: ");
-      //for (int j=0; j<numGroups; j++)
-      //  fprintf(stdout,"%d ", boundaryGroupMatchings[i][j]);
-      //fprintf(stdout,"\n");
       std::vector<int> outsideIndices;
       for (int j=0; j<cleanPointsInMatching[i].size(); j++)
       {
         int cleanPointId = cleanPointsInMatching[i][j];
         int isInterior = cleanVolume->GetPointData()->GetArray("IsInteriorPoint")->GetTuple1(cleanPointId);
-        //fprintf(stdout,"       -> %d IS INTERIOR: %d\n", cleanPointId, isInterior);
         if (!isInterior)
           outsideIndices.push_back(j);
       }
-      //fprintf(stdout,"\n");
       if (outsideIndices.size() != 2)
       {
-        fprintf(stdout,"There should be two points along interior boundary ridge, but there are %d\n", outsideIndices.size());
+        vtkDebugMacro("There should be two points along interior boundary ridge, but there are " << outsideIndices.size());
         return SV_ERROR;
       }
 
@@ -1778,7 +1763,7 @@ int vtkSVParameterizeVolumeOnPolycube::SetControlMeshBoundaries(vtkUnstructuredG
 
               if (neighborIds.size() != 2)
               {
-                fprintf(stderr,"Should be two neighbors to this interace point, but there is %d\n", neighborIds.size());
+                vtkErrorMacro("Should be two neighbors to this interace point, but there is " << neighborIds.size());
                 return SV_ERROR;
               }
 
