@@ -123,73 +123,8 @@ public:
   vtkBooleanMacro(GroupSurface, int);
   //@}
 
-
-  /** \brief Correct cells on the boundary by updating val if they have
-   *  multiple neighboring cells of the same value */
-  static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
-
-  /** \brief Naive implementation to get most reoccuring number in list. Okay
-   *  because list size is small. */
-  static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
-
-  /** \brief Run basic edge weithing cvt with pd */
-  static int RunEdgeWeightedCVT(vtkPolyData *pd, vtkPolyData *generatorPd);
-
-  /** \brief From three vectors, compute transformation from global to local */
-  static int ComputeRotationMatrix(const double vx[3], const double vy[3],
-                                   const double vz[3], double rotMatrix[9]);
-
-  static int SmoothBoundaries(vtkPolyData *pd, std::string arrayName);
-
-  static int GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
-                               const int cellId, const int pointId,
-                               vtkIdList *sameCells);
-
-  static int GetRegions(vtkPolyData *pd, std::string arrayName,
-                        std::vector<Region> &allRegions);
-
-  static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
-                                std::vector<Region> allRegions);
-
   static int SplitBoundary(vtkPolyData *pd, std::vector<int> boundary,
-                           int numDivs, int groupId, std::vector<int> &newSlicePoints, std::string slicePointsArrayName);
-
-  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-
-  static int CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
-
-  static int CheckCellValuesEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
-  static void SplineKnots(std::vector<int> &u, int n, int t);
-
-  static void SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res);
-
-  static void SplinePoint(const std::vector<int> &u, int n, int t, double v, const std::vector<XYZ> &control, XYZ &output);
-
-  static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
-
-  static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
-
-  static int RotateGroupToGlobalAxis(vtkPolyData *pd,
-                                     const int thresholdId,
-                                     std::string arrayName,
-                                     vtkPolyData *rotPd,
-                                     vtkMatrix4x4 *rotMatrix0,
-                                     vtkMatrix4x4 *rotMatrix1);
-  static int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
-                                      vtkPolyData *targetPd,
-                                      vtkPolyData *targetBasePd,
-                                      vtkPolyData *mappedPd,
-                                      std::string dataMatchingArrayName);
-  static int GetCellRingNeighbors(vtkPolyData *pd,
-                                  vtkIdList *cellIds,
-                                  int ringNumber,
-                                  int totNumberOfRings,
-                                  std::vector<std::vector<int> > &neighbors);
-
-
-  const static double GlobalCoords[3][3];
-
+                    int numDivs, int groupId, std::vector<int> &newSlicePoints, std::string slicePointsArrayName);
 
 protected:
   vtkSVSurfaceCenterlineGrouper();
@@ -208,14 +143,15 @@ protected:
   int MatchSurfaceToPolycube();
   int CheckSlicePoints();
   int SplitCellsAroundPoint(vtkPolyData *pd, int ptId);
+
   int SplitEdge(vtkPolyData *pd, int cellId, int ptId0, int ptId1,
                 vtkCellArray *newCells, std::vector<std::vector<int> >  &splitCells);
+  // TODO Reduce FixMultiple and RemoveMultiple
   int FixMultipleGroups(vtkPolyData *pd, vtkPolyData *polycubePd,
                         std::vector<Region> surfaceGroups,
                         std::vector<Region> polycubeGroups);
 
   int CheckGroups(vtkPolyData *pd);
-  int CheckGroups2();
   int FixEdges(vtkPolyData *pd, vtkPolyData *origPd, std::string arrayName,
                const Region region, std::vector<int> allEdges,
                std::vector<int> fixEdges, vtkIdList *critPts);

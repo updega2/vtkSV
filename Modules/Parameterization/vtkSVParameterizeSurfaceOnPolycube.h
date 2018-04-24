@@ -70,36 +70,17 @@ public:
 
   //@{
   /// \brief Get/Set macro for array name used by the filter. Must
-  //  be present on the centerlines.
+  //  be present on the surface and polycube.
   vtkSetStringMacro(GroupIdsArrayName);
   vtkGetStringMacro(GroupIdsArrayName);
   //@}
 
-  static int GetRegions(vtkPolyData *pd, std::string arrayName,
-                        std::vector<Region> &allRegions);
-
-  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-
-  static int CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
-
-  static int GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
-                               const int cellId, const int pointId,
-                               vtkIdList *sameCells);
-
-  static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
-
-  static int RotateGroupToGlobalAxis(vtkPolyData *pd,
-                                     const int thresholdId,
-                                     std::string arrayName,
-                                     vtkPolyData *rotPd,
-                                     vtkMatrix4x4 *rotMatrix0,
-                                     vtkMatrix4x4 *rotMatrix1);
-  static int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
-                                      vtkPolyData *targetPd,
-                                      vtkPolyData *targetBasePd,
-                                      vtkPolyData *mappedPd,
-                                      std::string dataMatchingArrayName);
+  //@{
+  /// \brief Get/Set macro for array name used by the filter. Must
+  // be presetn on the surface and polycube.
+  vtkSetStringMacro(PatchIdsArrayName);
+  vtkGetStringMacro(PatchIdsArrayName);
+  //@}
 
 
 protected:
@@ -111,6 +92,18 @@ protected:
                           vtkInformationVector **,
                           vtkInformationVector *) override;
 
+  int RotateGroupToGlobalAxis(vtkPolyData *pd,
+                              const int thresholdId,
+                              std::string arrayName,
+                              vtkPolyData *rotPd,
+                              vtkMatrix4x4 *rotMatrix0,
+                              vtkMatrix4x4 *rotMatrix1);
+  int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
+                               vtkPolyData *targetPd,
+                               vtkPolyData *targetBasePd,
+                               vtkPolyData *mappedPd,
+                               std::string dataMatchingArrayName);
+
   vtkPolyData *WorkPd;
   vtkPolyData *PolycubePd;
   vtkPolyData *SurfaceOnPolycubePd;
@@ -119,6 +112,7 @@ protected:
   int RunFilter(); // Run filter operations.
 
   char *GroupIdsArrayName;
+  char *PatchIdsArrayName;
 
 private:
   vtkSVParameterizeSurfaceOnPolycube(const vtkSVParameterizeSurfaceOnPolycube&);  // Not implemented.

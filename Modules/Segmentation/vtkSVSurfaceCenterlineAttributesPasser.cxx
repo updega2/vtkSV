@@ -67,16 +67,6 @@
 #include <algorithm>
 
 // ----------------------
-// GlobalCoords
-// ----------------------
-const double vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[3][3] =
-  {
-    {1.0, 0.0, 0.0},
-    {0.0, 1.0, 0.0},
-    {0.0, 0.0, 1.0},
-  };
-
-// ----------------------
 // StandardNewMacro
 // ----------------------
 vtkStandardNewMacro(vtkSVSurfaceCenterlineAttributesPasser);
@@ -673,7 +663,12 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
       // Compute the rotation from global coordinate system to centerlines
       // local coordinate system
       double rotMat[9];
-      this->ComputeRotationMatrix(locals[0], locals[1], locals[4], rotMat);
+      double globals[3][3];
+      globals[0][0] = 1.0; globals[0][1] = 0.0; globals[0][2] = 0.0;
+      globals[1][0] = 0.0; globals[1][1] = 1.0; globals[1][2] = 0.0;
+      globals[2][0] = 0.0; globals[2][1] = 0.0; globals[2][2] = 1.0;
+      vtkSVGeneralUtils::ComputeRotationMatrix(globals[0], globals[1], globals[2],
+                                               locals[0], locals[1], locals[4], rotMat);
 
       double cellClusterVec[3];
       preRotationNormals->GetTuple(realCellId, cellClusterVec);
@@ -1217,12 +1212,12 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         endVessel -= pCoordThr;
       }
 
-      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
+      if (vtkSVGeneralUtils::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
       {
         vtkErrorMacro("Could not correct patch vals on branch");
         return SV_ERROR;
       }
-      if (vtkSVSurfaceCenterlineGrouper::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
+      if (vtkSVGeneralUtils::CorrectCellBoundaries(branchPd, "PatchVals") != SV_OK)
       {
         vtkErrorMacro("Could not correct patch vals on branch");
         return SV_ERROR;
@@ -1251,7 +1246,12 @@ int vtkSVSurfaceCenterlineAttributesPasser::RunFilter()
         // Compute the rotation from global coordinate system to centerlines
         // local coordinate system
         double rotMat[9];
-        this->ComputeRotationMatrix(locals[0], locals[1], locals[4], rotMat);
+        double globals[3][3];
+        globals[0][0] = 1.0; globals[0][1] = 0.0; globals[0][2] = 0.0;
+        globals[1][0] = 0.0; globals[1][1] = 1.0; globals[1][2] = 0.0;
+        globals[2][0] = 0.0; globals[2][1] = 0.0; globals[2][2] = 1.0;
+        vtkSVGeneralUtils::ComputeRotationMatrix(globals[0], globals[1], globals[2],
+                                                 locals[0], locals[1], locals[4], rotMat);
 
         double cellClusterVec[3];
         preRotationNormals->GetTuple(realCellId, cellClusterVec);
@@ -1303,98 +1303,11 @@ void vtkSVSurfaceCenterlineAttributesPasser::PrintSelf(ostream& os, vtkIndent in
 }
 
 // ----------------------
-// ComputeRotationMatrix
-// ----------------------
-int vtkSVSurfaceCenterlineAttributesPasser::ComputeRotationMatrix(const double vx[3],
-                                                const double vy[3],
-                                                const double vz[3],
-                                                double rotMatrix[9])
-{
-  rotMatrix[0] = vx[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][0] +
-                 vx[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][1] +
-                 vx[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][2];
-  rotMatrix[1] = vx[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][0] +
-                 vx[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][1] +
-                 vx[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][2];
-  rotMatrix[2] = vx[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][0] +
-                 vx[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][1] +
-                 vx[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][2];
-
-  rotMatrix[3] = vy[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][0] +
-                 vy[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][1] +
-                 vy[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][2];
-  rotMatrix[4] = vy[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][0] +
-                 vy[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][1] +
-                 vy[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][2];
-  rotMatrix[5] = vy[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][0] +
-                 vy[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][1] +
-                 vy[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][2];
-
-  rotMatrix[6] = vz[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][0] +
-                 vz[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][1] +
-                 vz[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[0][2];
-  rotMatrix[7] = vz[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][0] +
-                 vz[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][1] +
-                 vz[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[1][2];
-  rotMatrix[8] = vz[0]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][0] +
-                 vz[1]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][1] +
-                 vz[2]*vtkSVSurfaceCenterlineAttributesPasser::GlobalCoords[2][2];
-
-  return SV_OK;
-}
-
-// ----------------------
-// GetCCWPoint
-// ----------------------
-int vtkSVSurfaceCenterlineAttributesPasser::GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId)
-{
-	int pointCCW;
-	int position = 0;
-
-  vtkIdType npts, *pts;
-  pd->GetCellPoints(cellId, npts, pts);
-	for (int i = 0; i < npts; i++)
-	{
-		if (pts[i] == pointId)
-		{
-			position = i;
-			break;
-		}
-	}
-
-  position = (position+1)%npts;
-  return pts[position];
-}
-
-// ----------------------
-// GetCWPoint
-// ----------------------
-int vtkSVSurfaceCenterlineAttributesPasser::GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId)
-{
-	int pointCCW;
-	int position = 0;
-
-  vtkIdType npts, *pts;
-  pd->GetCellPoints(cellId, npts, pts);
-	for (int i = 0; i < npts; i++)
-	{
-		if (pts[i] == pointId)
-		{
-			position = i;
-			break;
-		}
-	}
-
-  position = (position+npts-1)%npts;
-  return pts[position];
-}
-
-// ----------------------
 // GetOpenBoundaryEdges
 // ----------------------
 int vtkSVSurfaceCenterlineAttributesPasser::GetOpenBoundaryEdges(vtkPolyData *pd,
-                                               std::vector<int> &openCornerPoints,
-                                               std::vector<std::vector<int> > &openEdges)
+                                            std::vector<int> &openCornerPoints,
+                                            std::vector<std::vector<int> > &openEdges)
 {
   int numPoints = pd->GetNumberOfPoints();
   int numCells  = pd->GetNumberOfCells();
@@ -1433,7 +1346,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::GetOpenBoundaryEdges(vtkPolyData *pd
             for (int l=0; l<pointCells->GetNumberOfIds(); l++)
             {
               int cellId = pointCells->GetId(l);
-              int pointCCWId = vtkSVSurfaceCenterlineAttributesPasser::GetCCWPoint(pd, tempNodes[k], cellId);
+              int pointCCWId = vtkSVGeneralUtils::GetCCWPoint(pd, tempNodes[k], cellId);
 
               // Check if open edge
               vtkNew(vtkIdList, edgeCells);
@@ -1645,7 +1558,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::CheckGroupsWithPolycube()
 
   vtkDebugMacro("GETTING SURFACE GROUPS");
   std::vector<Region> surfaceRegions;
-  if (vtkSVSurfaceCenterlineGrouper::GetRegions(this->WorkPd, this->GroupIdsArrayName, surfaceRegions) != SV_OK)
+  if (vtkSVGeneralUtils::GetRegions(this->WorkPd, this->GroupIdsArrayName, surfaceRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get groups");
     return SV_ERROR;
@@ -1684,7 +1597,7 @@ int vtkSVSurfaceCenterlineAttributesPasser::CheckGroupsWithPolycube()
 
   vtkDebugMacro("GETTING POLYCUBE GROUPS");
   std::vector<Region> polycubeRegions;
-  if (vtkSVSurfaceCenterlineGrouper::GetRegions(this->PolycubePd, this->GroupIdsArrayName, polycubeRegions) != SV_OK)
+  if (vtkSVGeneralUtils::GetRegions(this->PolycubePd, this->GroupIdsArrayName, polycubeRegions) != SV_OK)
   {
     vtkErrorMacro("Couldn't get groups");
     return SV_ERROR;

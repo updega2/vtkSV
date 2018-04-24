@@ -55,6 +55,8 @@
 #include "vtkPolyData.h"
 #include "vtkUnstructuredGrid.h"
 
+#include "vtkSVGlobals.h"
+
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -421,6 +423,73 @@ public:
    *  It has three components as there are three angles per cell.
    *  return SV_OK */
   static int GetPolyDataAngles(vtkPolyData *pd, vtkFloatArray *cellAngles);
+
+  /** \brief Function to get regions of scalar labels definied on a surface.
+   * Typically used with clustering algorithms, the regions allow quick
+   * access to the cells in the cluster and the points on the edges of the cluster.
+   */
+  static int GetRegions(vtkPolyData *pd, std::string arrayName,
+                        std::vector<Region> &allRegions);
+  static int GetSpecificRegions(vtkPolyData *pd, std::string arrayName,
+                                             std::vector<Region> &allRegions,
+                                             vtkIdList *targetRegions);
+
+  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
+
+  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
+
+  static int CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
+
+  static int CheckCellValuesEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
+
+  static void SplineKnots(std::vector<int> &u, int n, int t);
+
+  static void SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res);
+
+  static void SplinePoint(const std::vector<int> &u, int n, int t, double v, const std::vector<XYZ> &control, XYZ &output);
+
+  static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
+
+  static int GetCellRingNeighbors(vtkPolyData *pd,
+                                  vtkIdList *cellIds,
+                                  int ringNumber,
+                                  int totNumberOfRings,
+                                  std::vector<std::vector<int> > &neighbors);
+
+  int GetCellDirectNeighbors(vtkPolyData *pd,
+                             std::vector<std::vector<int> > &neighbors,
+                             std::vector<int> &numNeighbors);
+
+  /** \brief Naive implementation to get most reoccuring number in list. Okay
+   *  because list size is small. */
+  static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
+
+  static int SmoothBoundaries(vtkPolyData *pd, std::string arrayName);
+  static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName, vtkIdList *targetRegions);
+
+  static int GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
+                               const int cellId, const int pointId,
+                               vtkIdList *sameCells);
+
+  static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
+                                std::vector<Region> allRegions);
+
+  /** \brief Correct cells on the boundary by updating val if they have
+   *  multiple neighboring cells of the same value */
+  static int CorrectCellBoundaries(vtkPolyData *pd, std::string cellArrayName);
+  /** \brief Correct cells on the boundary by updating val if they have
+   *  multiple neighboring cells of the same value */
+  static int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
+                                    vtkIdList *targetRegions);
+
+  /** \brief From three vectors, compute transformation from global to local */
+  static int ComputeRotationMatrix(const double from_x[3], const double from_y[3],
+                                   const double from_z[3], const double to_x[3],
+                                   const double to_y[3], const double to_z[3],
+                                   double rotMatrix[9]);
+
+  static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
+
 
 protected:
   vtkSVGeneralUtils();

@@ -136,16 +136,6 @@ public:
   vtkBooleanMacro(IsVasculature,int);
   //@}
 
-  /** \brief From three vectors, compute transformation from global to local */
-  static int ComputeRotationMatrix(const double vx[3], const double vy[3],
-                                   const double vz[3], double rotMatrix[9]);
-
-  const static double GlobalCoords[3][3];
-
-  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-
-  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-
 protected:
   vtkSVSurfaceCenterlineAttributesPasser();
   ~vtkSVSurfaceCenterlineAttributesPasser();

@@ -136,50 +136,6 @@ public:
   vtkBooleanMacro(EnforcePolycubeConnectivity, int);
   //@}
 
-  /** \brief From three vectors, compute transformation from global to local */
-  static int ComputeRotationMatrix(const double vx[3], const double vy[3],
-                                   const double vz[3], double rotMatrix[9]);
-
-  const static double GlobalCoords[3][3];
-
-  /** \brief Naive implementation to get most reoccuring number in list. Okay
-   *  because list size is small. */
-  static void GetMostOccuringVal(vtkIdList *idList, int &output, int &max_count);
-
-  static int SmoothSpecificBoundaries(vtkPolyData *pd, std::string arrayName,
-                                      vtkIdList *targetRegions);
-
-  static int GetRegions(vtkPolyData *pd, std::string arrayName,
-                        std::vector<Region> &allRegions);
-  static int GetSpecificRegions(vtkPolyData *pd, std::string arrayName,
-                                std::vector<Region> &allRegions,
-                                vtkIdList *targetRegions);
-
-  static int CurveFitBoundaries(vtkPolyData *pd, std::string arrayName,
-                                std::vector<Region> allRegions);
-
-  static int GetCCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-  static int GetCWPoint(vtkPolyData *pd, const int pointId, const int cellId);
-
-  static int CheckBoundaryEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
-
-  static int GetPointEdgeCells(vtkPolyData *pd, std::string arrayName,
-                               const int cellId, const int pointId,
-                               vtkIdList *sameCells);
-
-  static int CheckCellValuesEdge(vtkPolyData *pd, std::string arrayName, const int cellId, const int pointId0, const int pointId1);
-  static void SplineKnots(std::vector<int> &u, int n, int t);
-
-  static void SplineCurve(const std::vector<XYZ> &inp, int n, const std::vector<int> &knots, int t, std::vector<XYZ> &outp, int res);
-
-  static void SplinePoint(const std::vector<int> &u, int n, int t, double v, const std::vector<XYZ> &control, XYZ &output);
-
-  static double SplineBlend(int k, int t, const std::vector<int> &u, double v);
-
-  static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
-
-
-
 protected:
   vtkSVSurfaceCuboidPatcher();
   ~vtkSVSurfaceCuboidPatcher();
@@ -227,9 +183,6 @@ protected:
   int GetConnectedEdges(std::vector<std::vector<int> > inputEdges,
                         std::vector<std::vector<int> > &connectedCornerPts);
   int FixPatchesWithPolycube();
-  int GetCellDirectNeighbors(vtkPolyData *pd,
-                             std::vector<std::vector<int> > &neighbors,
-                             std::vector<int> &numNeighbors);
 
   int FixNoBoundaryRegions(vtkPolyData *pd, std::string arrayName);
   int FixRegions(vtkPolyData *pd, std::string arrayName,
@@ -238,17 +191,7 @@ protected:
   int FixBadTouchingRegions(vtkPolyData *pd, std::string arrayName, int fixIters);
   int FixThinRegions(vtkPolyData *pd, std::string arrayName, int fixIters);
 
-  /** \brief Correct cells on the boundary by updating val if they have
-   *  multiple neighboring cells of the same value */
-  int CorrectSpecificCellBoundaries(vtkPolyData *pd, std::string cellArrayName,
-                                    vtkIdList *targetRegions);
 
-  int GetNBoundaryRows(vtkPolyData *pd, const int numRows, vtkPolyData *rowsPd);
-
-  int GetNListNeighbors(vtkPolyData *pd, std::vector<int> &cellList,
-                               std::vector<int> &cellBool,
-                               int &currRow, const int numRows,
-                               std::vector<int> &allCells);
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
