@@ -14,18 +14,20 @@
 =========================================================================*/
 #include "vtkSVLocalLoopSubdivisionFilter.h"
 
-#include "vtkMath.h"
 #include "vtkCell.h"
 #include "vtkCellArray.h"
 #include "vtkEdgeTable.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
 #include "vtkObjectFactory.h"
+#include "vtkMath.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
 #include "vtkSmartPointer.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+
 #include "vtkSVGlobals.h"
 
 // ----------------------
@@ -121,7 +123,7 @@ int vtkSVLocalLoopSubdivisionFilter::GenerateSubdivisionPoints (vtkPolyData *inp
         delete [] weights;
 	delete [] noSubdivideCell;
         vtkErrorMacro ("Dataset is non-manifold and cannot be subdivided.");
-        return 0;
+        return SV_ERROR;
         }
       if (noSubdivideCell[edgeNeighbor->GetId(0)] ||
 	  noSubdivideCell[cellId])
@@ -151,7 +153,7 @@ int vtkSVLocalLoopSubdivisionFilter::GenerateSubdivisionPoints (vtkPolyData *inp
           {
           delete [] weights;
           vtkErrorMacro ("Dataset is non-manifold and cannot be subdivided.");
-          return 0;
+          return SV_ERROR;
           }
         newId = this->InterpolatePosition (inputPts, outputPts,
                                            stencil, weights);
@@ -189,7 +191,7 @@ int vtkSVLocalLoopSubdivisionFilter::GenerateSubdivisionPoints (vtkPolyData *inp
 
   // cleanup
   delete [] weights;
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -397,7 +399,7 @@ int vtkSVLocalLoopSubdivisionFilter::RequestUpdateExtent(
   if (!this->Superclass::RequestUpdateExtent(request, inputVector,
                                              outputVector))
     {
-    return 0;
+    return SV_ERROR;
     }
 
   numPieces =
@@ -411,7 +413,7 @@ int vtkSVLocalLoopSubdivisionFilter::RequestUpdateExtent(
                 ghostLevel + 1);
     }
 
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------
@@ -447,8 +449,9 @@ int vtkSVLocalLoopSubdivisionFilter::RequestData(
 
   if (!hasTris)
     {
-    vtkWarningMacro("vtkSVLocalLoopSubdivisionFilter only operates on triangles, but this data set has no triangles to operate on.")
-    return 0;
+      vtkErrorMacro("vtkSVLocalLoopSubdivisionFilter only operates on triangles, but this data set has no triangles to operate on.")
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
+      return SV_ERROR;
     }
 
   return this->Superclass::RequestData(request, inputVector, outputVector);
@@ -490,5 +493,5 @@ int vtkSVLocalLoopSubdivisionFilter::SetFixedCells(vtkPolyData *pd, int *noSubdi
     }
   }
 
-  return 1;
+  return SV_OK;
 }

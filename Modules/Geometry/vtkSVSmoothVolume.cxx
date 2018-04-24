@@ -32,20 +32,17 @@
 
 #include "vtkCell.h"
 #include "vtkCellData.h"
-#include "vtkConnectivityFilter.h"
-#include "vtkDijkstraGraphGeodesicPath.h"
-#include "vtkDataSetSurfaceFilter.h"
 #include "vtkDoubleArray.h"
-#include "vtkFeatureEdges.h"
+#include "vtkErrorCode.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
 #include "vtkPoints.h"
-#include "vtkUnstructuredGrid.h"
 #include "vtkSmartPointer.h"
-#include "vtkSVGeneralUtils.h"
-#include "vtkSVGlobals.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkUnstructuredGrid.h"
+
+#include "vtkSVGeneralUtils.h"
+#include "vtkSVGlobals.h"
 
 #include <iostream>
 #include <cmath>
@@ -103,7 +100,7 @@ int vtkSVSmoothVolume::RequestData(
   if (this->PrepFilter() != SV_OK)
   {
     vtkErrorMacro("Prep of filter failed");
-    output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
 
@@ -111,7 +108,7 @@ int vtkSVSmoothVolume::RequestData(
   if (this->RunFilter() != SV_OK)
   {
     vtkErrorMacro("Filter failed");
-    output->DeepCopy(input);
+    this->SetErrorCode(vtkErrorCode::UserError + 2);
     return SV_ERROR;
   }
 

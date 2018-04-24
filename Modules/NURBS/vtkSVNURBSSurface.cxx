@@ -659,14 +659,14 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   vtkNew(vtkDenseArray<double>, tmpUGrid);
   if (vtkSVNURBSUtils::MatrixMatrixMultiply(NUfinal, 0, 1, tmpControlGrid, 1, 4, tmpUGrid) != SV_OK)
   {
-    fprintf(stderr, "Error in matrix multiply\n");
+    vtkErrorMacro("Error in matrix multiply");
     return SV_ERROR;
   }
   // Do second matrix multiply with v basis functions
   vtkNew(vtkDenseArray<double>, tmpVGrid);
   if (vtkSVNURBSUtils::MatrixMatrixMultiply(tmpUGrid, 1, 4, NVfinalT, 0, 1, tmpVGrid) != SV_OK)
   {
-    fprintf(stderr, "Error in matrix multiply\n");
+    vtkErrorMacro("Error in matrix multiply");
     return SV_ERROR;
   }
 

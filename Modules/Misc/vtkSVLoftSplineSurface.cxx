@@ -646,16 +646,11 @@ int vtkSVLoftSplineSurface::linearInterpolate(double **orgPts, int numOrgPts, do
       }
 
       if (j == numOrgPts) {
-          fprintf(stdout,"Error interpolating point %i.\n",i);
+          vtkErrorMacro("Error interpolating point " << i);
           this->deleteArray(outPts,numOutPts,2);
           return SV_ERROR;
       }
     }
-
-    // debug
-    //for (i = 0; i < numOutPts; i++) {
-    //    fprintf(stdout,"%i: %8.3lf %8.3lf\n",i,outPts[i][0],outPts[i][1]);
-    //}
 
     *rtnOutPts = outPts;
 
@@ -749,11 +744,6 @@ int vtkSVLoftSplineSurface::linearInterpolateCurve(double **orgPts, int numOrgPt
         outPts[i][1]=yout[i][1];
         outPts[i][2]=zout[i][1];
     }
-
-    // debug
-    //for (i = 0; i < numOutPts; i++) {
-    //    fprintf(stdout,"%i: %8.3lf %8.3lf %8.3lf\n",i,outPts[i][0],outPts[i][1],outPts[i][2]);
-    //}
 
     // clean up
     this->deleteArray(xin,numOrgPts+1,2); this->deleteArray(xout,numOutPts,2);
@@ -931,11 +921,6 @@ int vtkSVLoftSplineSurface::smoothCurve(double **orgPts, int numOrgPts, int clos
         outPts[i][1]=yout[i][1];
         outPts[i][2]=zout[i][1];
     }
-
-    // debug
-    //for (i = 0; i < numOutPts; i++) {
-    //    fprintf(stdout,"%i: %8.3lf %8.3lf %8.3lf\n",i,outPts[i][0],outPts[i][1],outPts[i][2]);
-    //}
 
     // clean up
     this->deleteArray(xout,numOutPts,2);

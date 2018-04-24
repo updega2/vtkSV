@@ -42,7 +42,8 @@ set(SRCS
   vtkSVLocalLoopSubdivisionFilter.cxx
   vtkSVLocalQuadricDecimation.cxx
   vtkSVLocalSmoothPolyDataFilter.cxx
-  vtkSVSmoothVolume.cxx)
+  vtkSVSmoothVolume.cxx
+  )
 
 set(HDRS
   vtkSVConstrainedBlend.h
@@ -54,7 +55,8 @@ set(HDRS
   vtkSVLocalLoopSubdivisionFilter.h
   vtkSVLocalQuadricDecimation.h
   vtkSVLocalSmoothPolyDataFilter.h
-  vtkSVSmoothVolume.h)
+  vtkSVSmoothVolume.h
+  )
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -64,7 +66,7 @@ if(VTKSV_BUILD_LIBS_AS_VTK_MODULES)
     message(FATAL_ERROR "Error: lib and module name should be equal; Lib is ${lib} and Module is ${module}")
   endif()
 
-  # Parameterization vtk module
+  # Geometry vtk module
   vtksv_add_module(${lib}
     SRCS ${SRCS}
     HDRS ${HDRS}
@@ -113,7 +115,9 @@ endif()
 #------------------------------------------------------------------------------
 # Executables
 if(VTKSV_BUILD_EXES)
-  set(EXE_LIST SmoothVolume)
+  set(EXE_LIST
+    SmoothVolume
+    )
   foreach(exe ${EXE_LIST})
     add_executable(vtkSV${exe} ${exe}.cxx)
     target_link_libraries(vtkSV${exe} ${VTK_LIBRARIES} ${SV_LIB_VTKSVGEOMETRY_NAME} ${SV_LIB_VTKSVCOMMON_NAME})

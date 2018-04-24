@@ -27,7 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
 /**
  * \class vtkSVLoopBooleanPolyDataFilter
  *
@@ -55,8 +54,9 @@
 #ifndef vtkSVLoopBooleanPolyDataFilter_h
 #define vtkSVLoopBooleanPolyDataFilter_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVBooleanModule.h" // For export macro
+
+#include "vtkPolyDataAlgorithm.h"
 
 class VTKSVBOOLEAN_EXPORT vtkSVLoopBooleanPolyDataFilter :
         public vtkPolyDataAlgorithm
@@ -69,7 +69,7 @@ public:
                vtkPolyDataAlgorithm);
 
   // PrintSelf
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Integer describing the number of intersection points and lines
@@ -129,8 +129,8 @@ protected:
   ~vtkSVLoopBooleanPolyDataFilter();
 
   int RequestData(vtkInformation*, vtkInformationVector**,
-                  vtkInformationVector*);
-  int FillInputPortInformation(int, vtkInformation*);
+                  vtkInformationVector*) override;
+  int FillInputPortInformation(int, vtkInformation*) override;
 
   vtkPolyData *OutputSurface;
 

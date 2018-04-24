@@ -121,6 +121,7 @@
 #define __vtkDelaunay2D_60_h
 
 #include "vtkPolyDataAlgorithm.h"
+
 #include "vtkSVBooleanModule.h" // For export macro
 
 class vtkAbstractTransform;
@@ -136,7 +137,7 @@ class VTKSVBOOLEAN_EXPORT vtkDelaunay2D_60 : public vtkPolyDataAlgorithm
 {
 public:
   vtkTypeMacro(vtkDelaunay2D_60,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Construct object with Alpha = 0.0; Tolerance = 0.001; Offset = 1.25;
@@ -217,7 +218,7 @@ protected:
   vtkDelaunay2D_60();
   ~vtkDelaunay2D_60();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
 
   vtkAbstractTransform * ComputeBestFittingPlane(vtkPointSet *input);
 
@@ -260,7 +261,7 @@ private:
   void CheckEdge(vtkIdType ptId, double x[3], vtkIdType p1, vtkIdType p2,
                  vtkIdType tri);
 
-  virtual int FillInputPortInformation(int, vtkInformation*);
+  virtual int FillInputPortInformation(int, vtkInformation*) override;
 
 private:
   vtkDelaunay2D_60(const vtkDelaunay2D_60&);  // Not implemented.

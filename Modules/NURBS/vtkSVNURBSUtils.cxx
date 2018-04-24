@@ -322,7 +322,7 @@ int vtkSVNURBSUtils::GetKnots(vtkDoubleArray *U, int p, std::string type, vtkDou
     fprintf(stderr,"Type %s is not recognized\n", type.c_str());
     return SV_ERROR;
   }
-  fprintf(stdout,"Length of Knots: %lld\n", knots->GetNumberOfTuples());
+  //fprintf(stdout,"Length of Knots: %lld\n", knots->GetNumberOfTuples());
 
   return SV_OK;
 }
@@ -693,7 +693,7 @@ int vtkSVNURBSUtils::CurveRemoveKnot(vtkSVControlGrid *controlPoints, vtkDoubleA
 
   if (t==0)
   {
-    fprintf(stdout,"No knots were able to be removed\n");
+    fprintf(stderr,"No knots were able to be removed\n");
     return SV_OK;
   }
 
@@ -4494,7 +4494,7 @@ int vtkSVNURBSUtils::RemoveKnot(vtkSVControlGrid *controlPoints,
 
     if (t==0)
     {
-      fprintf(stdout,"No knots were able to be removed\n");
+      fprintf(stderr,"No knots were able to be removed\n");
       return SV_OK;
     }
 
@@ -4712,7 +4712,7 @@ int vtkSVNURBSUtils::RemoveKnot(vtkSVControlGrid *controlPoints,
 
     if (t==0)
     {
-      fprintf(stdout,"No knots were able to be removed\n");
+      fprintf(stderr,"No knots were able to be removed\n");
       return SV_OK;
     }
 

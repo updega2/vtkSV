@@ -470,7 +470,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   vtkNew(vtkDoubleArray, uKnots);
   if (vtkSVNURBSUtils::GetKnots(U, p, kutype, uKnots) != SV_OK)
   {
-    fprintf(stderr,"Error getting knots\n");
+    vtkErrorMacro("Error getting knots");
     return SV_ERROR;
   }
   //fprintf(stdout,"X knots\n");
@@ -489,7 +489,7 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkPolyData *inputs[], int numInputs,
   vtkNew(vtkDoubleArray, vKnots);
   if (vtkSVNURBSUtils::GetKnots(V, q, kvtype, vKnots) != SV_OK)
   {
-    fprintf(stderr,"Error getting knots\n");
+    vtkErrorMacro("Error getting knots");
     return SV_ERROR;
   }
   //fprintf(stdout,"Y knots\n");

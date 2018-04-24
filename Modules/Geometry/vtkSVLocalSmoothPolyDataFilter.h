@@ -105,8 +105,9 @@
 #ifndef vtkSVLocalSmoothPolyDataFilter_h
 #define vtkSVLocalSmoothPolyDataFilter_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVGeometryModule.h" // for export
+
+#include "vtkPolyDataAlgorithm.h"
 
 class vtkSVLocalSmoothPoints;
 
@@ -114,7 +115,7 @@ class VTKSVGEOMETRY_EXPORT vtkSVLocalSmoothPolyDataFilter : public vtkPolyDataAl
 {
 public:
   vtkTypeMacro(vtkSVLocalSmoothPolyDataFilter,vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   // Description:
   // Construct object with number of iterations 20; relaxation factor .01;
@@ -233,8 +234,8 @@ protected:
   vtkSVLocalSmoothPolyDataFilter();
   ~vtkSVLocalSmoothPolyDataFilter();
 
-  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  virtual int FillInputPortInformation(int port, vtkInformation *info);
+  virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *) override;
+  virtual int FillInputPortInformation(int port, vtkInformation *info) override;
 
   vtkIntArray 	        *SmoothCellArray;
   vtkIntArray 	        *SmoothPointArray;

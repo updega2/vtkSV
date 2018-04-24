@@ -110,12 +110,12 @@ int TestSurfaceIncreaseDegree(int argc, char *argv[])
   // Check the result
   if (surface->GetUDegree() != p+du)
   {
-    fprintf(stderr, "Curve was not updated to correct degree\n");
+    std::cerr << "Curve was not updated to correct degree" << endl;
     return EXIT_FAILURE;
   }
   if (surface->GetVDegree() != q+dv)
   {
-    fprintf(stderr, "Curve was not updated to correct degree\n");
+    std::cerr << "Curve was not updated to correct degree" << endl;
     return EXIT_FAILURE;
   }
 

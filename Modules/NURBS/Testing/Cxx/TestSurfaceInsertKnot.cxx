@@ -112,13 +112,13 @@ int TestSurfaceInsertKnot(int argc, char *argv[])
   // Check the result
   if (surface->GetNumberOfUControlPoints() != np+ru)
   {
-    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    std::cerr << "Curve was not updated to correct number of control points" << endl;
     return EXIT_FAILURE;
   }
 
   if (surface->GetNumberOfUKnotPoints() != nuk+ru)
   {
-    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    std::cerr << "Curve was not updated to correct number of knot points" << endl;
     return EXIT_FAILURE;
   }
 
@@ -128,13 +128,13 @@ int TestSurfaceInsertKnot(int argc, char *argv[])
   // Check the result
   if (surface->GetNumberOfVControlPoints() != mp+rv)
   {
-    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    std::cerr << "Curve was not updated to correct number of control points" << endl;
     return EXIT_FAILURE;
   }
 
   if (surface->GetNumberOfVKnotPoints() != nvk+rv)
   {
-    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    std::cerr << "Curve was not updated to correct number of knot points" << endl;
     return EXIT_FAILURE;
   }
 
@@ -144,13 +144,13 @@ int TestSurfaceInsertKnot(int argc, char *argv[])
   // Check the result
   if (surface->GetNumberOfVControlPoints() != mp+rv+rv)
   {
-    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    std::cerr << "Curve was not updated to correct number of control points" << endl;
     return EXIT_FAILURE;
   }
 
   if (surface->GetNumberOfVKnotPoints() != nvk+rv+rv)
   {
-    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    std::cerr << "Curve was not updated to correct number of knot points" << endl;
     return EXIT_FAILURE;
   }
 

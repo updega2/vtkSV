@@ -27,8 +27,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *=========================================================================*/
-
-
 /**
  *  \class vtkSVSmoothVolume
  *  \brief This class uses vtkDijkstraGraphGeodesicPath to get path betwen points
@@ -42,18 +40,18 @@
 #ifndef vtkSVSmoothVolume_h
 #define vtkSVSmoothVolume_h
 
-#include "vtkUnstructuredGridAlgorithm.h"
 #include "vtkSVGeometryModule.h" // For export
 
-#include "vtkPolyData.h"
 #include "vtkIdList.h"
+#include "vtkPolyData.h"
+#include "vtkUnstructuredGridAlgorithm.h"
 
 class VTKSVGEOMETRY_EXPORT vtkSVSmoothVolume : public vtkUnstructuredGridAlgorithm
 {
 public:
   static vtkSVSmoothVolume* New();
   vtkTypeMacro(vtkSVSmoothVolume,vtkUnstructuredGridAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Set the number of smooth iterations. Default 1000
@@ -68,7 +66,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.

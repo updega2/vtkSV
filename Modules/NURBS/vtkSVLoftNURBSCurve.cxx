@@ -171,7 +171,7 @@ int vtkSVLoftNURBSCurve::LoftNURBS(vtkPolyData *input, vtkPolyData *outputPD)
   vtkNew(vtkDoubleArray, knots);
   if (vtkSVNURBSUtils::GetKnots(U, p, ktype, knots) != SV_OK)
   {
-    fprintf(stderr,"Error getting knots\n");
+    vtkErrorMacro("Error getting knots");
     return SV_ERROR;
   }
 

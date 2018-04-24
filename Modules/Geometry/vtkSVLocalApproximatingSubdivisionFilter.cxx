@@ -18,15 +18,17 @@
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
 #include "vtkEdgeTable.h"
+#include "vtkErrorCode.h"
 #include "vtkIdList.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
-#include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkPointData.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkUnsignedCharArray.h"
+
 #include "vtkSVGeneralUtils.h"
 #include "vtkSVGlobals.h"
-#include "vtkUnsignedCharArray.h"
 
 // ----------------------
 // Constructor
@@ -92,7 +94,8 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
   if (numPts < 1 || numCells < 1)
     {
     vtkErrorMacro(<<"No data to approximate!");
-    return 1;
+    this->SetErrorCode(vtkErrorCode::UserError + 1);
+    return SV_ERROR;
     }
 
   //
@@ -110,6 +113,7 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
     if (this->SubdividePointArrayName == NULL)
     {
       std::cout<<"No PointArrayName given." << endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
   }
@@ -118,6 +122,7 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
     if (this->SubdivideCellArrayName == NULL)
     {
       std::cout<<"No CellArrayName given." << endl;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
       return SV_ERROR;
     }
   }
@@ -129,16 +134,18 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
     {
       if (this->GetSubdivideArrays(inputDS,1) != 1)
       {
-	vtkErrorMacro("Need cell array on mesh to be able to local subdivide");
-	return 0;
+        vtkErrorMacro("Need cell array on mesh to be able to local subdivide");
+        this->SetErrorCode(vtkErrorCode::UserError + 1);
+        return SV_ERROR;
       }
     }
     if (this->UsePointArray)
     {
       if (this->GetSubdivideArrays(inputDS,0) != 1)
       {
-	vtkErrorMacro("Need cell array on mesh to be able to local subdivide");
-	return 0;
+        vtkErrorMacro("Need cell array on mesh to be able to local subdivide");
+        this->SetErrorCode(vtkErrorCode::UserError + 1);
+        return SV_ERROR;
       }
     }
     this->UpdateProgress(static_cast<double>(level+1)/
@@ -183,7 +190,8 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
       inputDS->Delete();
       edgeData->Delete();
       vtkErrorMacro("Subdivision failed.");
-      return 0;
+      this->SetErrorCode(vtkErrorCode::UserError + 1);
+      return SV_ERROR;
       }
     this->GenerateSubdivisionCells (inputDS, edgeData, outputPolys, outputCD);
 
@@ -204,7 +212,7 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
 
   inputDS->Delete();
 
-  return 1;
+  return SV_OK;
 }
 
 // ----------------------

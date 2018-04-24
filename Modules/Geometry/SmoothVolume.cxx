@@ -120,6 +120,12 @@ int main(int argc, char *argv[])
   Smoother->Update();
   std::cout<<"Done"<<endl;
 
+  if (Smoother->GetErrorCode() != 0)
+  {
+    std::cout << "Error in running filter" << endl;
+    return SV_ERROR;
+  }
+
   //Write Files
   std::cout<<"Writing Files..."<<endl;
   vtkSVIOUtils::WriteVTUFile(outputFilename, Smoother->GetOutput(0));

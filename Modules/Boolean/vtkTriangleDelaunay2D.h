@@ -25,7 +25,7 @@ class VTKSVBOOLEAN_EXPORT vtkTriangleDelaunay2D : public vtkDelaunay2D
 {
 public:
   vtkTypeMacro(vtkTriangleDelaunay2D, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkTriangleDelaunay2D* New();
 
@@ -34,7 +34,7 @@ protected:
   ~vtkTriangleDelaunay2D();
 
   virtual int RequestData(vtkInformation*,
-    vtkInformationVector**, vtkInformationVector*);
+    vtkInformationVector**, vtkInformationVector*) override;
 
 private:
   vtkTriangleDelaunay2D(const vtkTriangleDelaunay2D&);  // Not implemented.

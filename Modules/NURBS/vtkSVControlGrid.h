@@ -42,11 +42,11 @@
 #ifndef vtkSVControlGrid_h
 #define vtkSVControlGrid_h
 
-#include "vtkStructuredGrid.h"
-#include "vtkSVNURBSModule.h"
-
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
+#include "vtkStructuredGrid.h"
+
+#include "vtkSVNURBSModule.h"
 
 class VTKSVNURBS_EXPORT vtkSVControlGrid : public vtkStructuredGrid
 {
@@ -54,7 +54,7 @@ public:
   static vtkSVControlGrid *New();
 
   vtkTypeMacro(vtkSVControlGrid,vtkStructuredGrid);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
 
   /// \brief Copy the geometric and topological structure of an input poly data object.

@@ -72,8 +72,8 @@ int TestGetBoundaryFaces(int argc, char *argv[])
   int expectedRegions = 70;
   if (boundaryFinder->GetNumberOfRegions() != expectedRegions)
   {
-    fprintf(stderr,"The boundary face separator did not find the correct number of regions: %d\n", boundaryFinder->GetNumberOfRegions());
-    fprintf(stderr,"Expected: %d\n", expectedRegions);
+    std::cerr << "The boundary face separator did not find the correct number of regions: " <<  boundaryFinder->GetNumberOfRegions() << endl;
+    std::cerr <<  "Expected: " << expectedRegions << endl;
     return EXIT_FAILURE;
   }
 

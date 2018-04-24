@@ -1171,7 +1171,7 @@ void vtkSVLoopBooleanPolyDataFilter::Impl::DetermineIntersection(
       vtkIdType nextCell = cellIds->GetId(0);
 
       //Run through intersection lines to get loops!
-      fprintf(stdout,"Running loop find: %d, %d\n", interPt, nextCell);
+      vtkDebugWithObjectMacro(this->ParentFilter,"Running loop find: " << interPt << " " <<  nextCell);
       newloop.startPt = interPt;
       int caseId=0;
       caseId = this->RunLoopFind(interPt, nextCell, usedPt, &newloop);

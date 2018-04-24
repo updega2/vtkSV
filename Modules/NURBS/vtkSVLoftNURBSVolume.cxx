@@ -584,7 +584,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     if (DU0->GetNumberOfPoints() == 0 ||
         DUN->GetNumberOfPoints() == 0)
     {
-      fprintf(stdout,"Getting default derivatives\n");
+      vtkDebugMacro("Getting default derivatives");
       vtkNew(vtkPoints, DU0Points);
       vtkNew(vtkPoints, DUNPoints);
       DU0->SetPoints(DU0Points);
@@ -602,7 +602,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     if (DV0->GetNumberOfPoints() == 0 ||
         DVN->GetNumberOfPoints() == 0)
     {
-      fprintf(stdout,"Getting default derivatives\n");
+      vtkDebugMacro("Getting default derivatives");
       vtkNew(vtkPoints, DV0Points);
       vtkNew(vtkPoints, DVNPoints);
       DV0->SetPoints(DV0Points);
@@ -620,7 +620,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
     if (DW0->GetNumberOfPoints() == 0 ||
         DWN->GetNumberOfPoints() == 0)
     {
-      fprintf(stdout,"Getting default derivatives\n");
+      vtkDebugMacro("Getting default derivatives");
       vtkNew(vtkPoints, DW0Points);
       vtkNew(vtkPoints, DWNPoints);
       DW0->SetPoints(DW0Points);

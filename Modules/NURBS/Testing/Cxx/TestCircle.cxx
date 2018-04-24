@@ -96,13 +96,13 @@ int TestCircle(int argc, char *argv[])
   // Check the result
   if (curve->GetNumberOfControlPoints() != np+r)
   {
-    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    std::cerr << "Curve was not updated to correct number of control points" << endl;
     return EXIT_FAILURE;
   }
 
   if (curve->GetNumberOfKnotPoints() != m+r)
   {
-    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    std::cerr << "Curve was not updated to correct number of knot points" << endl;
     return EXIT_FAILURE;
   }
 
@@ -119,13 +119,13 @@ int TestCircle(int argc, char *argv[])
   // Check the result
   if (curve->GetNumberOfControlPoints() != np+r+q)
   {
-    fprintf(stderr, "Curve was not updated to correct number of control points\n");
+    std::cerr << "Curve was not updated to correct number of control points" << endl;
     return EXIT_FAILURE;
   }
 
   if (curve->GetNumberOfKnotPoints() != m+r+q)
   {
-    fprintf(stderr, "Curve was not updated to correct number of knot points\n");
+    std::cerr << "Curve was not updated to correct number of knot points" << endl;
     return EXIT_FAILURE;
   }
 

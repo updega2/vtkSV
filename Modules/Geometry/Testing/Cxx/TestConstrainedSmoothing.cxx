@@ -61,7 +61,7 @@ int TestConstrainedSmoothing(int argc, char *argv[])
   // TODO: make an actual test, just making sure filter runs
   if (output->GetNumberOfPoints() != surfacePd->GetNumberOfPoints())
   {
-    fprintf(stderr,"Filter did not execute properly\n");
+    std::cerr << "Filter did not execute properly" << endl;
     return EXIT_FAILURE;
   }
 

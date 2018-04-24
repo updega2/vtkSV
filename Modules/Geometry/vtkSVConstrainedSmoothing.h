@@ -43,8 +43,9 @@
 #ifndef vtkSVConstrainedSmoothing_h
 #define vtkSVConstrainedSmoothing_h
 
-#include "vtkPolyDataAlgorithm.h"
 #include "vtkSVGeometryModule.h" // for export
+
+#include "vtkPolyDataAlgorithm.h"
 #include <set>
 
 class VTKSVGEOMETRY_EXPORT vtkSVConstrainedSmoothing : public vtkPolyDataAlgorithm
@@ -52,7 +53,7 @@ class VTKSVGEOMETRY_EXPORT vtkSVConstrainedSmoothing : public vtkPolyDataAlgorit
 public:
   static vtkSVConstrainedSmoothing* New();
   vtkTypeMacro(vtkSVConstrainedSmoothing, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
   /// \brief Set name for cell array or point array to use for blending
@@ -101,7 +102,7 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
   vtkIntArray *CellArray;
   vtkIntArray *PointArray;

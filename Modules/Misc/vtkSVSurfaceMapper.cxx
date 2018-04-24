@@ -654,9 +654,9 @@ int vtkSVSurfaceMapper::GetPointOnTargetBoundary(int srcPtId, int targCellId, do
   }
   else
   {
-    fprintf(stdout,"numBoundaryPts: %d\n", numBoundaryPts);
-    fprintf(stdout,"srcPtId: %d\n", srcPtId);
-    fprintf(stdout,"targCellId: %d\n", targCellId);
+    vtkDebugMacro("numBoundaryPts: " << numBoundaryPts);
+    vtkDebugMacro("srcPtId: " << srcPtId);
+    vtkDebugMacro("targCellId: " << targCellId);
     vtkErrorMacro("Boundaries do not match well enough");
     return SV_ERROR;
   }

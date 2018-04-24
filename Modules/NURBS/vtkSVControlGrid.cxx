@@ -36,6 +36,7 @@
 #include "vtkPointData.h"
 #include "vtkPoints.h"
 #include "vtkSmartPointer.h"
+
 #include "vtkSVGlobals.h"
 
 vtkStandardNewMacro(vtkSVControlGrid);
@@ -109,7 +110,7 @@ int vtkSVControlGrid::SetNumberOfControlPoints(const int numPoints)
   vtkDataArray *weights = this->GetPointData()->GetArray("Weights");
   if (weights == NULL)
   {
-    fprintf(stderr,"No weigths on surface\n");
+    vtkErrorMacro("No weigths on surface");
     return SV_ERROR;
   }
   int numCurrentVals = weights->GetNumberOfTuples();
@@ -250,12 +251,6 @@ int vtkSVControlGrid::GetPointId(const int i, const int j, const int k, int &ptI
   int extent[6];
   this->GetExtent(extent);
 
-  //fprintf(stdout,"Extents: %d %d %d %d %d %d\n", extent[0],
-  //                                                  extent[1],
-  //                                                  extent[2],
-  //                                                  extent[3],
-  //                                                  extent[4],
-  //                                                  extent[5]);
   if(i < extent[0] || i > extent[1] ||
      j < extent[2] || j > extent[3] ||
      k < extent[4] || k > extent[5])
@@ -282,12 +277,6 @@ int vtkSVControlGrid::GetPointId(const int i, const int j, const int k)
   int extent[6];
   this->GetExtent(extent);
 
-  //fprintf(stdout,"Extents: %d %d %d %d %d %d\n", extent[0],
-  //                                                  extent[1],
-  //                                                  extent[2],
-  //                                                  extent[3],
-  //                                                  extent[4],
-  //                                                  extent[5]);
   if(i < extent[0] || i > extent[1] ||
      j < extent[2] || j > extent[3] ||
      k < extent[4] || k > extent[5])
