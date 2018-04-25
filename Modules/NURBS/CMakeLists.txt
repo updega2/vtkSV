@@ -87,6 +87,8 @@ else()
   target_link_libraries(${lib}
     ${VTK_LIBRARIES}
     ${SV_LIB_VTKSVCOMMON_NAME}
+    ${SV_LIB_VTKSVMISC_NAME}
+    ${SV_LIB_VTKSVIO_NAME}
     )
 
   # Set up for exports

@@ -94,6 +94,11 @@ else()
   target_link_libraries(${lib}
     ${VTK_LIBRARIES}
     ${SV_LIB_VTKSVCOMMON_NAME}
+    ${SV_LIB_VTKSVIO_NAME}
+    ${SV_LIB_VTKSVMISC_NAME}
+    ${SV_LIB_VTKSVVMTK_NAME}
+    ${SV_LIB_VTKSVPARAMETERIZATION_NAME}
+    ${SV_LIB_THIRDPARTY_VMTK_NAME}  # VMTK lib name in SimVascular
     )
 
   # Set up for exports
