@@ -138,7 +138,7 @@ int vtkSVParameterizeVolumeOnPolycube::RequestData(
 {
   // get the input and output
   vtkPolyData *input = vtkPolyData::GetData(inputVector[0]);
-  vtkPolyData *output = vtkPolyData::GetData(outputVector);
+  vtkUnstructuredGrid *output = vtkUnstructuredGrid::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
 
@@ -164,6 +164,17 @@ int vtkSVParameterizeVolumeOnPolycube::RequestData(
 
   return SV_OK;
 }
+
+// ----------------------
+// FillInputPortInformation
+// ----------------------
+int vtkSVParameterizeVolumeOnPolycube::FillInputPortInformation(
+    int port, vtkInformation *info)
+{
+  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPolyData");
+  return SV_OK;
+}
+
 
 // ----------------------
 // PrepFilter
@@ -357,7 +368,12 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
       vtkErrorMacro("Couldn't do the dirt");
       return SV_ERROR;
     }
-    surfaceAppender->AddInputData(mappedBranch);
+
+    vtkNew(vtkAppendFilter, converter);
+    converter->SetInputData(mappedBranch);
+    converter->Update();
+
+    surfaceAppender->AddInputData(converter->GetOutput());
   }
 
   surfaceAppender->Update();
@@ -395,7 +411,11 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     ider3->SetIdsArrayName("TmpInternalIds");
     ider3->Update();
 
-    volumeAppender->AddInputData(ider3->GetOutput());
+    vtkNew(vtkAppendFilter, converter);
+    converter->SetInputData(ider3->GetOutput());
+    converter->Update();
+
+    volumeAppender->AddInputData(converter->GetOutput());
   }
 
   volumeAppender->Update();
@@ -782,6 +802,15 @@ int vtkSVParameterizeVolumeOnPolycube::MapInteriorBoundary(vtkStructuredGrid *pa
   // Now lets try volume
   vtkDataArray *ptIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds2");
   vtkDataArray *mappedIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds");
+
+  if (ptIds == NULL)
+  {
+    vtkErrorMacro("No TmpInternals2 on mapped surface\n");
+  }
+  if (mappedIds == NULL)
+  {
+    vtkErrorMacro("No TmpInternals on mapped surface\n");
+  }
 
   int dim[3];
   paraHexVolume->GetDimensions(dim);

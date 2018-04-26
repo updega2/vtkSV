@@ -47,17 +47,17 @@
 
 #include "vtkIdList.h"
 #include "vtkMatrix4x4.h"
-#include "vtkPolyDataAlgorithm.h"
+#include "vtkUnstructuredGridAlgorithm.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
 #include "vtkUnstructuredGrid.h"
 
 #include "vtkSVGlobals.h"
 
-class VTKSVPARAMETERIZATION_EXPORT vtkSVParameterizeVolumeOnPolycube : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVParameterizeVolumeOnPolycube : public vtkUnstructuredGridAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVParameterizeVolumeOnPolycube,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVParameterizeVolumeOnPolycube,vtkUnstructuredGridAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   static vtkSVParameterizeVolumeOnPolycube *New();
@@ -95,6 +95,7 @@ protected:
   virtual int RequestData(vtkInformation *,
                           vtkInformationVector **,
                           vtkInformationVector *) override;
+  virtual int FillInputPortInformation(int, vtkInformation *) override;
 
   int InterpolateMapOntoTarget(vtkPolyData *sourceBasePd,
                                vtkPolyData *targetPd,

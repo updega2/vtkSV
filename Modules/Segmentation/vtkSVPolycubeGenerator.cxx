@@ -409,7 +409,11 @@ int vtkSVPolycubeGenerator::GetVolumePolycube()
     ider->SetIdsArrayName("TmpInternalIds");
     ider->Update();
 
-    appender->AddInputData(ider->GetOutput());
+    vtkNew(vtkAppendFilter, converter);
+    converter->SetInputData(ider->GetOutput());
+    converter->Update();
+
+    appender->AddInputData(converter->GetOutput());
   }
   appender->Update();
 
