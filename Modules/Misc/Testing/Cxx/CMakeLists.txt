@@ -26,6 +26,8 @@
 
 ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0141_1001_Renal_Branch_Surface.vtp}")
 ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0141_1001_Renal_Branch_Centerlines.vtp}")
+ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0110_0001_Iliac_Branch_Surface.vtp}")
+ExternalData_expand_arguments(VTKSVData files "DATA{${VTKSV_TEST_DATA_DIR}/0110_0001_Iliac_Branch_Centerlines.vtp}")
 
 vtksv_add_test_cxx(${vtk-module}CxxTests tests
   TestHausdorffDistance.cxx,NO_DATA,NO_VALID,NO_OUTPUT

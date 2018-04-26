@@ -448,10 +448,8 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
 
     //// FOR LOFTING OF VOLUME
     //// Set up the volume
-    //vtkNew(vtkUnstructuredGrid, emptyGrid);
     //vtkNew(vtkSVLoftNURBSVolume, lofter);
-    //lofter->SetInputData(emptyGrid);
-    //lofter->SetInputGrid(realHexMesh);
+    //lofter->SetInputData(realHexMesh);
     //lofter->SetUDegree(1);
     //lofter->SetVDegree(1);
     //lofter->SetWDegree(2);

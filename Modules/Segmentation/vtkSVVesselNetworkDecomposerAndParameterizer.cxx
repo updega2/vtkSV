@@ -28,7 +28,7 @@
  *
  *=========================================================================*/
 
-#include "vtkSVGroupsSegmenter.h"
+#include "vtkSVVesselNetworkDecomposerAndParameterizer.h"
 
 #include "vtkCellArray.h"
 #include "vtkCellData.h"
@@ -74,12 +74,12 @@
 // ----------------------
 // StandardNewMacro
 // ----------------------
-vtkStandardNewMacro(vtkSVGroupsSegmenter);
+vtkStandardNewMacro(vtkSVVesselNetworkDecomposerAndParameterizer);
 
 // ----------------------
 // Constructor
 // ----------------------
-vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
+vtkSVVesselNetworkDecomposerAndParameterizer::vtkSVVesselNetworkDecomposerAndParameterizer()
 {
   this->WorkPd = vtkPolyData::New();
   this->MergedCenterlines = vtkPolyData::New();
@@ -117,7 +117,7 @@ vtkSVGroupsSegmenter::vtkSVGroupsSegmenter()
 // ----------------------
 // Destructor
 // ----------------------
-vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
+vtkSVVesselNetworkDecomposerAndParameterizer::~vtkSVVesselNetworkDecomposerAndParameterizer()
 {
   if (this->WorkPd != NULL)
   {
@@ -185,7 +185,7 @@ vtkSVGroupsSegmenter::~vtkSVGroupsSegmenter()
 // ----------------------
 // RequestData
 // ----------------------
-int vtkSVGroupsSegmenter::RequestData(
+int vtkSVVesselNetworkDecomposerAndParameterizer::RequestData(
   vtkInformation *vtkNotUsed(request),
   vtkInformationVector **inputVector,
   vtkInformationVector *outputVector)
@@ -220,7 +220,7 @@ int vtkSVGroupsSegmenter::RequestData(
 // ----------------------
 // PrepFilter
 // ----------------------
-int vtkSVGroupsSegmenter::PrepFilter()
+int vtkSVVesselNetworkDecomposerAndParameterizer::PrepFilter()
 {
   if (!this->Centerlines)
   {
@@ -309,7 +309,7 @@ int vtkSVGroupsSegmenter::PrepFilter()
 // ----------------------
 // RunFilter
 // ----------------------
-int vtkSVGroupsSegmenter::RunFilter()
+int vtkSVVesselNetworkDecomposerAndParameterizer::RunFilter()
 {
   // Generate normals just in case they don't exist
   vtkNew(vtkPolyDataNormals, normaler);
@@ -448,7 +448,7 @@ int vtkSVGroupsSegmenter::RunFilter()
 // ----------------------
 // MergeCenterlines
 // ----------------------
-int vtkSVGroupsSegmenter::MergeCenterlines()
+int vtkSVVesselNetworkDecomposerAndParameterizer::MergeCenterlines()
 {
   if (vtkSVGeneralUtils::CheckArrayExists(this->Centerlines, 1, this->GroupIdsArrayName) != SV_OK)
   {
@@ -605,7 +605,7 @@ int vtkSVGroupsSegmenter::MergeCenterlines()
 // ----------------------
 // PrintSelf
 // ----------------------
-void vtkSVGroupsSegmenter::PrintSelf(ostream& os, vtkIndent indent)
+void vtkSVVesselNetworkDecomposerAndParameterizer::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
   os << indent << "Clip value: " << this->ClipValue << "\n";

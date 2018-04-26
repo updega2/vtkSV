@@ -318,6 +318,21 @@ int vtkSVCenterlines::RequestData(
   surfaceNormals->ConsistencyOn();
   surfaceNormals->Update();
   // ------------------------------------------------------------------------
+  vtkDebugMacro("SOURCE POINTS");
+  for (int i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
+  {
+    vtkDebugMacro(" " << this->SourceSeedIds->GetId(i));
+  }
+  vtkDebugMacro("TARGET POINTS");
+  for (int i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
+  {
+    vtkDebugMacro(" " << this->TargetSeedIds->GetId(i));
+  }
+  vtkDebugMacro("CAP CENTER POINTS");
+  for (int i=0; i<this->CapCenterIds->GetNumberOfIds(); i++)
+  {
+    vtkDebugMacro(" " << this->CapCenterIds->GetId(i));
+  }
 
   // ------------------------------------------------------------------------
   // Delaunay tesselation

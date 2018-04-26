@@ -150,7 +150,6 @@ int vtkSVLoftNURBSCurve::FillInputPortInformation(
     {
     return SV_ERROR;
     }
-  info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
   return SV_OK;
 }
 

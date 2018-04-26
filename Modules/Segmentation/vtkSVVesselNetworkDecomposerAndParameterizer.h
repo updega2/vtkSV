@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVGroupsSegmenter
+ *  \class vtkSVVesselNetworkDecomposerAndParameterizer
  *  \brief Using a polydata centerlines, separate the polydata into regions
  *  based on the centerlines
  *
@@ -39,8 +39,8 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVGroupsSegmenter_h
-#define vtkSVGroupsSegmenter_h
+#ifndef vtkSVVesselNetworkDecomposerAndParameterizer_h
+#define vtkSVVesselNetworkDecomposerAndParameterizer_h
 
 #include "vtkSVSegmentationModule.h" // For export
 
@@ -54,13 +54,13 @@
 
 #include "vtkSVGlobals.h"
 
-class VTKSVSEGMENTATION_EXPORT vtkSVGroupsSegmenter : public vtkPolyDataAlgorithm
+class VTKSVSEGMENTATION_EXPORT vtkSVVesselNetworkDecomposerAndParameterizer : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVGroupsSegmenter,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVVesselNetworkDecomposerAndParameterizer,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
-  static vtkSVGroupsSegmenter *New();
+  static vtkSVVesselNetworkDecomposerAndParameterizer *New();
 
   //@{
   /// \brief Get/Set macro for the object's centerlines
@@ -208,8 +208,8 @@ public:
   //@}
 
 protected:
-  vtkSVGroupsSegmenter();
-  ~vtkSVGroupsSegmenter();
+  vtkSVVesselNetworkDecomposerAndParameterizer();
+  ~vtkSVVesselNetworkDecomposerAndParameterizer();
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
@@ -252,8 +252,8 @@ protected:
   double MergeDistance;
 
 private:
-  vtkSVGroupsSegmenter(const vtkSVGroupsSegmenter&);  // Not implemented.
-  void operator=(const vtkSVGroupsSegmenter&);  // Not implemented.
+  vtkSVVesselNetworkDecomposerAndParameterizer(const vtkSVVesselNetworkDecomposerAndParameterizer&);  // Not implemented.
+  void operator=(const vtkSVVesselNetworkDecomposerAndParameterizer&);  // Not implemented.
 };
 
 #endif

@@ -239,6 +239,12 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
 
   for (int i=0; i<numPatches; i++)
   {
+    if (patches[i].CornerPoints.size() < 4 || patches[i].CornerPoints.size() > 6)
+    {
+      vtkErrorMacro("Patch should haver either 4, 5, or 6 points, but patch " << patches[i].IndexCluster << " has " << patches[i].CornerPoints.size() << " points");
+      return SV_ERROR;
+    }
+
     int groupId = this->WorkPd->GetCellData()->GetArray(
      this->GroupIdsArrayName)->GetTuple1(patches[i].Elements[0]);
     int patchId = this->WorkPd->GetCellData()->GetArray(

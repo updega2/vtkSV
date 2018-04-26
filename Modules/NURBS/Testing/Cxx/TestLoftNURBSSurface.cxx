@@ -29,20 +29,22 @@
  *=========================================================================*/
 
 #include <vtkCamera.h>
-#include "vtkSVControlGrid.h"
 #include "vtkDataObject.h"
-#include "vtkSVLoftNURBSSurface.h"
-#include "vtkSVNURBSSurface.h"
-#include "vtkSVNURBSUtils.h"
 #include "vtkPoints.h"
 #include <vtkPolyDataMapper.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
 #include "vtkSmartPointer.h"
-#include "vtkSVGlobals.h"
-#include "vtkSVIOUtils.h"
+#include "vtkStructuredGrid.h"
 #include "vtkStructuredGridGeometryFilter.h"
+
+#include "vtkSVControlGrid.h"
+#include "vtkSVGlobals.h"
+#include "vtkSVLoftNURBSSurface.h"
+#include "vtkSVNURBSSurface.h"
+#include "vtkSVNURBSUtils.h"
+#include "vtkSVIOUtils.h"
 
 #include <string>
 #include <sstream>
@@ -56,14 +58,17 @@ int TestLoftNURBSSurface(int argc, char *argv[])
   // Set number of initial data points
   int nU = 57;
   int nV = 63;
-  vtkPolyData **inputPolys = new vtkPolyData*[nU];
-  for (int i=0; i<nU; i++)
-  {
-    inputPolys[i] = vtkPolyData::New();
-    vtkNew(vtkPoints, newPoints);
-    inputPolys[i]->SetPoints(newPoints);
-    inputPolys[i]->GetPoints()->SetNumberOfPoints(nV);
-  }
+  int dim2D[3];
+  dim2D[0] = nU;
+  dim2D[1] = nV;
+  dim2D[2] = 1;
+
+  vtkNew(vtkPoints, newPoints);
+  newPoints->SetNumberOfPoints(nU*nV);
+
+  vtkNew(vtkStructuredGrid, inputGrid);
+  inputGrid->SetPoints(newPoints);
+  inputGrid->SetDimensions(dim2D);
 
   // Create data
   vtkNew(vtkDoubleArray, xdata);
@@ -90,22 +95,25 @@ int TestLoftNURBSSurface(int argc, char *argv[])
     vders->SetTuple(i, vder);
 
   // Set up all the polydatas
+  int pos[3];
   for (int i=0; i<nU; i++)
   {
     for (int j=0; j<nV; j++)
     {
+      pos[0] = i; pos[1] = j; pos[2] = 0;
+      int ptId = vtkStructuredData::ComputePointId(dim2D, pos);
+
       double xval = xdata->GetTuple1(i);
       double yval = ydata->GetTuple1(j);;
       double zval = sin(xval) * sin(yval);
 
-      inputPolys[i]->GetPoints()->SetPoint(j, xval, yval, zval);
+      inputGrid->GetPoints()->SetPoint(ptId, xval, yval, zval);
     }
   }
 
   // Filter
   vtkNew(vtkSVLoftNURBSSurface, lofter);
-  for (int i=0; i<nU; i++)
-    lofter->AddInputData(inputPolys[i]);
+  lofter->SetInputData(inputGrid);
   lofter->SetUDegree(3);
   lofter->SetVDegree(3);
   lofter->SetPolyDataUSpacing(0.05);
@@ -120,11 +128,6 @@ int TestLoftNURBSSurface(int argc, char *argv[])
   lofter->SetEndVDerivatives(vders);
   lofter->Update();
 
-  for (int i=0; i<nU; i++)
-  {
-    inputPolys[i]->Delete();
-  }
-  delete [] inputPolys;
 
   // Get outputs
   vtkNew(vtkPolyData, surfacePd);

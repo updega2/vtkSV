@@ -40,7 +40,7 @@ set(SRCS
   vtkSVEdgeWeightedSmoother.cxx
   vtkSVCenterlines.cxx
   vtkSVPolyBallLine.cxx
-  vtkSVGroupsSegmenter.cxx
+  vtkSVVesselNetworkDecomposerAndParameterizer.cxx
   vtkSVCenterlineGraph.cxx
   vtkSVCenterlineGCell.cxx
   vtkSVCenterlineBranchSplitter.cxx
@@ -60,7 +60,7 @@ set(HDRS
   vtkSVEdgeWeightedSmoother.h
   vtkSVPolyBallLine.h
   vtkSVCenterlines.h
-  vtkSVGroupsSegmenter.h
+  vtkSVVesselNetworkDecomposerAndParameterizer.h
   vtkSVCenterlineGraph.h
   vtkSVCenterlineGCell.h
   vtkSVCenterlineBranchSplitter.h
@@ -134,7 +134,7 @@ if(VTKSV_BUILD_EXES)
     EdgeWeightedCVT
     CenterlinesEdgeWeightedCVT
     CenterlinesBasedNormalsEdgeWeightedCVT
-    GroupsSegmenter
+    VesselNetworkDecomposerAndParameterizer
     CenterlinesExtractor
     CenterlinesSplitter
     CenterlinesMerger
@@ -150,7 +150,6 @@ if(VTKSV_BUILD_EXES)
       ${SV_LIB_VTKSVMISC_NAME}
       ${SV_LIB_VTKSVVMTK_NAME}
       ${SV_LIB_VTKSVPARAMETERIZATION_NAME}
-      ${SV_LIB_VTKSVNURBS_NAME}
       )
     install(TARGETS vtkSV${exe}
       RUNTIME DESTINATION ${VTKSV_INSTALL_RUNTIME_DIR} COMPONENT CoreExecutables)

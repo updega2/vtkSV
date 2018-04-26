@@ -27,14 +27,6 @@
 set(DOCUMENTATION "A module containing code to segment a geometry various ways.")
 
 #------------------------------------------------------------------------------
-# NURBS addition
-set(EXTRA_DEPENDS "")
-if(VTKSV_BUILD_MISC)
-  set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVMisc)
-  if(VTKSV_BUILD_MODULE_NURBS AND VTKSV_BUILD_MODULE_PARAMETERIZATION AND VTKSV_BUILD_THIRDPARTY_VMTK)
-    set(EXTRA_DEPENDS ${EXTRA_DEPENDS} vtkSVNURBS vtkSVParameterization vtkSVVMTK)
-  endif()
-endif()
 set(EXTRA_TEST_DEPENDS "")
 if(vtkRenderingFreeType${VTK_RENDERING_BACKEND}_LOADED)
   set(EXTRA_TEST_DEPENDS ${EXTRA_TEST_DEPENDS} vtkRenderingFreeType${VTK_RENDERING_BACKEND})
@@ -54,7 +46,9 @@ vtk_module(vtkSVSegmentation
   vtkFiltersModeling
   vtkSVCommon
   vtkSVIO
-  ${EXTRA_DEPENDS}
+  vtkSVMisc
+  vtkSVParameterization
+  vtkSVVMTK
   TEST_DEPENDS
   vtkSVCommon
   vtkSVIO

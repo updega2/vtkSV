@@ -61,7 +61,6 @@ vtkStandardNewMacro(vtkSVLoftNURBSVolume);
 // ----------------------
 vtkSVLoftNURBSVolume::vtkSVLoftNURBSVolume()
 {
-  this->UserManagedInputs = 0;
   this->UDegree = 2;
   this->VDegree = 2;
   this->WDegree = 2;
@@ -77,7 +76,7 @@ vtkSVLoftNURBSVolume::vtkSVLoftNURBSVolume()
   this->EndVDerivatives   = vtkStructuredGrid::New();
   this->EndWDerivatives   = vtkStructuredGrid::New();
 
-  this->InputGrid = NULL;
+  this->InputGrid = vtkStructuredGrid::New();
   this->Volume = vtkSVNURBSVolume::New();
 
   this->UKnotSpanType        = NULL;
@@ -94,6 +93,10 @@ vtkSVLoftNURBSVolume::vtkSVLoftNURBSVolume()
 // ----------------------
 vtkSVLoftNURBSVolume::~vtkSVLoftNURBSVolume()
 {
+  if (this->InputGrid != NULL)
+  {
+    this->InputGrid->Delete();
+  }
   if (this->Volume != NULL)
   {
     this->Volume->Delete();
@@ -156,93 +159,6 @@ vtkSVLoftNURBSVolume::~vtkSVLoftNURBSVolume()
 }
 
 // ----------------------
-// AddInputData
-// ----------------------
-void vtkSVLoftNURBSVolume::AddInputData(vtkUnstructuredGrid *ds)
-{
-  if (this->UserManagedInputs)
-    {
-    vtkErrorMacro(<<
-      "AddInput is not supported if UserManagedInputs is true");
-    return;
-    }
-  this->Superclass::AddInputData(ds);
-}
-
-// ----------------------
-// RemoveInputData
-// ----------------------
-void vtkSVLoftNURBSVolume::RemoveInputData(vtkUnstructuredGrid *ds)
-{
-  if (this->UserManagedInputs)
-    {
-    vtkErrorMacro(<<
-      "RemoveInput is not supported if UserManagedInputs is true");
-    return;
-    }
-
-  if (!ds)
-    {
-    return;
-    }
-  int numCons = this->GetNumberOfInputConnections(0);
-  for(int i=0; i<numCons; i++)
-    {
-    if (this->GetInput(i) == ds)
-      {
-      this->RemoveInputConnection(0,
-        this->GetInputConnection(0, i));
-      }
-    }
-}
-
-// ----------------------
-// SetNumberOfInputs
-// ----------------------
-void vtkSVLoftNURBSVolume::SetNumberOfInputs(int num)
-{
-  if (!this->UserManagedInputs)
-    {
-    vtkErrorMacro(<<
-      "SetNumberOfInputs is not supported if UserManagedInputs is false");
-    return;
-    }
-
-  // Ask the superclass to set the number of connections.
-  this->SetNumberOfInputConnections(0, num);
-}
-
-// ----------------------
-// SetInputDataByNumber
-// ----------------------
-void vtkSVLoftNURBSVolume::
-SetInputDataByNumber(int num, vtkUnstructuredGrid* input)
-{
-  vtkTrivialProducer* tp = vtkTrivialProducer::New();
-  tp->SetOutput(input);
-  this->SetInputConnectionByNumber(num, tp->GetOutputPort());
-  tp->Delete();
-}
-
-// ----------------------
-// SetInputConnectionByNumber
-// ----------------------
-void vtkSVLoftNURBSVolume::
-SetInputConnectionByNumber(int num,vtkAlgorithmOutput *input)
-{
-  if (!this->UserManagedInputs)
-    {
-    vtkErrorMacro(<<
-      "SetInputConnectionByNumber is not supported if UserManagedInputs "<<
-      "is false");
-    return;
-    }
-
-  // Ask the superclass to connect the input.
-  this->SetNthInputConnection(0, num, input);
-}
-
-// ----------------------
 // RequestData
 // ----------------------
 int vtkSVLoftNURBSVolume::RequestData(
@@ -252,17 +168,10 @@ int vtkSVLoftNURBSVolume::RequestData(
 {
   // get the info object
   // get the ouptut
+  vtkStructuredGrid *input = vtkStructuredGrid::GetData(inputVector[0]);
   vtkUnstructuredGrid *output = vtkUnstructuredGrid::GetData(outputVector, 0);
 
-  // Get number of inputs
-  int numInputs = inputVector[0]->GetNumberOfInformationObjects();
-
-  // Set up input vector
-  vtkUnstructuredGrid** inputs = new vtkUnstructuredGrid*[numInputs];
-  for (int idx = 0; idx < numInputs; ++idx)
-    {
-    inputs[idx] = vtkUnstructuredGrid::GetData(inputVector[0],idx);
-    }
+  this->InputGrid->DeepCopy(input);
 
   if (this->InputGrid == NULL)
   {
@@ -290,96 +199,14 @@ int vtkSVLoftNURBSVolume::RequestData(
   }
 
   // TODO: Need to make sure knot span and parameteric span types are set
-  if (this->LoftNURBS(this->InputGrid,numInputs,output) != SV_OK)
+  if (this->LoftNURBS(this->InputGrid, output) != SV_OK)
   {
     vtkErrorMacro("Could not loft surface");
     this->SetErrorCode(vtkErrorCode::UserError + 4);
-    delete [] inputs;
     return SV_ERROR;
   }
 
-  delete [] inputs;
   return SV_OK;
-}
-
-// ----------------------
-// RequestUpdateExtent
-// ----------------------
-int vtkSVLoftNURBSVolume::RequestUpdateExtent(
-    vtkInformation *vtkNotUsed(request),
-    vtkInformationVector **inputVector,
-    vtkInformationVector *outputVector)
-{
-  // get the output info object
-  vtkInformation *outInfo = outputVector->GetInformationObject(0);
-
-  int piece, numPieces, ghostLevel;
-  int idx;
-
-  piece = outInfo->Get(
-      vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER());
-  numPieces = outInfo->Get(
-      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES());
-  ghostLevel = outInfo->Get(
-      vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS());
-
-  // make sure piece is valid
-  if (piece < 0 || piece >= numPieces)
-    {
-    return SV_ERROR;
-    }
-
-  int numInputs = this->GetNumberOfInputConnections(0);
-  if (this->ParallelStreaming)
-    {
-    piece = piece * numInputs;
-    numPieces = numPieces * numInputs;
-    }
-
-  vtkInformation *inInfo;
-  // just copy the Update extent as default behavior.
-  for (idx = 0; idx < numInputs; ++idx)
-    {
-    inInfo = inputVector[0]->GetInformationObject(idx);
-    if (inInfo)
-      {
-      if (this->ParallelStreaming)
-        {
-        inInfo->Set(
-	    vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(),
-	    piece + idx);
-        inInfo->Set(
-	    vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(),
-                    numPieces);
-        inInfo->Set(
-	    vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(),
-                    ghostLevel);
-        }
-      else
-        {
-        inInfo->Set(
-	    vtkStreamingDemandDrivenPipeline::UPDATE_PIECE_NUMBER(),
-                    piece);
-        inInfo->Set(
-	    vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_PIECES(),
-                    numPieces);
-        inInfo->Set(
-	    vtkStreamingDemandDrivenPipeline::UPDATE_NUMBER_OF_GHOST_LEVELS(),
-                    ghostLevel);
-        }
-      }
-    }
-
-  return SV_OK;
-}
-
-// ----------------------
-// GetInput
-// ----------------------
-vtkUnstructuredGrid *vtkSVLoftNURBSVolume::GetInput(int idx)
-{
-  return vtkUnstructuredGrid::SafeDownCast(
-    this->GetExecutive()->GetInputData(0, idx));
 }
 
 // ----------------------
@@ -389,9 +216,6 @@ void vtkSVLoftNURBSVolume::PrintSelf(ostream& os,
     vtkIndent indent)
 {
   this->Superclass::PrintSelf(os,indent);
-
-  os << "ParallelStreaming:" << (this->ParallelStreaming?"On":"Off") << endl;
-  os << "UserManagedInputs:" << (this->UserManagedInputs?"On":"Off") << endl;
 
   os << indent << "U Degree: " << this->UDegree << "\n";
   os << indent << "U Knot span type: " << this->UKnotSpanType << "\n";
@@ -449,23 +273,19 @@ void vtkSVLoftNURBSVolume::PrintSelf(ostream& os,
 int vtkSVLoftNURBSVolume::FillInputPortInformation(
     int port, vtkInformation *info)
 {
-  if (!this->Superclass::FillInputPortInformation(port, info))
-    {
-    return SV_ERROR;
-    }
-  info->Set(vtkAlgorithm::INPUT_IS_REPEATABLE(), 1);
+  info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkStructuredGrid");
   return SV_OK;
 }
 
 // ----------------------
 // LoftNURBS
 // ----------------------
-int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
+int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *input,
     vtkUnstructuredGrid *outputUG)
 {
   // Get number of control points and degree
   int dim[3];
-  inputs->GetDimensions(dim);
+  input->GetDimensions(dim);
   int nUCon = dim[0];
   int nVCon = dim[1];
   int nWCon = dim[2];
@@ -505,7 +325,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   {
     int pos[3]; pos[0] = i; pos[1] = 0; pos[2] = 0;
     int ptId = vtkStructuredData::ComputePointId(dim, pos);
-    tmpUPoints->SetPoint(i, inputs->GetPoint(ptId));
+    tmpUPoints->SetPoint(i, input->GetPoint(ptId));
   }
 
   // Get the input point set u representation
@@ -533,7 +353,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   {
     int pos[3]; pos[0] = 0; pos[1] = i; pos[2] = 0;
     int ptId = vtkStructuredData::ComputePointId(dim, pos);
-    tmpVPoints->SetPoint(i, inputs->GetPoint(ptId));
+    tmpVPoints->SetPoint(i, input->GetPoint(ptId));
   }
   // Get the input point set v representation
   vtkNew(vtkDoubleArray, V);
@@ -560,7 +380,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   {
     int pos[3]; pos[0] = 0; pos[1] = 0; pos[2] = i;
     int ptId = vtkStructuredData::ComputePointId(dim, pos);
-    tmpWPoints->SetPoint(i, inputs->GetPoint(ptId));
+    tmpWPoints->SetPoint(i, input->GetPoint(ptId));
   }
   // Get the input point set v representation
   vtkNew(vtkDoubleArray, W);
@@ -595,7 +415,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
       vtkNew(vtkPoints, DUNPoints);
       DU0->SetPoints(DU0Points);
       DUN->SetPoints(DUNPoints);
-      this->GetDefaultDerivatives(inputs, 0, DU0, DUN);
+      this->GetDefaultDerivatives(input, 0, DU0, DUN);
     }
   }
 
@@ -613,7 +433,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
       vtkNew(vtkPoints, DVNPoints);
       DV0->SetPoints(DV0Points);
       DVN->SetPoints(DVNPoints);
-      this->GetDefaultDerivatives(inputs, 1, DV0, DVN);
+      this->GetDefaultDerivatives(input, 1, DV0, DVN);
     }
   }
 
@@ -631,7 +451,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
       vtkNew(vtkPoints, DWNPoints);
       DW0->SetPoints(DW0Points);
       DWN->SetPoints(DWNPoints);
-      this->GetDefaultDerivatives(inputs, 2, DW0, DWN);
+      this->GetDefaultDerivatives(input, 2, DW0, DWN);
     }
   }
 
@@ -640,7 +460,7 @@ int vtkSVLoftNURBSVolume::LoftNURBS(vtkStructuredGrid *inputs, int numInputs,
   vtkNew(vtkDoubleArray, uWeights);
   vtkNew(vtkDoubleArray, vWeights);
   vtkNew(vtkDoubleArray, wWeights);
-  if (vtkSVNURBSUtils::GetControlPointsOfVolume(inputs, U, V, W,
+  if (vtkSVNURBSUtils::GetControlPointsOfVolume(input, U, V, W,
                                                 uWeights, vWeights, wWeights,
                                                 uKnots, vKnots, wKnots,
                                                 p, q, r, kutype, kvtype, kwtype,
