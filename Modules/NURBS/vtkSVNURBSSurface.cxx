@@ -1,7 +1,9 @@
-/*=========================================================================
+/* Copyright (c) Stanford University, The Regents of the University of
+ *               California, and others.
  *
- * Copyright (c) 2014 The Regents of the University of California.
  * All Rights Reserved.
+ *
+ * See Copyright-SimVascular.txt for additional details.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,8 +27,7 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- *=========================================================================*/
+ */
 
 #include "vtkSVNURBSSurface.h"
 
@@ -688,6 +689,7 @@ int vtkSVNURBSSurface::GeneratePolyDataRepresentation(const double uSpacing,
   // Clean the surface in case of duplicate points (closed surface)
   vtkNew(vtkCleanPolyData, cleaner);
   cleaner->SetInputData(this->SurfaceRepresentation);
+  cleaner->SetTolerance(1.0e-6);
   cleaner->Update();
 
   // Get clean output and build links
