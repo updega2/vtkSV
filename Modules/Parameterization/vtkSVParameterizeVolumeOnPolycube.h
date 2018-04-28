@@ -87,6 +87,13 @@ public:
   vtkGetStringMacro(GroupIdsArrayName);
   //@}
 
+  //@{
+  /// \brief Get/Set macro for array name used for the grid point ids
+  // on the polycube unstructured grid
+  vtkSetStringMacro(GridIdsArrayName);
+  vtkGetStringMacro(GridIdsArrayName);
+  //@}
+
 protected:
   vtkSVParameterizeVolumeOnPolycube();
   ~vtkSVParameterizeVolumeOnPolycube();
@@ -129,6 +136,7 @@ protected:
                 vtkStructuredGrid *mappedVolume);
   int ConvertUGToSG(vtkUnstructuredGrid *ug,
                     vtkStructuredGrid *sg,
+                    std::string pointArrayName,
                     const int w_div, const int h_div, const int l_div);
   int GetPointConnectivity(vtkUnstructuredGrid *hexMesh,
                            std::vector<std::vector<int> > &ptEdgeNeighbors);
@@ -147,6 +155,7 @@ protected:
   int RunFilter(); // Run filter operations.
 
   char *GroupIdsArrayName;
+  char *GridIdsArrayName;
 
 private:
   vtkSVParameterizeVolumeOnPolycube(const vtkSVParameterizeVolumeOnPolycube&);  // Not implemented.

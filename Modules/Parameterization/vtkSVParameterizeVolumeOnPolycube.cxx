@@ -92,6 +92,7 @@ vtkSVParameterizeVolumeOnPolycube::vtkSVParameterizeVolumeOnPolycube()
   this->FinalHexMesh = vtkUnstructuredGrid::New();
 
   this->GroupIdsArrayName = NULL;
+  this->GridIdsArrayName = NULL;
 }
 
 // ----------------------
@@ -125,6 +126,12 @@ vtkSVParameterizeVolumeOnPolycube::~vtkSVParameterizeVolumeOnPolycube()
   {
     delete [] this->GroupIdsArrayName;
     this->GroupIdsArrayName = NULL;
+  }
+
+  if (this->GridIdsArrayName != NULL)
+  {
+    delete [] this->GridIdsArrayName;
+    this->GridIdsArrayName = NULL;
   }
 }
 
@@ -218,6 +225,20 @@ int vtkSVParameterizeVolumeOnPolycube::PrepFilter()
     return SV_OK;
   }
 
+  if (!this->GridIdsArrayName)
+  {
+    vtkDebugMacro("Grid point ids array name not given, setting to GridIds");
+    this->GridIdsArrayName = new char[strlen("GridIds") + 1];
+    strcpy(this->GridIdsArrayName, "GridIds");
+  }
+
+  if (vtkSVGeneralUtils::CheckArrayExists(this->PolycubeUg, 0, this->GridIdsArrayName) != SV_OK)
+  {
+    vtkErrorMacro(<< "GridIdsArray with name specified does not exist on volume polycube");
+    return SV_OK;
+  }
+
+
   return SV_OK;
 }
 
@@ -279,8 +300,8 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     }
 
     vtkNew(vtkStructuredGrid, branchPolycubeSg);
-    this->ConvertUGToSG(branchPolycubeUg, branchPolycubeSg, whl_divs[1],
-      whl_divs[2], whl_divs[3]);
+    this->ConvertUGToSG(branchPolycubeUg, branchPolycubeSg, this->GridIdsArrayName,
+        whl_divs[1], whl_divs[2], whl_divs[3]);
 
     vtkDebugMacro("WDIV: " << whl_divs[1]);
     vtkDebugMacro("HDIV: " << whl_divs[2]);
@@ -291,7 +312,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
 
     vtkNew(vtkIntArray, internalPointIds);
     internalPointIds->SetNumberOfTuples(branchPolycubeSg->GetNumberOfPoints());
-    internalPointIds->SetName("TmpInternalIds");
+    internalPointIds->SetName(this->GridIdsArrayName);
     for (int j=0; j<branchPolycubeSg->GetNumberOfPoints(); j++)
       internalPointIds->SetTuple1(j, j);
     branchPolycubeSg->GetPointData()->AddArray(internalPointIds);
@@ -350,9 +371,9 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
 
   vtkNew(vtkIdFilter, ider2);
   ider2->SetInputData(mappedSurface);
-  ider2->SetIdsArrayName("TmpInternalIds2");
+  ider2->SetIdsArrayName("TmpInternalIds");
   ider2->Update();
-  vtkDataArray *tmpArray = ider2->GetOutput()->GetPointData()->GetArray("TmpInternalIds2");
+  vtkDataArray *tmpArray = ider2->GetOutput()->GetPointData()->GetArray("TmpInternalIds");
   mappedSurface->GetPointData()->AddArray(tmpArray);
 
   vtkNew(vtkAppendFilter, surfaceAppender);
@@ -374,6 +395,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     converter->Update();
 
     surfaceAppender->AddInputData(converter->GetOutput());
+    //surfaceAppender->AddInputData(mappedBranch);
   }
 
   surfaceAppender->Update();
@@ -408,7 +430,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
 
     vtkNew(vtkIdFilter, ider3);
     ider3->SetInputData(realHexMesh);
-    ider3->SetIdsArrayName("TmpInternalIds");
+    ider3->SetIdsArrayName(this->GridIdsArrayName);
     ider3->Update();
 
     vtkNew(vtkAppendFilter, converter);
@@ -416,6 +438,7 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     converter->Update();
 
     volumeAppender->AddInputData(converter->GetOutput());
+    //volumeAppender->AddInputData(ider3->GetOutput());
   }
 
   volumeAppender->Update();
@@ -460,7 +483,8 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
     vtkSVGeneralUtils::ThresholdUg(mappedVolume, groupId, groupId, 1, this->GroupIdsArrayName, mappedBranch);
 
     vtkNew(vtkStructuredGrid, realHexMesh);
-    if (this->ConvertUGToSG(mappedBranch, realHexMesh, w_divs[i], h_divs[i], l_divs[i]) != SV_OK)
+    if (this->ConvertUGToSG(mappedBranch, realHexMesh, this->GridIdsArrayName,
+        w_divs[i], h_divs[i], l_divs[i]) != SV_OK)
     {
       vtkErrorMacro("Couldn't do the dirt");
       return SV_ERROR;
@@ -665,10 +689,11 @@ int vtkSVParameterizeVolumeOnPolycube::RunFilter()
 // ----------------------
 int vtkSVParameterizeVolumeOnPolycube::ConvertUGToSG(vtkUnstructuredGrid *ug,
                                         vtkStructuredGrid *sg,
+                                        std::string pointArrayName,
                                         const int w_div, const int h_div,
                                         const int l_div)
 {
-  vtkDataArray *ptIds = ug->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *ptIds = ug->GetPointData()->GetArray(pointArrayName.c_str());
 
   int dim[3]; dim[0] = w_div; dim[1] = h_div; dim[2] = l_div;
 
@@ -800,8 +825,8 @@ int vtkSVParameterizeVolumeOnPolycube::MapInteriorBoundary(vtkStructuredGrid *pa
                                               const std::vector<int> ptMap)
 {
   // Now lets try volume
-  vtkDataArray *ptIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds2");
-  vtkDataArray *mappedIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *ptIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *mappedIds = mappedSurface->GetPointData()->GetArray(this->GridIdsArrayName);
 
   if (ptIds == NULL)
   {
@@ -1041,7 +1066,7 @@ int vtkSVParameterizeVolumeOnPolycube::MapInteriorBoundary(vtkStructuredGrid *pa
 int vtkSVParameterizeVolumeOnPolycube::FixInteriorBoundary(vtkPolyData *mappedSurface,
                                               const std::vector<std::vector<int> > invPtMap)
 {
-  vtkDataArray *ptIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds2");
+  vtkDataArray *ptIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds");
 
   for (int i=0; i<invPtMap.size(); i++)
   {
@@ -1385,8 +1410,8 @@ int vtkSVParameterizeVolumeOnPolycube::MapVolume(vtkStructuredGrid *paraHexVolum
                                     vtkStructuredGrid *mappedVolume)
 {
   // Now lets try volume
-  vtkDataArray *volumeIds = paraHexVolume->GetPointData()->GetArray("TmpInternalIds");
-  vtkDataArray *mappedIds = mappedSurface->GetPointData()->GetArray("TmpInternalIds");
+  vtkDataArray *volumeIds = paraHexVolume->GetPointData()->GetArray(this->GridIdsArrayName);
+  vtkDataArray *mappedIds = mappedSurface->GetPointData()->GetArray(this->GridIdsArrayName);
 
   int dim[3];
   paraHexVolume->GetDimensions(dim);

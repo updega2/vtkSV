@@ -89,6 +89,8 @@ public:
   vtkGetStringMacro(CenterlineGroupIdsArrayName);
   vtkSetStringMacro(CenterlineRadiusArrayName);
   vtkGetStringMacro(CenterlineRadiusArrayName);
+  vtkSetStringMacro(GridIdsArrayName);
+  vtkGetStringMacro(GridIdsArrayName);
   //@}
 
   //@{
@@ -185,6 +187,7 @@ private:
 
   char *CenterlineGroupIdsArrayName;
   char *CenterlineRadiusArrayName;
+  char *GridIdsArrayName;
 
   vtkSVCenterlineGraph *CenterlineGraph;
   vtkPolyData *WorkPd;

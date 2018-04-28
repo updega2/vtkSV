@@ -60,6 +60,7 @@ vtkSVPolycubeGenerator::vtkSVPolycubeGenerator()
 {
   this->CenterlineGroupIdsArrayName = NULL;
   this->CenterlineRadiusArrayName   = NULL;
+  this->GridIdsArrayName      = NULL;
   this->CenterlineGraph             = vtkSVCenterlineGraph::New();
 
   this->WorkPd     = vtkPolyData::New();
@@ -86,6 +87,12 @@ vtkSVPolycubeGenerator::~vtkSVPolycubeGenerator()
   {
     delete [] this->CenterlineRadiusArrayName;
     this->CenterlineRadiusArrayName = NULL;
+  }
+
+  if (this->GridIdsArrayName != NULL)
+  {
+    delete [] this->GridIdsArrayName;
+    this->GridIdsArrayName = NULL;
   }
 
   if (this->CenterlineGraph != NULL)
@@ -186,6 +193,13 @@ int vtkSVPolycubeGenerator::PrepFilter()
   {
     vtkErrorMacro(<< "CenterlineRadiusArray with name specified does not exist");
     return SV_OK;
+  }
+
+  if (!this->GridIdsArrayName)
+  {
+    vtkDebugMacro("Grid point ids array name not given, setting to GridIds");
+    this->GridIdsArrayName = new char[strlen("GridIds") + 1];
+    strcpy(this->GridIdsArrayName, "GridIds");
   }
 
   return SV_OK;
@@ -406,7 +420,7 @@ int vtkSVPolycubeGenerator::GetVolumePolycube()
 
     vtkNew(vtkIdFilter, ider);
     ider->SetInputData(paraHexMesh);
-    ider->SetIdsArrayName("TmpInternalIds");
+    ider->SetIdsArrayName(this->GridIdsArrayName);
     ider->Update();
 
     vtkNew(vtkAppendFilter, converter);
@@ -414,6 +428,7 @@ int vtkSVPolycubeGenerator::GetVolumePolycube()
     converter->Update();
 
     appender->AddInputData(converter->GetOutput());
+    //appender->AddInputData(ider->GetOutput());
   }
   appender->Update();
 

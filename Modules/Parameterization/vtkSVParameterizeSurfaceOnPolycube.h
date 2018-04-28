@@ -69,6 +69,17 @@ public:
   //@}
 
   //@{
+  /// \brief Get/Set macro for surface polycube
+  vtkGetObjectMacro(PolycubeOnSurfacePd,vtkPolyData);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for surface polycube
+  vtkSetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
+  vtkGetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
+  //@}
+
+  //@{
   /// \brief Get/Set macro for array name used by the filter. Must
   //  be present on the surface and polycube.
   vtkSetStringMacro(GroupIdsArrayName);
@@ -80,6 +91,13 @@ public:
   // be presetn on the surface and polycube.
   vtkSetStringMacro(PatchIdsArrayName);
   vtkGetStringMacro(PatchIdsArrayName);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for array name used for the structured grid points
+  // ids on the polycube unstructured grid
+  vtkSetStringMacro(GridIdsArrayName);
+  vtkGetStringMacro(GridIdsArrayName);
   //@}
 
 
@@ -104,15 +122,26 @@ protected:
                                vtkPolyData *mappedPd,
                                std::string dataMatchingArrayName);
 
+  int GetInteriorPointMaps(vtkPolyData *pdWithAllInterior,
+                           vtkPolyData *pdWithCleanInterior,
+                           vtkPolyData *pdWithoutInterior,
+                           std::vector<int> &ptMap,
+                           std::vector<std::vector<int> > &invPtMap);
+  int RemoveInteriorCells(vtkPolyData *quadMesh);
+
   vtkPolyData *WorkPd;
   vtkPolyData *PolycubePd;
   vtkPolyData *SurfaceOnPolycubePd;
+  vtkPolyData *PolycubeOnSurfacePd;
+
+  vtkUnstructuredGrid *PolycubeUg;
 
   int PrepFilter(); // Prep work.
   int RunFilter(); // Run filter operations.
 
   char *GroupIdsArrayName;
   char *PatchIdsArrayName;
+  char *GridIdsArrayName;
 
 private:
   vtkSVParameterizeSurfaceOnPolycube(const vtkSVParameterizeSurfaceOnPolycube&);  // Not implemented.

@@ -430,6 +430,7 @@ int vtkSVVesselNetworkDecomposerAndParameterizer::RunFilter()
   vtkNew(vtkSVParameterizeSurfaceOnPolycube, surfParameterizer);
   surfParameterizer->SetInputData(this->WorkPd);
   surfParameterizer->SetPolycubePd(this->PolycubePd);
+  surfParameterizer->SetPolycubeUg(this->PolycubeUg);
   surfParameterizer->SetGroupIdsArrayName(this->GroupIdsArrayName);
   surfParameterizer->Update();
 
