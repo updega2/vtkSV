@@ -216,6 +216,7 @@ int vtkSVCenterlineGraph::BuildGraph()
 
   // Check to see if we need to flip the first line
   vtkIdType npts, *pts;
+  this->Lines->BuildLinks();
   int cellId = this->Lines->GetCellData()->GetArray(this->GroupIdsArrayName)->LookupValue(this->Root->GroupId);
   this->Lines->GetCellPoints(cellId, npts, pts);
 

@@ -154,6 +154,7 @@ int vtkSVParameterizeSurfaceOnPolycube::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
+  this->WorkPd->BuildLinks();
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)
@@ -200,6 +201,7 @@ int vtkSVParameterizeSurfaceOnPolycube::PrepFilter()
     vtkErrorMacro("Surface polycube not provided");
     return SV_ERROR;
   }
+  this->PolycubePd->BuildLinks();
 
   if (this->PolycubePd->GetNumberOfCells() == 0)
   {

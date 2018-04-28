@@ -120,6 +120,7 @@ int vtkSVCenterlineParallelTransportVectors::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
+  this->WorkPd->BuildLinks();
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)

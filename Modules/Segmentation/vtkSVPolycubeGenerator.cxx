@@ -135,6 +135,7 @@ int vtkSVPolycubeGenerator::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
+  this->WorkPd->BuildLinks();
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)
@@ -221,6 +222,7 @@ int vtkSVPolycubeGenerator::RunFilter()
     polycubeSize = this->PolycubeUnitLength*this->PolycubeDivisions;
   }
 
+  this->WorkPd->BuildLinks();
   this->CenterlineGraph->SetLines(this->WorkPd);
   this->CenterlineGraph->SetGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
   this->CenterlineGraph->SetCubeSize(polycubeSize);

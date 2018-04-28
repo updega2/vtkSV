@@ -201,6 +201,7 @@ int vtkSVSurfaceCuboidPatcher::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
+  this->WorkPd->BuildLinks();
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)
@@ -233,6 +234,7 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
     vtkErrorMacro(<< "Centerlines not set.");
     return SV_ERROR;
   }
+  this->MergedCenterlines->BuildLinks();
 
   if (!this->CenterlineGroupIdsArrayName)
   {

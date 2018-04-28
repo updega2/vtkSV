@@ -179,6 +179,7 @@ int vtkSVSurfaceCenterlineGrouper::RequestData(
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->WorkPd->DeepCopy(input);
+  this->WorkPd->BuildLinks();
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)
@@ -211,6 +212,7 @@ int vtkSVSurfaceCenterlineGrouper::PrepFilter()
     this->SetErrorCode(vtkErrorCode::UserError + 1);
     return SV_ERROR;
   }
+  this->MergedCenterlines->BuildLinks();
 
   if (!this->CenterlineGroupIdsArrayName)
   {
