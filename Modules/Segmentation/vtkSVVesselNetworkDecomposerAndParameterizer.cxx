@@ -289,6 +289,7 @@ int vtkSVVesselNetworkDecomposerAndParameterizer::PrepFilter()
   polycuber->SetInputData(this->MergedCenterlines);
   polycuber->SetCenterlineGroupIdsArrayName(this->CenterlineGroupIdsArrayName);
   polycuber->SetCenterlineRadiusArrayName(this->CenterlineRadiusArrayName);
+  polycuber->SetPolycubeDivisions(11);
   polycuber->Update();
 
   this->PolycubePd->DeepCopy(polycuber->GetOutput());

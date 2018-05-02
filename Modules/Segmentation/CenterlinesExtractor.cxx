@@ -238,45 +238,38 @@ int main(int argc, char *argv[])
 
     std::cout << "Cleaning Capped Surface..." << endl;
 
+    // Clean
     cleaner->SetInputData(surfaceCapper->GetOutput());
     cleaner->Update();
 
-    if (cleaner->GetOutput()->GetNumberOfPoints() != inputPd->GetNumberOfPoints() ||
-        cleaner->GetOutput()->GetNumberOfCells() != inputPd->GetNumberOfCells())
+    inputPd->DeepCopy(cleaner->GetOutput());
+
+    // Remove non-triangle cells
+    for (int i=0; i<inputPd->GetNumberOfCells(); i++)
     {
-      inputPd->DeepCopy(cleaner->GetOutput());
-      inputPd->BuildLinks();
-
-      for (int i=0; i<inputPd->GetNumberOfCells(); i++)
+      if (inputPd->GetCellType(i) != VTK_TRIANGLE)
       {
-        if (inputPd->GetCellType(i) != VTK_TRIANGLE)
-        {
-          inputPd->DeleteCell(i);
-        }
+        inputPd->DeleteCell(i);
       }
-      inputPd->RemoveDeletedCells();
-      inputPd->BuildLinks();
-
-      std::cout << "Cleaner Removed Some Points and Cells, Using Point Locator To Reset Cap Center Ids..." << endl;
-      vtkNew(vtkPointLocator, pointLocator);
-      pointLocator->SetDataSet(inputPd);
-      pointLocator->BuildLocator();
-
-      int currCapCenterId, newCapCenterId;
-      double pt[3];
-      for (int i=0; i<capCenterIds->GetNumberOfIds(); i++)
-      {
-        currCapCenterId = capCenterIds->GetId(i);
-        surfaceCapper->GetOutput()->GetPoint(currCapCenterId, pt);
-
-        newCapCenterId = pointLocator->FindClosestPoint(pt);
-        capCenterIds->SetId(i, newCapCenterId);
-      }
-
     }
-    else
+
+    inputPd->RemoveDeletedCells();
+    inputPd->BuildLinks();
+
+    // Reset cap ids if the polydata happened to change
+    vtkNew(vtkPointLocator, pointLocator);
+    pointLocator->SetDataSet(inputPd);
+    pointLocator->BuildLocator();
+
+    int currCapCenterId, newCapCenterId;
+    double pt[3];
+    for (int i=0; i<capCenterIds->GetNumberOfIds(); i++)
     {
-      inputPd->DeepCopy(surfaceCapper->GetOutput());
+      currCapCenterId = capCenterIds->GetId(i);
+      surfaceCapper->GetOutput()->GetPoint(currCapCenterId, pt);
+
+      newCapCenterId = pointLocator->FindClosestPoint(pt);
+      capCenterIds->SetId(i, newCapCenterId);
     }
 
     int numNonTriangleCells = 0;
