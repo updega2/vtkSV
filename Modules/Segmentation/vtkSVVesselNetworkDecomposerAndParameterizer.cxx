@@ -97,7 +97,6 @@ vtkSVVesselNetworkDecomposerAndParameterizer::vtkSVVesselNetworkDecomposerAndPar
   this->BlankingArrayName = NULL;
 
   this->UseVmtkClipping = 0;
-  this->EnforceBoundaryDirections = 1;
   this->CutoffRadiusFactor = VTK_SV_LARGE_DOUBLE;
   this->ClipValue = 0.0;
   this->UseRadiusInformation = 1;
@@ -108,7 +107,6 @@ vtkSVVesselNetworkDecomposerAndParameterizer::vtkSVVesselNetworkDecomposerAndPar
   this->NormalsWeighting = 0.6;
   this->IsVasculature = 1;
   this->NumberOfCenterlineRemovePts = 3;
-  this->BoundaryEnforceFactor = 1;
 
   this->UseAbsoluteMergeDistance = 0;
   this->RadiusMergeRatio = 0.5;
@@ -427,8 +425,6 @@ int vtkSVVesselNetworkDecomposerAndParameterizer::RunFilter()
   patcher->SetParallelTransportVectorArrayName("ParallelTransportVector");
   patcher->SetIsVasculature(this->IsVasculature);
   patcher->SetNormalsWeighting(this->NormalsWeighting);
-  patcher->SetBoundaryEnforceFactor(this->BoundaryEnforceFactor);
-  patcher->EnforceBoundaryDirectionsOn();
   patcher->EnforcePolycubeConnectivityOn();
   patcher->Update();
 

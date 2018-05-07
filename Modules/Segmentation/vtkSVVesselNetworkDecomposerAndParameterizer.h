@@ -124,13 +124,6 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set the factor for enforcing of the boundary directions. Approximately represents the number of centerline points to enforce per branch. Default is 1, and typically a fairly low value works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems.
-  vtkSetMacro(BoundaryEnforceFactor,int);
-  vtkGetMacro(BoundaryEnforceFactor,int);
-  //@}
-
-
-  //@{
   /// \brief Get/Set the clip value for clipping of the surface distance functions.
   vtkSetMacro(ClipValue,double);
   vtkGetMacro(ClipValue,double);
@@ -148,14 +141,6 @@ public:
   vtkSetMacro(UseVmtkClipping,int);
   vtkGetMacro(UseVmtkClipping,int);
   vtkBooleanMacro(UseVmtkClipping,int);
-  //@}
-
-  //@{
-  /// \brief Get/Set whether the boundary at separating patches should be more
-  //  strictly enforced.
-  vtkSetMacro(EnforceBoundaryDirections,int);
-  vtkGetMacro(EnforceBoundaryDirections,int);
-  vtkBooleanMacro(EnforceBoundaryDirections,int);
   //@}
 
   //@{
@@ -243,11 +228,9 @@ protected:
 
   int UseRadiusInformation;
   int UseVmtkClipping;
-  int EnforceBoundaryDirections;
   int IsVasculature;
   int NumberOfCenterlineRemovePts;
   int PolycubeDivisions;
-  int BoundaryEnforceFactor;
   int UseAbsoluteMergeDistance;
 
   double CutoffRadiusFactor;

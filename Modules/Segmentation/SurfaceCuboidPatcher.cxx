@@ -66,8 +66,6 @@ int main(int argc, char *argv[])
   // Default values for options
   int enforcePolycubeConnectivity = 0;
   int isVasculature = 1;
-  int enforceBoundaryDirections = 0;
-  int boundaryEnforceFactor = 1;
 
   double normalsWeighting = 0.6;
 
@@ -99,8 +97,6 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-clusteringvector")              {clusteringVectorArrayName = argv[++iarg];}
       else if(tmpstr=="-paralleltransportvector")       {parallelTransportVectorArrayName = argv[++iarg];}
       else if(tmpstr=="-enforcepolycubeconnectivity")   {enforcePolycubeConnectivity = atoi(argv[++iarg]);}
-      else if(tmpstr=="-enforceboundarydirections")     {enforceBoundaryDirections = atoi(argv[++iarg]);}
-      else if(tmpstr=="-boundaryenforcefactor")         {boundaryEnforceFactor = atoi(argv[++iarg]);}
       else if(tmpstr=="-normalsweighting")              {normalsWeighting = atof(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
       // reset tmpstr for next argument
@@ -131,7 +127,6 @@ int main(int argc, char *argv[])
     cout << "  -normalsweighting               : For the individual branch clustering, the weighting to put on normals. Should vary between 0 and 1. 1.0 will cluster only based on surface normals. 0.0 will cluster only based on position around the centerline [default 0.8]" << endl;
     cout << "  -isvasculature                  : Flag to indicate whether model is a vascular model with truncated boundaries. If model is not vasculature, the ends of the centerlines must be removed and the ends of the vessels need to be clustered based on position [default 1]" << endl;
     cout << "  -enforceboundarydirections      : At separating patches, enforce the boundary directions by modifying the clustering vectors [default 0]" << endl;
-    cout << "  -boundaryenforcefactor          : Approximately represents the number of centerline points to enforce per branch. Typically a fairly low integer works well. The larger the value, the larger the portion of the vessel is set explicitly, and sometimes this can cause large problems. [default 1]" << endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
     return EXIT_FAILURE;
   }
@@ -182,9 +177,7 @@ int main(int argc, char *argv[])
   Patcher->SetClusteringVectorArrayName(clusteringVectorArrayName.c_str());
   Patcher->SetEnforcePolycubeConnectivity(enforcePolycubeConnectivity);
   Patcher->SetIsVasculature(isVasculature);
-  Patcher->SetEnforceBoundaryDirections(enforceBoundaryDirections);
   Patcher->SetNormalsWeighting(normalsWeighting);
-  Patcher->SetBoundaryEnforceFactor(boundaryEnforceFactor);
   Patcher->DebugOn();
   Patcher->Update();
   std::cout<<"Done"<<endl;

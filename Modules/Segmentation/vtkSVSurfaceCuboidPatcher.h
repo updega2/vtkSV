@@ -106,14 +106,6 @@ public:
   //@}
 
   //@{
-  /// \brief Get/Set whether the boundary at separating patches should be more
-  //  strictly enforced.
-  vtkSetMacro(EnforceBoundaryDirections,int);
-  vtkGetMacro(EnforceBoundaryDirections,int);
-  vtkBooleanMacro(EnforceBoundaryDirections,int);
-  //@}
-
-  //@{
   /// \brief Get/Set the scalar determing how much influence to put on the normal
   // of the cell and how much influence to put on the position of the cell for
   // the cube patch clustering.
@@ -208,7 +200,6 @@ protected:
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
 
-  int EnforceBoundaryDirections;
   int EnforcePolycubeConnectivity;
   int IsVasculature;
   int BoundaryEnforceFactor;

@@ -98,12 +98,11 @@ vtkSVSurfaceCuboidPatcher::vtkSVSurfaceCuboidPatcher()
   this->ClusteringVectorArrayName = NULL;
   this->ParallelTransportVectorArrayName = NULL;
 
-  this->EnforceBoundaryDirections = 0;
   this->EnforcePolycubeConnectivity = 0;
 
   this->NormalsWeighting = 0.6;
   this->IsVasculature = 1;
-  this->BoundaryEnforceFactor = 1;
+  this->BoundaryEnforceFactor = 0;
 }
 
 // ----------------------
@@ -382,7 +381,7 @@ int vtkSVSurfaceCuboidPatcher::PrepFilter()
     return SV_OK;
   }
 
-  if (this->EnforcePolycubeConnectivity || this->EnforceBoundaryDirections)
+  if (this->EnforcePolycubeConnectivity)
   {
     if (vtkSVGeneralUtils::CheckArrayExists(this->PolycubePd, 1, this->PatchIdsArrayName) != SV_OK)
     {
@@ -875,7 +874,7 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
     }
   }
 
-  if (this->EnforceBoundaryDirections && this->MergedCenterlines->GetNumberOfCells() > 1)
+  if (this->EnforcePolycubeConnectivity && this->MergedCenterlines->GetNumberOfCells() > 1)
   {
     // Now enforce boundaries if we need to!!!!
     vtkIdType npts, *pts;
@@ -1377,46 +1376,50 @@ int vtkSVSurfaceCuboidPatcher::RunFilter()
         stopEndVal = 0.5;
       }
 
-      //double maxBegPCoordThr = 1.0*this->BoundaryEnforceFactor/nlinepts;
-      //double maxEndPCoordThr = 1.0*this->BoundaryEnforceFactor/nlinepts;
-      double maxBegPCoordThr = 0.0;
-      if (maxFrontRadiusRatio > 1.0)
+      double begPCoordThr;
+      double endPCoordThr;
+      if (this->BoundaryEnforceFactor > 0)
       {
-        maxBegPCoordThr = 0.1+2.0*maxFrontRadiusRatio/nlinepts;
+        begPCoordThr = 1.0*this->BoundaryEnforceFactor/nlinepts;
+        endPCoordThr = 1.0*this->BoundaryEnforceFactor/nlinepts;
       }
-      if (maxBegPCoordThr > 0.5)
+      else
       {
-        maxBegPCoordThr = 0.5;
-      }
-      double maxEndPCoordThr = 0.0;
-      if (maxBackRadiusRatio > 1.0)
-      {
-        maxEndPCoordThr = 0.1+2.0*maxBackRadiusRatio/nlinepts;
-      }
-      if (maxEndPCoordThr > 0.5)
-      {
-        maxEndPCoordThr = 0.5;
-      }
-      vtkDebugMacro("BOUNDARY ENFORCE FACTOR BEG FROM STOP CALC: " << stopBegVal);
-      vtkDebugMacro("BOUNDARY ENFORCE FACTOR END FROM STOP CALC: " << stopEndVal);
-      vtkDebugMacro("BOUNDARY ENFORCE FACTOR BEG: " << maxBegPCoordThr);
-      vtkDebugMacro("BOUNDARY ENFORCE FACTOR END: " << maxEndPCoordThr);
-      //double pCoordThr = 0.01;
-      //double begPCoordThr = maxBegPCoordThr;
-      //double endPCoordThr = maxEndPCoordThr;
-      double begPCoordThr = stopBegVal;
-      if (maxBegPCoordThr > begPCoordThr)
-      {
-        begPCoordThr = maxBegPCoordThr;
-      }
+        double maxBegPCoordThr = 0.0;
+        if (maxFrontRadiusRatio > 1.0)
+        {
+          maxBegPCoordThr = 0.1+2.0*maxFrontRadiusRatio/nlinepts;
+        }
+        if (maxBegPCoordThr > 0.5)
+        {
+          maxBegPCoordThr = 0.5;
+        }
+        double maxEndPCoordThr = 0.0;
+        if (maxBackRadiusRatio > 1.0)
+        {
+          maxEndPCoordThr = 0.1+2.0*maxBackRadiusRatio/nlinepts;
+        }
+        if (maxEndPCoordThr > 0.5)
+        {
+          maxEndPCoordThr = 0.5;
+        }
+        vtkDebugMacro("BOUNDARY ENFORCE FACTOR BEG FROM STOP CALC: " << stopBegVal);
+        vtkDebugMacro("BOUNDARY ENFORCE FACTOR END FROM STOP CALC: " << stopEndVal);
+        vtkDebugMacro("BOUNDARY ENFORCE FACTOR BEG: " << maxBegPCoordThr);
+        vtkDebugMacro("BOUNDARY ENFORCE FACTOR END: " << maxEndPCoordThr);
 
-      double endPCoordThr = stopEndVal;
-      if (maxEndPCoordThr > endPCoordThr)
-      {
-        endPCoordThr = maxEndPCoordThr;
+        begPCoordThr = stopBegVal;
+        if (maxBegPCoordThr > begPCoordThr)
+        {
+          begPCoordThr = maxBegPCoordThr;
+        }
+
+        endPCoordThr = stopEndVal;
+        if (maxEndPCoordThr > endPCoordThr)
+        {
+          endPCoordThr = maxEndPCoordThr;
+        }
       }
-      double begVessel = 0.0;
-      double endVessel = 1.0;
 
       vtkDebugMacro("PATCH VALUES: \n");
       for (int j=0; j<allPatchValues.size(); j++)

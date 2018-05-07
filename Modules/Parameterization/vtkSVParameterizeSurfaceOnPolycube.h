@@ -105,6 +105,12 @@ public:
   vtkGetStringMacro(GridIdsArrayName);
   //@}
 
+  //@{
+  /// \brief Get/Set the radius information
+  vtkSetMacro(EnforcePolycubeConnectivity, int);
+  vtkGetMacro(EnforcePolycubeConnectivity, int);
+  vtkBooleanMacro(EnforcePolycubeConnectivity, int);
+  //@}
 
 protected:
   vtkSVParameterizeSurfaceOnPolycube();
@@ -150,6 +156,8 @@ protected:
   char *GroupIdsArrayName;
   char *PatchIdsArrayName;
   char *GridIdsArrayName;
+
+  int EnforcePolycubeConnectivity;
 
 private:
   vtkSVParameterizeSurfaceOnPolycube(const vtkSVParameterizeSurfaceOnPolycube&);  // Not implemented.
