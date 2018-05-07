@@ -39,7 +39,6 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkSmartPointer.h"
 #include "vtkSVGlobals.h"
-#include "vtkSVIOUtils.h"
 #include "vtkSVNURBSSurface.h"
 #include "vtkSVNURBSUtils.h"
 #include "vtkStructuredGridGeometryFilter.h"
@@ -62,20 +61,21 @@ int TestSurfaceIncreaseDegree(int argc, char *argv[])
   int nvk=q+mp+1; //nvk
 
   // Control points for a cylinder, two circles really
+  double ldiv = 10.0/(mp-1);
   vtkNew(vtkSVControlGrid, controlPointGrid);
   controlPointGrid->SetDimensions(np, mp, 1);
   controlPointGrid->SetNumberOfControlPoints(np*mp);
   for (int j=0; j<mp; j++)
   {
-    controlPointGrid->SetControlPoint(0, j, 0, 1.0, 0.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(1, j, 0, 1.0, 1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(2, j, 0, 0.0, 1.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(3, j, 0, -1.0, 1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(4, j, 0, -1.0, 0.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(5, j, 0, -1.0, -1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(6, j, 0, 0.0, -1.0, j+(j*9), 1.0);
-    controlPointGrid->SetControlPoint(7, j, 0, 1.0, -1.0, j+(j*9), sqrt(2)/2);
-    controlPointGrid->SetControlPoint(8, j, 0, 1.0, 0.0, j+(j*9), 1.0);
+    controlPointGrid->SetControlPoint(0, j, 0, 1.0, 0.0, (j*ldiv), 1.0);
+    controlPointGrid->SetControlPoint(1, j, 0, 1.0, 1.0, (j*ldiv), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(2, j, 0, 0.0, 1.0, (j*ldiv), 1.0);
+    controlPointGrid->SetControlPoint(3, j, 0, -1.0, 1.0, (j*ldiv), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(4, j, 0, -1.0, 0.0, (j*ldiv), 1.0);
+    controlPointGrid->SetControlPoint(5, j, 0, -1.0, -1.0, (j*ldiv), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(6, j, 0, 0.0, -1.0, (j*ldiv), 1.0);
+    controlPointGrid->SetControlPoint(7, j, 0, 1.0, -1.0, (j*ldiv), sqrt(2)/2);
+    controlPointGrid->SetControlPoint(8, j, 0, 1.0, 0.0, (j*ldiv), 1.0);
   }
 
   // uKnot vector equal space

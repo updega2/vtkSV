@@ -144,6 +144,7 @@ if(VTKSV_BUILD_EXES)
     HausdorffDistance
     PassDataArray
     PolyDataSurfaceInspector
+    PolyDataToBinaryImage
     )
   foreach(exe ${EXE_LIST})
     add_executable(vtkSV${exe} ${exe}.cxx)

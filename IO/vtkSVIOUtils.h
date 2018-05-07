@@ -45,6 +45,7 @@
 #include "vtkObject.h"
 #include "vtkSVIOModule.h" // For export
 
+#include "vtkImageData.h"
 #include "vtkObjectFactory.h"
 #include "vtkPolyData.h"
 #include "vtkStructuredGrid.h"
@@ -106,7 +107,13 @@ public:
   static int WriteVTSFile(std::string outputFilename, vtkStructuredGrid *writeStructuredGrid);
   static int WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writeStructuredGrid,std::string attachName);
   //@}
+
+  //@{
+  /** \brief write a vts file. */
+  static int WriteMHDFile(std::string outputFilename, vtkImageData *image);
+  //@}
   //
+
   //@{
   /** \brief write a raw file. */
   static int WriteRawFile(std::string outputFilename, vtkPolyData *writePolyData);

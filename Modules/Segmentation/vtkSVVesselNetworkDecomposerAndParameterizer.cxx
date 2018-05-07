@@ -85,6 +85,7 @@ vtkSVVesselNetworkDecomposerAndParameterizer::vtkSVVesselNetworkDecomposerAndPar
   this->MergedCenterlines = vtkPolyData::New();
   this->PolycubePd = vtkPolyData::New();
   this->GraphPd = vtkPolyData::New();
+  this->NURBSSurfaceRepresentationPd = vtkPolyData::New();
   this->Centerlines = NULL;
 
   this->PolycubeUg   = vtkUnstructuredGrid::New();
@@ -143,6 +144,11 @@ vtkSVVesselNetworkDecomposerAndParameterizer::~vtkSVVesselNetworkDecomposerAndPa
   {
     this->GraphPd->Delete();
     this->GraphPd = NULL;
+  }
+  if (this->NURBSSurfaceRepresentationPd != NULL)
+  {
+    this->NURBSSurfaceRepresentationPd->Delete();
+    this->NURBSSurfaceRepresentationPd = NULL;
   }
 
   if (this->PolycubeUg != NULL)
@@ -434,6 +440,8 @@ int vtkSVVesselNetworkDecomposerAndParameterizer::RunFilter()
   surfParameterizer->SetPolycubeUg(this->PolycubeUg);
   surfParameterizer->SetGroupIdsArrayName(this->GroupIdsArrayName);
   surfParameterizer->Update();
+
+  this->NURBSSurfaceRepresentationPd->DeepCopy(surfParameterizer->GetNURBSSurfaceRepresentationPd());
 
   vtkNew(vtkSVParameterizeVolumeOnPolycube, volParameterizer);
   volParameterizer->SetInputData(this->WorkPd);

@@ -88,6 +88,11 @@ public:
 
   //@{
   /// \brief Get/Set macro for surface polycube
+  vtkGetObjectMacro(NURBSSurfaceRepresentationPd,vtkPolyData);
+  //@}
+
+  //@{
+  /// \brief Get/Set macro for surface polycube
   vtkSetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
   vtkGetObjectMacro(PolycubeUg,vtkUnstructuredGrid);
   //@}
@@ -231,6 +236,7 @@ protected:
   vtkPolyData *Centerlines;
   vtkPolyData *MergedCenterlines;
   vtkPolyData *PolycubePd;
+  vtkPolyData *NURBSSurfaceRepresentationPd;
 
   vtkUnstructuredGrid *PolycubeUg;
   vtkUnstructuredGrid *FinalHexMesh;

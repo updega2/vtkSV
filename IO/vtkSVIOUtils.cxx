@@ -32,6 +32,7 @@
 #include "vtkSVIOUtils.h"
 
 #include "vtkDataArray.h"
+#include "vtkMetaImageWriter.h"
 #include "vtkObjectFactory.h"
 #include "vtkSmartPointer.h"
 #include "vtkSTLReader.h"
@@ -432,6 +433,30 @@ int vtkSVIOUtils::WriteVTSFile(std::string inputFilename,vtkStructuredGrid *writ
   writer->SetInput(writeStructuredGrid);
 #else
   writer->SetInputData(writeStructuredGrid);
+#endif
+
+  writer->Write();
+  return SV_OK;
+}
+
+// ----------------------
+// WriteMHDFile
+// ----------------------
+int vtkSVIOUtils::WriteMHDFile(std::string outputFilename,vtkImageData *image)
+{
+  // Get directory
+  std::string dirName = vtkSVIOUtils::GetPath(outputFilename);
+
+  // Check directory exists
+  if (vtkSVIOUtils::CheckDirectoryExists(dirName) != SV_OK)
+    return SV_ERROR;
+
+  vtkNew(vtkMetaImageWriter, writer);
+  writer->SetFileName(outputFilename.c_str());
+#if VTK_MAJOR_VERSION <= 5
+  writer->SetInput(image);
+#else
+  writer->SetInputData(image);
 #endif
 
   writer->Write();
