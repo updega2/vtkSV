@@ -506,12 +506,12 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
   // all data on fullMapPd now
   this->InterpolateMapOntoTarget(paraHexSurface, this->WorkPd, this->SurfaceOnPolycubePd, this->PolycubeOnSurfacePd, this->GroupIdsArrayName);
 
-  // This is to be moved to a separate filter
-  if (this->FormNURBSSurface() != SV_OK)
-  {
-    vtkErrorMacro("Error making NURBS surface\n");
-    return SV_ERROR;
-  }
+  //// This is to be moved to a separate filter
+  //if (this->FormNURBSSurface() != SV_OK)
+  //{
+  //  vtkErrorMacro("Error making NURBS surface\n");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }

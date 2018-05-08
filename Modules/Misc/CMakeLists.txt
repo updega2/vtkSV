@@ -54,6 +54,7 @@ set(SRCS
   vtkSVPickPointSeedSelector.cxx
   vtkSVOpenProfilesSeedSelector.cxx
   vtkSVIdListSeedSelector.cxx
+  vtkSVUpdeSmoothing.cxx
   )
 set(HDRS
   vtkSVCleanUnstructuredGrid.h
@@ -77,6 +78,7 @@ set(HDRS
   vtkSVPickPointSeedSelector.h
   vtkSVOpenProfilesSeedSelector.h
   vtkSVIdListSeedSelector.h
+  vtkSVUpdeSmoothing.h
   )
 #------------------------------------------------------------------------------
 
@@ -145,6 +147,7 @@ if(VTKSV_BUILD_EXES)
     PassDataArray
     PolyDataSurfaceInspector
     PolyDataToBinaryImage
+    UpdeSmoothing
     )
   foreach(exe ${EXE_LIST})
     add_executable(vtkSV${exe} ${exe}.cxx)
