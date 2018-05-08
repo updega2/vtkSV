@@ -73,7 +73,8 @@ vtkStandardNewMacro(vtkSVUpdeSmoothing);
 // ----------------------
 vtkSVUpdeSmoothing::vtkSVUpdeSmoothing()
 {
-    this->NumSmoothOperations = 10;
+    this->NumberOfOuterSmoothOperations = 10;
+    this->NumberOfInnerSmoothOperations = 10;
     this->Alpha = 0.5;
     this->Beta = 0.8;
 }
@@ -92,7 +93,8 @@ void vtkSVUpdeSmoothing::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 
-  os << indent << "Number of smooth operations: " << this->NumSmoothOperations << "\n";
+  os << indent << "Number of outer smooth operations: " << this->NumberOfOuterSmoothOperations << "\n";
+  os << indent << "Number of inner smooth operations: " << this->NumberOfInnerSmoothOperations << "\n";
 }
 
 // ----------------------
@@ -151,11 +153,11 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   vtkNew(vtkPolyData, tmp);
   tmp->DeepCopy(input);
 
-  for (int i=0; i<this->NumSmoothOperations; i++)
+  for (int i=0; i<this->NumberOfOuterSmoothOperations; i++)
   {
     vtkNew(vtkSmoothPolyDataFilter, smoother);
     smoother->SetInputData(tmp);
-    smoother->SetNumberOfIterations(10);
+    smoother->SetNumberOfIterations(this->NumberOfInnerSmoothOperations);
     smoother->Update();
 
     vtkNew(vtkPolyDataNormals, tmpNormaler);

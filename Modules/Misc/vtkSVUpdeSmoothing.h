@@ -52,16 +52,17 @@ class VTKSVGEOMETRY_EXPORT vtkSVUpdeSmoothing : public vtkPolyDataAlgorithm
 public:
   static vtkSVUpdeSmoothing* New();
   vtkTypeMacro(vtkSVUpdeSmoothing, vtkPolyDataAlgorithm);
-  void PrintSelf(ostream& os, vtkIndent indent);
+  void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
-  /// \brief Get/Set the number of constrained smoothing operations. Set to
-  /// 1, a normal laplacian smooth is performed. More than 1, and the weight
-  /// kicks in and will attempt to retain the original surface.
-  vtkGetMacro(NumSmoothOperations,int);
-  vtkSetMacro(NumSmoothOperations,int);
+  vtkGetMacro(NumberOfOuterSmoothOperations,int);
+  vtkSetMacro(NumberOfOuterSmoothOperations,int);
   //@}
 
+  //@{
+  vtkGetMacro(NumberOfInnerSmoothOperations,int);
+  vtkSetMacro(NumberOfInnerSmoothOperations,int);
+  //@}
 protected:
   vtkSVUpdeSmoothing();
   ~vtkSVUpdeSmoothing();
@@ -69,12 +70,13 @@ protected:
   // Usual data generation method
   int RequestData(vtkInformation *vtkNotUsed(request),
 		  vtkInformationVector **inputVector,
-		  vtkInformationVector *outputVector);
+		  vtkInformationVector *outputVector) override;
 
 
   int RunFilter(vtkPolyData *original, vtkPolyData *output);
 
-  int NumSmoothOperations;
+  int NumberOfOuterSmoothOperations;
+  int NumberOfInnerSmoothOperations;
   double Alpha;
   double Beta;
 
