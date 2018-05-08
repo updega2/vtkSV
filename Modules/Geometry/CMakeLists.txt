@@ -47,6 +47,7 @@ set(SRCS
   vtkSVLocalQuadricDecimation.cxx
   vtkSVLocalSmoothPolyDataFilter.cxx
   vtkSVSmoothVolume.cxx
+  vtkSVUpdeSmoothing.cxx
   )
 
 set(HDRS
@@ -60,6 +61,7 @@ set(HDRS
   vtkSVLocalQuadricDecimation.h
   vtkSVLocalSmoothPolyDataFilter.h
   vtkSVSmoothVolume.h
+  vtkSVUpdeSmoothing.h
   )
 #------------------------------------------------------------------------------
 
@@ -121,6 +123,7 @@ endif()
 if(VTKSV_BUILD_EXES)
   set(EXE_LIST
     SmoothVolume
+    UpdeSmoothing
     )
   foreach(exe ${EXE_LIST})
     add_executable(vtkSV${exe} ${exe}.cxx)

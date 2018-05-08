@@ -80,6 +80,8 @@ protected:
   double Alpha;
   double Beta;
 
+  vtkPolyData *WorkPd;
+
 private:
   vtkSVUpdeSmoothing(const vtkSVUpdeSmoothing&);  // Not implemented.
   void operator=(const vtkSVUpdeSmoothing&);  // Not implemented.

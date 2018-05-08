@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
   std::cout<<"Performing Operation..."<<endl;
   UpdeSmoothing->SetInputData(inputPd);
   UpdeSmoothing->SetNumberOfOuterSmoothOperations(numOuterSmooth);
-  UpdeSmoothing->SetNumberOfInnerSmoothOperations(numOuterSmooth);
+  UpdeSmoothing->SetNumberOfInnerSmoothOperations(numInnerSmooth);
   UpdeSmoothing->Update();
 
   //Write Files

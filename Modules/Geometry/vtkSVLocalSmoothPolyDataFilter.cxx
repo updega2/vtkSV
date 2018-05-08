@@ -896,7 +896,7 @@ int vtkSVLocalSmoothPolyDataFilter::SetFixedPoints(vtkPolyData *pd,int *fixedPoi
     for (vtkIdType pointId = 0;pointId < numPts;pointId++)
     {
       if (this->SmoothPointArray->GetValue(pointId) != 1)
-	fixedPoint[pointId] = 1;
+        fixedPoint[pointId] = 1;
     }
   }
   if (this->UseCellArray)
@@ -907,20 +907,20 @@ int vtkSVLocalSmoothPolyDataFilter::SetFixedPoints(vtkPolyData *pd,int *fixedPoi
       pd->GetCellPoints(cellId,npts,pts);
       for (int i=0; i < npts;i++)
       {
-	p1 = pts[i];
-	p2 = pts[(i+1)%(npts)];
-  vtkNew(vtkIdList, neighbors);
-	pd->GetCellEdgeNeighbors(cellId,p1,p2,neighbors);
-	vtkIdType numNei = neighbors->GetNumberOfIds();
-	if (numNei > 0)
-	{
-	  vtkIdType neighCell = neighbors->GetId(0);
-	  if (this->SmoothCellArray->GetValue(neighCell) != 1)
-	  {
-	    fixedPoint[p1] = 1;
-	    fixedPoint[p2] = 1;
-	  }
-	}
+        p1 = pts[i];
+        p2 = pts[(i+1)%(npts)];
+        vtkNew(vtkIdList, neighbors);
+        pd->GetCellEdgeNeighbors(cellId,p1,p2,neighbors);
+        vtkIdType numNei = neighbors->GetNumberOfIds();
+        if (numNei > 0)
+        {
+          vtkIdType neighCell = neighbors->GetId(0);
+          if (this->SmoothCellArray->GetValue(neighCell) != 1)
+          {
+            fixedPoint[p1] = 1;
+            fixedPoint[p2] = 1;
+          }
+        }
       }
     }
   }
