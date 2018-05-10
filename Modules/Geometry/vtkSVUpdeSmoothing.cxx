@@ -69,10 +69,12 @@ vtkSVUpdeSmoothing::vtkSVUpdeSmoothing()
 {
   this->WorkPd = vtkPolyData::New();
 
-  this->NumberOfOuterSmoothOperations = 10;
-  this->NumberOfInnerSmoothOperations = 10;
+  this->NumberOfOuterSmoothOperations = 1;
+  this->NumberOfInnerSmoothOperations = 500;
   this->Alpha = 0.5;
   this->Beta = 0.8;
+
+  this->SmoothPointArrayName = NULL;
 }
 
 // ----------------------
@@ -84,6 +86,12 @@ vtkSVUpdeSmoothing::~vtkSVUpdeSmoothing()
   {
     this->WorkPd->Delete();
     this->WorkPd = NULL;
+  }
+
+  if (this->SmoothPointArrayName != NULL)
+  {
+    delete [] this->SmoothPointArrayName;
+    this->SmoothPointArrayName = NULL;
   }
 }
 
@@ -135,30 +143,30 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
   vtkSVGeneralUtils::GiveIds(this->WorkPd, "TmpInternalIds");
 
-  vtkNew(vtkFeatureEdges, featureFinder);
-  featureFinder->SetInputData(this->WorkPd);
-  featureFinder->SetFeatureAngle(80.0);
-  featureFinder->NonManifoldEdgesOff();
-  featureFinder->ManifoldEdgesOn();
-  featureFinder->BoundaryEdgesOn();
-  featureFinder->FeatureEdgesOn();
-  featureFinder->Update();
 
   // Set fixed points
-  int realPointId;
-  vtkNew(vtkIntArray, smoothPointArray);
-  smoothPointArray->SetNumberOfTuples(numPts);
-  smoothPointArray->FillComponent(0, 1);
-  smoothPointArray->SetName("SmoothPoints");
-
   std::vector<int> fixedPoints(numPts, 0);
-  for (int i=0; i<featureFinder->GetOutput()->GetNumberOfPoints(); i++)
+
+  if (this->SmoothPointArrayName != NULL)
   {
-    realPointId = featureFinder->GetOutput()->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(i);
-    fixedPoints[realPointId] = 1;
-    smoothPointArray->SetTuple1(realPointId, 0);
+    this->SmoothPointArray = vtkIntArray::SafeDownCast(this->WorkPd->GetPointData()->GetArray(this->SmoothPointArrayName));
+
+    if (this->SmoothPointArray == NULL)
+    {
+      vtkErrorMacro("Error getting array indicating the points to smooth on mesh");
+      return SV_ERROR;
+    }
+
+    for (int i=0; i<this->WorkPd->GetNumberOfPoints(); i++)
+    {
+      pointId = this->SmoothPointArray->GetTuple1(i);
+
+      if (pointId != 1)
+      {
+        fixedPoints[pointId] = 1;
+      }
+    }
   }
-  this->WorkPd->GetPointData()->AddArray(smoothPointArray);
 
   vtkIdType npts, *pts;
   vtkNew(vtkIdList, pointCellIds);
@@ -225,7 +233,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     vtkNew(vtkSVLocalSmoothPolyDataFilter, smoother);
     smoother->SetInputData(tmp);
     smoother->SetUsePointArray(1);
-    smoother->SetSmoothPointArrayName("SmoothPoints");
+    smoother->SetSmoothPointArrayName(this->SmoothPointArrayName);
     smoother->SetNumberOfIterations(this->NumberOfInnerSmoothOperations);
     smoother->Update();
 

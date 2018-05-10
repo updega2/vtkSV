@@ -5211,7 +5211,7 @@ int vtkSVNURBSUtils::GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multipl
   for (int i=0; i<numVals-1; i++)
   {
     int count = 1;
-    while(array->GetTuple1(i+1) == array->GetTuple1(i) && i<numVals)
+    while(array->GetTuple1(i+1) == array->GetTuple1(i) && i<numVals-1)
     {
       count++;
       i++;
@@ -5226,7 +5226,8 @@ int vtkSVNURBSUtils::GetMultiplicity(vtkDoubleArray *array, vtkIntArray *multipl
   int numMults = singleValues->GetNumberOfTuples();
 
   // Set the last spot of the array if needed
-  if (array->GetTuple1(numVals-1) != singleValues->GetTuple1(numMults-1)){
+  if (array->GetTuple1(numVals-1) != singleValues->GetTuple1(numMults-1))
+  {
     // Add new mult because not equal
     multiplicity->InsertNextTuple1(1);
     singleValues->InsertNextTuple1(array->GetTuple1(numVals-1));

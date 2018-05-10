@@ -63,6 +63,14 @@ public:
   vtkGetMacro(NumberOfInnerSmoothOperations,int);
   vtkSetMacro(NumberOfInnerSmoothOperations,int);
   //@}
+
+  //@{
+  // Description:
+  // Set/get the name for the point array attached to the input surface
+  vtkSetStringMacro(SmoothPointArrayName);
+  vtkGetStringMacro(SmoothPointArrayName);
+  //@}
+
 protected:
   vtkSVUpdeSmoothing();
   ~vtkSVUpdeSmoothing();
@@ -81,6 +89,9 @@ protected:
   double Beta;
 
   vtkPolyData *WorkPd;
+  vtkIntArray *SmoothPointArray;
+
+  char *SmoothPointArrayName;
 
 private:
   vtkSVUpdeSmoothing(const vtkSVUpdeSmoothing&);  // Not implemented.

@@ -38,7 +38,6 @@
 #include "vtkExecutive.h"
 #include "vtkErrorCode.h"
 #include "vtkCellArray.h"
-#include "vtkCellLocator.h"
 #include "vtkIdFilter.h"
 #include "vtkInformation.h"
 #include "vtkInformationVector.h"
@@ -65,9 +64,11 @@
 #include "vtkSVIOUtils.h"
 #include "vtkSVLoftNURBSSurface.h"
 #include "vtkSVMathUtils.h"
+#include "vtkSVPassDataArray.h"
 #include "vtkSVPlanarMapper.h"
 #include "vtkSVPointSetBoundaryMapper.h"
 #include "vtkSVSurfaceMapper.h"
+#include "vtkSVUpdeSmoothing.h"
 
 #include <algorithm>
 
@@ -503,8 +504,78 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
   std::vector<std::vector<int> > invSurfacePtMap;
   this->GetInteriorPointMaps(paraHexSurface, paraHexCleanSurface, cleanSurface, surfacePtMap, invSurfacePtMap);
 
+  // Pass patch ids to new surfaces from volume hex mesh
+  paraHexSurface->BuildLinks();
+  vtkNew(vtkSVPassDataArray, passer0);
+  passer0->SetInputData(0, this->PolycubePd);
+  passer0->SetInputData(1, paraHexSurface);
+  passer0->SetPassArrayName(this->PatchIdsArrayName);
+  passer0->SetPassDataIsCellData(1);
+  passer0->SetPassDataToCellData(1);
+  passer0->Update();
+  paraHexSurface->DeepCopy(passer0->GetOutput());
+
+  cleanSurface->BuildLinks();
+  vtkNew(vtkSVPassDataArray, passer1);
+  passer1->SetInputData(0, this->PolycubePd);
+  passer1->SetInputData(1, cleanSurface);
+  passer1->SetPassArrayName(this->PatchIdsArrayName);
+  passer1->SetPassDataIsCellData(1);
+  passer1->SetPassDataToCellData(1);
+  passer1->Update();
+  cleanSurface->DeepCopy(passer1->GetOutput());
+
   // all data on fullMapPd now
   this->InterpolateMapOntoTarget(paraHexSurface, this->WorkPd, this->SurfaceOnPolycubePd, this->PolycubeOnSurfacePd, this->GroupIdsArrayName);
+
+  // Now interpolate cleaned surface
+  vtkNew(vtkPolyData, cleanPolycubeOnSurfacePd);
+  this->InterpolateMapOntoTarget(cleanSurface, this->WorkPd, this->SurfaceOnPolycubePd, cleanPolycubeOnSurfacePd, this->GroupIdsArrayName);
+  cleanPolycubeOnSurfacePd->BuildLinks();
+
+  // Since we have the mapping, now we can do some smoothing if we want
+  // Set which points to smooth
+  vtkNew(vtkIntArray, smoothPointArray);
+  smoothPointArray->SetNumberOfTuples(cleanPolycubeOnSurfacePd->GetNumberOfPoints());
+  smoothPointArray->FillComponent(0, 1);
+  smoothPointArray->SetName("SmoothPoints");
+
+  vtkNew(vtkIdList, patchValues);
+  for (int i=0; i<cleanPolycubeOnSurfacePd->GetNumberOfPoints(); i++)
+  {
+    patchValues->Reset();
+    vtkSVGeneralUtils::GetPointCellsValues(cleanPolycubeOnSurfacePd, this->PatchIdsArrayName, i, patchValues);
+
+    for (int j=0; j<patchValues->GetNumberOfIds(); j++)
+    {
+      patchValues->SetId(j, patchValues->GetId(j)%6);
+    }
+
+    if (patchValues->IsId(4) != -1 || patchValues->IsId(5) != -1)
+    {
+      smoothPointArray->SetTuple1(i, 0);
+    }
+  }
+  cleanPolycubeOnSurfacePd->GetPointData()->AddArray(smoothPointArray);
+
+  vtkNew(vtkSVUpdeSmoothing, paramSmoother);
+  paramSmoother->SetInputData(cleanPolycubeOnSurfacePd);
+  paramSmoother->SetSmoothPointArrayName("SmoothPoints");
+  paramSmoother->SetNumberOfInnerSmoothOperations(200);
+  paramSmoother->Update();
+
+  cleanPolycubeOnSurfacePd->DeepCopy(paramSmoother->GetOutput());
+
+  double pt[3];
+  for (int i=0; i<cleanPolycubeOnSurfacePd->GetNumberOfPoints(); i++)
+  {
+    cleanPolycubeOnSurfacePd->GetPoint(i, pt);
+    for (int j=0; j<invSurfacePtMap[i].size(); j++)
+    {
+      this->PolycubeOnSurfacePd->GetPoints()->SetPoint(invSurfacePtMap[i][j], pt);
+    }
+  }
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DOUBLECHECK.vtp", cleanPolycubeOnSurfacePd);
 
   //// This is to be moved to a separate filter
   //if (this->FormNURBSSurface() != SV_OK)
@@ -633,6 +704,11 @@ int vtkSVParameterizeSurfaceOnPolycube::GetInteriorPointMaps(vtkPolyData *pdWith
   ptMap.resize(numPoints);
   std::fill(ptMap.begin(), ptMap.end(), -1);
 
+  vtkNew(vtkIntArray, pointOnInterior);
+  pointOnInterior->SetNumberOfTuples(numPoints);
+  pointOnInterior->FillComponent(0, 0);
+  pointOnInterior->SetName("InteriorPoints");
+
   int numCleanPoints = pdWithCleanInterior->GetNumberOfPoints();
   invPtMap.clear();
   invPtMap.resize(numCleanPoints);
@@ -654,8 +730,11 @@ int vtkSVParameterizeSurfaceOnPolycube::GetInteriorPointMaps(vtkPolyData *pdWith
       int cleanPtId = locator2->FindClosestPoint(pt0);
       ptMap[i] = cleanPtId;
       invPtMap[cleanPtId].push_back(i);
+      pointOnInterior->SetTuple1(i, 1);
     }
   }
+
+  pdWithAllInterior->GetPointData()->AddArray(pointOnInterior);
 
   return SV_OK;
 }

@@ -132,7 +132,9 @@ int vtkSVPassDataArray::RequestData(vtkInformation *vtkNotUsed(request),
   vtkPolyData *output = vtkPolyData::GetData(outputVector);
 
   this->SourcePd->DeepCopy(input0);
+  this->SourcePd->BuildLinks();
   this->TargetPd->DeepCopy(input1);
+  this->TargetPd->BuildLinks();
 
   // Prep work for filter
   if (this->PrepFilter() != SV_OK)

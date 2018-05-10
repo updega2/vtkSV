@@ -370,6 +370,8 @@ int vtkSVLoftNURBSSurface::LoftNURBS(vtkStructuredGrid *input,
   this->Surface->SetKnotVector(uKnots, 0);
   this->Surface->SetKnotVector(vKnots, 1);
   this->Surface->SetControlPoints(cPoints);
+  this->Surface->SetUDegree(p);
+  this->Surface->SetUDegree(q);
 
   // Get the polydata representation from the NURBS Surface
   this->Surface->GeneratePolyDataRepresentation(this->PolyDataUSpacing, this->PolyDataVSpacing);
