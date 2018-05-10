@@ -49,6 +49,7 @@ vtk_module(vtkSVParameterization
   vtkSVIO
   vtkSVMisc
   vtkSVNURBS
+  vtkSVGeometry
   ${EXTRA_DEPENDS}
   TEST_DEPENDS
   vtkFiltersExtraction
