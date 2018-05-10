@@ -318,20 +318,31 @@ int vtkSVCenterlines::RequestData(
   surfaceNormals->ConsistencyOn();
   surfaceNormals->Update();
   // ------------------------------------------------------------------------
-  vtkDebugMacro("SOURCE POINTS");
-  for (int i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
+  if (this->SourceSeedIds != NULL)
   {
-    vtkDebugMacro(" " << this->SourceSeedIds->GetId(i));
+    vtkDebugMacro("SOURCE POINTS");
+    for (int i=0; i<this->SourceSeedIds->GetNumberOfIds(); i++)
+    {
+      vtkDebugMacro(" " << this->SourceSeedIds->GetId(i));
+    }
   }
-  vtkDebugMacro("TARGET POINTS");
-  for (int i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
+
+  if (this->TargetSeedIds != NULL)
   {
-    vtkDebugMacro(" " << this->TargetSeedIds->GetId(i));
+    vtkDebugMacro("TARGET POINTS");
+    for (int i=0; i<this->TargetSeedIds->GetNumberOfIds(); i++)
+    {
+      vtkDebugMacro(" " << this->TargetSeedIds->GetId(i));
+    }
   }
-  vtkDebugMacro("CAP CENTER POINTS");
-  for (int i=0; i<this->CapCenterIds->GetNumberOfIds(); i++)
+
+  if (this->CapCenterIds != NULL)
   {
-    vtkDebugMacro(" " << this->CapCenterIds->GetId(i));
+    vtkDebugMacro("CAP CENTER POINTS");
+    for (int i=0; i<this->CapCenterIds->GetNumberOfIds(); i++)
+    {
+      vtkDebugMacro(" " << this->CapCenterIds->GetId(i));
+    }
   }
 
   // ------------------------------------------------------------------------

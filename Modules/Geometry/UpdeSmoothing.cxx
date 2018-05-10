@@ -57,8 +57,8 @@ int main(int argc, char *argv[])
   std::string outputFilename;
 
   // Default values for options
-  int numOuterSmooth = 10;
-  int numInnerSmooth = 10;
+  int numOuterSmooth = 1;
+  int numInnerSmooth = 500;
 
   // argc is the number of strings on the command-line
   //  starting with the program name

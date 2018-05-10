@@ -167,6 +167,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       }
     }
   }
+  this->WorkPd->GetPointData()->AddArray(smoothPointArray);
 
   vtkIdType npts, *pts;
   vtkNew(vtkIdList, pointCellIds);
