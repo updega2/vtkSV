@@ -43,6 +43,7 @@ set(SRCS
   vtkSVSuperSquareBoundaryMapper.cxx
   vtkSVPointSetBoundaryMapper.cxx
   vtkSVParameterizeSurfaceOnPolycube.cxx
+  vtkSVNewParameterizeSurfaceOnPolycube.cxx
   vtkSVParameterizeVolumeOnPolycube.cxx
   vtkSVSphericalMapper.cxx
   )
@@ -54,6 +55,7 @@ set(HDRS
   vtkSVSuperSquareBoundaryMapper.h
   vtkSVPointSetBoundaryMapper.h
   vtkSVParameterizeSurfaceOnPolycube.h
+  vtkSVNewParameterizeSurfaceOnPolycube.cxx
   vtkSVParameterizeVolumeOnPolycube.h
   vtkSVSphericalMapper.h
   )

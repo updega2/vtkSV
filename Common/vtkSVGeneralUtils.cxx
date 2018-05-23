@@ -3688,8 +3688,37 @@ int vtkSVGeneralUtils::FindPointMatchingValues(vtkPointSet *ps, std::string arra
     else if (prevNum == pointCellValues->GetNumberOfIds() && prevNum == 4)
       closeMatch = i;
   }
+  // TODO CHECK IF WE WANT THIS
   if (closeMatch != -1)
     returnPtId = closeMatch;
 
   return SV_ERROR;
+}
+
+// ----------------------
+// FindPointsMatchingValues
+// ----------------------
+int vtkSVGeneralUtils::FindPointsMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, vtkIdList *returnPtIds)
+{
+  int found = 0;
+  for (int i=0; i<ps->GetNumberOfPoints(); i++)
+  {
+    vtkNew(vtkIdList, pointCellValues);
+    vtkSVGeneralUtils::GetPointCellsValues(ps, arrayName, i, pointCellValues);
+    int prevNum = pointCellValues->GetNumberOfIds();
+    pointCellValues->IntersectWith(matchingVals);
+
+    if (pointCellValues->GetNumberOfIds() == matchingVals->GetNumberOfIds() &&
+        prevNum == pointCellValues->GetNumberOfIds())
+    {
+      // We found it!
+      returnPtIds->InsertNextId(i);
+      found = 1;
+    }
+  }
+
+  if (!found)
+    return SV_ERROR;
+
+  return SV_OK;
 }

@@ -41,6 +41,7 @@ set(SRCS
   vtkSVCenterlines.cxx
   vtkSVPolyBallLine.cxx
   vtkSVVesselNetworkDecomposerAndParameterizer.cxx
+  vtkSVNewVesselNetworkDecomposerAndParameterizer.cxx
   vtkSVCenterlineGraph.cxx
   vtkSVCenterlineGCell.cxx
   vtkSVCenterlineBranchSplitter.cxx
@@ -61,6 +62,7 @@ set(HDRS
   vtkSVPolyBallLine.h
   vtkSVCenterlines.h
   vtkSVVesselNetworkDecomposerAndParameterizer.h
+  vtkSVNewVesselNetworkDecomposerAndParameterizer.h
   vtkSVCenterlineGraph.h
   vtkSVCenterlineGCell.h
   vtkSVCenterlineBranchSplitter.h
@@ -140,6 +142,7 @@ if(VTKSV_BUILD_EXES)
     CenterlinesEdgeWeightedCVT
     CenterlinesBasedNormalsEdgeWeightedCVT
     VesselNetworkDecomposerAndParameterizer
+    NewVesselNetworkDecomposerAndParameterizer
     CenterlinesExtractor
     CenterlinesSplitter
     CenterlinesMerger

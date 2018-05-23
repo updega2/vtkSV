@@ -271,9 +271,9 @@ int vtkSVPolycubeGenerator::GetApproximatePolycubeSize(double &polycubeSize)
 
   avgRadius = avgRadius/numPoints;
 
-  //polycubeSize = 4*avgRadius;
+  polycubeSize = 4*avgRadius;
   //polycubeSize = 2*avgRadius;
-  polycubeSize = avgRadius;
+  //polycubeSize = avgRadius;
 
   return SV_OK;
 }

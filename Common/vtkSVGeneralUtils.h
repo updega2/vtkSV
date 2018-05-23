@@ -490,6 +490,7 @@ public:
                                    double rotMatrix[9]);
 
   static int FindPointMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, int &returnPtId);
+  static int FindPointsMatchingValues(vtkPointSet *ps, std::string arrayName, vtkIdList *matchingVals, vtkIdList *returnPtIds);
 
 
 protected:

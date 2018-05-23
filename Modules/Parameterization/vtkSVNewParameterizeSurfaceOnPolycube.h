@@ -29,7 +29,7 @@
  *=========================================================================*/
 
 /**
- *  \class vtkSVParameterizeSurfaceOnPolycube
+ *  \class vtkSVNewParameterizeSurfaceOnPolycube
  *  \brief Using a polydata centerlines, separate the polydata into regions
  *  based on the centerlines
  *
@@ -39,8 +39,8 @@
  *  \author shaddenlab.berkeley.edu
  */
 
-#ifndef vtkSVParameterizeSurfaceOnPolycube_h
-#define vtkSVParameterizeSurfaceOnPolycube_h
+#ifndef vtkSVNewParameterizeSurfaceOnPolycube_h
+#define vtkSVNewParameterizeSurfaceOnPolycube_h
 
 #include "vtkSVParameterizationModule.h" // For exports
 
@@ -53,13 +53,13 @@
 
 #include "vtkSVGlobals.h"
 
-class VTKSVPARAMETERIZATION_EXPORT vtkSVParameterizeSurfaceOnPolycube : public vtkPolyDataAlgorithm
+class VTKSVPARAMETERIZATION_EXPORT vtkSVNewParameterizeSurfaceOnPolycube : public vtkPolyDataAlgorithm
 {
 public:
-  vtkTypeMacro(vtkSVParameterizeSurfaceOnPolycube,vtkPolyDataAlgorithm);
+  vtkTypeMacro(vtkSVNewParameterizeSurfaceOnPolycube,vtkPolyDataAlgorithm);
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
-  static vtkSVParameterizeSurfaceOnPolycube *New();
+  static vtkSVNewParameterizeSurfaceOnPolycube *New();
 
   //@{
   /// \brief Get/Set macro for surface polycube
@@ -112,8 +112,8 @@ public:
   //@}
 
 protected:
-  vtkSVParameterizeSurfaceOnPolycube();
-  ~vtkSVParameterizeSurfaceOnPolycube();
+  vtkSVNewParameterizeSurfaceOnPolycube();
+  ~vtkSVNewParameterizeSurfaceOnPolycube();
 
   // Usual data generation method
   virtual int RequestData(vtkInformation *,
@@ -159,8 +159,8 @@ protected:
   int EnforcePolycubeConnectivity;
 
 private:
-  vtkSVParameterizeSurfaceOnPolycube(const vtkSVParameterizeSurfaceOnPolycube&);  // Not implemented.
-  void operator=(const vtkSVParameterizeSurfaceOnPolycube&);  // Not implemented.
+  vtkSVNewParameterizeSurfaceOnPolycube(const vtkSVNewParameterizeSurfaceOnPolycube&);  // Not implemented.
+  void operator=(const vtkSVNewParameterizeSurfaceOnPolycube&);  // Not implemented.
 };
 
 #endif

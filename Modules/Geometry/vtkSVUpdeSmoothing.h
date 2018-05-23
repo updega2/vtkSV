@@ -55,6 +55,11 @@ public:
   void PrintSelf(ostream& os, vtkIndent indent) override;
 
   //@{
+  vtkGetObjectMacro(SourcePd,vtkPolyData);
+  vtkSetObjectMacro(SourcePd,vtkPolyData);
+  //@}
+
+  //@{
   vtkGetMacro(NumberOfOuterSmoothOperations,int);
   vtkSetMacro(NumberOfOuterSmoothOperations,int);
   //@}
@@ -89,6 +94,7 @@ protected:
   double Beta;
 
   vtkPolyData *WorkPd;
+  vtkPolyData *SourcePd;
   vtkIntArray *SmoothPointArray;
 
   char *SmoothPointArrayName;
