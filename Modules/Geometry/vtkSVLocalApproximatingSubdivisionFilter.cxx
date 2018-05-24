@@ -174,7 +174,7 @@ int vtkSVLocalApproximatingSubdivisionFilter::RequestData(
     {
       if (this->GetSubdivideArrays(inputDS,0) != 1)
       {
-        vtkErrorMacro("Need cell array on mesh to be able to local subdivide");
+        vtkErrorMacro("Need point array on mesh to be able to local subdivide");
         this->SetErrorCode(vtkErrorCode::UserError + 1);
         return SV_ERROR;
       }

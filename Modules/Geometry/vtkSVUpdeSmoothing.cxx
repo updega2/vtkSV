@@ -183,38 +183,38 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   }
 
 
-  // ========================= FEATURE EDGES ===============================
-  vtkNew(vtkPolyData, idPd);
-  idPd->DeepCopy(this->WorkPd);
-  vtkSVGeneralUtils::GiveIds(idPd, "TmpInternalIds");
+  //// ========================= FEATURE EDGES ===============================
+  //vtkNew(vtkPolyData, idPd);
+  //idPd->DeepCopy(this->WorkPd);
+  //vtkSVGeneralUtils::GiveIds(idPd, "TmpInternalIds");
 
   //this->SetSmoothPointArrayName("SmoothPoints");
-  vtkNew(vtkIntArray, tmpSmoothPointArray);
-  tmpSmoothPointArray->SetNumberOfTuples(idPd->GetNumberOfPoints());
-  tmpSmoothPointArray->FillComponent(0, 1);
-  tmpSmoothPointArray->SetName("SmoothPoints");
+  //vtkNew(vtkIntArray, tmpSmoothPointArray);
+  //tmpSmoothPointArray->SetNumberOfTuples(idPd->GetNumberOfPoints());
+  //tmpSmoothPointArray->FillComponent(0, 1);
+  //tmpSmoothPointArray->SetName("SmoothPoints");
 
-  vtkNew(vtkFeatureEdges, featurer);
-  featurer->SetInputData(idPd);
-  featurer->NonManifoldEdgesOff();
-  featurer->ManifoldEdgesOff();
-  featurer->BoundaryEdgesOff();
-  featurer->FeatureEdgesOn();
-  featurer->SetFeatureAngle(70.0);
-  featurer->Update();
+  //vtkNew(vtkFeatureEdges, featurer);
+  //featurer->SetInputData(idPd);
+  //featurer->NonManifoldEdgesOff();
+  //featurer->ManifoldEdgesOff();
+  //featurer->BoundaryEdgesOff();
+  //featurer->FeatureEdgesOn();
+  //featurer->SetFeatureAngle(70.0);
+  //featurer->Update();
 
-  vtkNew(vtkPolyData, featurePd);
-  featurePd->DeepCopy(featurer->GetOutput());
+  //vtkNew(vtkPolyData, featurePd);
+  //featurePd->DeepCopy(featurer->GetOutput());
 
-  int realPtId;
-  for (int i=0; i<featurePd->GetNumberOfPoints(); i++)
-  {
-    realPtId = featurePd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(i);
-    fixedPoints[realPtId] = 1;
-    tmpSmoothPointArray->SetTuple1(realPtId, 0);
-  }
-  this->WorkPd->GetPointData()->AddArray(tmpSmoothPointArray);
-  // ========================= FEATURE EDGES ===============================
+  //int realPtId;
+  //for (int i=0; i<featurePd->GetNumberOfPoints(); i++)
+  //{
+  //  realPtId = featurePd->GetPointData()->GetArray("TmpInternalIds")->GetTuple1(i);
+  //  fixedPoints[realPtId] = 1;
+  //  tmpSmoothPointArray->SetTuple1(realPtId, 0);
+  //}
+  //this->WorkPd->GetPointData()->AddArray(tmpSmoothPointArray);
+  //// ========================= FEATURE EDGES ===============================
 
   vtkIdType npts, *pts;
   vtkNew(vtkIdList, pointCellIds);

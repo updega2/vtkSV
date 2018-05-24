@@ -44,6 +44,7 @@
 #include "vtkIntArray.h"
 #include "vtkLine.h"
 #include "vtkLinearSubdivisionFilter.h"
+#include "vtkLoopSubdivisionFilter.h"
 #include "vtkMath.h"
 #include "vtkObjectFactory.h"
 #include "vtkPointData.h"
@@ -558,10 +559,16 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
   }
   cleanPolycubeOnSurfacePd->GetPointData()->AddArray(smoothPointArray);
 
+  vtkNew(vtkLoopSubdivisionFilter, subdivider);
+  subdivider->SetInputData(this->WorkPd);
+  subdivider->SetNumberOfSubdivisions(3);
+  subdivider->Update();
+
   vtkNew(vtkSVUpdeSmoothing, paramSmoother);
   paramSmoother->SetInputData(cleanPolycubeOnSurfacePd);
   paramSmoother->SetSmoothPointArrayName("SmoothPoints");
   paramSmoother->SetNumberOfInnerSmoothOperations(200);
+  paramSmoother->SetSourcePd(subdivider->GetOutput()); // Constrain to original surface
   paramSmoother->Update();
 
   cleanPolycubeOnSurfacePd->DeepCopy(paramSmoother->GetOutput());
