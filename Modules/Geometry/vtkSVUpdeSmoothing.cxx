@@ -161,7 +161,17 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     this->SourcePd = vtkPolyData::New();
     this->SourcePd->DeepCopy(triangulator->GetOutput());
     this->SourcePd->BuildLinks();
+
   }
+  vtkNew(vtkPolyDataNormals, sNormaler);
+  sNormaler->SetInputData(this->SourcePd);
+  sNormaler->SplittingOff();
+  sNormaler->ComputeCellNormalsOn();
+  sNormaler->ComputePointNormalsOn();
+  sNormaler->FlipNormalsOn();
+  sNormaler->Update();
+
+  vtkDataArray *sCellNormals = sNormaler->GetOutput()->GetCellData()->GetArray("Normals");
 
   // Build locator if source given
   double length = this->WorkPd->GetLength();
@@ -282,40 +292,41 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     shapeImproveDirection->SetNumberOfTuples(numPts);
     shapeImproveDirection->SetName("ShapeImproveDirection");
 
-    std::vector<std::vector<int> > pointCells(numPts);
-    std::vector<std::vector<int> > cellPoints(numCells);
+    this->PointCells.clear();
+    this->PointCells.resize(numPts);
     vtkNew(vtkIdList, pointCellIds);
     for (int i=0; i<numPts; i++)
     {
       this->WorkPd->GetPointCells(i, pointCellIds);
       for (int j=0; j<pointCellIds->GetNumberOfIds(); j++)
       {
-        pointCells[i].push_back(pointCellIds->GetId(j));
+        this->PointCells[i].push_back(pointCellIds->GetId(j));
       }
     }
 
+    this->CellPoints.clear();
+    this->CellPoints.resize(numPts);
     vtkIdType npts, *pts;
     for (int i=0; i<numCells; i++)
     {
       this->WorkPd->GetCellPoints(i, npts, pts);
       for (int j=0; j<npts; j++)
       {
-        cellPoints[i].push_back(pts[j]);
+        this->CellPoints[i].push_back(pts[j]);
       }
     }
 
     int pointCellStatus;
     int cellId, pointIndex;
-    int ptId0, ptId1, ptId2, oppPtId;
-    double f;
-    double df[3];
     double pointImprove = 0;
     double pointImproveDir[3];
-    double pt0[3], pt1[3], pt2[3], oppositePt[3];
+    double testPointImprove = 0;
+    double testPointImproveDir[3];
     double testPt[3];
 
     int subId;
     int edgeStatus;
+    double pt0[3];
     double normDot;
     double newPt[3];
     double normal[3];
@@ -331,7 +342,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     vtkNew(vtkIdList, cellEdgeNeighbors);
     double maxBad = 0.0;
     double avgBad = 0.0;
-    for (int iter=0; iter<1000; iter++)
+    for (int iter=0; iter<100; iter++)
     {
       maxBad = 0;
       avgBad = 0;
@@ -343,53 +354,10 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
           pointImproveDir[j] = 0.0;
         }
 
-        for (int j=0; j<pointCells[i].size(); j++)
-        {
-          cellId = pointCells[i][j];
-          for (int k=0; k<cellPoints[cellId].size(); k++)
-          {
-            if (cellPoints[cellId][k] == i)
-            {
-              pointIndex = k;
-              break;
-            }
-          }
+        this->ComputeVertexCondition(i, pointImprove, pointImproveDir);
+        vtkMath::Normalize(pointImproveDir);
+        vtkMath::MultiplyScalar(pointImproveDir, -1.0);
 
-          for (int k=0; k<cellPoints[cellId].size(); k++)
-          {
-            if (k == (pointIndex+2)%npts)
-            {
-              continue;
-            }
-
-            // doing with repsect to point ptId0
-            ptId0   = cellPoints[cellId][k];
-            oppPtId = cellPoints[cellId][(k+1)%npts];
-            ptId1   = cellPoints[cellId][(k+2)%npts];
-            ptId2   = cellPoints[cellId][(k+3)%npts];
-
-            this->WorkPd->GetPoint(ptId0, pt0);
-            this->WorkPd->GetPoint(oppPtId, oppositePt);
-            this->WorkPd->GetPoint(ptId1, pt1);
-            this->WorkPd->GetPoint(ptId2, pt2);
-
-            //this->ComputeUntanglingFunction(pt0, pt1, pt2, oppositePt, SV_PI/2.0, f);
-
-            // Compute function
-            this->ComputeShapeImprovementFunction(pt0, pt1, pt2, oppositePt, f);
-
-            // Compute direction
-            this->ComputeShapeImprovementDerivatives(pt0, pt1, pt2, oppositePt, df);
-            vtkMath::Normalize(df);
-
-            //fprintf(stdout,"NUTS: %.6f %.6f %.6f\n", df[0], df[1], df[2]);
-            pointImprove += f;
-            for (int l=0; l<3; l++)
-            {
-              pointImproveDir[l] += df[l];
-            }
-          }
-        }
         //fprintf(stdout,"PONT IMP DIR: %.6f %.6f %.6f\n", pointImproveDir[0], pointImproveDir[1], pointImproveDir[2]);
 
         // Now time to move point
@@ -411,37 +379,34 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         this->SourcePd->GetCellPoints(closestCellId, snpts, spts);
 
         // Within cell
-        if (pointCellStatus == 0)
-        {
-          allCapableNeighbors->InsertNextId(closestCellId);
-        }
+        allCapableNeighbors->InsertNextId(closestCellId);
 
         // On edges
         if (pointCellStatus == 1)
         {
           cellEdgeNeighbors->Reset();
           this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[1], spts[2], cellEdgeNeighbors);
-          for (int i=0; i<cellEdgeNeighbors->GetNumberOfIds(); i++)
+          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
           {
-            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(i));
+            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
           }
         }
         if (pointCellStatus == 2)
         {
           cellEdgeNeighbors->Reset();
           this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[0], spts[2], cellEdgeNeighbors);
-          for (int i=0; i<cellEdgeNeighbors->GetNumberOfIds(); i++)
+          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
           {
-            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(i));
+            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
           }
         }
         if (pointCellStatus == 4)
         {
           cellEdgeNeighbors->Reset();
           this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[0], spts[1], cellEdgeNeighbors);
-          for (int i=0; i<cellEdgeNeighbors->GetNumberOfIds(); i++)
+          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
           {
-            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(i));
+            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
           }
         }
 
@@ -449,32 +414,26 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         if (pointCellStatus == 3)
         {
           // on vertex 2
-          this->SourcePd->GetCellPoints(spts[2], allCapableNeighbors);
+          this->SourcePd->GetPointCells(spts[2], allCapableNeighbors);
         }
 
         if (pointCellStatus == 5)
         {
           // on vertex 1
-          this->SourcePd->GetCellPoints(spts[1], allCapableNeighbors);
+          this->SourcePd->GetPointCells(spts[1], allCapableNeighbors);
         }
 
         if (pointCellStatus == 6)
         {
           // on vertex 0
-          this->SourcePd->GetCellPoints(spts[0], allCapableNeighbors);
+          this->SourcePd->GetPointCells(spts[0], allCapableNeighbors);
         }
 
         for (int k=0; k<allCapableNeighbors->GetNumberOfIds(); k++)
         {
           cellId = allCapableNeighbors->GetId(k);
-          this->SourcePd->GetCellPoints(cellId, snpts, spts);
 
-          for (int l=0; l<3; l++)
-          {
-            this->SourcePd->GetPoint(spts[l], sourcePts[l]);
-          }
-
-          vtkTriangle::ComputeNormal(sourcePts[0], sourcePts[1], sourcePts[2], normal);
+          sCellNormals->GetTuple(cellId, normal);
           vtkMath::Normalize(normal);
           normDot = vtkMath::Dot(pointImproveDir, normal);
 
@@ -484,12 +443,49 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
           if (this->MovePointToEdge(closestPt, cellId, tangentImproveDir, newPt, edgeStatus) == SV_OK)
           {
-            vtkMath::Normalize(tangentImproveDir);
-            vtkMath::MultiplyScalar(tangentImproveDir, 0.001);
-            vtkMath::Add(closestPt, tangentImproveDir, closestPt);
+            // iterate till get to good spot
+            double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
+            double stepSize = segmentLength * 0.01;
+            int numberOfSteps = (int) ceil(segmentLength/stepSize);
+            stepSize = segmentLength /numberOfSteps;
+            double dirLength = 0.0;
 
-            this->WorkPd->GetPoints()->SetPoint(i, closestPt);
-            break;
+            int m;
+            double newOptDir[3];
+            double funcVal = pointImprove;
+            double newFuncVal;
+            for (m=0; m<numberOfSteps; m++)
+            {
+              dirLength += stepSize;
+              this->MovePointDistance(closestPt, tangentImproveDir, dirLength, newPt);
+
+              this->WorkPd->GetPoints()->SetPoint(i, newPt);
+
+              this->ComputeVertexCondition(i, newFuncVal, newOptDir);
+              fprintf(stdout,"INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
+
+              if (newFuncVal > funcVal)
+              {
+                this->WorkPd->GetPoints()->SetPoint(i, closestPt);
+                break;
+              }
+              else
+              {
+                funcVal = newFuncVal;
+
+                for (int n=0; n<3; n++)
+                {
+                  closestPt[n] = newPt[n];
+                }
+              }
+            }
+
+            if (m > 0)
+            {
+              fprintf(stdout,"BROKED\n");
+              this->WorkPd->GetPoints()->SetPoint(i, closestPt);
+              break;
+            }
           }
         }
 
@@ -899,6 +895,74 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   return SV_OK;
 }
 
+// ----------------------
+// ComputeVertexCondition
+// ----------------------
+int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition, double optDirection[3])
+{
+  vertexCondition = 0;
+  for (int j=0; j<3; j++)
+  {
+    optDirection[j] = 0.0;
+  }
+
+  int numpts;
+  int cellId, pointIndex;
+  int ptId0, ptId1, ptId2, oppPtId;
+  double f, df[3];
+  double pt0[3], pt1[3], pt2[3], oppositePt[3];
+  for (int j=0; j<this->PointCells[ptId].size(); j++)
+  {
+    cellId = this->PointCells[ptId][j];
+    for (int k=0; k<this->CellPoints[cellId].size(); k++)
+    {
+      if (this->CellPoints[cellId][k] == ptId)
+      {
+        pointIndex = k;
+        break;
+      }
+    }
+
+    numpts = this->CellPoints[cellId].size();
+    for (int k=0; k<this->CellPoints[cellId].size(); k++)
+    {
+      if (k == (pointIndex+1)%numpts)
+      {
+        continue;
+      }
+
+      // doing with repsect to point ptId0
+      ptId0   = this->CellPoints[cellId][k];
+      oppPtId = this->CellPoints[cellId][(k+1)%numpts];
+      ptId1   = this->CellPoints[cellId][(k+2)%numpts];
+      ptId2   = this->CellPoints[cellId][(k+3)%numpts];
+
+      this->WorkPd->GetPoint(ptId0, pt0);
+      this->WorkPd->GetPoint(oppPtId, oppositePt);
+      this->WorkPd->GetPoint(ptId1, pt1);
+      this->WorkPd->GetPoint(ptId2, pt2);
+
+      //this->ComputeUntanglingFunction(pt0, pt1, pt2, oppositePt, SV_PI/2.0, f);
+
+      // Compute function
+      this->ComputeShapeImprovementFunction(pt0, pt1, pt2, oppositePt, f);
+
+      // Compute direction
+      this->ComputeShapeImprovementDerivatives(pt0, pt1, pt2, oppositePt, df);
+      //vtkMath::Normalize(df);
+
+      //fprintf(stdout,"NUTS: %.6f %.6f %.6f\n", df[0], df[1], df[2]);
+      vertexCondition += f;
+      for (int l=0; l<3; l++)
+      {
+        optDirection[l] += df[l];
+      }
+    }
+  }
+
+  return SV_OK;
+}
+
 
 // ----------------------
 // RunFilter
@@ -1159,7 +1223,6 @@ int vtkSVUpdeSmoothing::PointCellStatus(double currentPt[3], int sourceCell, int
     pointCellStatus += 4;
   }
 
-
   return SV_OK;
 }
 
@@ -1229,7 +1292,26 @@ int vtkSVUpdeSmoothing::EdgeStatusWithDir(double currentPt[3], int sourceCell, d
 }
 
 // ----------------------
-// ComputeOptimumPointAlongDir
+// MovePointDistance
+// ----------------------
+int vtkSVUpdeSmoothing::MovePointDistance(double currentPt[3], double moveDir[3], double length, double newPt[3])
+{
+  double copyDir[3];
+  for (int i=0; i<3; i++)
+  {
+   copyDir[i] = moveDir[i];
+  }
+
+  vtkMath::Normalize(copyDir);
+  vtkMath::MultiplyScalar(copyDir, length);
+
+  vtkMath::Add(currentPt, copyDir, newPt);
+
+  return SV_OK;
+}
+
+// ----------------------
+// MovePointToEdge
 // ----------------------
 int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, double moveDir[3], double newPt[3], int &edgeStatus)
 {
@@ -1471,15 +1553,15 @@ int vtkSVUpdeSmoothing::ComputeShapeImprovementDerivatives(double pt0[3], double
   //fprintf(stdout,"dJdZ:  %.6f\n", dJdZ);
   //fprintf(stdout,"F2:    %.6f\n", F2);
 
-  dK[0] = ((detJacobian * dF0dX) + (dJdX * F0)) / (2 * pow(detJacobian, 2.0));
-  dK[1] = ((detJacobian * dF0dY) + (dJdY * F0)) / (2 * pow(detJacobian, 2.0));
-  dK[2] = ((detJacobian * dF0dZ) + (dJdZ * F0)) / (2 * pow(detJacobian, 2.0));
+  //dK[0] = ((detJacobian * dF0dX) + (dJdX * F0)) / (2 * pow(detJacobian, 2.0));
+  //dK[1] = ((detJacobian * dF0dY) + (dJdY * F0)) / (2 * pow(detJacobian, 2.0));
+  //dK[2] = ((detJacobian * dF0dZ) + (dJdZ * F0)) / (2 * pow(detJacobian, 2.0));
   //dK[0] = ((detJacobian * dF1dX) + (dJdX * F1)) / (2 * pow(detJacobian, 2.0));
   //dK[1] = ((detJacobian * dF1dY) + (dJdY * F1)) / (2 * pow(detJacobian, 2.0));
   //dK[2] = ((detJacobian * dF1dZ) + (dJdZ * F1)) / (2 * pow(detJacobian, 2.0));
-  //dK[0] = ((detJacobian * dF2dX) + (dJdX * F2)) / (2 * pow(detJacobian, 2.0));
-  //dK[1] = ((detJacobian * dF2dY) + (dJdY * F2)) / (2 * pow(detJacobian, 2.0));
-  //dK[2] = ((detJacobian * dF2dZ) + (dJdZ * F2)) / (2 * pow(detJacobian, 2.0));
+  dK[0] = ((detJacobian * dF2dX) + (dJdX * F2)) / (2 * pow(detJacobian, 2.0));
+  dK[1] = ((detJacobian * dF2dY) + (dJdY * F2)) / (2 * pow(detJacobian, 2.0));
+  dK[2] = ((detJacobian * dF2dZ) + (dJdZ * F2)) / (2 * pow(detJacobian, 2.0));
 
   return SV_OK;
 }
@@ -1573,9 +1655,9 @@ int vtkSVUpdeSmoothing::ComputeShapeImprovementFunction(double pt0[3], double pt
   double F1 = pow(l0, 2.0) + pow(l1, 2.0);
   double F2 = pow(l1, 2.0) + pow(l2, 2.0);
 
-  f = F0/ (2 *detJacobian);
+  //f = F0/ (2 *detJacobian);
   //f = F1/ (2 *detJacobian);
-  //f = F2/ (2 *detJacobian);
+  f = F2/ (2 *detJacobian);
 
   return SV_OK;
 }

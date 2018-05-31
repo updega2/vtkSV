@@ -94,6 +94,7 @@ protected:
                                double oppositePt[3], int sourceCell, double newPt[3]);
   int ComputeOptimizationDirection(double pt0[3], double pt1[3], double currentPt[3], double oppositePt[3], int sourceCell, double newDir[3]);
   int MovePointToEdge(double currentPt[3], int sourceCell, double moveDir[3], double newPt[3], int &edgeStatus);
+  int MovePointDistance(double currentPt[3], double moveDir[3], double length, double newPt[3]);
   int ComputeUntanglingDerivatives(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double newDir[3]);
   int GetJacobianDerivatives(double pt0[3], double pt1[3], double pt2[3],
                            double pPt0[3], double pPt1[3], double pPt2[3],
@@ -101,9 +102,10 @@ protected:
   int ComputeShapeImprovementDerivatives(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3],
                                        double dK[3]);
 
-int ComputeUntanglingFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double &f);
+  int ComputeUntanglingFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double &f);
 
-int ComputeShapeImprovementFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double &f);
+  int ComputeShapeImprovementFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double &f);
+  int ComputeVertexCondition(int ptId, double &vertexCondition, double optDirection[3]);
 
   double Determinant(double mat[4]);
 
@@ -122,6 +124,8 @@ int ComputeShapeImprovementFunction(double pt0[3], double pt1[3], double pt2[3],
   char *SmoothPointArrayName;
 
   std::vector<std::vector<int> > CellsOnSource;
+  std::vector<std::vector<int> > PointCells;
+  std::vector<std::vector<int> > CellPoints;
 
 private:
   vtkSVUpdeSmoothing(const vtkSVUpdeSmoothing&);  // Not implemented.
