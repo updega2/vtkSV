@@ -88,6 +88,28 @@ protected:
 
   int RunFilter(vtkPolyData *original, vtkPolyData *output);
 
+  int PointCellStatus(double currentPt[3], int sourceCell, int &pointCellStatus);
+  int EdgeStatusWithDir(double currentPt[3], int sourceCell, double moveDir[3], int &edgeStatus) ;
+  int ComputeOptimizationPoint(int pointId, double pt0[3], double pt1[3], double pt2[3],
+                               double oppositePt[3], int sourceCell, double newPt[3]);
+  int ComputeOptimizationDirection(double pt0[3], double pt1[3], double currentPt[3], double oppositePt[3], int sourceCell, double newDir[3]);
+  int MovePointToEdge(double currentPt[3], int sourceCell, double moveDir[3], double newPt[3], int &edgeStatus);
+  int ComputeUntanglingDerivatives(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double newDir[3]);
+  int GetJacobianDerivatives(double pt0[3], double pt1[3], double pt2[3],
+                           double pPt0[3], double pPt1[3], double pPt2[3],
+                           double &dJdX, double &dJdY, double &dJdZ);
+  int ComputeShapeImprovementDerivatives(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3],
+                                       double dK[3]);
+
+int ComputeUntanglingFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double &f);
+
+int ComputeShapeImprovementFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double &f);
+
+  double Determinant(double mat[4]);
+
+  int GetJacobians(double pPt0[3], double pPt1[3], double pPt2[3],
+                   double J0[4], double J1[4], double J2[4]);
+
   int NumberOfOuterSmoothOperations;
   int NumberOfInnerSmoothOperations;
   double Alpha;
@@ -98,6 +120,8 @@ protected:
   vtkIntArray *SmoothPointArray;
 
   char *SmoothPointArrayName;
+
+  std::vector<std::vector<int> > CellsOnSource;
 
 private:
   vtkSVUpdeSmoothing(const vtkSVUpdeSmoothing&);  // Not implemented.

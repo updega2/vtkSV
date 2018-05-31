@@ -63,6 +63,7 @@
 #include "vtkTransform.h"
 #include "vtkTransformFilter.h"
 #include "vtkTransformPolyDataFilter.h"
+#include "vtkTriangle.h"
 #include "vtkTriangleFilter.h"
 #include "vtkDataSet.h"
 #include "vtkUnstructuredGrid.h"
@@ -906,6 +907,111 @@ int vtkSVGeneralUtils::GetBarycentricCoordinates(double f[3], double pt0[3],
 }
 
 // ----------------------
+// ComputeParametricDerivatives
+// ----------------------
+int vtkSVGeneralUtils::ComputeParametricDerivatives(double pt0[3], double pt1[3], double pt2[3],
+                                                    double pPt0[3], double pPt1[3], double pPt2[3],
+                                                    double dXdXi, double dXdEta,
+                                                    double dYdXi, double dYdEta,
+                                                    double dZdXi, double dZdEta)
+{
+  double area = vtkTriangle::TriangleArea(pPt0, pPt1, pPt2);
+
+  dXdXi = (1./2) * ((pPt0[1] - pPt1[1]) * pt2[0] +
+                    (pPt1[1] - pPt2[1]) * pt0[0] +
+                    (pPt1[1] - pPt0[1]) * pt1[0]) / area;
+  dXdEta = (1./2) * ((pPt0[0] - pPt1[0]) * pt2[0] +
+                    (pPt1[0] - pPt2[0]) * pt0[0] +
+                    (pPt1[0] - pPt0[0]) * pt1[0]) / area;
+
+  dYdXi = (1./2) * ((pPt0[1] - pPt1[1]) * pt2[1] +
+                    (pPt1[1] - pPt2[1]) * pt0[1] +
+                    (pPt1[1] - pPt0[1]) * pt1[1]) / area;
+  dYdEta = (1./2) * ((pPt0[0] - pPt1[0]) * pt2[1] +
+                    (pPt1[0] - pPt2[0]) * pt0[1] +
+                    (pPt1[0] - pPt0[0]) * pt1[1]) / area;
+
+  dZdXi = (1./2) * ((pPt0[1] - pPt1[1]) * pt2[2] +
+                    (pPt1[1] - pPt2[1]) * pt0[2] +
+                    (pPt1[1] - pPt0[1]) * pt1[2]) / area;
+  dZdEta = (1./2) * ((pPt0[0] - pPt1[0]) * pt2[2] +
+                    (pPt1[0] - pPt2[0]) * pt0[2] +
+                    (pPt1[0] - pPt0[0]) * pt1[2]) / area;
+
+  return SV_OK;
+}
+
+// ----------------------
+// ComputeJacobianDerivatives
+// ----------------------
+int vtkSVGeneralUtils::ComputeJacobianDerivatives(double pt0[3], double pt1[3], double pt2[3],
+                                                  double pPt0[3], double pPt1[3], double pPt2[3],
+                                                  double dXdXi, double dXdEta,
+                                                  double dYdXi, double dYdEta,
+                                                  double dZdXi, double dZdEta)
+{
+  double area = vtkTriangle::TriangleArea(pPt0, pPt1, pPt2);
+
+  dXdXi = (1./2) * ((pPt0[1] - pPt1[1]) * pt2[0] +
+                    (pPt1[1] - pPt2[1]) * pt0[0] +
+                    (pPt1[1] - pPt0[1]) * pt1[0]) / area;
+  dXdEta = (1./2) * ((pPt0[0] - pPt1[0]) * pt2[0] +
+                    (pPt1[0] - pPt2[0]) * pt0[0] +
+                    (pPt1[0] - pPt0[0]) * pt1[0]) / area;
+
+  dYdXi = (1./2) * ((pPt0[1] - pPt1[1]) * pt2[1] +
+                    (pPt1[1] - pPt2[1]) * pt0[1] +
+                    (pPt1[1] - pPt0[1]) * pt1[1]) / area;
+  dYdEta = (1./2) * ((pPt0[0] - pPt1[0]) * pt2[1] +
+                    (pPt1[0] - pPt2[0]) * pt0[1] +
+                    (pPt1[0] - pPt0[0]) * pt1[1]) / area;
+
+  dZdXi = (1./2) * ((pPt0[1] - pPt1[1]) * pt2[2] +
+                    (pPt1[1] - pPt2[1]) * pt0[2] +
+                    (pPt1[1] - pPt0[1]) * pt1[2]) / area;
+  dZdEta = (1./2) * ((pPt0[0] - pPt1[0]) * pt2[2] +
+                    (pPt1[0] - pPt2[0]) * pt0[2] +
+                    (pPt1[0] - pPt0[0]) * pt1[2]) / area;
+
+  return SV_OK;
+}
+
+// ----------------------
+// GetParametricPoints
+// ----------------------
+int vtkSVGeneralUtils::GetParametricPoints(double pt0[3], double pt1[3], double pt2[3],
+                                           double pPt0[3], double pPt1[3], double pPt2[3])
+{
+  // GIVE THE CORRECT RESULT IF WE NEED TO USE
+  double l0 = vtkSVMathUtils::Distance(pt0, pt1);
+  double l1 = vtkSVMathUtils::Distance(pt1, pt2);
+  double l2 = vtkSVMathUtils::Distance(pt2, pt0);
+
+  double x = (pow(l2, 2.0) -
+              pow(l1, 2.0) +
+              pow(l0, 2.0))/ (2 * l0);
+  double y = std::sqrt( pow(l2, 2.0) - pow(x, 2.0));
+
+  pPt0[0] = 0.0;
+  pPt0[1] = 0.0;
+  pPt0[2] = 0.0;
+
+  pPt1[0] = l0;
+  pPt1[1] = 0.0;
+  pPt1[2] = 0.0;
+
+  pPt2[0] = x;
+  pPt2[1] = y;
+  pPt2[2] = 0.0;
+
+  //vtkSVGeneralUtils::TransformTriangleToXYPlane(pt0, pt1, pt2,
+  //                                              pPt0, pPt1, pPt2);
+
+  return SV_OK;
+}
+
+
+// ----------------------
 // GetPointNeighbors
 // ----------------------
 int vtkSVGeneralUtils::GetPointNeighbors(vtkIdType p0,
@@ -1640,6 +1746,73 @@ int vtkSVGeneralUtils::ApplyRotationMatrix(vtkPolyData *pd, double rotMatrix[16]
   // Copy output
   pd->DeepCopy(pdTransformer->GetOutput());
   pd->BuildLinks();
+  return SV_OK;
+}
+
+// ----------------------
+// TransformTriangleToXYPlane
+// ----------------------
+int vtkSVGeneralUtils::TransformTriangleToXYPlane(double pt0[3], double pt1[3], double pt2[3],
+                                                  double outPt0[3], double outPt1[3], double outPt2[3])
+{
+  double xVec[3], tmpVec[3];
+  vtkMath::Subtract(pt1, pt0, xVec);
+  vtkMath::Normalize(xVec);
+  vtkMath::Subtract(pt2, pt1, tmpVec);
+  vtkMath::Normalize(tmpVec);
+
+  double zVec[3];
+  vtkMath::Cross(xVec, tmpVec, zVec);
+  vtkMath::Normalize(zVec);
+
+  double realX[3], realZ[3];
+  realX[0] = 1.0; realX[1] = 0.0; realX[2] = 0.0;
+  realZ[0] = 0.0; realZ[1] = 0.0; realZ[2] = 1.0;
+
+  vtkNew(vtkMatrix4x4, rotMatrix0);
+  vtkSVGeneralUtils::GetRotationMatrix(zVec, realZ, rotMatrix0);
+  double inputXVec[4], newXVec[4];
+  inputXVec[0] = 0.0; inputXVec[1] = 0.0; inputXVec[2] = 0.0; inputXVec[3] = 0.0;
+  newXVec[0] = 0.0; newXVec[1] = 0.0; newXVec[2] = 0.0; newXVec[3] = 0.0;
+  for (int i=0; i<3; i++)
+    inputXVec[i] = xVec[i];
+  inputXVec[3] = 0.0;
+  rotMatrix0->MultiplyPoint(xVec, newXVec);
+
+  vtkNew(vtkMatrix4x4, rotMatrix1);
+  vtkSVGeneralUtils::GetRotationMatrix(newXVec, realX, rotMatrix1);
+
+  double rot0Pts[3][4];
+  double rot1Pts[3][4];
+  double tmpOutPts[3][4];
+  for (int j=0; j<3; j++)
+  {
+    rot0Pts[0][j] = pt0[j];
+    rot0Pts[1][j] = pt1[j];
+    rot0Pts[2][j] = pt2[j];
+  }
+  rot0Pts[0][3] = 0.0;
+  rot0Pts[1][3] = 0.0;
+  rot0Pts[2][3] = 0.0;
+
+  for (int i=0; i<3; i++)
+  {
+    rotMatrix0->MultiplyPoint(rot0Pts[i], rot1Pts[i]);
+  }
+
+  for (int i=0; i<3; i++)
+  {
+    rotMatrix1->MultiplyPoint(rot1Pts[i], tmpOutPts[i]);
+  }
+
+  // move to 0.0, 0.0
+  for (int j=0; j<3; j++)
+  {
+    outPt0[j] = tmpOutPts[0][j] - tmpOutPts[0][j];
+    outPt1[j] = tmpOutPts[1][j] - tmpOutPts[0][j];
+    outPt2[j] = tmpOutPts[2][j] - tmpOutPts[0][j];
+  }
+
   return SV_OK;
 }
 

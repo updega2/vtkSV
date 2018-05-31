@@ -419,6 +419,27 @@ public:
   static int ApplyRotationMatrix(vtkUnstructuredGrid *ug, double rotMatrix[16]);
   //@}
 
+  /** \brief Transforms the three points of a triangle in 3d to 2d. pt0 is
+   *   relocated to 0.0, 0.0 and pt1 is relocated to lie on the x axis.
+   *  return SV_OK */
+  static int TransformTriangleToXYPlane(double pt0[3], double pt1[3], double pt2[3],
+                                        double outPt0[3], double outPt1[3], double outPt[2]);
+
+  static int ComputeParametricDerivatives(double pt0[3], double pt1[3], double pt2[3],
+                                                    double pPt0[3], double pPt1[3], double pPt2[3],
+                                                    double dXdXi, double dXdEta,
+                                                    double dYdXi, double dYdEta,
+                                                    double dZdXi, double dZdEta);
+
+  static int ComputeJacobianDerivatives(double pt0[3], double pt1[3], double pt2[3],
+                                                  double pPt0[3], double pPt1[3], double pPt2[3],
+                                                  double dXdXi, double dXdEta,
+                                                  double dYdXi, double dYdEta,
+                                                  double dZdXi, double dZdEta);
+
+  static int GetParametricPoints(double pt0[3], double pt1[3], double pt2[3],
+                                 double pPt0[3], double pPt1[3], double pPt2[3]);
+
   /** \brief Get all angles of a polydata surface.
    *  \param cellAngles data array containing the angle values of all on mesh.
    *  It has three components as there are three angles per cell.

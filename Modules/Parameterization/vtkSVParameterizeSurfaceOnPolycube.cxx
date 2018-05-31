@@ -564,9 +564,11 @@ int vtkSVParameterizeSurfaceOnPolycube::RunFilter()
   subdivider->SetNumberOfSubdivisions(3);
   subdivider->Update();
 
+  vtkSVIOUtils::WriteVTPFile("/Users/adamupdegrove/Desktop/tmp/DOUBLECHECK_BEFORE.vtp", cleanPolycubeOnSurfacePd);
   vtkNew(vtkSVUpdeSmoothing, paramSmoother);
   paramSmoother->SetInputData(cleanPolycubeOnSurfacePd);
   paramSmoother->SetSmoothPointArrayName("SmoothPoints");
+  paramSmoother->SetNumberOfOuterSmoothOperations(5);
   paramSmoother->SetNumberOfInnerSmoothOperations(200);
   paramSmoother->SetSourcePd(subdivider->GetOutput()); // Constrain to original surface
   paramSmoother->Update();
