@@ -342,10 +342,16 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     vtkNew(vtkIdList, cellEdgeNeighbors);
     double maxBad = 0.0;
     double avgBad = 0.0;
+    int lesser = 0;
+    int greater = 0;
+
+    double moveStep = 0.1;
     for (int iter=0; iter<100; iter++)
     {
       maxBad = 0;
       avgBad = 0;
+      lesser = 0;
+      greater = 0;
       for (int i=0; i<numPts; i++)
       {
         pointImprove = 0;
@@ -356,7 +362,23 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
         this->ComputeVertexCondition(i, pointImprove, pointImproveDir);
         vtkMath::Normalize(pointImproveDir);
-        vtkMath::MultiplyScalar(pointImproveDir, -1.0);
+
+        //vtkMath::MultiplyScalar(pointImproveDir, moveStep);
+        //this->WorkPd->GetPoint(i, pt0);
+        //vtkMath::Add(pt0, pointImproveDir, newPt);
+
+        //this->WorkPd->GetPoints()->SetPoint(i, newPt);
+        //this->ComputeVertexCondition(i, testPointImprove, testPointImproveDir);
+
+        //if (testPointImprove > pointImprove)
+        //{
+        //  this->WorkPd->GetPoints()->SetPoint(i, pt0);
+        //  greater++;
+        //}
+        //else
+        //{
+        //  lesser++;
+        //}
 
         //fprintf(stdout,"PONT IMP DIR: %.6f %.6f %.6f\n", pointImproveDir[0], pointImproveDir[1], pointImproveDir[2]);
 
@@ -445,7 +467,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
           {
             // iterate till get to good spot
             double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
-            double stepSize = segmentLength * 0.01;
+            double stepSize = segmentLength * 0.1;
             int numberOfSteps = (int) ceil(segmentLength/stepSize);
             stepSize = segmentLength /numberOfSteps;
             double dirLength = 0.0;
@@ -462,7 +484,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
               this->WorkPd->GetPoints()->SetPoint(i, newPt);
 
               this->ComputeVertexCondition(i, newFuncVal, newOptDir);
-              fprintf(stdout,"INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
+              //fprintf(stdout,"INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
 
               if (newFuncVal > funcVal)
               {
@@ -480,9 +502,13 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
               }
             }
 
+            if (m >= numberOfSteps-1)
+            {
+              fprintf(stdout,"MADE IT TO EDGE!\n");
+            }
             if (m > 0)
             {
-              fprintf(stdout,"BROKED\n");
+              fprintf(stdout,"ITERED\n");
               this->WorkPd->GetPoints()->SetPoint(i, closestPt);
               break;
             }
@@ -499,6 +525,16 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
       avgBad /= numPts;
       fprintf(stdout,"ITER %d MAX CONDITION: %.6f, AVG CONDITION: %.6f\n", iter, maxBad, avgBad);
+      //fprintf(stdout,"ITER %d MAX CONDITION: %.6f, AVG CONDITION: %.6f, STEPSIZE: %.6f\n", iter, maxBad, avgBad, moveStep);
+      //fprintf(stdout,"WORSE: %d, BETTER: %d\n", greater, lesser);
+      if (lesser == 0)
+      {
+        moveStep*=0.1;
+      }
+      if (greater == 0)
+      {
+        moveStep*=10;
+      }
     }
     this->WorkPd->GetPointData()->AddArray(shapeImproveFunction);
     this->WorkPd->GetPointData()->AddArray(shapeImproveDirection);
@@ -905,6 +941,18 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
   {
     optDirection[j] = 0.0;
   }
+  double vertexCondition0 = 0;
+  double optDirection0[3];
+  for (int j=0; j<3; j++)
+  {
+    optDirection0[j] = 0.0;
+  }
+  double vertexCondition1 = 0;
+  double optDirection1[3];
+  for (int j=0; j<3; j++)
+  {
+    optDirection1[j] = 0.0;
+  }
 
   int numpts;
   int cellId, pointIndex;
@@ -926,38 +974,46 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
     numpts = this->CellPoints[cellId].size();
     for (int k=0; k<this->CellPoints[cellId].size(); k++)
     {
-      if (k == (pointIndex+1)%numpts)
+      //if (k != pointIndex)
+      //{
+      //  continue;
+      //}
+      if (k == (pointIndex+2)%numpts)
       {
         continue;
       }
 
-      // doing with repsect to point ptId0
-      ptId0   = this->CellPoints[cellId][k];
-      oppPtId = this->CellPoints[cellId][(k+1)%numpts];
-      ptId1   = this->CellPoints[cellId][(k+2)%numpts];
-      ptId2   = this->CellPoints[cellId][(k+3)%numpts];
+      // doing with repsect to point ptId2
+      ptId0 = this->CellPoints[cellId][(k+3)%numpts];
+      ptId1 = this->CellPoints[cellId][(k+1)%numpts];
+      ptId2 = this->CellPoints[cellId][k];
 
       this->WorkPd->GetPoint(ptId0, pt0);
-      this->WorkPd->GetPoint(oppPtId, oppositePt);
       this->WorkPd->GetPoint(ptId1, pt1);
       this->WorkPd->GetPoint(ptId2, pt2);
 
       //this->ComputeUntanglingFunction(pt0, pt1, pt2, oppositePt, SV_PI/2.0, f);
 
+      double area = vtkTriangle::TriangleArea(pt0, pt1, pt2);
+      double check1 = vtkSVMathUtils::Distance(pt0, pt2) + vtkSVMathUtils::Distance(pt1, pt2) * area;
+      double check2 = vtkSVMathUtils::Distance(pt1, pt2) + vtkSVMathUtils::Distance(pt0, pt2) * area;
+
       // Compute function
       this->ComputeShapeImprovementFunction(pt0, pt1, pt2, oppositePt, f);
+      fprintf(stdout,"COMPARE1: %.6f, %.6f\n", f, check1);
+      fprintf(stdout,"COMPARE2: %.6f, %.6f\n", f, check2);
 
       // Compute direction
       this->ComputeShapeImprovementDerivatives(pt0, pt1, pt2, oppositePt, df);
-      //vtkMath::Normalize(df);
 
-      //fprintf(stdout,"NUTS: %.6f %.6f %.6f\n", df[0], df[1], df[2]);
+      //fprintf(stdout,"  NUTS PT %d: %.6f, %.6f %.6f %.6f\n", ptId2, f, df[0], df[1], df[2]);
       vertexCondition += f;
       for (int l=0; l<3; l++)
       {
         optDirection[l] += df[l];
       }
     }
+
   }
 
   return SV_OK;
@@ -1481,14 +1537,17 @@ int vtkSVUpdeSmoothing::GetJacobianDerivatives(double pt0[3], double pt1[3], dou
 
   double l0 = pPt1[0];
 
-  dJdX = ((l0 * (pt2[0] - pt0[0])) -
-          (xi * (pt1[0] - pt0[0]))) / eta;
+  //fprintf(stdout,"x0: %.6f, x1: %.6f, x2: %.6f\n", pt0[0], pt1[0], pt2[0]);
+  //fprintf(stdout,"y0: %.6f, y1: %.6f, y2: %.6f\n", pt0[1], pt1[1], pt2[1]);
+  //fprintf(stdout,"z0: %.6f, z1: %.6f, z2: %.6f\n", pt0[2], pt1[2], pt2[2]);
+  dJdX = ((l0 * (pt2[0] - pt0[0])) - (xi * (pt1[0] - pt0[0]))) / eta;
+  //fprintf(stdout,"DJdX: %.6f\n", dJdX);
 
-  dJdY = ((l0 * (pt2[1] - pt0[1])) -
-          (xi * (pt1[1] - pt0[1]))) / eta;
+  dJdY = ((l0 * (pt2[1] - pt0[1])) - (xi * (pt1[1] - pt0[1]))) / eta;
+  //fprintf(stdout,"DJdY: %.6f\n", dJdY);
 
-  dJdZ = ((l0 * (pt2[2] - pt0[2])) -
-          (xi * (pt1[2] - pt0[2]))) / eta;
+  dJdZ = ((l0 * (pt2[2] - pt0[2])) - (xi * (pt1[2] - pt0[2]))) / eta;
+  //fprintf(stdout,"DJdZ: %.6f\n", dJdZ);
 
 
   return SV_OK;
@@ -1513,7 +1572,7 @@ int vtkSVUpdeSmoothing::ComputeShapeImprovementDerivatives(double pt0[3], double
   double detJacobian = this->Determinant(J0);
   //detJacobian = pPt1[0] * pPt2[1];
 
-  // Jacobian derivatives
+  // Jacobian derivatives, only valid for point 2 in the current parametric format
   double dJdX, dJdY, dJdZ;
   this->GetJacobianDerivatives(pt0, pt1, pt2,
                                pPt0, pPt1, pPt2,
@@ -1528,16 +1587,16 @@ int vtkSVUpdeSmoothing::ComputeShapeImprovementDerivatives(double pt0[3], double
   double F1 = pow(l0, 2.0) + pow(l1, 2.0);
   double F2 = pow(l1, 2.0) + pow(l2, 2.0);
 
-  // Frobenius norm derivatives
-  // p0
-  double dF0dX = 2 * (pt2[0] - pt0[0]);
-  double dF0dY = 2 * (pt2[1] - pt0[1]);
-  double dF0dZ = 2 * (pt2[2] - pt0[2]);
+  //// Frobenius norm derivatives
+  //// p0
+  //double dF0dX = 2 * (pt2[0] - pt0[0]);
+  //double dF0dY = 2 * (pt2[1] - pt0[1]);
+  //double dF0dZ = 2 * (pt2[2] - pt0[2]);
 
-  // p1
-  double dF1dX = 2 * (pt2[0] - pt1[0]);
-  double dF1dY = 2 * (pt2[1] - pt1[1]);
-  double dF1dZ = 2 * (pt2[2] - pt1[2]);
+  //// p1
+  //double dF1dX = 2 * (pt2[0] - pt1[0]);
+  //double dF1dY = 2 * (pt2[1] - pt1[1]);
+  //double dF1dZ = 2 * (pt2[2] - pt1[2]);
 
   // p2
   double dF2dX = 2 * (2*pt2[0] - (pt0[0] + pt1[0]));
@@ -1556,12 +1615,15 @@ int vtkSVUpdeSmoothing::ComputeShapeImprovementDerivatives(double pt0[3], double
   //dK[0] = ((detJacobian * dF0dX) + (dJdX * F0)) / (2 * pow(detJacobian, 2.0));
   //dK[1] = ((detJacobian * dF0dY) + (dJdY * F0)) / (2 * pow(detJacobian, 2.0));
   //dK[2] = ((detJacobian * dF0dZ) + (dJdZ * F0)) / (2 * pow(detJacobian, 2.0));
+
   //dK[0] = ((detJacobian * dF1dX) + (dJdX * F1)) / (2 * pow(detJacobian, 2.0));
   //dK[1] = ((detJacobian * dF1dY) + (dJdY * F1)) / (2 * pow(detJacobian, 2.0));
   //dK[2] = ((detJacobian * dF1dZ) + (dJdZ * F1)) / (2 * pow(detJacobian, 2.0));
+
   dK[0] = ((detJacobian * dF2dX) + (dJdX * F2)) / (2 * pow(detJacobian, 2.0));
   dK[1] = ((detJacobian * dF2dY) + (dJdY * F2)) / (2 * pow(detJacobian, 2.0));
   dK[2] = ((detJacobian * dF2dZ) + (dJdZ * F2)) / (2 * pow(detJacobian, 2.0));
+
 
   return SV_OK;
 }
