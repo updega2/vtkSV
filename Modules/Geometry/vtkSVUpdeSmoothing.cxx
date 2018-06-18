@@ -316,6 +316,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       }
     }
 
+    int dirWorks;
     int pointCellStatus;
     int cellId, pointIndex;
     double pointImprove = 0;
@@ -337,7 +338,8 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     vtkIdType closestCellId;
     vtkNew(vtkGenericCell, genericCell);
 
-    vtkIdType snpts, *spts;
+    vtkIdType nspts, *spts;
+    vtkIdType ntpts, *tpts;
     vtkNew(vtkIdList, allCapableNeighbors);
     vtkNew(vtkIdList, cellEdgeNeighbors);
     double maxBad = 0.0;
@@ -362,6 +364,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
         this->ComputeVertexCondition(i, pointImprove, pointImproveDir);
         vtkMath::Normalize(pointImproveDir);
+        vtkMath::MultiplyScalar(pointImproveDir, 1.0);
 
         //vtkMath::MultiplyScalar(pointImproveDir, moveStep);
         //this->WorkPd->GetPoint(i, pt0);
@@ -386,6 +389,8 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         this->WorkPd->GetPoint(i, pt0);
 
         cellLocator->FindClosestPoint(pt0, closestPt, genericCell, closestCellId, subId, distance);
+        fprintf(stdout,"MOVING POINT: %d\n", i);
+        fprintf(stdout,"  CLOSEST CELL: %d\n", closestCellId);
 
         pointCellStatus = 0;
         if (this->PointCellStatus(closestPt, closestCellId, pointCellStatus)  != SV_OK)
@@ -394,11 +399,11 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
           return SV_ERROR;
         }
 
-        //fprintf(stdout,"POINT CELL STATUS: %d\n", pointCellStatus);
+        fprintf(stdout,"  POINT CELL STATUS: %d\n", pointCellStatus);
 
         allCapableNeighbors->Reset();
 
-        this->SourcePd->GetCellPoints(closestCellId, snpts, spts);
+        this->SourcePd->GetCellPoints(closestCellId, nspts, spts);
 
         // Within cell
         allCapableNeighbors->InsertNextId(closestCellId);
@@ -454,6 +459,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         for (int k=0; k<allCapableNeighbors->GetNumberOfIds(); k++)
         {
           cellId = allCapableNeighbors->GetId(k);
+          this->SourcePd->GetCellPoints(cellId, ntpts, tpts);
 
           sCellNormals->GetTuple(cellId, normal);
           vtkMath::Normalize(normal);
@@ -463,55 +469,134 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
           vtkMath::Subtract(pointImproveDir, normal, tangentImproveDir);
           vtkMath::Normalize(tangentImproveDir);
 
-          if (this->MovePointToEdge(closestPt, cellId, tangentImproveDir, newPt, edgeStatus) == SV_OK)
+          fprintf(stdout,"  --------------------TESTING CELL: %d\n", cellId);
+          dirWorks = 0;
+          if (pointCellStatus == 1)
           {
-            // iterate till get to good spot
-            double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
-            double stepSize = segmentLength * 0.1;
-            int numberOfSteps = (int) ceil(segmentLength/stepSize);
-            stepSize = segmentLength /numberOfSteps;
-            double dirLength = 0.0;
-
-            int m;
-            double newOptDir[3];
-            double funcVal = pointImprove;
-            double newFuncVal;
-            for (m=0; m<numberOfSteps; m++)
+            for (int l=0; l<ntpts; l++)
             {
-              dirLength += stepSize;
-              this->MovePointDistance(closestPt, tangentImproveDir, dirLength, newPt);
-
-              this->WorkPd->GetPoints()->SetPoint(i, newPt);
-
-              this->ComputeVertexCondition(i, newFuncVal, newOptDir);
-              //fprintf(stdout,"INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
-
-              if (newFuncVal > funcVal)
+              if (tpts[l] == spts[1] || tpts[l] == spts[2])
               {
-                this->WorkPd->GetPoints()->SetPoint(i, closestPt);
-                break;
-              }
-              else
-              {
-                funcVal = newFuncVal;
-
-                for (int n=0; n<3; n++)
+                if (tpts[(l+1)%ntpts] == spts[1] || tpts[(l+1)%ntpts] == spts[2])
                 {
-                  closestPt[n] = newPt[n];
+                  dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
                 }
               }
             }
-
-            if (m >= numberOfSteps-1)
+          }
+          else if (pointCellStatus == 2)
+          {
+            for (int l=0; l<ntpts; l++)
             {
-              fprintf(stdout,"MADE IT TO EDGE!\n");
+              if (tpts[l] == spts[0] || tpts[l] == spts[2])
+              {
+                if (tpts[(l+1)%ntpts] == spts[0] || tpts[(l+1)%ntpts] == spts[2])
+                {
+                  dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+                }
+              }
             }
-            if (m > 0)
+          }
+          else if (pointCellStatus == 4)
+          {
+            for (int l=0; l<ntpts; l++)
             {
-              fprintf(stdout,"ITERED\n");
+              if (tpts[l] == spts[0] || tpts[l] == spts[1])
+              {
+                if (tpts[(l+1)%ntpts] == spts[0] || tpts[(l+1)%ntpts] == spts[1])
+                {
+                  dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+                }
+              }
+            }
+          }
+          else if (pointCellStatus == 3)
+          {
+            for (int l=0; l<ntpts; l++)
+            {
+              if (tpts[l] != spts[2])
+                continue;
+              dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+            }
+          }
+          else if (pointCellStatus == 5)
+          {
+            for (int l=0; l<ntpts; l++)
+            {
+              if (tpts[l] != spts[1])
+                continue;
+              dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+            }
+          }
+          else if (pointCellStatus == 6)
+          {
+            for (int l=0; l<ntpts; l++)
+            {
+              if (tpts[l] != spts[0])
+                continue;
+              dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+            }
+          }
+          else
+          {
+            dirWorks = this->MovePointToEdge(closestPt, cellId, tangentImproveDir, newPt, edgeStatus);
+          }
+
+          if (!dirWorks)
+          {
+            continue;
+          }
+
+          fprintf(stdout,"  FOUND CELL IN WHICH PROJECTED DIRECTION LIES: %d\n", cellId);
+          // iterate till get to good spot
+          double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
+          fprintf(stdout,  "  CLOSEST POINT: %.6f %.6f %.6f\n", closestPt[0], closestPt[1], closestPt[2]);
+          fprintf(stdout,  "  NEW     POINT: %.6f %.6f %.6f\n", newPt[0], newPt[1], newPt[2]);
+          double stepSize = segmentLength * 0.01;
+          int numberOfSteps = (int) ceil(segmentLength/stepSize);
+          stepSize = segmentLength /numberOfSteps;
+          fprintf(stdout,"  STEP SIZE: %.6f\n", stepSize);
+          double dirLength = 0.0;
+
+          int m;
+          double newOptDir[3];
+          double funcVal = pointImprove;
+          double newFuncVal;
+          for (m=0; m<numberOfSteps; m++)
+          {
+            dirLength += stepSize;
+            this->MovePointDistance(closestPt, tangentImproveDir, dirLength, newPt);
+
+            this->WorkPd->GetPoints()->SetPoint(i, newPt);
+
+            this->ComputeVertexCondition(i, newFuncVal, newOptDir);
+            fprintf(stdout,"  INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
+
+            if (newFuncVal > funcVal)
+            {
               this->WorkPd->GetPoints()->SetPoint(i, closestPt);
               break;
             }
+            else
+            {
+              funcVal = newFuncVal;
+
+              for (int n=0; n<3; n++)
+              {
+                closestPt[n] = newPt[n];
+              }
+            }
+          }
+
+          fprintf(stdout,"  NUMBER OF STEPS: %d, OUT OF %d\n", m, numberOfSteps);
+          if (m >= numberOfSteps-1)
+          {
+            fprintf(stdout,"  MADE IT TO EDGE!\n");
+          }
+          if (m > 0)
+          {
+            this->WorkPd->GetPoints()->SetPoint(i, closestPt);
+            break;
           }
         }
 
@@ -524,7 +609,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       }
 
       avgBad /= numPts;
-      fprintf(stdout,"ITER %d MAX CONDITION: %.6f, AVG CONDITION: %.6f\n", iter, maxBad, avgBad);
+      fprintf(stdout,"==========================ITER %d MAX CONDITION: %.6f, AVG CONDITION=======================: %.6f\n", iter, maxBad, avgBad);
       //fprintf(stdout,"ITER %d MAX CONDITION: %.6f, AVG CONDITION: %.6f, STEPSIZE: %.6f\n", iter, maxBad, avgBad, moveStep);
       //fprintf(stdout,"WORSE: %d, BETTER: %d\n", greater, lesser);
       if (lesser == 0)
@@ -995,13 +1080,10 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
       //this->ComputeUntanglingFunction(pt0, pt1, pt2, oppositePt, SV_PI/2.0, f);
 
       double area = vtkTriangle::TriangleArea(pt0, pt1, pt2);
-      double check1 = vtkSVMathUtils::Distance(pt0, pt2) + vtkSVMathUtils::Distance(pt1, pt2) * area;
-      double check2 = vtkSVMathUtils::Distance(pt1, pt2) + vtkSVMathUtils::Distance(pt0, pt2) * area;
+      double otherF = pow(vtkSVMathUtils::Distance(pt0, pt2), 2.0) + pow(vtkSVMathUtils::Distance(pt1, pt2), 2.0) * 2 * area;
 
       // Compute function
       this->ComputeShapeImprovementFunction(pt0, pt1, pt2, oppositePt, f);
-      fprintf(stdout,"COMPARE1: %.6f, %.6f\n", f, check1);
-      fprintf(stdout,"COMPARE2: %.6f, %.6f\n", f, check2);
 
       // Compute direction
       this->ComputeShapeImprovementDerivatives(pt0, pt1, pt2, oppositePt, df);
@@ -1401,10 +1483,10 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
   double u2, v2;
   vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
 
-  //fprintf(stdout,"U0: %.6f V0: %.6f, U1: %.6f V1: %.6f, U2: %.6f V2: %.6f\n", u0, v0, u1, v1, u2, v2);
+  fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f, U2: %.6f V2: %.6f\n", u0, v0, u1, v1, u2, v2);
   edgeStatus = 0;
   int onEdge0 = 0;
-  if (u0 >= 0.0 && u0 <= 1.0)
+  if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
   {
     onEdge0 = 1;
     for (int i=0; i<3; i++)
@@ -1413,9 +1495,10 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
     }
     edgeStatus += 1;
   }
+  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
   int onEdge1 = 0;
-  if (u1 >= 0.0 && u1 <= 1.0)
+  if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
   {
     onEdge1 = 1;
     for (int i=0; i<3; i++)
@@ -1424,9 +1507,10 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
     }
     edgeStatus += 2;
   }
+  fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
 
   int onEdge2 = 0;
-  if (u2 >= 0.0 && u2 <= 1.0)
+  if (u2 >= -1.0e-6 && u2 <= 1.0+1.0e-6 && v2 >= -1.0e-6 && v2 <= 1.0+1.0e-6)
   {
     onEdge2 = 1;
     for (int i=0; i<3; i++)
@@ -1435,8 +1519,121 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
     }
     edgeStatus += 4;
   }
+  fprintf(stdout,"  ON EDGE 2: %d\n", onEdge2);
 
   if (!onEdge0 && !onEdge1 && !onEdge2)
+  {
+    //vtkErrorMacro("Point and direction do not intersect with triangle");
+    return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// MovePointFromEdgeToEdge
+// ----------------------
+int vtkSVUpdeSmoothing::MovePointFromEdgeToEdge(double currentPt[3], int ptId0, int ptId1, int ptId2, double moveDir[3], double newPt[3], int &edgeStatus)
+{
+  double sourcePts[3][3];
+
+  this->SourcePd->GetPoint(ptId0, sourcePts[0]);
+  this->SourcePd->GetPoint(ptId1, sourcePts[1]);
+  this->SourcePd->GetPoint(ptId2, sourcePts[2]);
+
+  double l0 = vtkSVMathUtils::Distance(sourcePts[0], sourcePts[1]);
+  double l1 = vtkSVMathUtils::Distance(sourcePts[1], sourcePts[2]);
+  double l2 = vtkSVMathUtils::Distance(sourcePts[2], sourcePts[0]);
+
+  double lineLength = l0 + l1 + l2;
+  vtkMath::Normalize(moveDir);
+  vtkMath::MultiplyScalar(moveDir, lineLength);
+
+  double outPt[3];
+  vtkMath::Add(currentPt, moveDir, outPt);
+
+  double u0, v0;
+  vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
+
+  double u1, v1;
+  vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u1, v1);
+
+  fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f\n", u0, v0, u1, v1);
+  edgeStatus = 0;
+  int onEdge0 = 0;
+  if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
+  {
+    onEdge0 = 1;
+    for (int i=0; i<3; i++)
+    {
+      newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
+    }
+    edgeStatus += 1;
+  }
+  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
+
+  int onEdge1 = 0;
+  if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
+  {
+    onEdge1 = 1;
+    for (int i=0; i<3; i++)
+    {
+      newPt[i] = sourcePts[1][i] + u1 * l1 * (sourcePts[2][i] - sourcePts[1][i]);
+    }
+    edgeStatus += 2;
+  }
+  fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
+
+  if (!onEdge0 && !onEdge1)
+  {
+    //vtkErrorMacro("Point and direction do not intersect with triangle");
+    return SV_ERROR;
+  }
+
+  return SV_OK;
+}
+
+// ----------------------
+// MovePointFromPointToEdge
+// ----------------------
+int vtkSVUpdeSmoothing::MovePointFromPointToEdge(double currentPt[3], int ptId0, int ptId1, int ptId2, double moveDir[3], double newPt[3], int &edgeStatus)
+{
+
+  double sourcePts[3][3];
+
+  this->SourcePd->GetPoint(ptId0, sourcePts[0]);
+  this->SourcePd->GetPoint(ptId1, sourcePts[1]);
+  this->SourcePd->GetPoint(ptId2, sourcePts[2]);
+
+  double l0 = vtkSVMathUtils::Distance(sourcePts[0], sourcePts[1]);
+  double l1 = vtkSVMathUtils::Distance(sourcePts[1], sourcePts[2]);
+  double l2 = vtkSVMathUtils::Distance(sourcePts[2], sourcePts[0]);
+
+  double lineLength = l0 + l1 + l2;
+  vtkMath::Normalize(moveDir);
+  vtkMath::MultiplyScalar(moveDir, lineLength);
+
+  double outPt[3];
+  vtkMath::Add(currentPt, moveDir, outPt);
+
+  double u0, v0;
+  vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
+
+  fprintf(stdout,"  U0: %.6f V0: %.6f\n", u0, v0);
+  edgeStatus = 0;
+  int onEdge0 = 0;
+  if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
+  {
+    onEdge0 = 1;
+    for (int i=0; i<3; i++)
+    {
+      newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
+    }
+    edgeStatus += 1;
+  }
+  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
+
+  if (!onEdge0)
   {
     //vtkErrorMacro("Point and direction do not intersect with triangle");
     return SV_ERROR;

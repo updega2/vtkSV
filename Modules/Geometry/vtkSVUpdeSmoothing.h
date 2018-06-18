@@ -94,6 +94,8 @@ protected:
                                double oppositePt[3], int sourceCell, double newPt[3]);
   int ComputeOptimizationDirection(double pt0[3], double pt1[3], double currentPt[3], double oppositePt[3], int sourceCell, double newDir[3]);
   int MovePointToEdge(double currentPt[3], int sourceCell, double moveDir[3], double newPt[3], int &edgeStatus);
+  int MovePointFromEdgeToEdge(double currentPt[3], int ptId0, int ptId1, int ptId2, double moveDir[3], double newPt[3], int &edgeStatus);
+  int MovePointFromPointToEdge(double currentPt[3], int ptId0, int ptId1, int ptId2, double moveDir[3], double newPt[3], int &edgeStatus);
   int MovePointDistance(double currentPt[3], double moveDir[3], double length, double newPt[3]);
   int ComputeUntanglingDerivatives(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double newDir[3]);
   int GetJacobianDerivatives(double pt0[3], double pt1[3], double pt2[3],
