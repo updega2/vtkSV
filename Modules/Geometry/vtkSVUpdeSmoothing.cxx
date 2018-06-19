@@ -172,6 +172,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
   sNormaler->Update();
 
   vtkDataArray *sCellNormals = sNormaler->GetOutput()->GetCellData()->GetArray("Normals");
+  vtkDataArray *sPointNormals = sNormaler->GetOutput()->GetPointData()->GetArray("Normals");
 
   // Build locator if source given
   double length = this->WorkPd->GetLength();
@@ -347,8 +348,8 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     int lesser = 0;
     int greater = 0;
 
-    double moveStep = 0.1;
-    for (int iter=0; iter<100; iter++)
+    double moveStep = 0.001;
+    for (int iter=0; iter<1000; iter++)
     {
       maxBad = 0;
       avgBad = 0;
@@ -366,6 +367,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         vtkMath::Normalize(pointImproveDir);
         vtkMath::MultiplyScalar(pointImproveDir, 1.0);
 
+//=============================ONE==========================================
         //vtkMath::MultiplyScalar(pointImproveDir, moveStep);
         //this->WorkPd->GetPoint(i, pt0);
         //vtkMath::Add(pt0, pointImproveDir, newPt);
@@ -382,223 +384,251 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         //{
         //  lesser++;
         //}
+        //
+//=============================TWO==========================================
 
-        //fprintf(stdout,"PONT IMP DIR: %.6f %.6f %.6f\n", pointImproveDir[0], pointImproveDir[1], pointImproveDir[2]);
+        sPointNormals->GetTuple(i, normal);
+        vtkMath::Normalize(normal);
+        normDot = vtkMath::Dot(pointImproveDir, normal);
 
-        // Now time to move point
+        vtkMath::MultiplyScalar(normal, normDot);
+        vtkMath::Subtract(pointImproveDir, normal, tangentImproveDir);
+        vtkMath::Normalize(tangentImproveDir);
+
+        vtkMath::MultiplyScalar(tangentImproveDir, moveStep);
         this->WorkPd->GetPoint(i, pt0);
+        vtkMath::Add(pt0, tangentImproveDir, newPt);
 
-        cellLocator->FindClosestPoint(pt0, closestPt, genericCell, closestCellId, subId, distance);
-        fprintf(stdout,"MOVING POINT: %d\n", i);
-        fprintf(stdout,"  CLOSEST CELL: %d\n", closestCellId);
+        this->WorkPd->GetPoints()->SetPoint(i, newPt);
+        this->ComputeVertexCondition(i, testPointImprove, testPointImproveDir);
 
-        pointCellStatus = 0;
-        if (this->PointCellStatus(closestPt, closestCellId, pointCellStatus)  != SV_OK)
-        {
-          vtkErrorMacro("Point is technically outside the cell it was found to be closest to");
-          return SV_ERROR;
-        }
+        //if (testPointImprove > pointImprove)
+        //{
+        //  this->WorkPd->GetPoints()->SetPoint(i, pt0);
+        //  greater++;
+        //}
+        //else
+        //{
+        //  lesser++;
+        //}
 
-        fprintf(stdout,"  POINT CELL STATUS: %d\n", pointCellStatus);
+//=============================THREE==========================================
+        ////fprintf(stdout,"PONT IMP DIR: %.6f %.6f %.6f\n", pointImproveDir[0], pointImproveDir[1], pointImproveDir[2]);
 
-        allCapableNeighbors->Reset();
+        //// Now time to move point
+        //this->WorkPd->GetPoint(i, pt0);
 
-        this->SourcePd->GetCellPoints(closestCellId, nspts, spts);
+        //cellLocator->FindClosestPoint(pt0, closestPt, genericCell, closestCellId, subId, distance);
+        //fprintf(stdout,"MOVING POINT: %d\n", i);
+        //fprintf(stdout,"  CLOSEST CELL: %d\n", closestCellId);
 
-        // Within cell
-        allCapableNeighbors->InsertNextId(closestCellId);
+        //pointCellStatus = 0;
+        //if (this->PointCellStatus(closestPt, closestCellId, pointCellStatus)  != SV_OK)
+        //{
+        //  vtkErrorMacro("Point is technically outside the cell it was found to be closest to");
+        //  return SV_ERROR;
+        //}
 
-        // On edges
-        if (pointCellStatus == 1)
-        {
-          cellEdgeNeighbors->Reset();
-          this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[1], spts[2], cellEdgeNeighbors);
-          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
-          {
-            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
-          }
-        }
-        if (pointCellStatus == 2)
-        {
-          cellEdgeNeighbors->Reset();
-          this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[0], spts[2], cellEdgeNeighbors);
-          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
-          {
-            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
-          }
-        }
-        if (pointCellStatus == 4)
-        {
-          cellEdgeNeighbors->Reset();
-          this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[0], spts[1], cellEdgeNeighbors);
-          for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
-          {
-            allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
-          }
-        }
+        //fprintf(stdout,"  POINT CELL STATUS: %d\n", pointCellStatus);
 
-        // On verts
-        if (pointCellStatus == 3)
-        {
-          // on vertex 2
-          this->SourcePd->GetPointCells(spts[2], allCapableNeighbors);
-        }
+        //allCapableNeighbors->Reset();
 
-        if (pointCellStatus == 5)
-        {
-          // on vertex 1
-          this->SourcePd->GetPointCells(spts[1], allCapableNeighbors);
-        }
+        //this->SourcePd->GetCellPoints(closestCellId, nspts, spts);
 
-        if (pointCellStatus == 6)
-        {
-          // on vertex 0
-          this->SourcePd->GetPointCells(spts[0], allCapableNeighbors);
-        }
+        //// Within cell
+        //allCapableNeighbors->InsertNextId(closestCellId);
 
-        for (int k=0; k<allCapableNeighbors->GetNumberOfIds(); k++)
-        {
-          cellId = allCapableNeighbors->GetId(k);
-          this->SourcePd->GetCellPoints(cellId, ntpts, tpts);
+        //// On edges
+        //if (pointCellStatus == 1)
+        //{
+        //  cellEdgeNeighbors->Reset();
+        //  this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[1], spts[2], cellEdgeNeighbors);
+        //  for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
+        //  {
+        //    allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
+        //  }
+        //}
+        //if (pointCellStatus == 2)
+        //{
+        //  cellEdgeNeighbors->Reset();
+        //  this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[0], spts[2], cellEdgeNeighbors);
+        //  for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
+        //  {
+        //    allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
+        //  }
+        //}
+        //if (pointCellStatus == 4)
+        //{
+        //  cellEdgeNeighbors->Reset();
+        //  this->SourcePd->GetCellEdgeNeighbors(closestCellId, spts[0], spts[1], cellEdgeNeighbors);
+        //  for (int k=0; k<cellEdgeNeighbors->GetNumberOfIds(); k++)
+        //  {
+        //    allCapableNeighbors->InsertNextId(cellEdgeNeighbors->GetId(k));
+        //  }
+        //}
 
-          sCellNormals->GetTuple(cellId, normal);
-          vtkMath::Normalize(normal);
-          normDot = vtkMath::Dot(pointImproveDir, normal);
+        //// On verts
+        //if (pointCellStatus == 3)
+        //{
+        //  // on vertex 2
+        //  this->SourcePd->GetPointCells(spts[2], allCapableNeighbors);
+        //}
 
-          vtkMath::MultiplyScalar(normal, normDot);
-          vtkMath::Subtract(pointImproveDir, normal, tangentImproveDir);
-          vtkMath::Normalize(tangentImproveDir);
+        //if (pointCellStatus == 5)
+        //{
+        //  // on vertex 1
+        //  this->SourcePd->GetPointCells(spts[1], allCapableNeighbors);
+        //}
 
-          fprintf(stdout,"  --------------------TESTING CELL: %d\n", cellId);
-          dirWorks = 0;
-          if (pointCellStatus == 1)
-          {
-            for (int l=0; l<ntpts; l++)
-            {
-              if (tpts[l] == spts[1] || tpts[l] == spts[2])
-              {
-                if (tpts[(l+1)%ntpts] == spts[1] || tpts[(l+1)%ntpts] == spts[2])
-                {
-                  dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
-                }
-              }
-            }
-          }
-          else if (pointCellStatus == 2)
-          {
-            for (int l=0; l<ntpts; l++)
-            {
-              if (tpts[l] == spts[0] || tpts[l] == spts[2])
-              {
-                if (tpts[(l+1)%ntpts] == spts[0] || tpts[(l+1)%ntpts] == spts[2])
-                {
-                  dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
-                }
-              }
-            }
-          }
-          else if (pointCellStatus == 4)
-          {
-            for (int l=0; l<ntpts; l++)
-            {
-              if (tpts[l] == spts[0] || tpts[l] == spts[1])
-              {
-                if (tpts[(l+1)%ntpts] == spts[0] || tpts[(l+1)%ntpts] == spts[1])
-                {
-                  dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
-                }
-              }
-            }
-          }
-          else if (pointCellStatus == 3)
-          {
-            for (int l=0; l<ntpts; l++)
-            {
-              if (tpts[l] != spts[2])
-                continue;
-              dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
-            }
-          }
-          else if (pointCellStatus == 5)
-          {
-            for (int l=0; l<ntpts; l++)
-            {
-              if (tpts[l] != spts[1])
-                continue;
-              dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
-            }
-          }
-          else if (pointCellStatus == 6)
-          {
-            for (int l=0; l<ntpts; l++)
-            {
-              if (tpts[l] != spts[0])
-                continue;
-              dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
-            }
-          }
-          else
-          {
-            dirWorks = this->MovePointToEdge(closestPt, cellId, tangentImproveDir, newPt, edgeStatus);
-          }
+        //if (pointCellStatus == 6)
+        //{
+        //  // on vertex 0
+        //  this->SourcePd->GetPointCells(spts[0], allCapableNeighbors);
+        //}
 
-          if (!dirWorks)
-          {
-            continue;
-          }
+        //for (int k=0; k<allCapableNeighbors->GetNumberOfIds(); k++)
+        //{
+        //  cellId = allCapableNeighbors->GetId(k);
+        //  this->SourcePd->GetCellPoints(cellId, ntpts, tpts);
 
-          fprintf(stdout,"  FOUND CELL IN WHICH PROJECTED DIRECTION LIES: %d\n", cellId);
-          // iterate till get to good spot
-          double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
-          fprintf(stdout,  "  CLOSEST POINT: %.6f %.6f %.6f\n", closestPt[0], closestPt[1], closestPt[2]);
-          fprintf(stdout,  "  NEW     POINT: %.6f %.6f %.6f\n", newPt[0], newPt[1], newPt[2]);
-          double stepSize = segmentLength * 0.01;
-          int numberOfSteps = (int) ceil(segmentLength/stepSize);
-          stepSize = segmentLength /numberOfSteps;
-          fprintf(stdout,"  STEP SIZE: %.6f\n", stepSize);
-          double dirLength = 0.0;
+        //  sCellNormals->GetTuple(cellId, normal);
+        //  vtkMath::Normalize(normal);
+        //  normDot = vtkMath::Dot(pointImproveDir, normal);
 
-          int m;
-          double newOptDir[3];
-          double funcVal = pointImprove;
-          double newFuncVal;
-          for (m=0; m<numberOfSteps; m++)
-          {
-            dirLength += stepSize;
-            this->MovePointDistance(closestPt, tangentImproveDir, dirLength, newPt);
+        //  vtkMath::MultiplyScalar(normal, normDot);
+        //  vtkMath::Subtract(pointImproveDir, normal, tangentImproveDir);
+        //  vtkMath::Normalize(tangentImproveDir);
 
-            this->WorkPd->GetPoints()->SetPoint(i, newPt);
+        //  fprintf(stdout,"  --------------------TESTING CELL: %d\n", cellId);
+        //  dirWorks = 0;
+        //  if (pointCellStatus == 1)
+        //  {
+        //    for (int l=0; l<ntpts; l++)
+        //    {
+        //      if (tpts[l] == spts[1] || tpts[l] == spts[2])
+        //      {
+        //        if (tpts[(l+1)%ntpts] == spts[1] || tpts[(l+1)%ntpts] == spts[2])
+        //        {
+        //          dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+        //        }
+        //      }
+        //    }
+        //  }
+        //  else if (pointCellStatus == 2)
+        //  {
+        //    for (int l=0; l<ntpts; l++)
+        //    {
+        //      if (tpts[l] == spts[0] || tpts[l] == spts[2])
+        //      {
+        //        if (tpts[(l+1)%ntpts] == spts[0] || tpts[(l+1)%ntpts] == spts[2])
+        //        {
+        //          dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+        //        }
+        //      }
+        //    }
+        //  }
+        //  else if (pointCellStatus == 4)
+        //  {
+        //    for (int l=0; l<ntpts; l++)
+        //    {
+        //      if (tpts[l] == spts[0] || tpts[l] == spts[1])
+        //      {
+        //        if (tpts[(l+1)%ntpts] == spts[0] || tpts[(l+1)%ntpts] == spts[1])
+        //        {
+        //          dirWorks = this->MovePointFromEdgeToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+        //        }
+        //      }
+        //    }
+        //  }
+        //  else if (pointCellStatus == 3)
+        //  {
+        //    for (int l=0; l<ntpts; l++)
+        //    {
+        //      if (tpts[l] != spts[2])
+        //        continue;
+        //      dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+        //    }
+        //  }
+        //  else if (pointCellStatus == 5)
+        //  {
+        //    for (int l=0; l<ntpts; l++)
+        //    {
+        //      if (tpts[l] != spts[1])
+        //        continue;
+        //      dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+        //    }
+        //  }
+        //  else if (pointCellStatus == 6)
+        //  {
+        //    for (int l=0; l<ntpts; l++)
+        //    {
+        //      if (tpts[l] != spts[0])
+        //        continue;
+        //      dirWorks = this->MovePointFromPointToEdge(closestPt, tpts[l], tpts[(l+1)%ntpts], tpts[(l+2)%ntpts], tangentImproveDir, newPt, edgeStatus);
+        //    }
+        //  }
+        //  else
+        //  {
+        //    dirWorks = this->MovePointToEdge(closestPt, cellId, tangentImproveDir, newPt, edgeStatus);
+        //  }
 
-            this->ComputeVertexCondition(i, newFuncVal, newOptDir);
-            fprintf(stdout,"  INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
+        //  if (!dirWorks)
+        //  {
+        //    continue;
+        //  }
 
-            if (newFuncVal > funcVal)
-            {
-              this->WorkPd->GetPoints()->SetPoint(i, closestPt);
-              break;
-            }
-            else
-            {
-              funcVal = newFuncVal;
+        //  fprintf(stdout,"  FOUND CELL IN WHICH PROJECTED DIRECTION LIES: %d\n", cellId);
+        //  // iterate till get to good spot
+        //  double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
+        //  fprintf(stdout,  "  CLOSEST POINT: %.6f %.6f %.6f\n", closestPt[0], closestPt[1], closestPt[2]);
+        //  fprintf(stdout,  "  NEW     POINT: %.6f %.6f %.6f\n", newPt[0], newPt[1], newPt[2]);
+        //  double stepSize = segmentLength * 0.01;
+        //  int numberOfSteps = (int) ceil(segmentLength/stepSize);
+        //  stepSize = segmentLength /numberOfSteps;
+        //  fprintf(stdout,"  STEP SIZE: %.6f\n", stepSize);
+        //  double dirLength = 0.0;
 
-              for (int n=0; n<3; n++)
-              {
-                closestPt[n] = newPt[n];
-              }
-            }
-          }
+        //  int m;
+        //  double newOptDir[3];
+        //  double funcVal = pointImprove;
+        //  double newFuncVal;
+        //  for (m=0; m<numberOfSteps; m++)
+        //  {
+        //    dirLength += stepSize;
+        //    this->MovePointDistance(closestPt, tangentImproveDir, dirLength, newPt);
 
-          fprintf(stdout,"  NUMBER OF STEPS: %d, OUT OF %d\n", m, numberOfSteps);
-          if (m >= numberOfSteps-1)
-          {
-            fprintf(stdout,"  MADE IT TO EDGE!\n");
-          }
-          if (m > 0)
-          {
-            this->WorkPd->GetPoints()->SetPoint(i, closestPt);
-            break;
-          }
-        }
+        //    this->WorkPd->GetPoints()->SetPoint(i, newPt);
+
+        //    this->ComputeVertexCondition(i, newFuncVal, newOptDir);
+        //    fprintf(stdout,"  INNER STEP %d OF %d; OLD: %.6f, NEW: %.6f\n", m, numberOfSteps, funcVal, newFuncVal);
+
+        //    if (newFuncVal > funcVal)
+        //    {
+        //      this->WorkPd->GetPoints()->SetPoint(i, closestPt);
+        //      break;
+        //    }
+        //    else
+        //    {
+        //      funcVal = newFuncVal;
+
+        //      for (int n=0; n<3; n++)
+        //      {
+        //        closestPt[n] = newPt[n];
+        //      }
+        //    }
+        //  }
+
+        //  fprintf(stdout,"  NUMBER OF STEPS: %d, OUT OF %d\n", m, numberOfSteps);
+        //  if (m >= numberOfSteps-1)
+        //  {
+        //    fprintf(stdout,"  MADE IT TO EDGE!\n");
+        //  }
+        //  if (m > 0)
+        //  {
+        //    this->WorkPd->GetPoints()->SetPoint(i, closestPt);
+        //    break;
+        //  }
+        //}
 
         shapeImproveDirection->SetTuple(i, tangentImproveDir);
         shapeImproveFunction->SetTuple1(i, pointImprove);
@@ -611,15 +641,15 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       avgBad /= numPts;
       fprintf(stdout,"==========================ITER %d MAX CONDITION: %.6f, AVG CONDITION=======================: %.6f\n", iter, maxBad, avgBad);
       //fprintf(stdout,"ITER %d MAX CONDITION: %.6f, AVG CONDITION: %.6f, STEPSIZE: %.6f\n", iter, maxBad, avgBad, moveStep);
-      //fprintf(stdout,"WORSE: %d, BETTER: %d\n", greater, lesser);
-      if (lesser == 0)
-      {
-        moveStep*=0.1;
-      }
-      if (greater == 0)
-      {
-        moveStep*=10;
-      }
+      fprintf(stdout,"WORSE: %d, BETTER: %d\n", greater, lesser);
+      //if (lesser == 0)
+      //{
+      //  moveStep*=0.1;
+      //}
+      //if (greater == 0)
+      //{
+      //  moveStep*=10;
+      //}
     }
     this->WorkPd->GetPointData()->AddArray(shapeImproveFunction);
     this->WorkPd->GetPointData()->AddArray(shapeImproveDirection);
@@ -1026,26 +1056,16 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
   {
     optDirection[j] = 0.0;
   }
-  double vertexCondition0 = 0;
-  double optDirection0[3];
-  for (int j=0; j<3; j++)
-  {
-    optDirection0[j] = 0.0;
-  }
-  double vertexCondition1 = 0;
-  double optDirection1[3];
-  for (int j=0; j<3; j++)
-  {
-    optDirection1[j] = 0.0;
-  }
 
   int numpts;
   int cellId, pointIndex;
-  int ptId0, ptId1, ptId2, oppPtId;
+  int tmpPtIds[3];
+  int ptIds[3], oppPtId;
   double f, df[3];
-  double pt0[3], pt1[3], pt2[3], oppositePt[3];
+  double pts[3][3], oppositePt[3];
   for (int j=0; j<this->PointCells[ptId].size(); j++)
   {
+    //fprintf(stdout,"START POINT: %d\n", ptId);
     cellId = this->PointCells[ptId][j];
     for (int k=0; k<this->CellPoints[cellId].size(); k++)
     {
@@ -1056,6 +1076,7 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
       }
     }
 
+    //fprintf(stdout,"CELL: %d\n", cellId);
     numpts = this->CellPoints[cellId].size();
     for (int k=0; k<this->CellPoints[cellId].size(); k++)
     {
@@ -1069,30 +1090,39 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
       }
 
       // doing with repsect to point ptId2
-      ptId0 = this->CellPoints[cellId][(k+3)%numpts];
-      ptId1 = this->CellPoints[cellId][(k+1)%numpts];
-      ptId2 = this->CellPoints[cellId][k];
+      tmpPtIds[0] = this->CellPoints[cellId][(k+3)%numpts];
+      tmpPtIds[1] = this->CellPoints[cellId][(k+1)%numpts];
+      tmpPtIds[2] = this->CellPoints[cellId][k];
 
-      this->WorkPd->GetPoint(ptId0, pt0);
-      this->WorkPd->GetPoint(ptId1, pt1);
-      this->WorkPd->GetPoint(ptId2, pt2);
-
-      //this->ComputeUntanglingFunction(pt0, pt1, pt2, oppositePt, SV_PI/2.0, f);
-
-      double area = vtkTriangle::TriangleArea(pt0, pt1, pt2);
-      double otherF = pow(vtkSVMathUtils::Distance(pt0, pt2), 2.0) + pow(vtkSVMathUtils::Distance(pt1, pt2), 2.0) * 2 * area;
-
-      // Compute function
-      this->ComputeShapeImprovementFunction(pt0, pt1, pt2, oppositePt, f);
-
-      // Compute direction
-      this->ComputeShapeImprovementDerivatives(pt0, pt1, pt2, oppositePt, df);
-
-      //fprintf(stdout,"  NUTS PT %d: %.6f, %.6f %.6f %.6f\n", ptId2, f, df[0], df[1], df[2]);
-      vertexCondition += f;
-      for (int l=0; l<3; l++)
+      for (int l=0; l<1; l++)
       {
-        optDirection[l] += df[l];
+        ptIds[0] = tmpPtIds[l];
+        ptIds[1] = tmpPtIds[(l+1)%3];
+        ptIds[2] = tmpPtIds[(l+2)%3];
+
+        //fprintf(stdout,"POINT 0: %d\n", ptIds[0]);
+        //fprintf(stdout,"POINT 1: %d\n", ptIds[1]);
+        //fprintf(stdout,"POINT 2: %d\n", ptIds[2]);
+
+        this->WorkPd->GetPoint(ptIds[0], pts[0]);
+        this->WorkPd->GetPoint(ptIds[1], pts[1]);
+        this->WorkPd->GetPoint(ptIds[2], pts[2]);
+
+        //this->ComputeUntanglingFunction(pts[0], pts[1], pts[2], oppositePt, SV_PI/2.0, f);
+
+        // Compute function
+        this->ComputeShapeImprovementFunction(pts[0], pts[1], pts[2], oppositePt, f);
+        //fprintf(stdout,"This f: %.6f\n", f);
+
+        // Compute direction
+        this->ComputeShapeImprovementDerivatives(pts[0], pts[1], pts[2], oppositePt, df);
+
+        //fprintf(stdout,"  NUTS PT %d: %.6f, %.6f %.6f %.6f\n", ptIds[2], f, df[0], df[1], df[2]);
+        vertexCondition += f;
+        for (int m=0; m<3; m++)
+        {
+          optDirection[m] += df[m];
+        }
       }
     }
 
