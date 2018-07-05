@@ -349,7 +349,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
     int greater = 0;
 
     double moveStep = 0.001;
-    for (int iter=0; iter<1000; iter++)
+    for (int iter=0; iter<1; iter++)
     {
       maxBad = 0;
       avgBad = 0;
@@ -365,7 +365,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
 
         this->ComputeVertexCondition(i, pointImprove, pointImproveDir);
         vtkMath::Normalize(pointImproveDir);
-        vtkMath::MultiplyScalar(pointImproveDir, 1.0);
+        vtkMath::MultiplyScalar(pointImproveDir, -1.0);
 
 //=============================ONE==========================================
         //vtkMath::MultiplyScalar(pointImproveDir, moveStep);
@@ -384,7 +384,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         //{
         //  lesser++;
         //}
-        //
+
 //=============================TWO==========================================
 
         sPointNormals->GetTuple(i, normal);
@@ -392,6 +392,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         normDot = vtkMath::Dot(pointImproveDir, normal);
 
         vtkMath::MultiplyScalar(normal, normDot);
+        fprintf(stdout,"NORM DOT: %6f\n", normDot);
         vtkMath::Subtract(pointImproveDir, normal, tangentImproveDir);
         vtkMath::Normalize(tangentImproveDir);
 
@@ -402,18 +403,18 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         this->WorkPd->GetPoints()->SetPoint(i, newPt);
         this->ComputeVertexCondition(i, testPointImprove, testPointImproveDir);
 
-        //if (testPointImprove > pointImprove)
-        //{
-        //  this->WorkPd->GetPoints()->SetPoint(i, pt0);
-        //  greater++;
-        //}
-        //else
-        //{
-        //  lesser++;
-        //}
+        if (testPointImprove > pointImprove)
+        {
+          this->WorkPd->GetPoints()->SetPoint(i, pt0);
+          greater++;
+        }
+        else
+        {
+          lesser++;
+        }
 
 //=============================THREE==========================================
-        ////fprintf(stdout,"PONT IMP DIR: %.6f %.6f %.6f\n", pointImproveDir[0], pointImproveDir[1], pointImproveDir[2]);
+        //fprintf(stdout,"PONT IMP DIR: %.6f %.6f %.6f\n", pointImproveDir[0], pointImproveDir[1], pointImproveDir[2]);
 
         //// Now time to move point
         //this->WorkPd->GetPoint(i, pt0);
@@ -500,7 +501,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         //  vtkMath::Normalize(tangentImproveDir);
 
         //  fprintf(stdout,"  --------------------TESTING CELL: %d\n", cellId);
-        //  dirWorks = 0;
+        //  //dirWorks = 0;
         //  if (pointCellStatus == 1)
         //  {
         //    for (int l=0; l<ntpts; l++)
@@ -582,7 +583,7 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
         //  double segmentLength = vtkSVMathUtils::Distance(closestPt, newPt);
         //  fprintf(stdout,  "  CLOSEST POINT: %.6f %.6f %.6f\n", closestPt[0], closestPt[1], closestPt[2]);
         //  fprintf(stdout,  "  NEW     POINT: %.6f %.6f %.6f\n", newPt[0], newPt[1], newPt[2]);
-        //  double stepSize = segmentLength * 0.01;
+        //  double stepSize = segmentLength * 0.001;
         //  int numberOfSteps = (int) ceil(segmentLength/stepSize);
         //  stepSize = segmentLength /numberOfSteps;
         //  fprintf(stdout,"  STEP SIZE: %.6f\n", stepSize);
@@ -650,6 +651,8 @@ int vtkSVUpdeSmoothing::RequestData(vtkInformation *vtkNotUsed(request),
       //{
       //  moveStep*=10;
       //}
+      //if (moveStep < 1.0e-8)
+      //  break;
     }
     this->WorkPd->GetPointData()->AddArray(shapeImproveFunction);
     this->WorkPd->GetPointData()->AddArray(shapeImproveDirection);
@@ -1080,14 +1083,14 @@ int vtkSVUpdeSmoothing::ComputeVertexCondition(int ptId, double &vertexCondition
     numpts = this->CellPoints[cellId].size();
     for (int k=0; k<this->CellPoints[cellId].size(); k++)
     {
-      //if (k != pointIndex)
-      //{
-      //  continue;
-      //}
-      if (k == (pointIndex+2)%numpts)
+      if (k != pointIndex)
       {
         continue;
       }
+      //if (k == (pointIndex+2)%numpts)
+      //{
+      //  continue;
+      //}
 
       // doing with repsect to point ptId2
       tmpPtIds[0] = this->CellPoints[cellId][(k+3)%numpts];
@@ -1513,7 +1516,7 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
   double u2, v2;
   vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
 
-  fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f, U2: %.6f V2: %.6f\n", u0, v0, u1, v1, u2, v2);
+  //fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f, U2: %.6f V2: %.6f\n", u0, v0, u1, v1, u2, v2);
   edgeStatus = 0;
   int onEdge0 = 0;
   if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
@@ -1525,7 +1528,7 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
     }
     edgeStatus += 1;
   }
-  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
+  //fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
   int onEdge1 = 0;
   if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
@@ -1537,7 +1540,7 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
     }
     edgeStatus += 2;
   }
-  fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
+  //fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
 
   int onEdge2 = 0;
   if (u2 >= -1.0e-6 && u2 <= 1.0+1.0e-6 && v2 >= -1.0e-6 && v2 <= 1.0+1.0e-6)
@@ -1549,7 +1552,7 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
     }
     edgeStatus += 4;
   }
-  fprintf(stdout,"  ON EDGE 2: %d\n", onEdge2);
+  //fprintf(stdout,"  ON EDGE 2: %d\n", onEdge2);
 
   if (!onEdge0 && !onEdge1 && !onEdge2)
   {
@@ -1588,7 +1591,7 @@ int vtkSVUpdeSmoothing::MovePointFromEdgeToEdge(double currentPt[3], int ptId0, 
   double u1, v1;
   vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u1, v1);
 
-  fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f\n", u0, v0, u1, v1);
+  //fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f\n", u0, v0, u1, v1);
   edgeStatus = 0;
   int onEdge0 = 0;
   if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
@@ -1600,7 +1603,7 @@ int vtkSVUpdeSmoothing::MovePointFromEdgeToEdge(double currentPt[3], int ptId0, 
     }
     edgeStatus += 1;
   }
-  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
+  //fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
   int onEdge1 = 0;
   if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
@@ -1612,7 +1615,7 @@ int vtkSVUpdeSmoothing::MovePointFromEdgeToEdge(double currentPt[3], int ptId0, 
     }
     edgeStatus += 2;
   }
-  fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
+  //fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
 
   if (!onEdge0 && !onEdge1)
   {
@@ -1649,7 +1652,7 @@ int vtkSVUpdeSmoothing::MovePointFromPointToEdge(double currentPt[3], int ptId0,
   double u0, v0;
   vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
 
-  fprintf(stdout,"  U0: %.6f V0: %.6f\n", u0, v0);
+  //fprintf(stdout,"  U0: %.6f V0: %.6f\n", u0, v0);
   edgeStatus = 0;
   int onEdge0 = 0;
   if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
@@ -1661,7 +1664,7 @@ int vtkSVUpdeSmoothing::MovePointFromPointToEdge(double currentPt[3], int ptId0,
     }
     edgeStatus += 1;
   }
-  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
+  //fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
   if (!onEdge0)
   {
@@ -1847,9 +1850,9 @@ int vtkSVUpdeSmoothing::ComputeShapeImprovementDerivatives(double pt0[3], double
   //dK[1] = ((detJacobian * dF1dY) + (dJdY * F1)) / (2 * pow(detJacobian, 2.0));
   //dK[2] = ((detJacobian * dF1dZ) + (dJdZ * F1)) / (2 * pow(detJacobian, 2.0));
 
-  dK[0] = ((detJacobian * dF2dX) + (dJdX * F2)) / (2 * pow(detJacobian, 2.0));
-  dK[1] = ((detJacobian * dF2dY) + (dJdY * F2)) / (2 * pow(detJacobian, 2.0));
-  dK[2] = ((detJacobian * dF2dZ) + (dJdZ * F2)) / (2 * pow(detJacobian, 2.0));
+  dK[0] = ((detJacobian * dF2dX) - (dJdX * F2)) / (2 * pow(detJacobian, 2.0));
+  dK[1] = ((detJacobian * dF2dY) - (dJdY * F2)) / (2 * pow(detJacobian, 2.0));
+  dK[2] = ((detJacobian * dF2dZ) - (dJdZ * F2)) / (2 * pow(detJacobian, 2.0));
 
 
   return SV_OK;
