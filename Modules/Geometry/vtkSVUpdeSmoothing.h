@@ -108,6 +108,7 @@ protected:
 
   int ComputeShapeImprovementFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double &f);
   int ComputeVertexCondition(int ptId, double &vertexCondition, double optDirection[3]);
+  int CheckVertexInverted(int ptId, double &vertexCondition, double optDirection[3]);
 
   double Determinant(double mat[4]);
 
