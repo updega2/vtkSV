@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
   std::string sourceFilename;
 
   // Default values for options
+  int useInputAsSource = 0;
   int numOuterSmooth = 1;
   int numInnerSmooth = 500;
 
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
       else if(tmpstr=="-input")             {InputProvided = true; inputFilename = argv[++iarg];}
       else if(tmpstr=="-output")            {OutputProvided = true; outputFilename = argv[++iarg];}
       else if(tmpstr=="-source")            {SourceProvided = true; sourceFilename = argv[++iarg];}
+      else if(tmpstr=="-useinputassource")  {useInputAsSource = atoi(argv[++iarg]);}
       else if(tmpstr=="-numouteriters")     {numOuterSmooth = atoi(argv[++iarg]);}
       else if(tmpstr=="-numinneriters")     {numInnerSmooth = atoi(argv[++iarg]);}
       else {cout << argv[iarg] << " is not a valid argument. Ask for help with -h." << endl; RequestedHelp = true; return EXIT_FAILURE;}
@@ -90,6 +92,7 @@ int main(int argc, char *argv[])
     cout << "  -input              : Input file name (.vtp or .stl)"<< endl;
     cout << "  -output             : Output file name"<< endl;
     cout << "  -source             : Source file name"<< endl;
+    cout << "  -useinputassource   : Use the input as the source surface to constrain to"<< endl;
     cout << "  -numouteriters      : Number of outer loop smooth iterations to perform"<< endl;
     cout << "  -numinneriters      : Number of inner loop smooth iterations to perform"<< endl;
     cout << "END COMMAND-LINE ARGUMENT SUMMARY" << endl;
@@ -133,6 +136,7 @@ int main(int argc, char *argv[])
   UpdeSmoothing->SetInputData(inputPd);
   UpdeSmoothing->SetNumberOfOuterSmoothOperations(numOuterSmooth);
   UpdeSmoothing->SetNumberOfInnerSmoothOperations(numInnerSmooth);
+  UpdeSmoothing->SetUseInputAsSource(useInputAsSource);
   if (SourceProvided)
   {
     UpdeSmoothing->SetSourcePd(sourcePd);

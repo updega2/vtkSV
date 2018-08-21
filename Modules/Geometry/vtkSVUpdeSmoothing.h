@@ -45,6 +45,7 @@
 
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSVGeometryModule.h" // for export
+#include "vtkCellLocator.h"
 #include <set>
 
 class VTKSVGEOMETRY_EXPORT vtkSVUpdeSmoothing : public vtkPolyDataAlgorithm
@@ -70,6 +71,11 @@ public:
   //@}
 
   //@{
+  vtkGetMacro(UseInputAsSource,int);
+  vtkSetMacro(UseInputAsSource,int);
+  //@}
+
+  //@{
   // Description:
   // Set/get the name for the point array attached to the input surface
   vtkSetStringMacro(SmoothPointArrayName);
@@ -88,6 +94,11 @@ protected:
 
   int RunFilter(vtkPolyData *original, vtkPolyData *output);
 
+  int UntangleSurface(vtkDoubleArray *shapeImproveFunction,
+                      vtkDoubleArray *shapeImproveDirection);
+  int SmoothSurface(vtkDoubleArray *shapeImproveFunction,
+                    vtkDoubleArray *shapeImproveDirection);
+
   int PointCellStatus(double currentPt[3], int sourceCell, int &pointCellStatus);
   int EdgeStatusWithDir(double currentPt[3], int sourceCell, double moveDir[3], int &edgeStatus) ;
   int ComputeOptimizationPoint(int pointId, double pt0[3], double pt1[3], double pt2[3],
@@ -104,17 +115,18 @@ protected:
   int ComputeShapeImprovementDerivatives(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3],
                                        double dK[3]);
 
-  int ComputeUntanglingFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double theta, double &f);
+  int ComputeUntanglingFunction(double pt0[3], double pt1[3], double pt2[3], double compareNormal[3], double theta, double &f);
 
   int ComputeShapeImprovementFunction(double pt0[3], double pt1[3], double pt2[3], double oppositePt[3], double &f);
   int ComputeVertexCondition(int ptId, double &vertexCondition, double optDirection[3]);
-  int CheckVertexInverted(int ptId, double &vertexCondition, double optDirection[3]);
+  int CheckVertexInverted(int ptId, double compareNormal[3], double &vertexCondition, double optDirection[3]);
 
   double Determinant(double mat[4]);
 
   int GetJacobians(double pPt0[3], double pPt1[3], double pPt2[3],
                    double J0[4], double J1[4], double J2[4]);
 
+  int UseInputAsSource;
   int NumberOfOuterSmoothOperations;
   int NumberOfInnerSmoothOperations;
   double Alpha;
@@ -123,12 +135,19 @@ protected:
   vtkPolyData *WorkPd;
   vtkPolyData *SourcePd;
   vtkIntArray *SmoothPointArray;
+  vtkCellLocator *CellLocator;
+
+  vtkDataArray *SourceCellNormals;
+  vtkDataArray *SourcePointNormals;
+  vtkDataArray *OriginalCellNormals;
+  vtkDataArray *OriginalPointNormals;
 
   char *SmoothPointArrayName;
 
   std::vector<std::vector<int> > CellsOnSource;
   std::vector<std::vector<int> > PointCells;
   std::vector<std::vector<int> > CellPoints;
+  std::vector<int> FixedPoints;
 
 private:
   vtkSVUpdeSmoothing(const vtkSVUpdeSmoothing&);  // Not implemented.
