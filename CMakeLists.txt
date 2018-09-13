@@ -77,6 +77,7 @@ include(GenerateExportHeader)
 #-----------------------------------------------------------------------------
 # Setup documentation
 if(VTKSV_BUILD_DOCUMENTATION)
+  set(DOXYGEN_EXAMPLE_PATH ${CMAKE_SOURCE_DIR}/Modules)
   find_package(Doxygen REQUIRED)
   if(DOXYGEN_FOUND)
     configure_file(${VTKSV_SOURCE_DIR}/Documentation/vtksv.Doxyfile.in

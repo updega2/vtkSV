@@ -147,7 +147,7 @@ EXCLUDE                = .svn:OneDSolver \
                           vtkDelaunay2D_60.h \
                           vtkDelaunay2D_60.cxx \
                           vtkDelaunayTriangleDelaunay2D.h \
-                          vtkDelaunayTriangleDelaunay2D.cxx \
+                          vtkDelaunayTriangleDelaunay2D.cxx
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */.svn/* */IritSolidModel/* */OneDSolver/* */.git/* \
                           triangle.h \
@@ -159,10 +159,10 @@ EXCLUDE_PATTERNS       = */.svn/* */IritSolidModel/* */OneDSolver/* */.git/* \
                           vtkDelaunay2D_60.h \
                           vtkDelaunay2D_60.cxx \
                           vtkDelaunayTriangleDelaunay2D.h \
-                          vtkDelaunayTriangleDelaunay2D.cxx \
-EXAMPLE_PATH           =
+                          vtkDelaunayTriangleDelaunay2D.cxx
+EXAMPLE_PATH           =  @CMAKE_SOURCE_DIR@
 EXAMPLE_PATTERNS       = *
-EXAMPLE_RECURSIVE      = NO
+EXAMPLE_RECURSIVE      = YES
 IMAGE_PATH             =
 INPUT_FILTER           =
 FILTER_PATTERNS        =
@@ -303,3 +303,9 @@ DOT_CLEANUP            = YES
 # Configuration::additions related to the search engine
 #---------------------------------------------------------------------------
 SEARCHENGINE           = NO
+#---------------------------------------------------------------------------
+# Configuration::additions for markdown documentation
+#---------------------------------------------------------------------------
+INPUT                  += mainpage.md
+FILE_PATTERNS          += *.md *.markdown
+USE_MDFILE_AS_MAINPAGE = mainpage.md
