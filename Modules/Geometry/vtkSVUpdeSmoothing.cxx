@@ -1041,7 +1041,7 @@ int vtkSVUpdeSmoothing::SmoothSurface(vtkDoubleArray *shapeImproveFunction,
         this->WorkPd->GetPoint(i, pt0);
 
         this->CellLocator->FindClosestPoint(pt0, closestPt, genericCell, closestCellId, subId, distance);
-        fprintf(stdout,"  CLOSEST CELL: %d\n", closestCellId);
+        //fprintf(stdout,"  CLOSEST CELL: %d\n", closestCellId);
 
         pointCellStatus = 0;
         if (this->PointCellStatus(closestPt, closestCellId, pointCellStatus)  != SV_OK)
@@ -1761,27 +1761,27 @@ int vtkSVUpdeSmoothing::EdgeStatusWithDir(double currentPt[3], int sourceCell, d
   double u2, v2;
   //vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
 
-  edgeStatus = 0;
-  if (onEdge0 == 2)
-  {
-    edgeStatus += 1;
-  }
+  //edgeStatus = 0;
+  //if (onEdge0 == 2)
+  //{
+  //  edgeStatus += 1;
+  //}
 
-  if (onEdge1 == 2)
-  {
-    edgeStatus += 2;
-  }
+  //if (onEdge1 == 2)
+  //{
+  //  edgeStatus += 2;
+  //}
 
-  if (onEdge2 == 2)
-  {
-    edgeStatus += 4;
-  }
+  //if (onEdge2 == 2)
+  //{
+  //  edgeStatus += 4;
+  //}
 
-  if (onEdge0 != 2 && onEdge1 != 2 && onEdge2 != 2)
-  {
-    //vtkErrorMacro("Point and direction do not intersect with triangle");
-    return SV_ERROR;
-  }
+  //if (onEdge0 != 2 && onEdge1 != 2 && onEdge2 != 2)
+  //{
+  //  //vtkErrorMacro("Point and direction do not intersect with triangle");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
