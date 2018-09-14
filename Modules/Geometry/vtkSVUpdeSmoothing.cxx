@@ -1750,14 +1750,16 @@ int vtkSVUpdeSmoothing::EdgeStatusWithDir(double currentPt[3], int sourceCell, d
   double outPt[3];
   vtkMath::Add(currentPt, moveDir, outPt);
 
+  // TODO: NEEDS TO BE ADDED FOR OLDER VTK TYPES
+
   double u0, v0;
-  int onEdge0 = vtkLine::Intersection3D(sourcePts[0], sourcePts[1], currentPt, outPt, u0, v0);
+  //vtkLine::Intersection3D(sourcePts[0], sourcePts[1], currentPt, outPt, u0, v0);
 
   double u1, v1;
-  int onEdge1 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u1, v1);
+  //vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u1, v1);
 
   double u2, v2;
-  int onEdge2 = vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
+  //vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
 
   edgeStatus = 0;
   if (onEdge0 == 2)
