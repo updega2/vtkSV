@@ -1753,13 +1753,13 @@ int vtkSVUpdeSmoothing::EdgeStatusWithDir(double currentPt[3], int sourceCell, d
   // TODO: NEEDS TO BE ADDED FOR OLDER VTK TYPES
 
   double u0, v0;
-  //vtkLine::Intersection3D(sourcePts[0], sourcePts[1], currentPt, outPt, u0, v0);
+  //int onEdge0 = vtkLine::Intersection3D(sourcePts[0], sourcePts[1], currentPt, outPt, u0, v0);
 
   double u1, v1;
-  //vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u1, v1);
+  //int onEdge1 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u1, v1);
 
   double u2, v2;
-  //vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
+  //int onEdge2 = vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
 
   //edgeStatus = 0;
   //if (onEdge0 == 2)
@@ -1832,57 +1832,57 @@ int vtkSVUpdeSmoothing::MovePointToEdge(double currentPt[3], int sourceCell, dou
   vtkMath::Add(currentPt, moveDir, outPt);
 
   double u0, v0;
-  int onEdge0 = vtkLine::Intersection3D(sourcePts[0], sourcePts[1], currentPt, outPt, u0, v0);
+  //int onEdge0 = vtkLine::Intersection3D(sourcePts[0], sourcePts[1], currentPt, outPt, u0, v0);
 
   double u1, v1;
-  int onEdge1 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u1, v1);
+  //int onEdge1 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u1, v1);
 
   double u2, v2;
-  int onEdge2 = vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
+  //int onEdge2 = vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u2, v2);
 
   //fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f, U2: %.6f V2: %.6f\n", u0, v0, u1, v1, u2, v2);
   edgeStatus = 0;
   //if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
   //{
-  if (onEdge0 == 2)
-  {
-    for (int i=0; i<3; i++)
-    {
-      newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
-    }
-    edgeStatus += 1;
-  }
-  //fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
-
-  //if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
+  //if (onEdge0 == 2)
   //{
-  if (onEdge1 == 2)
-  {
-    for (int i=0; i<3; i++)
-    {
-      newPt[i] = sourcePts[1][i] + u1 * l1 * (sourcePts[2][i] - sourcePts[1][i]);
-    }
-    edgeStatus += 2;
-  }
-  //fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
+  //  for (int i=0; i<3; i++)
+  //  {
+  //    newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
+  //  }
+  //  edgeStatus += 1;
+  //}
+  ////fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
-  //if (u2 >= -1.0e-6 && u2 <= 1.0+1.0e-6 && v2 >= -1.0e-6 && v2 <= 1.0+1.0e-6)
+  ////if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
+  ////{
+  //if (onEdge1 == 2)
   //{
-  if (onEdge2 == 2)
-  {
-    for (int i=0; i<3; i++)
-    {
-      newPt[i] = sourcePts[2][i] + u2 * l2 * (sourcePts[0][i] - sourcePts[2][i]);
-    }
-    edgeStatus += 4;
-  }
-  //fprintf(stdout,"  ON EDGE 2: %d\n", onEdge2);
+  //  for (int i=0; i<3; i++)
+  //  {
+  //    newPt[i] = sourcePts[1][i] + u1 * l1 * (sourcePts[2][i] - sourcePts[1][i]);
+  //  }
+  //  edgeStatus += 2;
+  //}
+  ////fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
 
-  if (onEdge0 != 2 && onEdge1 != 2 && onEdge2 != 2)
-  {
-    //vtkErrorMacro("Point and direction do not intersect with triangle");
-    return SV_ERROR;
-  }
+  ////if (u2 >= -1.0e-6 && u2 <= 1.0+1.0e-6 && v2 >= -1.0e-6 && v2 <= 1.0+1.0e-6)
+  ////{
+  //if (onEdge2 == 2)
+  //{
+  //  for (int i=0; i<3; i++)
+  //  {
+  //    newPt[i] = sourcePts[2][i] + u2 * l2 * (sourcePts[0][i] - sourcePts[2][i]);
+  //  }
+  //  edgeStatus += 4;
+  //}
+  ////fprintf(stdout,"  ON EDGE 2: %d\n", onEdge2);
+
+  //if (onEdge0 != 2 && onEdge1 != 2 && onEdge2 != 2)
+  //{
+  //  //vtkErrorMacro("Point and direction do not intersect with triangle");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
@@ -1910,42 +1910,42 @@ int vtkSVUpdeSmoothing::MovePointFromEdgeToEdge(double currentPt[3], int ptId0, 
   vtkMath::Add(currentPt, moveDir, outPt);
 
   double u0, v0;
-  int onEdge0 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
+  //int onEdge0 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
 
   double u1, v1;
-  int onEdge1 = vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u1, v1);
+  //int onEdge1 = vtkLine::Intersection3D(sourcePts[2], sourcePts[0], currentPt, outPt, u1, v1);
 
   //fprintf(stdout,"  U0: %.6f V0: %.6f, U1: %.6f V1: %.6f\n", u0, v0, u1, v1);
   edgeStatus = 0;
   //if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
   //{
-  if (onEdge0 == 2)
-  {
-    for (int i=0; i<3; i++)
-    {
-      newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
-    }
-    edgeStatus += 1;
-  }
-  //fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
-
-  //if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
+  //if (onEdge0 == 2)
   //{
-  if (onEdge1 == 2)
-  {
-    for (int i=0; i<3; i++)
-    {
-      newPt[i] = sourcePts[1][i] + u1 * l1 * (sourcePts[2][i] - sourcePts[1][i]);
-    }
-    edgeStatus += 2;
-  }
-  //fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
+  //  for (int i=0; i<3; i++)
+  //  {
+  //    newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
+  //  }
+  //  edgeStatus += 1;
+  //}
+  ////fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
-  if (onEdge0 != 2 && onEdge1 != 2)
-  {
-    //vtkErrorMacro("Point and direction do not intersect with triangle");
-    return SV_ERROR;
-  }
+  ////if (u1 >= -1.0e-6 && u1 <= 1.0+1.0e-6 && v1 >= -1.0e-6 && v1 <= 1.0+1.0e-6)
+  ////{
+  //if (onEdge1 == 2)
+  //{
+  //  for (int i=0; i<3; i++)
+  //  {
+  //    newPt[i] = sourcePts[1][i] + u1 * l1 * (sourcePts[2][i] - sourcePts[1][i]);
+  //  }
+  //  edgeStatus += 2;
+  //}
+  ////fprintf(stdout,"  ON EDGE 1: %d\n", onEdge1);
+
+  //if (onEdge0 != 2 && onEdge1 != 2)
+  //{
+  //  //vtkErrorMacro("Point and direction do not intersect with triangle");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
@@ -1974,7 +1974,7 @@ int vtkSVUpdeSmoothing::MovePointFromPointToEdge(double currentPt[3], int ptId0,
   vtkMath::Add(currentPt, moveDir, outPt);
 
   double u0, v0;
-  int onEdge0 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
+  //int onEdge0 = vtkLine::Intersection3D(sourcePts[1], sourcePts[2], currentPt, outPt, u0, v0);
 
   //fprintf(stdout,"DO THEY INTERSECT: %d\n", onEdge0);
   //fprintf(stdout,"CHECKING TO SEE IF LINE FROM POINTS: %.6f %6.f %6.f -> %.6f %.6f %6.f\n", currentPt[0], currentPt[1], currentPt[2], outPt[0], outPt[1], outPt[2]);
@@ -1983,21 +1983,21 @@ int vtkSVUpdeSmoothing::MovePointFromPointToEdge(double currentPt[3], int ptId0,
   edgeStatus = 0;
   //if (u0 >= -1.0e-6 && u0 <= 1.0+1.0e-6 && v0 >= -1.0e-6 && v0 <= 1.0+1.0e-6)
   //{
-  if (onEdge0 == 2)
-  {
-    for (int i=0; i<3; i++)
-    {
-      newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
-    }
-    edgeStatus += 1;
-  }
-  fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
+  //if (onEdge0 == 2)
+  //{
+  //  for (int i=0; i<3; i++)
+  //  {
+  //    newPt[i] = sourcePts[0][i] + u0 * l0 * (sourcePts[1][i] - sourcePts[0][i]);
+  //  }
+  //  edgeStatus += 1;
+  //}
+  //fprintf(stdout,"  ON EDGE 0: %d\n", onEdge0);
 
-  if (onEdge0 != 2)
-  {
-    //vtkErrorMacro("Point and direction do not intersect with triangle");
-    return SV_ERROR;
-  }
+  //if (onEdge0 != 2)
+  //{
+  //  //vtkErrorMacro("Point and direction do not intersect with triangle");
+  //  return SV_ERROR;
+  //}
 
   return SV_OK;
 }
