@@ -28,10 +28,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  *  \class vtkSVGeneralUtils
- *  \brief This is a class of purely static functions.
- *  It is a compilation of useful and simple functions to be called
+ *  \brief This is a class of purely static functions and no member data.
+ *  It is essentially a compilation of useful and simple functions to be called
  *  anywhere in code base.
  *
  *  \author Adam Updegrove

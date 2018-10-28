@@ -72,6 +72,7 @@
 #include "vtkSVMathUtils.h"
 
 #include <algorithm>
+#include <iterator>
 
 // ----------------------
 // MakePlane
