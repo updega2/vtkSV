@@ -1,11 +1,20 @@
-Installation {#installation}
-==============
+vtkSV
+=====
 
-@tableofcontents
+[![Build Status](https://travis-ci.com/updega2/vtkSV.svg?token=z9SrUdBwjCgoNwiXtbbx&branch=master)](https://travis-ci.com/updega2/vtkSV)
 
-@section installation-required_dependencies Required Dependencies
+# Introduction
 
-@subsection installation-required_dependencies-cmake CMake
+vtkSV is a set of VTK-based objects and filters that aid in geometric representation and manipulation.
+It began as a series of filters that were developed for the software project SimVascular.
+
+👉 SimVascular project page: [http://www.simvascular.org](http://www.simvascular.org)
+
+# Installation
+
+## Required Dependencies
+
+### CMake
 
 CMake is used as the build and test system for vtkSV, following a very similar format to VTK.
 
@@ -13,7 +22,7 @@ CMake is used as the build and test system for vtkSV, following a very similar f
 
 It is recommended to install the CMake command line tools, but it is also possible to use the CMake GUI to configure, generate, and build.
 
-@subsection installation-required_dependencies-vtk VTK
+### VTK
 
 The other dependency of vtkSV is vtk (whoa, what a surprise).
 
@@ -34,7 +43,7 @@ If VTK was installed as binaries, the VTKConfig.cmake will be underneath the lib
 VTK-install-location/lib/cmake/vtk-{vtk_version}/VTKConfig.cmake
 ```
 
-@section installation-building Building
+## Building
 
 Building with default options should be straight forward.
 Create a build directory, use CMake to configure the project and generate the Makefiles.
@@ -52,9 +61,9 @@ make
 make install
 ```
 
-@section installation-build_options Build Options
+## Build Options
 
-@subsection installation-build_options-testing Testing
+### Testing
 
 Testing is off by default. To turn on:
 
@@ -78,7 +87,7 @@ See the ctest documentation to run specific tests and run with different options
 
 👉 ctest documentation: [https://cmake.org/cmake/help/v3.12/manual/ctest.1.html](https://cmake.org/cmake/help/v3.12/manual/ctest.1.html)
 
-@subsection installation-build_options-executables Executables
+### Executables
 
 For some parts of the codebase, executables have been created to easily run and use the code.
 
@@ -90,7 +99,7 @@ VTKSV_BUILD_EXES=ON
 
 The executables are placed underneath the bin directory.
 
-@subsection installation-build_options-modules Modules
+### Modules
 
 All modules are on by default. To turn off:
 
